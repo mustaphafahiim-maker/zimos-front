@@ -20,6 +20,10 @@ const STRINGS = {
     ORDER_NOT_PAID: "This prepaid order must be paid before it ships.",
     ORDER_ALREADY_SHIPPED: "This order has already shipped and can't be changed.",
     INSUFFICIENT_STOCK: "There isn't enough stock left for this order.",
+    // Handoff 274 — the words of lib/errorMessages.ts, repeated here so one order's row of a bulk answer says them too.
+    ORDER_TENDER_RETURNED: "The points, store credit or gift card went back to the customer when this was cancelled — place a new order",
+    // Handoff 229 — an order on account that would take the customer over their credit limit.
+    CREDIT_LIMIT_EXCEEDED: "This order is more than the credit this customer has left. Raise their limit, record a payment, or choose another payment method.",
   },
   ar: {
     INVALID_STATUS_TRANSITION: "لا يمكن نقل هذا الأوردر إلى هذه الحالة من حالته الحالية.",
@@ -32,6 +36,8 @@ const STRINGS = {
     ORDER_NOT_PAID: "يجب دفع هذا الأوردر قبل شحنه.",
     ORDER_ALREADY_SHIPPED: "الأوردر ده اتشحن ومينفعش يتغيّر.",
     INSUFFICIENT_STOCK: "مفيش مخزون كافٍ لهذا الأوردر.",
+    ORDER_TENDER_RETURNED: "النقاط / الرصيد / كارت الهدية رجعوا للعميل لما الطلب اتلغى — اعمل طلب جديد",
+    CREDIT_LIMIT_EXCEEDED: "الأوردر أكبر من الرصيد المتاح للعميل ده. زوّد حد الائتمان، أو سجّل دفعة، أو اختار طريقة دفع تانية.",
   },
 } satisfies Messages;
 

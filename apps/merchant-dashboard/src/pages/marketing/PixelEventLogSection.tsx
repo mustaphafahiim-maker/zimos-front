@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ListChecks, RefreshCw } from "lucide-react";
-import { Button, Card } from "@store-builder/ui";
+import { IconChecklist, IconRefresh } from "@/components/icons";
+import { cn } from "@store-builder/ui";
 import {
   trackingPixelsListEvents,
   type TrackingPixelEventDto,
@@ -10,16 +10,19 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { formatRelativeTime } from "@/lib/relativeTime";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { AccordionSection } from "@/components/Accordion";
 import { DataState } from "@/components/DataState";
-import { DataTable, type Column } from "@/components/DataTable";
 import { EmptyState } from "@/components/EmptyState";
-import { FilterTabs } from "@/components/FilterTabs";
+import { ChipRow, ListRowCard, ListSkeleton } from "@/components/list";
+import { DeskList, DeskRow } from "@/pages/returns/rowkit/DeskList";
+import { useIsCompact } from "@/pages/returns/rowkit/useScreen";
 import { LoadMore } from "@/components/LoadMore";
 import { StatusBadge } from "@/components/StatusBadge";
 
 const STRINGS = {
   en: {
     title: "Server event log",
+    summary: "What your store sent to the ad platforms from the server",
     description: "The last {n} events your store sent to the ad platforms from the server, and whether each was accepted.",
     refresh: "Refresh",
     filter: "Filter events by result",
@@ -44,24 +47,25 @@ const STRINGS = {
   },
   ar: {
     title: "سجل أحداث السيرفر",
-    description: "آخر {n} حدث أرسله متجرك لمنصات الإعلانات من السيرفر، وهل قُبل كل منها.",
-    refresh: "تحديث",
-    filter: "تصفية الأحداث حسب النتيجة",
+    summary: "اللي متجرك بعته لمنصات الإعلانات من السيرفر",
+    description: "آخر {n} حدث متجرك بعته لمنصات الإعلانات من السيرفر، وكل واحد اتقبل ولا لأ.",
+    refresh: "حدّث",
+    filter: "فلتر الأحداث بالنتيجة",
     all: "الكل",
-    sent: "مقبول",
+    sent: "اتقبل",
     failed: "فشل",
-    emptyTitle: "مفيش أحداث من السيرفر لسه",
-    emptyBody: "تظهر الأحداث هنا بعد تفعيل الـ Conversions API على أحد البيكسلات ووصول زيارات أو طلبات للمتجر.",
-    emptyFiltered: "مفيش أحداث بهذه النتيجة.",
+    emptyTitle: "لسه مفيش أحداث من السيرفر",
+    emptyBody: "الأحداث بتظهر هنا بعد ما تشغّل الـ Conversions API على بيكسل وييجي للمتجر زيارات أو أوردرات.",
+    emptyFiltered: "مفيش أحداث بالنتيجة دي.",
     colEvent: "الحدث",
     colPixel: "البيكسل",
     colResult: "النتيجة",
     colWhen: "الوقت",
     test: "تجريبي",
-    ev_purchase: "شراء",
+    ev_purchase: "شرا",
     ev_view_content: "مشاهدة منتج",
     ev_add_to_cart: "إضافة للسلة",
-    ev_begin_checkout: "بدء الطلب",
+    ev_begin_checkout: "بدء الأوردر",
     ev_add_payment_info: "اختيار وسيلة الدفع",
     ev_lead: "عميل محتمل",
     ev_page_view: "فتح صفحة",
@@ -77,6 +81,10 @@ const PLATFORM_NAMES: Record<string, string> = {
   snapchat: "Snapchat",
   google: "Google",
   pinterest: "Pinterest",
+  // The platforms that gained a server API in handoff 255.
+  x: "X (Twitter)",
+  reddit: "Reddit",
+  microsoft: "Microsoft Ads",
 };
 
 /** Marketing → Tracking tools: what the server sent to the ad platforms. */
@@ -125,90 +133,111 @@ export function PixelEventLogSection({ reloadKey = 0 }: { reloadKey?: number }) 
   }, [load, reloadKey]);
 
   const eventLabel = (name: string) => (t as Record<string, string>)[`ev_${name}`] ?? name;
+  const compact = useIsCompact();
 
-  const columns: Column<TrackingPixelEventDto>[] = [
-    {
-      key: "event",
-      header: t.colEvent,
-      cell: (e) => (
-        <div>
-          <span className="font-medium text-ink">{eventLabel(e.eventName)}</span>
-          {e.isTest && <span className="ms-2 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-dark">{t.test}</span>}
+  const rows = events.map((e) => {
+    const title = (
+      <>
+        <span>{eventLabel(e.eventName)}</span>
+        {e.isTest && <span className="ms-2 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-dark">{t.test}</span>}
+      </>
+    );
+    const result = <StatusBadge value={e.status} tone={e.status === "sent" ? "success" : "danger"} text={e.status === "sent" ? t.sent : t.failed} />;
+    const pixel = (
+      <>
+        {PLATFORM_NAMES[e.platform] ?? e.platform} · <bdi dir="ltr" className="font-mono text-xs">{e.pixelId}</bdi>
+      </>
+    );
+    const when = <time dateTime={e.createdAt}>{formatRelativeTime(e.createdAt)}</time>;
+    // The platform's own words, in whatever language it wrote them.
+    const problem = e.error ? (
+      <p dir="auto" className="text-xs leading-4 wrap-anywhere text-danger">
+        {e.error}
+      </p>
+    ) : null;
+
+    if (compact) {
+      return (
+        <li key={e.id}>
+          <ListRowCard title={title} amount={<span className="text-[13px] font-normal text-ink-soft">{when}</span>} status={result} meta={pixel} footer={problem} />
+        </li>
+      );
+    }
+    return (
+      <DeskRow key={e.id}>
+        <div className="min-w-0">
+          <p className="truncate text-sm leading-6 font-medium text-ink">{title}</p>
           {e.eventId && (
-            <div dir="ltr" className="mt-0.5 max-w-52 truncate font-mono text-xs text-ink-soft text-start">
+            <p dir="ltr" className="truncate text-start font-mono text-xs leading-5 text-ink-soft">
               {e.eventId}
-            </div>
+            </p>
           )}
         </div>
-      ),
-    },
-    {
-      key: "pixel",
-      header: t.colPixel,
-      cell: (e) => (
-        <div>
-          <div className="text-ink">{PLATFORM_NAMES[e.platform] ?? e.platform}</div>
-          <code dir="ltr" className="font-mono text-xs text-ink-soft">
-            {e.pixelId}
-          </code>
+        <p className="min-w-0 truncate text-sm text-ink">{pixel}</p>
+        <div className="min-w-0">
+          {result}
+          {problem && <div className="mt-1 max-w-72">{problem}</div>}
         </div>
-      ),
-    },
-    {
-      key: "result",
-      header: t.colResult,
-      cell: (e) => (
-        <div>
-          <StatusBadge value={e.status} tone={e.status === "sent" ? "success" : "danger"} text={e.status === "sent" ? t.sent : t.failed} />
-          {e.error && <div className="mt-1 max-w-72 text-xs text-danger">{e.error}</div>}
-        </div>
-      ),
-    },
-    { key: "when", header: t.colWhen, align: "end", cell: (e) => <span className="text-ink-soft">{formatRelativeTime(e.createdAt)}</span> },
-  ];
+        <div className="text-end text-xs whitespace-nowrap text-ink-soft">{when}</div>
+      </DeskRow>
+    );
+  });
 
   return (
-    <Card className="mb-6 gap-0 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <ListChecks className="size-4 text-primary" aria-hidden />
-            {t.title}
-          </h2>
-          <p className="mt-0.5 text-xs text-ink-soft">{fmt(t.description, { n: keep })}</p>
-        </div>
-        <Button size="sm" variant="outline" onClick={() => void load(null)} disabled={loading}>
-          <RefreshCw className="size-4" aria-hidden />
-          {t.refresh}
-        </Button>
-      </div>
-
-      <FilterTabs
-        className="mt-3 self-start"
-        label={t.filter}
-        value={filter}
-        onChange={setFilter}
-        tabs={[
-          { value: "all", label: t.all },
-          { value: "sent", label: t.sent },
-          { value: "failed", label: t.failed },
-        ]}
-      />
-
-      <div className="mt-3">
-        <DataState loading={loading} error={error} onRetry={() => void load(null)}>
+    <AccordionSection
+      title={t.title}
+      summary={t.summary}
+      icon={IconChecklist}
+      persistKey="marketing:event-log"
+      actions={
+        <button
+          type="button"
+          aria-label={t.refresh}
+          title={t.refresh}
+          disabled={loading}
+          onClick={() => void load(null)}
+          className="inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-[background-color,color,scale] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-paper-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-50 motion-safe:active:scale-[0.97] motion-reduce:transition-none"
+        >
+          <IconRefresh className={cn("size-5", loading && "animate-spin motion-reduce:animate-none")} aria-hidden />
+        </button>
+      }
+    >
+      <p className="text-[13px] leading-5 text-ink-soft">{fmt(t.description, { n: keep })}</p>
+      <div className="mt-3 flex flex-col gap-3">
+        <ChipRow
+          label={t.filter}
+          value={filter}
+          onChange={setFilter}
+          className="max-sm:mx-0"
+          items={[
+            { value: "all", label: t.all },
+            { value: "sent", label: t.sent },
+            { value: "failed", label: t.failed },
+          ]}
+        />
+        <DataState loading={loading} error={error} onRetry={() => void load(null)} skeleton={<ListSkeleton variant={compact ? "card" : "table"} rows={4} />}>
           {events.length === 0 ? (
             <EmptyState
-              icon={<ListChecks className="size-6" aria-hidden />}
+              icon={<IconChecklist aria-hidden />}
               title={filter === "all" ? t.emptyTitle : t.emptyFiltered}
               description={filter === "all" ? t.emptyBody : undefined}
             />
+          ) : compact ? (
+            <ul aria-label={t.title} className="flex flex-col gap-2.5">
+              {rows}
+            </ul>
           ) : (
-            <DataTable columns={columns} rows={events} rowKey={(e) => e.id} minWidth="40rem" />
+            <DeskList
+              columns="grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_max-content]"
+              label={t.title}
+              head={[{ label: t.colEvent }, { label: t.colPixel }, { label: t.colResult }, { label: t.colWhen, end: true }]}
+            >
+              {rows}
+            </DeskList>
           )}
           <LoadMore hasMore={Boolean(nextCursor)} loading={loadingMore} onClick={() => void load(nextCursor)} />
         </DataState>
       </div>
-    </Card>
+    </AccordionSection>
   );
 }

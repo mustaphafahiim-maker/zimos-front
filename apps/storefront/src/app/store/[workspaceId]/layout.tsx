@@ -5,8 +5,9 @@ import { BackToTop } from "@/components/BackToTop";
 import { StoreAppInstall } from "@/components/StoreAppInstall";
 import { CartDrawer } from "@/components/CartDrawer";
 import { ExitDownsell } from "@/components/offers/StoreOffers";
+import { SpinWheel } from "@/components/offers/SpinWheel";
 import { CouponFromLink } from "@/components/offers/CouponBits";
-import { NewsletterSignup, SocialProofPopup } from "@/components/offers/Engagement";
+import { AfterIdle, NewsletterSignup, SocialProofPopup } from "@/components/offers/Engagement";
 import { HideInFunnel } from "@/components/HideInFunnel";
 import { MobileCategoryStrip } from "@/components/MobileCategoryStrip";
 import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
@@ -42,10 +43,15 @@ import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore }
 import { storeThemeOf } from "@/lib/brandTheme";
 import { storeTextsOf } from "@/lib/storeTexts";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
-import { THEME_FONT_CSS } from "@/app/themeFonts";
+import { THEME_FONT_CSS, withOwnFontFaces } from "@/app/themeFonts";
 import { FontAssets, storeFontRefs, storeFontVars } from "@/lib/storeFonts";
 import { ThemeChrome } from "@/components/shell/ThemeChrome";
 import { StoreGate } from "@/components/gate/StoreGate";
+import { HolidayBanner } from "@/components/holiday/HolidayBanner";
+import { storefrontHolidayOf } from "@store-builder/api-client";
+import { StoreRewards } from "@/components/rewards/StoreRewards";
+import { withStoreLocator } from "@/lib/storeBranches";
+import { getStoreBranches } from "@/lib/storeBranchesServer";
 
 /** An unavailable store has no themeSettings; its own default language still counts. */
 function localeSource(store: UnavailableStore) {
@@ -112,7 +118,10 @@ export async function generateMetadata({
  *    (globals.css "Store themes"), and the small stylesheet beside it holds
  *    the themes' self-hosted font stacks (app/themeFonts.ts; the editor's
  *    preview page renders it too, for switching). Without a theme the store
- *    renders exactly as it did before themes existed;
+ *    renders exactly as it did before themes existed. Every family is served
+ *    from this origin and only the look's own are ever downloaded; a font the
+ *    merchant picked themselves is the one case that may reach for Google
+ *    (lib/storeFonts.tsx);
  *  - the store's link prefix, resolved once for the client components below it,
  *    since only a server component can tell how the request arrived;
  *  - the store language: `lang`/`dir` on this wrapper, mirrored onto <html> by
@@ -150,7 +159,15 @@ export default async function StoreLayout({
 
   const locale = await getStoreLocale(store);
   const t = getDictionary(locale);
-  const collections = await getStoreCollections(workspaceId);
+  // The collections, whether the store shows its branches (the footer's «فروعنا» link, handoff 233)
+  // and the merchant's own code slots and scripts, asked for together: none of them waits on
+  // another, and each one in a row was a round trip to the API before the page's first byte. The
+  // API returns no code to a staff preview, and components/CustomCode.tsx decides where the rest may run.
+  const [collections, branches, { slots: customCode, scripts: storeScripts }] = await Promise.all([
+    getStoreCollections(workspaceId),
+    getStoreBranches(workspaceId),
+    storeCode(workspaceId),
+  ]);
   const info: StoreInfo = {
     workspaceId,
     id: store.id,
@@ -173,6 +190,8 @@ export default async function StoreLayout({
     country: storefrontGeneralMeta(store).general.country,
     // The places it does not deliver to: left out of the checkout's list (lib/useShippingPlaces).
     hiddenPlaces: hiddenPlacesOf(store),
+    // A holiday in force: orders paused, or taken and shipped later (handoff 216; lib/storeHoliday).
+    holiday: storefrontHolidayOf(store),
     // The merchant's own wording, this language only (Website → Store texts; lib/storeTexts).
     storefrontTexts: { [locale]: storeTextsOf(store)[locale] ?? {} },
   };
@@ -184,9 +203,6 @@ export default async function StoreLayout({
   const pixels = storePixelsOf(store);
   const consent = storefrontCookieConsentOf(store);
   const { floatingWhatsapp } = storefrontGeneralMeta(store);
-  // The merchant's own code slots and scripts. The API returns none to a staff
-  // preview, and components/CustomCode.tsx decides where the rest may run.
-  const { slots: customCode, scripts: storeScripts } = await storeCode(workspaceId);
 
   return (
     <StoreRouteProvider basePath={basePath}>
@@ -214,12 +230,23 @@ export default async function StoreLayout({
           )}
           {/* suppressHydrationWarning: the editor's preview page puts its
               unsaved theme on this element before hydrating (brandTheme.ts
-              previewBootScript); a live store never changes it. */}
+              previewBootScript); a live store never changes it.
+
+              This wrapper is also where the bottom of a phone screen is shared
+              out (globals.css, "The bottom of the screen on a store page"). A
+              page that pins a bar there — the product page's order bar, the
+              cart's, the checkout's — tells it by setting `--sf-bottom-bar-h`
+              on this element (inline, the bar's height in px, measured from
+              the bottom edge of the screen; removed when the bar hides). It is
+              0px until someone does. The WhatsApp button, the way back up, the
+              sales notification, the install card and the cookie banner all
+              read what the wrapper works out from it and stand clear of the
+              bar; none of them needs to know which page it is on. */}
           <div
             lang={intlLocaleFor(locale)}
             dir={dirFor(locale)}
             className="brand-theme flex min-h-full flex-1 flex-col bg-paper font-sans text-ink"
-            style={{ ...brandStyle(store.themeSettings), ...storeFontVars(store.themeSettings) }}
+            style={withOwnFontFaces({ ...brandStyle(store.themeSettings), ...storeFontVars(store.themeSettings) }, dirFor(locale) === "rtl")}
             data-store-theme={theme ?? undefined}
             suppressHydrationWarning
           >
@@ -231,6 +258,10 @@ export default async function StoreLayout({
             <PaymentsPreviewBanner workspaceId={workspaceId} />
             {/* A password / coming-soon page or the age question in place of the store (handoff 197). */}
             <StoreGate workspaceId={workspaceId} store={store}>
+            {/* The cart priced for the signed-in shopper, and a friend's `?ref=` invite with its banner (handoffs 205, 222). */}
+            <StoreRewards />
+            {/* «المتجر في إجازة لحد …» across the top while the store is on holiday; on funnel pages too (handoff 216). */}
+            <HolidayBanner />
             <HideInFunnel>
               <CodeSlot name="above_header" />
               <StoreHeader store={store} locale={locale} />
@@ -242,14 +273,20 @@ export default async function StoreLayout({
               <CodeSlot name="above_footer" />
               {/* The merchant's sign-up form: a band above the footer, or a popup (Offers → Newsletter). */}
               <NewsletterSignup workspaceId={store.id} />
-              <StoreFooter store={store} locale={locale} year={new Date().getFullYear()} />
+              <StoreFooter store={withStoreLocator(store, branches !== null)} locale={locale} year={new Date().getFullYear()} />
               <CodeSlot name="below_footer" />
               {/* The slide-over cart: opened by "add to cart" and the header's
                   cart icon. Funnel pages have no cart, so it steps aside with
                   the rest of the store's chrome. */}
               <CartDrawer />
-              {/* The merchant's exit popup, once per visitor (Offers → Exit popup). */}
-              <ExitDownsell workspaceId={store.id} />
+              {/* The merchant's exit popup, once per visitor (Offers → Exit popup). It asks for its
+                  settings as it mounts, so it is mounted once the page has loaded and gone quiet, and
+                  not at all on the pages it never shows on (components/offers/Engagement AfterIdle). */}
+              <AfterIdle>
+                <ExitDownsell workspaceId={store.id} />
+              </AfterIdle>
+              {/* The merchant's wheel, once per visitor after its delay (Offers → Spin to win). */}
+              <SpinWheel workspaceId={store.id} />
               {/* Sales notifications from real orders (Offers → Sales notifications). */}
               <SocialProofPopup workspaceId={store.id} />
               {floatingWhatsapp && <FloatingWhatsapp phone={floatingWhatsapp.phone} message={floatingWhatsapp.message} />}

@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import { Alert, Button } from "@store-builder/ui";
 import {
   ApiError,
-  ordersImportTracking,
   ordersManifestPdf,
   ordersWaybillsPdf,
   type OrderTrackingImportResult,
@@ -14,6 +13,8 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/Toast";
 import { useOrderErrorMessage } from "../orderErrors";
+// Handoff 260: the courier's sheet as CSV or Excel.
+import { importTrackingSheet } from "./trackingSheetUpload";
 
 const STRINGS = {
   en: {
@@ -27,15 +28,16 @@ const STRINGS = {
     sync: "Sync from file",
     syncTitle: "Update tracking from a file",
     syncDescription:
-      "Upload the CSV your courier sent. Columns: order_number (required), tracking_number, tracking_url, carrier, status.",
+      "Upload the CSV or Excel (.xlsx) file your courier sent. Columns: order_number (required), tracking_number, tracking_url, carrier, status.",
     statuses: "Status can be: shipped, out_for_delivery, delivered, failed, returned.",
-    choose: "Choose a CSV file",
+    choose: "Choose a CSV or Excel file",
     template: "Download a sample file",
     uploading: "Reading the file…",
     resultOk: "{count} rows applied.",
     resultFailed: "{count} rows could not be applied:",
     line: "Line {line}",
     close: "Close",
+    BAD_FILE: "This is not an Excel (.xlsx) file",
     EMPTY_FILE: "The file has no rows under its header.",
     MISSING_COLUMN: "The file needs an order_number column.",
     TOO_MANY_ROWS: "The file has too many rows (2000 at most).",
@@ -54,15 +56,16 @@ const STRINGS = {
     sync: "تحديث من ملف",
     syncTitle: "تحديث التتبع من ملف",
     syncDescription:
-      "ارفع ملف CSV الذي أرسلته شركة الشحن. الأعمدة: order_number (مطلوب)، tracking_number، tracking_url، carrier، status.",
+      "ارفع ملف CSV أو Excel (.xlsx) الذي أرسلته شركة الشحن. الأعمدة: order_number (مطلوب)، tracking_number، tracking_url، carrier، status.",
     statuses: "الحالة يمكن أن تكون: shipped، out_for_delivery، delivered، failed، returned.",
-    choose: "اختار ملف CSV",
+    choose: "اختار ملف CSV أو Excel",
     template: "تحميل ملف نموذجي",
     uploading: "بنقرا الملف…",
     resultOk: "تم تطبيق {count} صف.",
     resultFailed: "تعذّر تطبيق {count} صف:",
     line: "السطر {line}",
     close: "إغلاق",
+    BAD_FILE: "الملف ده مش إكسيل (.xlsx)",
     EMPTY_FILE: "الملف لا يحتوي على صفوف تحت العناوين.",
     MISSING_COLUMN: "الملف يحتاج عمود order_number.",
     TOO_MANY_ROWS: "عدد الصفوف كبير جدًا (2000 على الأكثر).",
@@ -174,7 +177,7 @@ export function OrderListDocuments({ onImported }: { onImported: () => void }) {
     setError(null);
     setResult(null);
     try {
-      const answer = await ordersImportTracking(apiClient, workspaceId, await file.text());
+      const answer = await importTrackingSheet(workspaceId, file);
       setResult(answer);
       if (answer.succeeded > 0) onImported();
     } catch (err) {
@@ -227,7 +230,7 @@ export function OrderListDocuments({ onImported }: { onImported: () => void }) {
             <input
               ref={fileRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="sr-only"
               id="orders-tracking-file"
               onChange={(e) => {

@@ -1,0 +1,84 @@
+/* The screens the offers hub opens (the sweep): bundles, order bumps, upsells, cross-sell,
+   cart offers, free gifts, the exit popup, order rules, the spin wheel, sales notifications,
+   the newsletter form, referral links, the product feed, price lists and scheduled sales —
+   pages/offers/* (OfferKit.tsx), pages/priceLists/*, pages/priceSchedules/*.
+   Part of the liquid-glass layer (../liquid-glass.css): with data-glass="off" none of it
+   applies and every piece stands on its own solid Tailwind classes. Nothing here is blurred:
+   every piece lies in the page flow or inside a sheet that is already frosted.
+
+   Hooks: .zimos-offer-list / .zimos-offer-row (a list of offers: cards on a phone, one sheet
+   of rows from md), .zimos-offer-row-tile (the tile before a row's words), .zimos-offer-preview
+   ("the shopper sees"), .zimos-offer-checklist (a product checklist), [data-slot="offer-tier"]
+   (a tier, a slice or a channel inside a form), [data-slot="offer-fact"] (a small figure). */
+:root:not([data-glass="off"]) {
+  /* A row of the list. On a phone it is a pane of its own, like every list's card. */
+  .zimos-offer-row {
+    background-color: var(--lg-fill);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), var(--shadow-card);
+  }
+
+  /* From md the list is the pane and the rows lie in it, parted by hairlines; the row under
+     the pointer or the keyboard lights up, as every table's rows do. */
+  @media (min-width: 48rem) {
+    .zimos-offer-list {
+      background-color: var(--lg-fill);
+      box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-edge), var(--shadow-card);
+    }
+    .zimos-offer-row {
+      background-color: transparent;
+      box-shadow: none;
+      border-color: var(--lg-hairline);
+    }
+    .zimos-offer-row:focus-within {
+      background-color: var(--lg-row-lit);
+    }
+  }
+  @media (min-width: 48rem) and (hover: hover) {
+    .zimos-offer-row:hover {
+      background-color: var(--lg-row-lit);
+    }
+  }
+
+  /* The tile before a row's words: the hub's own tile, smaller. */
+  .zimos-offer-row-tile {
+    background-color: transparent;
+    background-image: linear-gradient(140deg, var(--offer-tile-from), var(--offer-tile-to));
+    box-shadow: var(--offer-tile-rim);
+  }
+
+  /* "The shopper sees": paper — a quiet inset pane, parted from the form by its tint. */
+  .zimos-offer-preview {
+    background-color: color-mix(in srgb, var(--color-ink) 4%, transparent);
+    box-shadow: inset 0 0 0 1px var(--lg-hairline);
+  }
+
+  /* Small panes inside a form: the product checklist, a tier / slice / channel block, a figure. */
+  .zimos-offer-checklist,
+  [data-slot="offer-tier"],
+  [data-slot="offer-fact"] {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  [data-slot="offer-tier"][data-invalid] {
+    box-shadow: var(--lg-rim-line), 0 0 0 1.5px var(--color-danger);
+  }
+
+  @media (forced-colors: active) {
+    .zimos-offer-row,
+    .zimos-offer-list,
+    .zimos-offer-row-tile,
+    .zimos-offer-preview,
+    .zimos-offer-checklist,
+    [data-slot="offer-tier"],
+    [data-slot="offer-fact"] {
+      background-image: none;
+      box-shadow: none;
+      border: 1px solid CanvasText;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .zimos-offer-row {
+      transition: none;
+    }
+  }
+}

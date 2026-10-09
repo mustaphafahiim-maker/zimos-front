@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { UsageBlock } from "./UsageBlock";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Alert, Button, Input, Label, cn } from "@store-builder/ui";
 import type { OnlinePaymentResult, OnlinePaymentStatus, WorkspaceBilling } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -13,6 +13,8 @@ import { useLocale, useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { recallReferralCode } from "@/lib/referralCode";
 import { useToast } from "@/components/Toast";
 import { DataState } from "@/components/DataState";
+import { SettingsCard } from "./sections/SettingsCard";
+import { PayBySupportFallback, SubscriptionPanels } from "./billing/SubscriptionPanels";
 
 /**
  * Role keys that hold billing.manage, which GET/POST /workspaces/:id/billing
@@ -20,6 +22,11 @@ import { DataState } from "@/components/DataState";
  * core/security/permissions.js). Other roles don't see the card at all.
  */
 const BILLING_ROLES: ReadonlySet<string> = new Set(["owner", "accountant"]);
+
+/** Whether this role is shown the plan at all: the settings list leaves the section out for anyone else. */
+export function canOpenBilling(role: string | null | undefined): boolean {
+  return BILLING_ROLES.has(role ?? "");
+}
 
 const STRINGS = {
   en: {
@@ -31,10 +38,14 @@ const STRINGS = {
     trialing: "Free trial",
     active: "Active",
     past_due: "Payment due",
+    expired: "Expired",
+    canceled: "Cancelled",
+    paused: "Paused",
+    draft: "Draft",
     suspended: "Suspended",
-    cancelled: "Cancelled",
     trialEnds: "Trial ends {date}",
     renews: "Current period ends {date}",
+    periodEnded: "Current period ended {date}",
     monthly: "Monthly",
     yearly: "Yearly",
     cycle: "Billing cycle",
@@ -44,6 +55,8 @@ const STRINGS = {
     cycleSaved: "Billing cycle updated. It applies from your next payment.",
     cycleOpenCharge: "A payment is already open at your current billing cycle. You can switch once it's settled.",
     nextCharge: "Next charge",
+    amountDue: "Amount due now",
+    renewalAmount: "Renewal amount",
     nextChargeDiscount: "{amount} (plan price {gross}, {discount} off with your code)",
     referralCode: "Referral code",
     referralHint: "Got a code from a Zimos agent? Enter it here. It applies to your plan's payments and can only be set once.",
@@ -72,6 +85,8 @@ const STRINGS = {
     duplicate: "This charge was already paid. The Zimos team will contact you about refunding this payment.",
     notConfirmedYet: "We couldn't confirm the payment yet. If you paid, it will show here shortly.",
     payDisabled: "Online payment isn't available right now.",
+    payOffline: "Online payment isn't available right now. Message support about renewing your plan, and we'll set it up once your payment arrives.",
+    contactSupport: "Contact support",
     payUnavailable: "Online payment isn't available right now. Try again later.",
     payCurrency: "Online payment is only available for plans priced in Egyptian pounds.",
     payStartFailed: "The payment page couldn't be opened. Try again in a few minutes.",
@@ -89,10 +104,14 @@ const STRINGS = {
     trialing: "فترة تجريبية",
     active: "نشطة",
     past_due: "مستحقة الدفع",
+    expired: "منتهية",
+    canceled: "ملغية",
+    paused: "متوقفة مؤقتًا",
+    draft: "مسودة",
     suspended: "موقوفة",
-    cancelled: "ملغاة",
     trialEnds: "تنتهي الفترة التجريبية في {date}",
     renews: "تنتهي الفترة الحالية في {date}",
+    periodEnded: "الفترة الحالية خلصت في {date}",
     monthly: "شهري",
     yearly: "سنوي",
     cycle: "دورة الفوترة",
@@ -102,6 +121,8 @@ const STRINGS = {
     cycleSaved: "تم تحديث دورة الفوترة. تُطبق من دفعتك القادمة.",
     cycleOpenCharge: "هناك دفعة مفتوحة بدورة الفوترة الحالية. يمكنك التبديل بعد تسويتها.",
     nextCharge: "الدفعة القادمة",
+    amountDue: "المبلغ المستحق دلوقتي",
+    renewalAmount: "مبلغ التجديد",
     nextChargeDiscount: "{amount} (سعر الخطة {gross}، وخصم {discount} بكودك)",
     referralCode: "كود الإحالة",
     referralHint: "حصلت على كود من أحد مندوبي Zimos؟ أدخله هنا. يُطبق على مدفوعات خطتك ويمكن إدخاله مرة واحدة فقط.",
@@ -130,6 +151,8 @@ const STRINGS = {
     duplicate: "هذه الدفعة مسددة بالفعل. سيتواصل معك فريق Zimos بشأن استرداد هذا المبلغ.",
     notConfirmedYet: "لم نتمكن من تأكيد الدفعة بعد. إذا أتممت الدفع فستظهر هنا قريبًا.",
     payDisabled: "الدفع الإلكتروني غير متاح حاليًا.",
+    payOffline: "الدفع أونلاين مش متاح دلوقتي. ابعت للدعم بخصوص تجديد باقتك، وهنفعّلها أول ما الدفع يوصل.",
+    contactSupport: "تواصل مع الدعم",
     payUnavailable: "الدفع الإلكتروني غير متاح حاليًا. حاول مرة أخرى لاحقًا.",
     payCurrency: "الدفع الإلكتروني متاح فقط للخطط المسعّرة بالجنيه المصري.",
     payStartFailed: "تعذّر فتح صفحة الدفع. حاول مرة أخرى بعد بضع دقائق.",
@@ -152,6 +175,7 @@ const RETURN_POLL_TRIES = 8;
 type ReturnHint = "success" | "fail" | "pending" | "back" | null;
 const hintOf = (value: string | null): ReturnHint =>
   value === "success" || value === "fail" || value === "pending" || value === "back" ? value : null;
+const isPast = (iso: string) => new Date(iso).getTime() < Date.now();
 
 export function BillingSection() {
   const { currentWorkspace } = useWorkspace();
@@ -160,7 +184,6 @@ export function BillingSection() {
 }
 
 function BillingCard() {
-  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const billing = useAsync(() => apiClient.getWorkspaceBilling(workspaceId), [workspaceId]);
   const [params, setParams] = useSearchParams();
@@ -182,9 +205,7 @@ function BillingCard() {
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
+    <SettingsCard>
       {returned && (
         <PaymentReturn
           key={returned.paymentId}
@@ -194,13 +215,12 @@ function BillingCard() {
           onDone={closeReturn}
         />
       )}
-      <div className="mt-4">
-        <DataState loading={billing.loading && !billing.data} error={billing.error} onRetry={() => void billing.refresh()}>
-          {billing.data && <BillingDetails billing={billing.data} onChange={(next) => billing.setData(next)} />}
-        </DataState>
-      </div>
+      <DataState loading={billing.loading && !billing.data} error={billing.error} onRetry={() => void billing.refresh()}>
+        {billing.data && <BillingDetails billing={billing.data} onChange={(next) => billing.setData(next)} />}
+        {billing.data && <SubscriptionPanels billing={billing.data} onBillingChange={() => void billing.refresh({ silent: true })} />}
+      </DataState>
       <UsageBlock />
-    </section>
+    </SettingsCard>
   );
 }
 
@@ -258,7 +278,7 @@ function PaymentReturn({
 
   const { message, variant } = returnMessage(t, payment, asking, hint);
   return (
-    <Alert variant={variant} className="mt-4" role="status">
+    <Alert variant={variant} className="mb-4" role="status">
       {message}
     </Alert>
   );
@@ -355,6 +375,22 @@ function BillingDetails({ billing, onChange }: { billing: WorkspaceBilling; onCh
   const t = useT(STRINGS);
   const { subscription, referralCode, nextCharge } = billing;
   const plan = subscription.plan;
+  // The figure is a price preview, not an open charge. Only past_due has a
+  // charge actually waiting, so only there is it "due now"; a lapsed plan
+  // (expired, cancelled, paused) is told what renewing costs.
+  const chargeLabel =
+    subscription.status === "past_due"
+      ? t.amountDue
+      : subscription.status === "expired" || subscription.status === "canceled" || subscription.status === "paused"
+        ? t.renewalAmount
+        : t.nextCharge;
+  // A draft store pays from its own subscribe dialog (GoLiveDialog).
+  const payBySupport =
+    !billing.onlinePayment?.enabled &&
+    nextCharge !== null &&
+    subscription.status !== "active" &&
+    subscription.status !== "trialing" &&
+    subscription.status !== "draft";
 
   return (
     <div className="space-y-5">
@@ -368,17 +404,19 @@ function BillingDetails({ billing, onChange }: { billing: WorkspaceBilling; onCh
         <div>
           <dt className="text-xs text-ink-soft">{t.status}</dt>
           <dd className="mt-0.5 text-sm font-medium text-ink">
-            {t[subscription.status as keyof typeof t] ?? subscription.status}
+            {t[subscription.status]}
             <span className="block text-xs font-normal text-ink-soft">
               {subscription.status === "trialing" && subscription.trialEndsAt
                 ? fmt(t.trialEnds, { date: formatDate(subscription.trialEndsAt) })
-                : fmt(t.renews, { date: formatDate(subscription.currentPeriodEnd) })}
+                : fmt(isPast(subscription.currentPeriodEnd) ? t.periodEnded : t.renews, {
+                    date: formatDate(subscription.currentPeriodEnd),
+                  })}
             </span>
           </dd>
         </div>
         {nextCharge && (
           <div className="sm:col-span-2">
-            <dt className="text-xs text-ink-soft">{t.nextCharge}</dt>
+            <dt className="text-xs text-ink-soft">{chargeLabel}</dt>
             <dd className="mt-0.5 text-sm font-medium text-ink">
               {nextCharge.discountAmount > 0
                 ? fmt(t.nextChargeDiscount, {
@@ -394,9 +432,21 @@ function BillingDetails({ billing, onChange }: { billing: WorkspaceBilling; onCh
 
       {billing.onlinePayment?.enabled && nextCharge && <OnlinePaymentPanel billing={billing} />}
 
+      {payBySupport && (
+        <PayBySupportFallback>
+          <div className="space-y-2 rounded-[10px] border border-line bg-paper px-4 py-3">
+            <p className="text-sm text-ink">{t.payOffline}</p>
+            <Button asChild className="min-h-11">
+              <Link to="/support">{t.contactSupport}</Link>
+            </Button>
+          </div>
+        </PayBySupportFallback>
+      )}
+
       {plan && plan.monthlyPrice > 0 && <BillingCycleChoice billing={billing} onChange={onChange} />}
 
-      {referralCode ? <AttachedCode code={referralCode} /> : <ReferralCodeForm onApplied={onChange} />}
+      {/* With no code yet, the plans below take one: «جرّب الكود» shows its prices before it is attached. */}
+      {referralCode && <AttachedCode code={referralCode} />}
     </div>
   );
 }
@@ -483,7 +533,7 @@ function AttachedCode({ code }: { code: NonNullable<WorkspaceBilling["referralCo
   );
 }
 
-function ReferralCodeForm({ onApplied }: { onApplied: (next: WorkspaceBilling) => void }) {
+export function ReferralCodeForm({ onApplied }: { onApplied: (next: WorkspaceBilling) => void }) {
   const t = useT(STRINGS);
   const id = useId();
   const workspaceId = useWorkspaceId();

@@ -9,8 +9,11 @@ import { SearchInput } from "@/components/forms";
 import { Panel, Td, Th } from "@/components/Panel";
 import { CopyId } from "@/components/CopyId";
 import { useAsync } from "@/lib/useAsync";
-import * as adminApi from "@/lib/adminApi";
 import { formatDate } from "@/lib/format";
+import { adminSearchUsersWithDeleted, adminUserModerationOf } from "@store-builder/api-client";
+import { apiClient } from "@/lib/apiClient";
+import { Toggle } from "@/components/Toggle";
+import { UserRowBadge } from "@/components/userModeration";
 
 const PAGE_SIZE = 25;
 
@@ -51,6 +54,14 @@ export function UsersPage() {
   const q = params.get("q") ?? "";
   const page = Math.max(1, Number(params.get("page")) || 1);
   const [draft, setDraft] = useState(q);
+  // Deleted accounts are left out unless asked for (`?deleted=1` → includeDeleted=true).
+  const includeDeleted = params.get("deleted") === "1";
+  const setIncludeDeleted = (on: boolean) => {
+    const next = new URLSearchParams();
+    if (q) next.set("q", q);
+    if (on) next.set("deleted", "1");
+    setParams(next, { replace: true });
+  };
 
   // Typing settles for a moment before it becomes a search (and a URL).
   useEffect(() => {
@@ -58,12 +69,16 @@ export function UsersPage() {
       if (draft.trim() === q) return;
       const next = new URLSearchParams();
       if (draft.trim()) next.set("q", draft.trim());
+      if (includeDeleted) next.set("deleted", "1");
       setParams(next, { replace: true });
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [draft, q, setParams]);
+  }, [draft, q, includeDeleted, setParams]);
 
-  const { data, loading, error, refresh } = useAsync(() => adminApi.searchUsers({ q, page, limit: PAGE_SIZE }), [q, page]);
+  const { data, loading, error, refresh } = useAsync(
+    () => adminSearchUsersWithDeleted(apiClient, { q, page, limit: PAGE_SIZE, includeDeleted }),
+    [q, page, includeDeleted]
+  );
 
   const goTo = (p: number) => {
     const next = new URLSearchParams(params);
@@ -81,6 +96,10 @@ export function UsersPage() {
           placeholder="Name, username, email, ID or store"
           className="sm:w-96"
         />
+        <label className="flex items-center gap-2 text-sm text-ink-soft">
+          <Toggle checked={includeDeleted} onChange={setIncludeDeleted} label="Show deleted accounts" hideLabel />
+          Show deleted accounts
+        </label>
         {data && (
           <span className="text-sm text-ink-soft sm:ms-auto" aria-live="polite">
             {data.total} {data.total === 1 ? "user" : "users"}
@@ -107,7 +126,11 @@ export function UsersPage() {
                   </TableHeader>
                   <TableBody>
                     {data.users.map((u) => (
-                      <TableRow key={u.id} className="cursor-pointer" onClick={() => navigate(`/users/${u.id}`)}>
+                      <TableRow
+                        key={u.id}
+                        className={adminUserModerationOf(u).deleted ? "cursor-pointer opacity-60" : "cursor-pointer"}
+                        onClick={() => navigate(`/users/${u.id}`)}
+                      >
                         <Td>
                           <Link
                             to={`/users/${u.id}`}
@@ -119,6 +142,7 @@ export function UsersPage() {
                           <span dir="ltr" className="text-xs text-ink-soft">
                             {u.username ? `@${u.username}` : "no username yet"}
                           </span>
+                          <UserRowBadge user={u} />
                         </Td>
                         <Td className="break-all text-ink-soft">
                           <bdi dir="ltr">{u.email}</bdi>

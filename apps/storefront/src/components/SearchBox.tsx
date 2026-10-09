@@ -6,6 +6,7 @@ import type { StorefrontSuggestions } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
 import { storeHref } from "@/lib/storeHref";
+import { rememberSearchVisitor } from "@/lib/searchVisitor";
 import { useStoreBasePath } from "./StoreRoute";
 import { CrossIcon, SearchIcon } from "./Icons";
 import { focusRing, iconBtn } from "./ui";
@@ -110,6 +111,8 @@ function SearchCombobox({ autoFocus = false, onDone }: { autoFocus?: boolean; on
     setOpen(false);
     setActive(-1);
     onDone?.();
+    // The results page is rendered on the server: this lets it count who searched (lib/searchVisitor).
+    rememberSearchVisitor(workspaceId);
     router.push(storeHref(basePath, href));
   }
 
@@ -216,7 +219,8 @@ function SearchCombobox({ autoFocus = false, onDone }: { autoFocus?: boolean; on
           onKeyDown={onKeyDown}
           className="min-w-0 flex-1 bg-transparent py-2 text-base text-ink outline-none placeholder:text-ink-soft [&::-webkit-search-cancel-button]:hidden"
         />
-        <button type="submit" className={`${iconBtn} size-9 border-0`} aria-label={t.catalog.searchSubmit}>
+        {/* The recipe's own 44px square, borderless inside the field: a thumb gets the whole of it. */}
+        <button type="submit" className={`${iconBtn} border-0`} aria-label={t.catalog.searchSubmit}>
           <SearchIcon size={16} aria-hidden />
         </button>
       </div>

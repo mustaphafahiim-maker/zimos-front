@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail } from "lucide-react";
+import { IconEmail } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import type { Website } from "@store-builder/api-client";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
@@ -33,7 +33,7 @@ export function WebsiteEmailsButton({ site }: { site: Pick<Website, "id" | "name
   return (
     <>
       <Button size="sm" variant="ghost" className="min-h-11 sm:min-h-8" aria-label={fmt(t.emailsFor, { name: site.name })} onClick={() => setOpen(true)}>
-        <Mail className="size-4" aria-hidden />
+        <IconEmail className="size-4" aria-hidden />
         {t.emails}
       </Button>
       {open && (

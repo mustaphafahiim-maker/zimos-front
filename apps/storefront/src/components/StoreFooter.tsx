@@ -10,6 +10,7 @@ import { resolveShellLinks, type ResolvedShellLink } from "@/lib/storeShell";
 import { PoweredByZimos, brandingRemoved } from "./PoweredByZimos";
 import { cardTitle, storeCards } from "@/lib/storePromises";
 import { pageAndPolicyGroups } from "@/lib/footerLinks";
+import { withBranchesLink } from "@/lib/storeBranches";
 import { RichFooter } from "./shell/RichFooter";
 import { ShellLink } from "./ShellLink";
 import { CookieSettingsButton } from "./CookieConsent";
@@ -62,7 +63,8 @@ export function StoreFooter({ store, locale, year }: { store: StorefrontMeta; lo
     : [];
   // Settings → store settings: the pages flagged "show in footer" and the
   // legal policies the store has written, each as its own column (lib/footerLinks).
-  groups.push(...pageAndPolicyGroups(store, t));
+  // …and «فروعنا» among the pages when the store shows its branches (lib/storeBranches, handoff 233).
+  groups.push(...withBranchesLink(pageAndPolicyGroups(store, t), store, t, locale));
   const about = footer.text ?? store.tagline;
   const blocks = (footer.showBrand ? 1 : 0) + groups.length + (footer.showHelp ? 1 : 0);
 

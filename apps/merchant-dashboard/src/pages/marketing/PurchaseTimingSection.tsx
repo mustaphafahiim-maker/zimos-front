@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Timer } from "lucide-react";
-import { Alert, Card } from "@store-builder/ui";
+import { IconTimer } from "@/components/icons";
+import { Alert, cn } from "@store-builder/ui";
 import {
   trackingPixelsGetSettings,
   trackingPixelsUpdateSettings,
@@ -11,6 +11,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { AccordionSection } from "@/components/Accordion";
 import { DataState } from "@/components/DataState";
 import { useToast } from "@/components/Toast";
 import { ConversionEventChoice } from "./ConversionEventChoice";
@@ -30,21 +31,25 @@ const STRINGS = {
     saved: "Purchase timing saved.",
   },
   ar: {
-    title: "متى يُسجَّل الشراء",
-    description: "اختار اللحظة التي يُحسب فيها الطلب كـ Purchase عند منصات الإعلانات، لتتعلم من الطلبات الحقيقية.",
-    on_order: "عند إنشاء الطلب",
-    on_order_hint: "الإعداد المعتاد. يُرسل من المتصفح ومن السيرفر في نفس الوقت.",
-    on_confirmed: "عند تأكيد الطلب",
-    on_confirmed_hint: "الطلبات المرفوضة والوهمية لا تُرسل أبدًا. يُرسل من السيرفر فقط.",
-    on_delivered: "عند تسليم الطلب",
-    on_delivered_hint: "يُرسل فقط ما تم تحصيله فعلًا. من السيرفر فقط، وبعد النقرة بأيام.",
+    title: "إمتى الشرا يتسجّل",
+    description: "اختار اللحظة اللي الأوردر يتحسب فيها Purchase عند منصات الإعلانات، عشان تتعلم من الأوردرات الحقيقية.",
+    on_order: "أول ما الأوردر يتعمل",
+    on_order_hint: "الإعداد المعتاد. بيتبعت من المتصفح ومن السيرفر في نفس الوقت.",
+    on_confirmed: "لما الأوردر يتأكد",
+    on_confirmed_hint: "الأوردرات المرفوضة والوهمية مش بتتبعت خالص. من السيرفر بس.",
+    on_delivered: "لما الأوردر يتسلّم",
+    on_delivered_hint: "بيتبعت بس اللي اتحصّل فعلاً. من السيرفر بس، وبعد الضغطة بأيام.",
     serverOnly:
-      "بهذا الاختيار يصل الشراء للمنصة فقط عبر بيكسل مفعّل عليه الـ Conversions API. البيكسلات بدونه لن تُظهر أي مشتريات.",
-    saved: "تم حفظ توقيت تسجيل الشراء.",
+      "بالاختيار ده الشرا بيوصل للمنصة بس عن طريق بيكسل مشغّل عليه الـ Conversions API. البيكسلات اللي من غيره مش هتظهر فيها مشتريات.",
+    saved: "توقيت تسجيل الشرا اتحفظ.",
   },
 } satisfies Messages;
 
-/** Marketing → Tracking tools: SPEC §13.3, the moment Purchase is sent. */
+/**
+ * Marketing → Tracking tools: SPEC §13.3, the moment Purchase is sent. A
+ * folded section whose closed row says the current choice; a choice saves at
+ * once and the toast can take it back.
+ */
 export function PurchaseTimingSection() {
   const t = useT(STRINGS);
   const toast = useToast();
@@ -53,14 +58,16 @@ export function PurchaseTimingSection() {
   const [saving, setSaving] = useState(false);
   const { data, error, loading, refresh, setData } = useAsync(() => trackingPixelsGetSettings(apiClient, workspaceId), [workspaceId]);
 
-  async function choose(timing: TrackingPurchaseEventTiming) {
+  async function choose(timing: TrackingPurchaseEventTiming, undoable = true): Promise<void> {
     if (!data || timing === data.purchaseEventTiming) return;
     const previous = data;
     setData({ ...data, purchaseEventTiming: timing });
     setSaving(true);
     try {
-      setData(await trackingPixelsUpdateSettings(apiClient, workspaceId, { purchaseEventTiming: timing }));
-      toast.success(t.saved);
+      const saved = await trackingPixelsUpdateSettings(apiClient, workspaceId, { purchaseEventTiming: timing });
+      setData(saved);
+      if (undoable) toast.undo(t.saved, () => restore(previous.purchaseEventTiming));
+      else toast.success(t.saved);
     } catch (err) {
       setData(previous);
       toast.error(errorMessage(err));
@@ -69,13 +76,23 @@ export function PurchaseTimingSection() {
     }
   }
 
+  /** Undo: the same request with the choice it had before. */
+  async function restore(timing: TrackingPurchaseEventTiming): Promise<void> {
+    try {
+      setData(await trackingPixelsUpdateSettings(apiClient, workspaceId, { purchaseEventTiming: timing }));
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  }
+
   return (
-    <Card className="mb-6 gap-0 p-4">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <Timer className="size-4 text-primary" aria-hidden />
-        {t.title}
-      </h2>
-      <p className="mt-0.5 text-xs text-ink-soft">{t.description}</p>
+    <AccordionSection
+      title={t.title}
+      summary={data ? t[data.purchaseEventTiming] : t.description}
+      icon={IconTimer}
+      persistKey="marketing:timing"
+    >
+      <p className="text-[13px] leading-5 text-ink-soft">{t.description}</p>
       <div className="mt-3">
         <DataState loading={loading} error={error} onRetry={() => void refresh()}>
           {data && (
@@ -85,21 +102,22 @@ export function PurchaseTimingSection() {
                 return (
                   <label
                     key={option}
-                    className={`flex cursor-pointer items-start gap-3 rounded-[0.5rem] border p-3 ${
-                      checked ? "border-primary bg-primary-soft/40" : "border-line hover:border-line-strong"
-                    }`}
+                    className={cn(
+                      "zimos-pick-tile flex min-h-14 cursor-pointer items-start gap-3 rounded-[0.875rem] px-3.5 py-3 transition-[background-color,box-shadow] duration-[var(--dur-fade)] ease-[var(--ease-out)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary motion-reduce:transition-none",
+                      checked ? "bg-primary-soft ring-2 ring-primary" : "bg-paper-raised ring-1 ring-line hover:bg-paper-sunken"
+                    )}
                   >
                     <input
                       type="radio"
                       name="purchase-event-timing"
-                      className="mt-0.5 size-4 cursor-pointer accent-primary"
+                      className="mt-0.5 size-[18px] shrink-0 cursor-pointer accent-primary"
                       checked={checked}
                       disabled={saving}
                       onChange={() => void choose(option)}
                     />
-                    <span>
-                      <span className="block text-sm font-medium text-ink">{t[option]}</span>
-                      <span className="block text-xs text-ink-soft">{t[`${option}_hint`]}</span>
+                    <span className="min-w-0">
+                      <span className="block text-sm leading-5 font-medium text-ink">{t[option]}</span>
+                      <span className="mt-0.5 block text-[13px] leading-5 text-ink-soft">{t[`${option}_hint`]}</span>
                     </span>
                   </label>
                 );
@@ -110,6 +128,6 @@ export function PurchaseTimingSection() {
         </DataState>
         {data && <ConversionEventChoice settings={data} disabled={saving} onSaved={setData} />}
       </div>
-    </Card>
+    </AccordionSection>
   );
 }

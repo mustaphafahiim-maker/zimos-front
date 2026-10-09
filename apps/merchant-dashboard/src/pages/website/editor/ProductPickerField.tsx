@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Search } from "lucide-react";
+import { IconExternal, IconSearch } from "@/components/icons";
 import { Input } from "@store-builder/ui";
 import type { ProductListParams } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -112,16 +112,16 @@ export function ProductPickerField({
       {({ id }) => (
         <div className="space-y-2">
           <div className="relative">
-            <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
+            <IconSearch className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={kind === "product" ? t.search : t.searchCollections}
               aria-label={kind === "product" ? t.search : t.searchCollections}
-              className="h-9 ps-8"
+              className="ps-8"
             />
           </div>
-          <Select id={id} value={value} onChange={(e) => onChange(e.target.value)} className="h-10">
+          <Select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
             <option value="">{t.none}</option>
             {options.map((o) => (
               <option key={o.value} value={o.value}>
@@ -137,9 +137,9 @@ export function ProductPickerField({
               href={editHref}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              className="inline-flex min-h-8 items-center gap-1 rounded-[0.5rem] text-xs font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary pointer-coarse:min-h-11"
             >
-              <ExternalLink className="size-3.5" aria-hidden />
+              <IconExternal className="size-3.5" aria-hidden />
               {kind === "product" ? t.editProduct : t.editCollections}
             </a>
           )}

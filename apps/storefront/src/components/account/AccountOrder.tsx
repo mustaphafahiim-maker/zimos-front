@@ -20,6 +20,9 @@ import { Notice, useAccount } from "./AccountShell";
 import { StageBadge } from "./AccountOrders";
 import { RepeatIcon } from "./accountIcons";
 import { ShopperReturns } from "@/components/returns/ShopperReturns";
+import { OrderSelfService } from "@/components/OrderSelfService";
+// «دفع آجل» as the way an on-account order is paid (handoff 229).
+import { onAccountPaidBy } from "@/components/business/businessCopy";
 
 type Reorder =
   | { status: "idle" }
@@ -161,7 +164,7 @@ export function AccountOrder() {
             ? payText.valu
             : order.paymentMethod === "kiosk"
               ? payText.kiosk
-              : null;
+              : onAccountPaidBy(order.paymentMethod, locale);
   const address = order.shippingAddress;
   const date = new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium", timeStyle: "short" });
 
@@ -172,7 +175,7 @@ export function AccountOrder() {
         <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">
           {a.order}{" "}
           <bdi dir="ltr" className="tabular-nums">
-            #{order.orderNumber}
+            {order.orderNumber}
           </bdi>
         </h2>
         <StageBadge stage={order.stage} />
@@ -248,6 +251,16 @@ export function AccountOrder() {
                 </div>
               )}
             </div>
+            {/* «إلغاء الطلب» and «تغيير العنوان», while the store allows them (handoff 220); then the order is read again. */}
+            {api.token && orderId && (
+              <OrderSelfService
+                orderId={orderId}
+                shopperToken={api.token}
+                workspaceId={workspaceId}
+                address={order.shippingAddress}
+                onChanged={() => setNonce((n) => n + 1)}
+              />
+            )}
             {/* «ارجع منتجات» for this order, as on the tracking page (handoff 186). */}
             {api.token && orderId && <ShopperReturns orderId={orderId} shopperToken={api.token} workspaceId={workspaceId} />}
           </section>

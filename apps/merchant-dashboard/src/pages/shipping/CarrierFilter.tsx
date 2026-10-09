@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { IconSearch } from "@/components/icons";
 import { Input } from "@store-builder/ui";
 import type { CarrierInfo } from "@store-builder/api-client";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
@@ -51,7 +51,7 @@ export function useCarrierFilter(carriers: CarrierInfo[]) {
     carriers.length > 1 ? (
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-48 flex-1">
-          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
+          <IconSearch className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
           <Input type="search" aria-label={t.search} placeholder={t.search} value={query} onChange={(e) => setQuery(e.target.value)} className="min-h-11 ps-9" />
         </div>
         {countries.length > 1 && (

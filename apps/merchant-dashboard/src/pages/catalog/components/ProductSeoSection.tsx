@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Alert, Button, Card, CardContent } from "@store-builder/ui";
+import { useState } from "react";
+import { Alert } from "@store-builder/ui";
 import type { Product } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -10,10 +10,13 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Field, TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
+import { SectionSaveBar } from "../product/saveQueue";
+import { ProductPageCard } from "./ProductPageCard";
 
 const STRINGS = {
   en: {
     title: "Search engines and sharing",
+    barName: "search engines",
     description: "How this product appears on Google and when its link is shared. Empty fields use the product's name, description and first image.",
     seoTitle: "Page title",
     seoDescription: "Description",
@@ -29,6 +32,7 @@ const STRINGS = {
   },
   ar: {
     title: "محركات البحث والمشاركة",
+    barName: "محركات البحث",
     description: "إزاي المنتج يظهر في جوجل ولما حد يشارك اللينك. الحقول الفاضية بتستخدم اسم المنتج ووصفه وأول صورة.",
     seoTitle: "عنوان الصفحة",
     seoDescription: "الوصف",
@@ -57,12 +61,14 @@ export function ProductSeoSection({ product, onChanged }: { product: Product; on
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const stored = (product.seo ?? {}) as Record<string, unknown>;
-  const [seo, setSeo] = useState<Seo>({
+  // What is saved, as this form reads it: the bar shows only once something differs from it.
+  const [baseline, setBaseline] = useState<Seo>(() => ({
     title: str(stored.title),
     description: str(stored.description),
     imageUrl: str(stored.imageUrl),
     noindex: stored.noindex === true,
-  });
+  }));
+  const [seo, setSeo] = useState<Seo>(baseline);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,8 +77,11 @@ export function ProductSeoSection({ product, onChanged }: { product: Product; on
   const shownDescription = seo.description.trim() || (product.description ?? "").replace(/\s+/g, " ").slice(0, DESCRIPTION_MAX);
   const url = `${currentWorkspace?.slug ? storeHost(currentWorkspace.slug) : ""}/products/${product.slug}`;
 
-  async function save(e: FormEvent) {
-    e.preventDefault();
+  const sent = (value: Seo): Seo => ({ title: value.title.trim(), description: value.description.trim(), imageUrl: value.imageUrl.trim(), noindex: value.noindex });
+  const dirty = JSON.stringify(sent(seo)) !== JSON.stringify(sent(baseline));
+
+  async function save() {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -80,6 +89,7 @@ export function ProductSeoSection({ product, onChanged }: { product: Product; on
         // Keys this form doesn't edit stay as they were.
         seo: { ...stored, title: seo.title.trim(), description: seo.description.trim(), imageUrl: seo.imageUrl.trim(), noindex: seo.noindex },
       });
+      setBaseline(seo);
       toast.success(t.saved);
       onChanged();
     } catch (err) {
@@ -90,13 +100,9 @@ export function ProductSeoSection({ product, onChanged }: { product: Product; on
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-4 p-5">
-        <div>
-          <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-          <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-        </div>
-        <div className="rounded-lg border border-line bg-paper p-3" aria-label={t.preview}>
+    <ProductPageCard title={t.title} description={t.description}>
+      <div className="space-y-4">
+        <div className="zimos-product-serp rounded-[var(--radius)] bg-paper p-3 ring-1 ring-line" role="group" aria-label={t.preview}>
           <p className="text-xs text-ink-soft">{t.preview}</p>
           <p dir="ltr" className="mt-1 truncate text-xs text-success">
             {url}
@@ -108,7 +114,13 @@ export function ProductSeoSection({ product, onChanged }: { product: Product; on
             {shownDescription}
           </p>
         </div>
-        <form onSubmit={save} className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (dirty) void save();
+          }}
+        >
           <TextField
             label={t.seoTitle}
             placeholder={product.name}
@@ -121,21 +133,27 @@ export function ProductSeoSection({ product, onChanged }: { product: Product; on
             {({ id }) => <Textarea id={id} rows={3} maxLength={320} value={seo.description} onChange={(e) => set({ description: e.target.value })} />}
           </Field>
           <TextField label={t.image} hint={t.imageHint} dir="ltr" type="url" value={seo.imageUrl} onChange={(e) => set({ imageUrl: e.target.value })} />
-          <label className="flex min-h-11 items-start gap-2 text-sm text-ink">
-            <input type="checkbox" className="mt-1" checked={seo.noindex} onChange={(e) => set({ noindex: e.target.checked })} />
+          <label className="flex min-h-11 cursor-pointer items-start gap-3 text-sm text-ink">
+            <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-primary" checked={seo.noindex} onChange={(e) => set({ noindex: e.target.checked })} />
             <span>
               <span className="font-medium">{t.noindex}</span>
               <span className="block text-xs text-ink-soft">{t.noindexHint}</span>
             </span>
           </label>
           {error && <Alert variant="danger">{error}</Alert>}
-          <div className="text-end">
-            <Button type="submit" className="min-h-11" disabled={busy}>
-              {busy ? t.saving : t.save}
-            </Button>
-          </div>
         </form>
-      </CardContent>
-    </Card>
+        <SectionSaveBar
+          section={t.barName}
+          dirty={dirty}
+          saving={busy}
+          error={error}
+          onSave={() => void save()}
+          onDiscard={() => {
+            setSeo(baseline);
+            setError(null);
+          }}
+        />
+      </div>
+    </ProductPageCard>
   );
 }

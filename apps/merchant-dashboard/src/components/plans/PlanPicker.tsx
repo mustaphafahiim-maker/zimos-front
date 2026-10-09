@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { Check } from "lucide-react";
+import { IconCheck } from "@/components/icons";
 import { cn } from "@store-builder/ui";
 import type { BillingCycle, PlanFeatureKey, PublicPlan } from "@store-builder/api-client";
 import { useLocale, useT, fmt } from "@/i18n/LocaleContext";
@@ -60,7 +60,7 @@ export function PlanSummary({ plan, billingCycle, compact = false }: { plan: Pla
         <ul className="mt-3 space-y-1.5 border-t border-line pt-3">
           {plan.features.map((key) => (
             <li key={key} className="flex items-start gap-2 text-sm text-ink">
-              <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+              <IconCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
               {featureLabel(key, t)}
             </li>
           ))}

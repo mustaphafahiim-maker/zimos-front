@@ -1,131 +1,220 @@
-import { ArrowDown, MapPin } from "lucide-react";
+import type { ReactNode } from "react";
 import { cn } from "@store-builder/ui";
-import type { Order, OrderStage } from "@store-builder/api-client";
+import type { Order, OrderSessionDetails } from "@store-builder/api-client";
+import { IconCash, IconPlace, IconUser, type IconComponent } from "@/components/icons";
 import { ContactActions } from "@/components/ContactActions";
-import { formatAddress, formatMoney } from "@/lib/format";
+import { StatusBadge } from "@/components/StatusBadge";
+import { formatAddress, formatMoney, parseMoney, placeName } from "@/lib/format";
+import { providerName } from "@/lib/providers";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { codAmountFor } from "@/pages/shipping/carriers";
 import { useOrderLabels } from "../orderLabels";
+import { NextStepButton } from "../detail/OrderNextStep";
+import { OrderStateChips } from "../detail/OrderStateChips";
+import { Ltr, fmtRich } from "../detail/rich";
+import type { NextStepTone, OrderNextStep } from "../detail/useOrderNextStep";
+import { CustomerHistoryBadge } from "./OrderSessionDetails";
+import { WhatsappConfirmButton } from "./WhatsappConfirmButton";
+import { OrderLanguageTag } from "./OrderLanguage";
 
 const STRINGS = {
   en: {
+    hero: "The order at a glance",
+    who: "Customer",
+    howMuch: "Amount",
+    where: "Address",
+    noName: "No name",
+    payment: "Payment",
+    payOnDelivery: "Paid on delivery",
+    toCollect: "{amount} to collect on delivery",
+    paid: "{amount} paid",
+    refunded: "{amount} refunded",
     next: "Next step",
-    go: "Go to it",
-    awaiting_payment: "Waiting for the customer to pay online.",
-    pending_confirmation: "Confirm the order with the customer before shipping it.",
-    needs_follow_up: "The customer didn't answer or asked to wait. Call again.",
-    ready_to_ship: "Confirmed. Book the courier and print the waybill.",
-    shipped: "With the courier. Nothing to do until it is delivered.",
-    out_for_delivery: "Out for delivery today.",
-    delivery_failed: "Delivery failed. Call the customer and agree on a new time.",
-    delivered: "Delivered. The cash arrives with the courier's settlement.",
-    returned: "Came back as a return.",
-    cancelled: "Cancelled.",
+    listSep: ", ",
   },
   ar: {
+    hero: "الأوردر في نظرة",
+    who: "العميل",
+    howMuch: "المبلغ",
+    where: "العنوان",
+    noName: "من غير اسم",
+    payment: "الدفع",
+    payOnDelivery: "هيتدفع عند الاستلام",
+    toCollect: "هيتحصّل {amount} عند الاستلام",
+    paid: "اتدفع {amount}",
+    refunded: "اترجّع {amount}",
     next: "الخطوة الجاية",
-    go: "روح لها",
-    awaiting_payment: "مستني العميل يدفع أونلاين.",
-    pending_confirmation: "أكّد الأوردر مع العميل قبل ما تشحنه.",
-    needs_follow_up: "العميل مردّش أو طلب يأجّل. كلّمه تاني.",
-    ready_to_ship: "متأكد. احجز المندوب واطبع البوليصة.",
-    shipped: "مع المندوب. مفيش حاجة تعملها لحد ما يتسلّم.",
-    out_for_delivery: "خرج للتوصيل النهارده.",
-    delivery_failed: "التوصيل فشل. كلّم العميل واتفقوا على ميعاد تاني.",
-    delivered: "اتسلّم. الفلوس هتيجي مع تحصيل شركة الشحن.",
-    returned: "رجع مرتجع.",
-    cancelled: "اتلغى.",
+    listSep: "، ",
   },
 } satisfies Messages;
 
-/** The section a stage's next step happens in (ids set on OrderDetailPage). */
-const STAGE_TARGET: Partial<Record<OrderStage, string>> = {
-  pending_confirmation: "order-confirmation",
-  needs_follow_up: "order-confirmation",
-  ready_to_ship: "order-shipments",
-  delivery_failed: "order-shipments",
-  awaiting_payment: "order-payments",
+// The strip that says what happens next takes the colour of how urgent it is. Soft token
+// fills on their own; under the glass layer they let a little of the pane through.
+const STEP_TONE: Record<NextStepTone, string> = {
+  attention: "bg-accent-soft",
+  primary: "bg-primary-soft",
+  danger: "bg-danger-soft",
+  success: "bg-success-soft",
+  neutral: "bg-paper-sunken",
 };
 
-const STAGE_ACCENT: Partial<Record<OrderStage, string>> = {
-  pending_confirmation: "bg-accent-soft text-accent-dark",
-  needs_follow_up: "bg-accent-soft text-accent-dark",
-  ready_to_ship: "bg-primary-soft text-primary-dark",
-  delivery_failed: "bg-danger-soft text-danger",
-  awaiting_payment: "bg-accent-soft text-accent-dark",
-  delivered: "bg-success-soft text-success",
-};
+/** One of the hero's three facts: a quiet caption with its glyph, then the fact itself. */
+function Fact({ icon: Icon, caption, first, children }: { icon: IconComponent; caption: string; first?: boolean; children: ReactNode }) {
+  return (
+    <div
+      data-slot="order-fact"
+      // Stacked rows with a hairline between them on a phone; columns with a hairline between them from lg up.
+      className={cn("min-w-0 p-4 sm:p-5", !first && "border-t border-line lg:border-t-0 lg:border-s")}
+    >
+      <p className="zimos-order-caption mb-1.5 flex items-center gap-1.5 text-xs font-medium text-ink-soft">
+        <Icon className="size-3.5 shrink-0" aria-hidden />
+        {caption}
+      </p>
+      {children}
+    </div>
+  );
+}
 
 /**
- * The top of the order page (docs/ux/07-plan.md S5): who ordered, how to
- * reach them in one tap, what they owe, and the one thing to do next. The
- * detailed cards below are unchanged.
+ * The top of the order page, and on a phone its whole first screen: one pane
+ * that says who ordered and how to reach them in one tap, how much it is and
+ * what is still to collect, where it goes — and what happens next, as one
+ * button (docs/ux/REDESIGN_PROMPT.md §6).
+ *
+ * These facts are said here and nowhere else on the page: the customer block
+ * further down keeps only what the hero leaves out. The name and the total
+ * carry `data-vt-part`, so a row opened from the orders list travels into
+ * place (lib/viewTransition.ts; the stage chip in the header is the third
+ * part, and the page wraps all three in `data-vt-target`).
+ *
+ * The next step is decided in `detail/useOrderNextStep.ts`. From md up its
+ * button stands in this pane; on a phone the page shows the same button in
+ * the bar above the dock instead, where the thumb is, and the pane keeps the
+ * sentence. Structure only here — the pane's glass is glass/order-page.css.
  */
-export function OrderHero({ order }: { order: Order }) {
+export function OrderHero({
+  order,
+  session,
+  nextStep,
+  onChanged,
+  onReveal,
+}: {
+  order: Order;
+  session: OrderSessionDetails | null | undefined;
+  nextStep: OrderNextStep | null;
+  onChanged: () => void;
+  /** Opens a folded section further down (the customer block, the gift) and scrolls to it. */
+  onReveal: (section: "customer" | "gift") => void;
+}) {
   const t = useT(STRINGS);
   const labels = useOrderLabels();
   const contact = order.contactSnapshot;
-  const stage = order.stage;
-  const target = stage ? STAGE_TARGET[stage] : undefined;
-  const address = order.shippingAddressSnapshot ? formatAddress(order.shippingAddressSnapshot) : null;
+  const address = order.shippingAddressSnapshot;
+
+  const paid = parseMoney(order.amountPaid);
+  const refunded = parseMoney(order.amountRefunded);
+  const toCollect = codAmountFor(order);
+  const money = (amount: number | string) => <Ltr>{formatMoney(amount, order.currency)}</Ltr>;
+
+  // Where: the governorate and the city on one line (said once when they are the same), the street under them.
+  const area = [placeName(address?.province), placeName(address?.city)].filter((part, i, all) => part && all.indexOf(part) === i);
+  const street = [address?.addressLine, address?.postalCode, address?.country && address.country !== "EG" ? address.country : null].filter(
+    (part): part is string => Boolean(part)
+  );
 
   return (
-    <section className="grid gap-[var(--bento-gap)] lg:grid-cols-3">
-      <div className="rounded-[var(--radius-card)] bg-paper-raised p-4 shadow-[var(--shadow-card)] ring-1 ring-line sm:p-5 lg:col-span-2">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-xl font-semibold text-ink">
-              <bdi>{contact?.fullName || "—"}</bdi>
+    <section
+      data-slot="order-hero"
+      aria-label={t.hero}
+      className="zimos-order-hero min-w-0 rounded-[1.75rem] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line"
+    >
+      <div className="grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.9fr)_minmax(0,1.25fr)]">
+        <Fact icon={IconUser} caption={t.who} first>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <p data-vt-part="title" className="inline-block max-w-full truncate text-[22px] leading-8 font-semibold text-ink">
+              <bdi>{contact?.fullName?.trim() || t.noName}</bdi>
             </p>
-            {contact?.phone && (
-              <p className="mt-0.5 text-sm text-ink-soft">
-                <bdi dir="ltr">{contact.phone}</bdi>
+            <CustomerHistoryBadge details={session} />
+            {/* The language the shopper used, when it is not the store's own (handoff 383). */}
+            <OrderLanguageTag locale={(order as { locale?: string | null }).locale} />
+          </div>
+          {contact?.phone && (
+            <p className="mt-0.5 text-base text-ink-soft">
+              <Ltr>{contact.phone}</Ltr>
+            </p>
+          )}
+          {/* Call and WhatsApp share the row edge to edge on a phone (each already 44px tall), and sit at their own width from sm up. */}
+          <ContactActions phone={contact?.phone} name={contact?.fullName} size="md" className="mt-3 [&>a]:flex-1 sm:[&>a]:flex-none" />
+        </Fact>
+
+        <Fact icon={IconCash} caption={t.howMuch}>
+          <p data-vt-part="amount" className="inline-block text-[28px] leading-9 font-semibold text-ink tabular-nums">
+            <bdi dir="ltr">{formatMoney(order.totalAmount, order.currency)}</bdi>
+          </p>
+          <p className="mt-0.5 text-sm text-ink-soft">
+            {labels.paymentMethod(order.paymentMethod)}
+            {order.paymentProvider && ` · ${providerName(order.paymentProvider)}`}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+            {/* Unpaid is the normal state of a cash-on-delivery order, not a warning (re-audit N-15). */}
+            {order.paymentMethod === "cod" && order.financialState === "pending" ? (
+              <StatusBadge label={t.payment} value="cod_pending" tone="neutral" text={t.payOnDelivery} />
+            ) : (
+              <StatusBadge label={t.payment} value={order.financialState} text={labels.financial(order.financialState)} />
+            )}
+          </div>
+          {(paid > 0 || toCollect > 0 || refunded > 0) && (
+            <ul className="mt-2 space-y-0.5 text-sm text-ink-soft">
+              {paid > 0 && <li>{fmtRich(t.paid, { amount: money(paid) })}</li>}
+              {toCollect > 0 && <li className="font-medium text-ink">{fmtRich(t.toCollect, { amount: money(toCollect) })}</li>}
+              {refunded > 0 && <li>{fmtRich(t.refunded, { amount: money(refunded) })}</li>}
+            </ul>
+          )}
+        </Fact>
+
+        <Fact icon={IconPlace} caption={t.where}>
+          {address ? (
+            <>
+              {area.length > 0 && <p className="text-[17px] leading-7 font-semibold text-ink">{area.join(" · ")}</p>}
+              {street.length > 0 && (
+                <p className="mt-0.5 text-sm leading-6 text-ink-soft">
+                  <bdi>{street.join(t.listSep)}</bdi>
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-ink-soft">{formatAddress(null)}</p>
+          )}
+        </Fact>
+      </div>
+
+      <OrderStateChips order={order} onReveal={onReveal} className="border-t border-line px-4 py-3 sm:px-5" />
+
+      {nextStep && (
+        <div
+          data-slot="order-step"
+          data-tone={nextStep.tone}
+          className={cn(
+            "zimos-order-step flex flex-col gap-3 rounded-b-[1.75rem] border-t border-line p-4 sm:p-5 md:flex-row md:items-center md:justify-between",
+            STEP_TONE[nextStep.tone]
+          )}
+        >
+          <div className="min-w-0">
+            <p className="zimos-order-caption text-xs font-medium text-ink-soft">{t.next}</p>
+            <p className="mt-0.5 text-[15px] leading-6 font-semibold text-ink">{nextStep.sentence}</p>
+            {nextStep.note && (
+              <p role="status" className="mt-0.5 text-sm leading-6 text-ink-soft">
+                {nextStep.note}
               </p>
             )}
           </div>
-          <div className="text-end">
-            <p className="text-2xl font-semibold text-ink tabular-nums">
-              <bdi dir="ltr">{formatMoney(order.totalAmount, order.currency)}</bdi>
-            </p>
-            <p className="text-xs text-ink-soft">{labels.paymentMethod(order.paymentMethod)}</p>
+          {/* With nothing in it — or, on a phone, only the button that lives in the bar — the row takes no room. */}
+          <div className="flex shrink-0 flex-wrap items-center gap-2 empty:hidden max-md:has-[>.zimos-order-next:only-child]:hidden">
+            {/* The quiet second way: the store's WhatsApp confirmation. It shows itself only while the order can still be confirmed. */}
+            <WhatsappConfirmButton order={order} onChanged={onChanged} />
+            {/* On a phone the same button is the bar above the dock (the page draws it there). */}
+            {nextStep.action && <NextStepButton action={nextStep.action} className="max-md:hidden" />}
           </div>
-        </div>
-        {address && (
-          <p className="mt-3 flex items-start gap-1.5 text-sm text-ink-soft">
-            <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-            <bdi>{address}</bdi>
-          </p>
-        )}
-        <ContactActions phone={contact?.phone} name={contact?.fullName} size="md" className="mt-4" />
-      </div>
-
-      {stage && (
-        <div
-          className={cn(
-            "flex flex-col justify-between rounded-[var(--radius-card)] p-4 sm:p-5",
-            STAGE_ACCENT[stage] ?? "bg-paper-sunken text-ink"
-          )}
-        >
-          <div>
-            <p className="text-[13px] font-medium opacity-90">
-              {t.next} · {labels.stage(stage)}
-            </p>
-            <p className="mt-1 text-[15px] leading-6 font-semibold">{t[stage]}</p>
-          </div>
-          {target && (
-            <a
-              href={`#${target}`}
-              onClick={(e) => {
-                const el = document.getElementById(target);
-                if (!el) return;
-                e.preventDefault();
-                el.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-              className="mt-3 inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-semibold underline-offset-4 hover:underline"
-            >
-              {t.go}
-              <ArrowDown className="size-4" aria-hidden />
-            </a>
-          )}
         </div>
       )}
     </section>

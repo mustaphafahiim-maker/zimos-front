@@ -1,54 +1,67 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
-import { Button, Input, Label, Alert } from "@store-builder/ui";
-import { ApiError } from "@/context/AuthContext";
+import { Button, Alert } from "@store-builder/ui";
+import { IconLinkOff, IconSuccess } from "@/components/icons";
+import { ApiError, useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { MIN_PASSWORD_LENGTH, isPasswordStrong, unmetPasswordRules } from "@/lib/passwordRules";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { errorMessageNow } from "@/lib/errorMessages";
+import { AUTH_SUBMIT, AuthHeading, AuthLink, AuthPasswordField, AuthRules, AuthShell } from "./AuthShell";
 
 const STRINGS = {
   en: {
     title: "Set a new password",
     intro: "Choose a new password for your account.",
-    badLink: "This link isn't valid. It may be incomplete or copied wrongly.",
-    newLink: "Request a new link",
-    done: "Your password was changed. Taking you to sign in…",
+    badLinkTitle: "This link doesn't work",
+    badLink: "It may be incomplete or copied wrongly. Ask for a new one.",
+    newLink: "Send me a new link",
+    doneTitle: "Password changed",
+    done: "Your password is changed and you've been signed out on every device. Sign in with the new password.",
+    usedLink: "This link has expired or was already used — ask for a new one",
+    askNewLink: "Ask for a new link",
     signIn: "Sign in",
     password: "New password",
-    passwordPlaceholder: "At least 8 characters",
-    confirm: "Confirm password",
-    show: "Show password",
-    hide: "Hide password",
-    passwordRules: "The password still misses some of the rules listed below it.",
-    mismatch: "The password and its confirmation don't match.",
-    save: "Save new password",
+    confirm: "New password again",
+    passwordRules: "The password still misses the rules listed under it.",
+    mismatch: "The two passwords are not the same. Type them again.",
+    save: "Save the new password",
     saving: "Saving…",
-    back: "← Back to sign in",
+    back: "Back to sign in",
     failed: "Couldn't change the password. Try again.",
   },
   ar: {
-    title: "تعيين كلمة مرور جديدة",
-    intro: "اختار كلمة مرور جديدة لحسابك.",
-    badLink: "الرابط غير صالح. قد يكون ناقصًا أو نُسخ بشكل خاطئ.",
-    newLink: "اطلب رابطًا جديدًا",
-    done: "اتغيرت كلمة السر. بنحوّلك لتسجيل الدخول…",
-    signIn: "تسجيل الدخول",
-    password: "كلمة المرور الجديدة",
-    passwordPlaceholder: "8 أحرف على الأقل",
-    confirm: "تأكيد كلمة المرور",
-    show: "إظهار كلمة المرور",
-    hide: "إخفاء كلمة المرور",
-    passwordRules: "كلمة المرور لا تستوفي بعض الشروط المذكورة أسفلها.",
-    mismatch: "كلمة المرور وتأكيدها غير متطابقين.",
-    save: "حفظ كلمة المرور الجديدة",
+    title: "اعمل كلمة سر جديدة",
+    intro: "اختار كلمة سر جديدة لحسابك.",
+    badLinkTitle: "اللينك ده مش شغّال",
+    badLink: "ممكن يكون ناقص أو اتنسخ غلط. اطلب لينك جديد.",
+    newLink: "ابعتلي لينك جديد",
+    doneTitle: "كلمة السر اتغيّرت",
+    done: "اتغيرت كلمة المرور، وخرجنا من حسابك على كل الأجهزة. سجّل دخولك بكلمة المرور الجديدة.",
+    usedLink: "الرابط ده انتهى أو اتستخدم قبل كده — اطلب رابط جديد",
+    askNewLink: "اطلب رابط جديد",
+    signIn: "ادخل",
+    password: "كلمة السر الجديدة",
+    confirm: "كلمة السر الجديدة تاني",
+    passwordRules: "كلمة السر لسه ناقصها الشروط اللي مكتوبة تحتها.",
+    mismatch: "كلمتين السر مش زي بعض. اكتبهم تاني.",
+    save: "احفظ كلمة السر الجديدة",
     saving: "بنحفظ…",
-    back: "← العودة لتسجيل الدخول",
-    failed: "تعذّر تغيير كلمة المرور. حاول مرة أخرى.",
+    back: "ارجع لتسجيل الدخول",
+    failed: "معرفناش نغيّر كلمة السر. جرّب تاني.",
   },
 } satisfies Messages;
+
+type FieldName = "password" | "confirm";
+
+/** The first invalid field: on screen and under the cursor. */
+function focusField(field: FieldName) {
+  window.setTimeout(() => {
+    const input = document.getElementById(field);
+    input?.scrollIntoView({ block: "center" });
+    input?.focus({ preventScroll: true });
+  }, 0);
+}
 
 export function ResetPasswordPage() {
   const t = useT(STRINGS);
@@ -61,11 +74,14 @@ export function ResetPasswordPage() {
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // What is wrong with a field, said under that field.
+  const [fieldError, setFieldError] = useState<{ field: FieldName; message: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  // The link is dead (used, replaced or expired): said with the way to a new one.
+  const [usedLink, setUsedLink] = useState(false);
+  const { refreshUser } = useAuth();
 
   const unmetRules = unmetPasswordRules(password);
 
@@ -73,165 +89,135 @@ export function ResetPasswordPage() {
   // below covers the case where the timer is missed (tab backgrounded, etc.).
   useEffect(() => {
     if (!done) return;
-    const timer = setTimeout(() => navigate("/login", { replace: true }), 2000);
+    // Long enough to read that every device was signed out.
+    const timer = setTimeout(() => navigate("/login", { replace: true }), 8000);
     return () => clearTimeout(timer);
   }, [done, navigate]);
+
+  function failField(field: FieldName, message: string) {
+    setFieldError({ field, message });
+    focusField(field);
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!token) return;
     setError(null);
+    setUsedLink(false);
+    setFieldError(null);
 
     if (!isPasswordStrong(password)) {
-      setError(t.passwordRules);
+      failField("password", t.passwordRules);
       return;
     }
     if (password !== confirm) {
-      setError(t.mismatch);
+      failField("confirm", t.mismatch);
       return;
     }
 
     setSubmitting(true);
     try {
       await apiClient.resetPassword(token, password);
+      // Every session ended with the reset, this browser's too: nothing stale is kept.
+      apiClient.clearSession();
+      void refreshUser();
       setDone(true);
     } catch (err) {
       // Keep the form mounted so they can fix a typo or go request a fresh link.
-      setError(
-        err instanceof ApiError ? errorMessageNow(err) : t.failed
-      );
+      if (err instanceof ApiError && (err.code as string | undefined) === "INVALID_RESET_TOKEN") setUsedLink(true);
+      else setError(err instanceof ApiError ? errorMessageNow(err) : t.failed);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="auth-glass">
-      <AuthBackdrop />
-      <div className="auth-glass-stage">
-        <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
+    <AuthShell>
+      {!token ? (
+        <>
+          <AuthHeading title={t.badLinkTitle} icon={<IconLinkOff aria-hidden />} tone="danger">
+            {t.badLink}
+          </AuthHeading>
+          <Button asChild className={`mt-6 ${AUTH_SUBMIT}`}>
+            <Link to="/forgot-password">{t.newLink}</Link>
+          </Button>
+          <AuthLink to="/login" back className="mt-4">
+            {t.back}
+          </AuthLink>
+        </>
+      ) : done ? (
+        <>
+          <AuthHeading title={t.doneTitle} icon={<IconSuccess aria-hidden />} tone="success">
+            <span role="status">{t.done}</span>
+          </AuthHeading>
+          <Button type="button" className={`mt-6 ${AUTH_SUBMIT}`} onClick={() => navigate("/login", { replace: true })}>
+            {t.signIn}
+          </Button>
+        </>
+      ) : (
+        <>
+          <AuthHeading title={t.title}>{t.intro}</AuthHeading>
 
-          {!token ? (
-            <>
-              <Alert variant="danger" className="mt-6">
-                {t.badLink}
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            {error && <Alert variant="danger">{error}</Alert>}
+            {usedLink && (
+              <Alert variant="danger">
+                <span className="block">{t.usedLink}</span>
+                <AuthLink to="/forgot-password">{t.askNewLink}</AuthLink>
               </Alert>
-              <Link
-                to="/forgot-password"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                {t.newLink}
-              </Link>
-            </>
-          ) : done ? (
-            <>
-              <Alert variant="success" className="mt-6">
-                {t.done}
-              </Alert>
-              <Button
-                type="button"
-                className="mt-6 w-full"
-                onClick={() => navigate("/login", { replace: true })}
-              >
-                {t.signIn}
-              </Button>
-            </>
-          ) : (
-            <>
-              <p className="mt-2 text-sm text-ink-soft">{t.intro}</p>
+            )}
 
-              <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-                {error && <Alert variant="danger">{error}</Alert>}
+            <AuthPasswordField
+              label={t.password}
+              fieldId="password"
+              name="new-password"
+              autoComplete="new-password"
+              enterKeyHint="next"
+              required
+              minLength={MIN_PASSWORD_LENGTH}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldError?.field === "password") setFieldError(null);
+              }}
+              aria-describedby={unmetRules.length > 0 ? "password-rules" : undefined}
+              error={fieldError?.field === "password" ? fieldError.message : undefined}
+            >
+              {/* What is still missing, from the first look at the field. */}
+              <AuthRules id="password-rules" rules={unmetRules.map((rule) => (locale === "ar" ? rule.label : rule.labelEn))} />
+            </AuthPasswordField>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="password">{t.password}</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      required
-                      minLength={MIN_PASSWORD_LENGTH}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={t.passwordPlaceholder}
-                      className="pe-10"
-                      aria-describedby="password-rules"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? t.hide : t.show}
-                      aria-pressed={showPassword}
-                      className="cursor-pointer absolute inset-y-0 end-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="size-4" aria-hidden />
-                      ) : (
-                        <Eye className="size-4" aria-hidden />
-                      )}
-                    </button>
-                  </div>
-                  {password.length > 0 && unmetRules.length > 0 && (
-                    <ul id="password-rules" className="mt-1 space-y-1 text-xs text-ink-soft">
-                      {unmetRules.map((rule) => (
-                        <li key={rule.id} className="flex items-center gap-1.5">
-                          <span aria-hidden>•</span>
-                          {locale === "ar" ? rule.label : rule.labelEn}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+            <AuthPasswordField
+              label={t.confirm}
+              fieldId="confirm"
+              name="confirm-password"
+              autoComplete="new-password"
+              enterKeyHint="done"
+              required
+              value={confirm}
+              onChange={(e) => {
+                setConfirm(e.target.value);
+                if (fieldError?.field === "confirm") setFieldError(null);
+              }}
+              error={
+                fieldError?.field === "confirm"
+                  ? fieldError.message
+                  : confirm.length > 0 && password !== confirm
+                    ? t.mismatch
+                    : undefined
+              }
+            />
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirm">{t.confirm}</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirm"
-                      type={showConfirm ? "text" : "password"}
-                      autoComplete="new-password"
-                      required
-                      value={confirm}
-                      onChange={(e) => setConfirm(e.target.value)}
-                      placeholder="••••••••"
-                      className="pe-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm((v) => !v)}
-                      aria-label={showConfirm ? t.hide : t.show}
-                      aria-pressed={showConfirm}
-                      className="cursor-pointer absolute inset-y-0 end-0 flex items-center px-3 text-ink-soft transition-colors hover:text-ink"
-                    >
-                      {showConfirm ? (
-                        <EyeOff className="size-4" aria-hidden />
-                      ) : (
-                        <Eye className="size-4" aria-hidden />
-                      )}
-                    </button>
-                  </div>
-                  {confirm.length > 0 && password !== confirm && (
-                    <p className="mt-1 text-xs text-danger">{t.mismatch}</p>
-                  )}
-                </div>
+            <Button type="submit" className={AUTH_SUBMIT} disabled={submitting}>
+              {submitting ? t.saving : t.save}
+            </Button>
+          </form>
 
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? t.saving : t.save}
-                </Button>
-              </form>
-
-              <Link
-                to="/login"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                {t.back}
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+          <AuthLink to="/login" back className="mt-4">
+            {t.back}
+          </AuthLink>
+        </>
+      )}
+    </AuthShell>
   );
 }

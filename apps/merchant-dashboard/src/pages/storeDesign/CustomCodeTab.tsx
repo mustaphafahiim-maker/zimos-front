@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Alert, Badge, Button } from "@store-builder/ui";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { Alert, Badge, cn } from "@store-builder/ui";
+import { IconCaretDown } from "@/components/icons";
 import {
   CUSTOM_CODE_MAX_LENGTH,
   storeDesignListCustomCode,
@@ -14,11 +16,13 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDate } from "@/lib/format";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
-import { Section } from "@/components/Section";
+import { SaveBar } from "@/components/SaveBar";
+import { SettingsGroup } from "@/components/settings";
 import { Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { ToggleRow } from "./SettingsFormFooter";
+import { STACK, SettingsSkeleton } from "./sections/parts";
 
 const GROUPS: Array<{ id: "blocks" | "head" | "files"; slots: CustomCodeSlotKey[] }> = [
   {
@@ -37,6 +41,7 @@ const GROUPS: Array<{ id: "blocks" | "head" | "files"; slots: CustomCodeSlotKey[
   { id: "head", slots: ["head"] },
   { id: "files", slots: ["css", "js"] },
 ];
+const ALL_SLOTS: CustomCodeSlotKey[] = GROUPS.flatMap((group) => group.slots);
 
 const STRINGS = {
   en: {
@@ -65,6 +70,8 @@ const STRINGS = {
     code: "Code",
     on: "On",
     empty: "Empty",
+    off: "Off",
+    unsaved: "Not saved yet",
     lastEdit: "Last edited {date}",
     save: "Save",
     saving: "Saving…",
@@ -94,12 +101,14 @@ const STRINGS = {
     enabled: "مفعّل",
     code: "الكود",
     on: "مفعّل",
-    empty: "فارغ",
+    empty: "فاضي",
+    off: "مقفول",
+    unsaved: "لسه ما اتحفظش",
     lastEdit: "آخر تعديل {date}",
-    save: "حفظ",
+    save: "احفظ الكود",
     saving: "بنحفظ…",
-    discard: "تجاهل",
-    saved: "تم حفظ الكود.",
+    discard: "سيبه زي ما كان",
+    saved: "اتحفظ الكود.",
   },
 } satisfies Messages;
 
@@ -118,48 +127,88 @@ export function CustomCodeTab() {
   const [errors, setErrors] = useState<Partial<Record<CustomCodeSlotKey, string>>>({});
 
   const bySlot = new Map((state.data ?? []).map((s) => [s.slot, s]));
+  const storedOf = (key: CustomCodeSlotKey): Draft => {
+    const stored = bySlot.get(key);
+    return { html: stored?.html ?? "", isActive: stored?.isActive ?? false };
+  };
+  const isDirty = (key: CustomCodeSlotKey) => {
+    const draft = drafts[key];
+    if (!draft) return false;
+    const stored = storedOf(key);
+    return draft.html !== stored.html || draft.isActive !== stored.isActive;
+  };
+  // The spots with an edit that is not saved yet: what the save bar saves, and what a switch of section asks about.
+  const dirtySlots = ALL_SLOTS.filter(isDirty);
+  useReportDirty(dirtySlots.length > 0);
 
-  async function save(slot: CustomCodeSlotKey, draft: Draft) {
+  /** Saves one spot through its own endpoint, as before. Answers whether it went through. */
+  async function save(slot: CustomCodeSlotKey, draft: Draft): Promise<boolean> {
     setSaving(slot);
     setErrors((prev) => ({ ...prev, [slot]: undefined }));
     try {
       const saved = await storeDesignSaveCustomCode(apiClient, workspaceId, slot, draft);
       state.setData((prev) => (prev ?? []).map((s) => (s.slot === slot ? saved : s)));
       setDrafts((prev) => ({ ...prev, [slot]: undefined }));
-      toast.success(t.saved);
+      return true;
     } catch (err) {
       setErrors((prev) => ({ ...prev, [slot]: errorMessage(err) }));
+      // The spot that failed opens, so its message is on screen.
+      setOpen(slot);
+      return false;
     } finally {
       setSaving(null);
     }
   }
 
+  /** The save bar: every changed spot, one after the other. One that fails keeps its edit and says why. */
+  async function saveAll() {
+    let done = 0;
+    for (const slot of dirtySlots) {
+      const draft = drafts[slot];
+      if (draft && (await save(slot, draft))) done += 1;
+    }
+    if (done > 0) toast.success(t.saved);
+  }
+
+  function discardAll() {
+    setDrafts({});
+    setErrors({});
+  }
+
   function row(key: CustomCodeSlotKey) {
     const stored: CustomCodeSlot | undefined = bySlot.get(key);
-    const draft: Draft = drafts[key] ?? { html: stored?.html ?? "", isActive: stored?.isActive ?? false };
-    const dirty = drafts[key] !== undefined && (draft.html !== (stored?.html ?? "") || draft.isActive !== (stored?.isActive ?? false));
+    const draft: Draft = drafts[key] ?? storedOf(key);
+    const dirty = isDirty(key);
     const expanded = open === key;
-    const busy = saving === key;
+    const busy = saving !== null;
     const edit = (patch: Partial<Draft>) => setDrafts((prev) => ({ ...prev, [key]: { ...draft, ...patch } }));
+    const live = Boolean(stored?.isActive && stored.html.trim());
 
     return (
-      <li key={key} className="py-3 first:pt-0 last:pb-0">
+      <li key={key} className="relative border-t border-line first:border-t-0">
         <button
           type="button"
           aria-expanded={expanded}
           onClick={() => setOpen(expanded ? null : key)}
-          className="flex w-full cursor-pointer items-center justify-between gap-3 text-start"
+          className="flex min-h-13 w-full cursor-pointer items-center justify-between gap-3 px-4 py-2 text-start transition-colors hover:bg-ink/4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
         >
-          <span className="text-sm font-medium text-ink">{t[key]}</span>
-          {stored?.isActive && stored.html.trim() ? (
+          <span className="min-w-0 flex-1 text-sm leading-5 font-medium text-ink">{t[key]}</span>
+          {dirty ? (
+            <Badge variant="secondary">{t.unsaved}</Badge>
+          ) : live ? (
             <Badge>{t.on}</Badge>
           ) : (
-            <span className="text-xs text-ink-soft">{stored?.html.trim() ? "" : t.empty}</span>
+            <span className="text-[13px] text-ink-soft">{stored?.html.trim() ? t.off : t.empty}</span>
           )}
+          <IconCaretDown
+            className={cn("size-4 shrink-0 text-ink-soft transition-transform duration-[var(--dur-fade)] motion-reduce:transition-none", expanded && "rotate-180")}
+            weight="bold"
+            aria-hidden
+          />
         </button>
 
         {expanded && (
-          <div className="mt-3 space-y-3 rounded-[0.5rem] bg-paper p-3">
+          <div className="space-y-3 px-4 pb-4">
             <ToggleRow label={t.enabled} checked={draft.isActive} disabled={busy} onChange={(isActive) => edit({ isActive })} />
             <Field label={t.code} error={errors[key]} labelHidden>
               {({ id }) => (
@@ -168,50 +217,51 @@ export function CustomCodeTab() {
                   rows={8}
                   dir="ltr"
                   spellCheck={false}
+                  autoCapitalize="none"
+                  autoCorrect="off"
                   maxLength={CUSTOM_CODE_MAX_LENGTH}
-                  className="font-mono text-xs"
+                  // 16px on a phone (no zoom on focus), small from sm up where code wants the room.
+                  className="font-mono text-base sm:text-xs"
                   disabled={busy}
                   value={draft.html}
                   onChange={(e) => edit({ html: e.target.value })}
                 />
               )}
             </Field>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs text-ink-soft">
-                {stored?.updatedAt ? t.lastEdit.replace("{date}", formatDate(stored.updatedAt)) : ""}
-              </span>
-              <div className="flex gap-2">
-                {dirty && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => setDrafts((prev) => ({ ...prev, [key]: undefined }))}
-                  >
-                    {t.discard}
-                  </Button>
-                )}
-                <Button size="sm" disabled={busy || !dirty} onClick={() => void save(key, draft)}>
-                  {busy ? t.saving : t.save}
-                </Button>
-              </div>
-            </div>
+            {stored?.updatedAt && <p className="text-xs text-ink-soft">{t.lastEdit.replace("{date}", formatDate(stored.updatedAt))}</p>}
           </div>
         )}
       </li>
     );
   }
 
+  const firstError = dirtySlots.map((slot) => errors[slot]).find(Boolean);
+
   return (
-    <DataState loading={state.loading} error={state.error} onRetry={() => void state.refresh()}>
-      <div className="space-y-5">
+    <DataState loading={state.loading} error={state.error} onRetry={() => void state.refresh()} skeleton={<SettingsSkeleton groups={2} rows={4} />}>
+      <div className={STACK}>
         <Alert variant="danger">{t.warning}</Alert>
-        <Alert>{t.where}</Alert>
         {GROUPS.map((group) => (
-          <Section key={group.id} title={t[group.id]} description={t[`${group.id}Description`]}>
-            <ul className="divide-y divide-line">{group.slots.map(row)}</ul>
-          </Section>
+          <SettingsGroup key={group.id} title={t[group.id]} description={t[`${group.id}Description`]} footer={group.id === "files" ? t.where : undefined}>
+            <ul role="list">{group.slots.map(row)}</ul>
+          </SettingsGroup>
         ))}
+        <SaveBar
+          dirty={dirtySlots.length > 0}
+          saving={saving !== null}
+          onSave={() => void saveAll()}
+          onDiscard={discardAll}
+          saveLabel={t.save}
+          savingLabel={t.saving}
+          discardLabel={t.discard}
+          message={
+            firstError ? (
+              <span role="alert" className="text-danger">
+                {firstError}
+              </span>
+            ) : undefined
+          }
+        />
       </div>
     </DataState>
   );

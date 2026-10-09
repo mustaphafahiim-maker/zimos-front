@@ -9,6 +9,7 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 import { Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
+import { SwitchRow } from "./inspector/controls";
 
 const STRINGS = {
   en: {
@@ -101,15 +102,12 @@ export function HtmlBlockCodeField({ label, hint, blockId, onBlockId }: { label:
           />
         )}
       </Field>
-      <label className="flex items-center gap-2 text-sm text-ink">
-        <input type="checkbox" className="size-4 accent-primary" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-        {t.active}
-      </label>
+      <SwitchRow label={t.active} checked={isActive} onChange={setIsActive} />
       {error && <Alert variant="danger">{error}</Alert>}
       <Button type="button" size="sm" disabled={busy || loading} onClick={() => void save()}>
         {busy ? t.saving : t.save}
       </Button>
-      <p className="text-xs text-ink-soft">{t.note}</p>
+      <p className="text-xs leading-5 text-ink-soft">{t.note}</p>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { ExternalLink } from "lucide-react";
+import { IconExternal } from "@/components/icons";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { legalUrl } from "@/lib/legalLinks";
 
@@ -52,7 +52,7 @@ export function TermsConsent({
       className="inline-flex items-center gap-0.5 font-medium text-primary underline underline-offset-2"
     >
       {label}
-      <ExternalLink className="size-3" aria-hidden />
+      <IconExternal className="size-3" aria-hidden />
       <span className="sr-only">{t.newTab}</span>
     </a>
   );

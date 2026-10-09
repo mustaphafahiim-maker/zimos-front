@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Download, PackageOpen } from "lucide-react";
-import { Alert, Button, Card } from "@store-builder/ui";
+import { IconDownload, IconPackageOpen } from "@/components/icons";
+import { Alert, Button } from "@store-builder/ui";
 import {
   GTM_ADS_ID,
   GTM_ADS_LABEL,
   GTM_CONTAINER_FILENAME,
   GTM_GA4_ID,
   googleAdsLabelsOf,
-  trackingPixelsGtmContainerDownload,
+  trackingPixelsGtmContainerFile,
   trackingPixelsGtmEvents,
   type GtmDataLayerEvent,
   type GtmDataLayerField,
@@ -18,10 +18,13 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { AccordionSection } from "@/components/Accordion";
 import { DataState } from "@/components/DataState";
 import { DataTable, type Column } from "@/components/DataTable";
 import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
+// Handoff 303: the store's own Google tags are left out of the file, and said so.
+import { GtmSkippedNote, useGtmOwnTagSource } from "./GtmSkippedNote";
 
 const STRINGS = {
   en: {
@@ -98,15 +101,15 @@ const STRINGS = {
     colField: "الخانة",
     colType: "النوع",
     colNote: "فيها إيه",
-    when_view_item: "لما صفحة منتج أو خطوة منتج في قمع تفتح",
+    when_view_item: "لما صفحة منتج أو خطوة منتج في مسار بيع تفتح",
     when_add_to_cart: "لما منتج يتضاف للسلة",
-    when_begin_checkout: "لما فورم الطلب يفتح",
+    when_begin_checkout: "لما فورم الأوردر يفتح",
     when_add_payment_info: "لما طريقة دفع تتختار",
-    when_purchase: "لما الطلب يتعمل (لو توقيت الشراء «عند إنشاء الطلب»)، إلا لو الطلبات بتتسجّل كـ Lead",
-    when_generate_lead: "لما فورم اشتراك يتبعت، أو لما الطلب يتعمل والمتجر أو القمع بيسجّل الطلبات كـ Lead",
+    when_purchase: "لما الأوردر يتعمل (لو توقيت الشرا «أول ما الأوردر يتعمل»)، إلا لو الأوردرات بتتسجّل كـ Lead",
+    when_generate_lead: "لما فورم اشتراك يتبعت، أو لما الأوردر يتعمل والمتجر أو مسار البيع بيسجّل الأوردرات كـ Lead",
     "note_ecommerce.value": "المبلغ بالعملة نفسها مش بالقروش (مثلاً 450.5)",
     "note_ecommerce.currency": "كود العملة (ISO 4217)، مثلاً EGP",
-    "note_ecommerce.transaction_id": "رقم الطلب، في purchase و generate_lead بعد الطلب",
+    "note_ecommerce.transaction_id": "رقم الأوردر، في purchase و generate_lead بعد الأوردر",
     "note_ecommerce.items": "الـ SKU أو رقم المنتج لكل منتج (item_id)",
     note_event_id: "نفس الرقم اللي أحداث السيرفر بتستخدمه، علشان مفيش حاجة تتحسب مرتين",
   },
@@ -154,6 +157,10 @@ export function GtmContainerCard({ pixels }: { pixels: TrackingPixelDto[] }) {
   const ownGa4 = google.find((p) => /^G-/i.test(p.pixelId)) ?? null;
   const ownAds = google.find((p) => /^AW-/i.test(p.pixelId)) ?? null;
   const ownLabels = googleAdsLabelsOf(ownAds);
+  // The ids the file leaves out: what the last download's header named, or — before one — the store's own tags.
+  const ownTagSource = useGtmOwnTagSource();
+  const [skippedByServer, setSkippedByServer] = useState<string[] | null>(null);
+  const skippedIds = skippedByServer ?? [ownGa4?.pixelId, ownAds?.pixelId].filter((id): id is string => Boolean(id));
 
   const ga4 = ids.ga4.trim();
   const ads = ids.ads.trim();
@@ -176,10 +183,11 @@ export function GtmContainerCard({ pixels }: { pixels: TrackingPixelDto[] }) {
     if (invalid) return;
     setBusy(true);
     try {
-      const blob = await trackingPixelsGtmContainerDownload(apiClient, workspaceId, {
+      const { blob, skipped } = await trackingPixelsGtmContainerFile(apiClient, workspaceId, {
         ...(ownGa4 ? {} : { ga4 }),
         ...(ownAds ? {} : { ads, purchaseLabel, leadLabel }),
       });
+      setSkippedByServer(skipped);
       saveBlob(blob, GTM_CONTAINER_FILENAME);
       toast.success(t.downloaded);
     } catch (err) {
@@ -226,21 +234,12 @@ export function GtmContainerCard({ pixels }: { pixels: TrackingPixelDto[] }) {
   const steps = [t.step1, t.step2, t.step3];
 
   return (
-    <Card className="mb-6 gap-0 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        {/* basis-64: on a phone the button drops under the text instead of squeezing it. */}
-        <div className="min-w-0 flex-1 basis-64">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <PackageOpen className="size-4 text-primary" aria-hidden />
-            {t.title}
-          </h2>
-          <p className="mt-0.5 text-xs text-ink-soft">{t.description}</p>
-        </div>
-        <Button size="sm" onClick={() => void download()} disabled={busy || invalid}>
-          <Download className="size-4" aria-hidden />
-          {busy ? t.downloading : t.download}
-        </Button>
-      </div>
+    <AccordionSection title={t.title} summary={t.description} icon={IconPackageOpen} persistKey="marketing:gtm" keepMounted>
+      <p className="text-[13px] leading-5 text-ink-soft">{t.description}</p>
+      <Button className="mt-3 rounded-full px-5 max-sm:w-full" onClick={() => void download()} disabled={busy || invalid}>
+        <IconDownload className="size-4" weight="bold" aria-hidden />
+        {busy ? t.downloading : t.download}
+      </Button>
 
       <ol className="mt-4 space-y-2">
         {steps.map((step, i) => (
@@ -260,7 +259,7 @@ export function GtmContainerCard({ pixels }: { pixels: TrackingPixelDto[] }) {
         <h3 className="text-sm font-semibold text-ink">{t.idsTitle}</h3>
         <div className="mt-2 space-y-3">
           {ownGa4 ? (
-            <OwnTag name="GA4" id={ownGa4.pixelId} source={t.fromPixels} />
+            <OwnTag name="GA4" id={ownGa4.pixelId} source={ownTagSource} />
           ) : (
             <TextField
               label={t.ga4}
@@ -278,7 +277,7 @@ export function GtmContainerCard({ pixels }: { pixels: TrackingPixelDto[] }) {
             <OwnTag
               name="Google Ads"
               id={ownAds.pixelId}
-              source={t.fromPixels}
+              source={ownTagSource}
               extra={[
                 `${t.purchaseLabel}: ${ownLabels.purchase || t.noLabel}`,
                 `${t.leadLabel}: ${ownLabels.lead || t.noLabel}`,
@@ -320,6 +319,7 @@ export function GtmContainerCard({ pixels }: { pixels: TrackingPixelDto[] }) {
             </>
           )}
         </div>
+        <GtmSkippedNote ids={skippedIds} />
         <Alert className="mt-3">{t.othersStay}</Alert>
       </div>
 
@@ -344,14 +344,14 @@ export function GtmContainerCard({ pixels }: { pixels: TrackingPixelDto[] }) {
           )}
         </DataState>
       </div>
-    </Card>
+    </AccordionSection>
   );
 }
 
 /** One of the store's own Google tags the container will use. */
 function OwnTag({ name, id, source, extra = [] }: { name: string; id: string; source: string; extra?: string[] }) {
   return (
-    <div className="rounded-[0.5rem] border border-line p-3">
+    <div data-slot="sweep-well" className="rounded-2xl bg-paper-sunken px-4 py-3">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span className="text-sm font-medium text-ink">{name}</span>
         <code dir="ltr" className="font-mono text-xs text-ink">

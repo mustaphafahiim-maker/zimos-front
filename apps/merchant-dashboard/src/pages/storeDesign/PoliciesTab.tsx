@@ -9,15 +9,24 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { IconCourier, IconDocument, IconReturns, IconShield, type IconComponent } from "@/components/icons";
+import { AccordionSection } from "@/components/Accordion";
 import { DataState } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Section } from "@/components/Section";
 import { Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { ReadOnlyNotice, SettingsFormFooter } from "./SettingsFormFooter";
 import { POLICY_TEMPLATES } from "./policyTemplates";
 import { useSettingsEditor } from "./useSettingsEditor";
+import { STACK, SettingsSkeleton } from "./sections/parts";
+
+const POLICY_ICON: Record<LegalPolicyKey, IconComponent> = {
+  shipping_policy: IconCourier,
+  refund_policy: IconReturns,
+  privacy_policy: IconShield,
+  terms_of_service: IconDocument,
+};
 
 const STRINGS = {
   en: {
@@ -36,6 +45,9 @@ const STRINGS = {
     replaceBody: "The template will replace what is written in this policy. Nothing is saved until you press Save.",
     replace: "Replace",
     cancel: "Cancel",
+    empty: "Not written yet — it won't show in the store",
+    written: "Written · {n} lines",
+    startFrom: "Start from a ready text:",
     saved: "Policies saved.",
   },
   ar: {
@@ -54,7 +66,10 @@ const STRINGS = {
     replaceBody: "سيستبدل القالب ما هو مكتوب في هذه السياسة. لا يُحفظ شيء حتى تضغط حفظ.",
     replace: "استبدال",
     cancel: "إلغاء",
-    saved: "تم حفظ السياسات.",
+    empty: "لسه ما اتكتبتش — مش هتظهر في المتجر",
+    written: "مكتوبة · {n} سطر",
+    startFrom: "ابدأ من نص جاهز:",
+    saved: "اتحفظت السياسات.",
   },
 } satisfies Messages;
 
@@ -77,8 +92,8 @@ export function PoliciesTab() {
     draft[key].trim() ? setPending({ key, lang }) : apply(key, lang);
 
   return (
-    <DataState loading={!editor.ready} error={null}>
-      <div className="space-y-5">
+    <DataState loading={!editor.ready} error={null} skeleton={<SettingsSkeleton groups={1} rows={4} />}>
+      <div className={STACK}>
         <ReadOnlyNotice editable={editable} />
         <Alert>
           <p>{t.intro}</p>
@@ -87,38 +102,47 @@ export function PoliciesTab() {
           </p>
         </Alert>
 
-        {LEGAL_POLICY_KEYS.map((key) => (
-          <Section
-            key={key}
-            title={t[key]}
-            actions={
-              editable ? (
-                <>
-                  <Button variant="outline" size="sm" disabled={saving} onClick={() => fromTemplate(key, "ar")}>
+        {/* Four long texts: each folds to one row saying whether it is written. Kept mounted, so a fold never drops an edit. */}
+        {LEGAL_POLICY_KEYS.map((key, index) => {
+          const lines = draft[key].split(/\n+/).filter((line) => line.trim() !== "").length;
+          return (
+            <AccordionSection
+              key={key}
+              title={t[key]}
+              icon={POLICY_ICON[key]}
+              summary={lines === 0 ? t.empty : fmt(t.written, { n: lines })}
+              defaultOpen={index === 0}
+              persistKey={`store-settings:policies:${key}`}
+              keepMounted
+            >
+              {editable && (
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <span className="text-[13px] text-ink-soft">{t.startFrom}</span>
+                  <Button variant="outline" className="min-h-11 rounded-full px-4 sm:min-h-9" disabled={saving} onClick={() => fromTemplate(key, "ar")}>
                     {t.templateAr}
                   </Button>
-                  <Button variant="outline" size="sm" disabled={saving} onClick={() => fromTemplate(key, "en")}>
+                  <Button variant="outline" className="min-h-11 rounded-full px-4 sm:min-h-9" disabled={saving} onClick={() => fromTemplate(key, "en")}>
                     {t.templateEn}
                   </Button>
-                </>
-              ) : undefined
-            }
-          >
-            <Field label={t.body} hint={t.bodyHint} labelHidden>
-              {({ id }) => (
-                <Textarea
-                  id={id}
-                  rows={10}
-                  dir="auto"
-                  maxLength={30000}
-                  disabled={locked}
-                  value={draft[key]}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, [key]: e.target.value }))}
-                />
+                </div>
               )}
-            </Field>
-          </Section>
-        ))}
+              <Field label={t.body} hint={t.bodyHint} labelHidden>
+                {({ id }) => (
+                  <Textarea
+                    id={id}
+                    rows={10}
+                    dir="auto"
+                    maxLength={30000}
+                    disabled={locked}
+                    value={draft[key]}
+                    onChange={(e) => setDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                    className="text-base sm:text-sm"
+                  />
+                )}
+              </Field>
+            </AccordionSection>
+          );
+        })}
 
         <SettingsFormFooter
           editable={editable}

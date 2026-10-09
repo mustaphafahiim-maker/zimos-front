@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Ban, Eye, EyeOff, Mail, Pencil, Power, Scale } from "lucide-react";
+import { IconBlock, IconEdit, IconEmail, IconEye, IconEyeOff, IconPower, IconScale } from "@/components/icons";
 import { Alert, Button, Card } from "@store-builder/ui";
 import {
   apiFieldProblems,
@@ -137,7 +137,7 @@ export function GiftCardDetailPage() {
                         : void run("code", async () => setCode((await giftCardCode(apiClient, workspaceId, card.id, false)).code))
                     }
                   >
-                    {code ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                    {code ? <IconEyeOff className="size-4" aria-hidden /> : <IconEye className="size-4" aria-hidden />}
                     {busy === "code" ? t.showingCode : code ? t.hideCode : t.showCode}
                   </Button>
                   {card.recipientEmail && (
@@ -153,16 +153,16 @@ export function GiftCardDetailPage() {
                         })
                       }
                     >
-                      <Mail className="size-4" aria-hidden />
+                      <IconEmail className="size-4" aria-hidden />
                       {busy === "resend" ? t.resending : t.resend}
                     </Button>
                   )}
                   <Button type="button" variant="outline" className="min-h-11" disabled={busy !== null} onClick={() => setAdjusting(true)}>
-                    <Scale className="size-4" aria-hidden />
+                    <IconScale className="size-4" aria-hidden />
                     {t.adjust}
                   </Button>
                   <Button type="button" variant="outline" className="min-h-11" disabled={busy !== null} onClick={() => setEditing(true)}>
-                    <Pencil className="size-4" aria-hidden />
+                    <IconEdit className="size-4" aria-hidden />
                     {t.editDetails}
                   </Button>
                   {card.status === "disabled" ? (
@@ -178,7 +178,7 @@ export function GiftCardDetailPage() {
                         })
                       }
                     >
-                      <Power className="size-4" aria-hidden />
+                      <IconPower className="size-4" aria-hidden />
                       {busy === "enable" ? t.enabling : t.enable}
                     </Button>
                   ) : (
@@ -189,7 +189,7 @@ export function GiftCardDetailPage() {
                       disabled={busy !== null}
                       onClick={() => setDisabling(true)}
                     >
-                      <Ban className="size-4" aria-hidden />
+                      <IconBlock className="size-4" aria-hidden />
                       {t.disable}
                     </Button>
                   )}
@@ -322,7 +322,8 @@ function History({ detail }: { detail: GiftCardDetail }) {
               </>
             )}
           </span>
-          {row.note && !/^refund:/.test(row.note) && (
+          {/* Only what staff wrote: a hold's or a release's note is the system's own remark (handoff 201). */}
+          {row.note && !/^refund:/.test(row.note) && (row.kind === "adjust" || row.kind === "issue") && (
             <span className="text-xs font-normal text-ink-soft">
               <bdi>{row.note}</bdi>
             </span>

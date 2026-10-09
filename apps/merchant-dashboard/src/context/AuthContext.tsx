@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ApiError,
   type AuthUser,
@@ -12,7 +12,8 @@ import { apiClient } from "@/lib/apiClient";
 
 interface AuthContextValue {
   user: AuthUser | null;
-  status: "loading" | "authenticated" | "guest";
+  /** "unreachable": signed in, but the server gave no answer about the session for a minute (offline, rate-limited, down). */
+  status: "loading" | "authenticated" | "guest" | "unreachable";
   /**
    * An account made through Google while a plan is required, still to choose
    * one: the dashboard asks for it before anything else (ChoosePlanPage).
@@ -33,23 +34,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [needsPlan, setNeedsPlan] = useState(false);
   const [status, setStatus] = useState<AuthContextValue["status"]>("loading");
 
+  // Only the newest loadUser may write state: a retry started while an older
+  // loop is still waiting would otherwise race it, and the loser could evict a
+  // merchant the winner had just signed back in.
+  const generation = useRef(0);
+
   const loadUser = async () => {
+    const gen = ++generation.current;
+    const live = () => gen === generation.current;
     if (!apiClient.isAuthenticated()) {
       setUser(null);
       setNeedsPlan(false);
       setStatus("guest");
       return;
     }
-    try {
-      const me = await apiClient.meDetails();
-      setUser(me.user);
-      setNeedsPlan(me.needsPlan);
-      setStatus("authenticated");
-    } catch {
-      setUser(null);
-      setNeedsPlan(false);
-      setStatus("guest");
+    // A call that got no answer about the session (the rate limiter, a server
+    // error, a phone that lost signal while the page loaded) leaves the session
+    // in place. Wait and ask again rather than show the sign-in page to someone
+    // who is signed in, for up to a minute — one window of the rate limiter.
+    const waits = [1000, 2000, 4000, 8000, 15000];
+    const deadline = Date.now() + 60_000;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const me = await apiClient.meDetails();
+        if (!live()) return;
+        setUser(me.user);
+        setNeedsPlan(me.needsPlan);
+        setStatus("authenticated");
+        return;
+      } catch (err) {
+        if (!live()) return;
+        const noAnswer = !(err instanceof ApiError) || err.status === 408 || err.status === 429 || err.status >= 500;
+        if (!noAnswer) break;
+        if (!apiClient.isAuthenticated()) break;
+        // The rate limiter rarely says how long is left (ApiError.retryAfter): wait a third of its window.
+        const limited = err instanceof ApiError && err.status === 429;
+        const asked = err instanceof ApiError && err.retryAfter ? Math.min(err.retryAfter, 60) * 1000 : 0;
+        const wait = Math.min(limited ? asked || 20000 : waits[Math.min(attempt, waits.length - 1)], deadline - Date.now());
+        if (wait <= 0) {
+          // Still signed in, still no answer: say so instead of showing a sign-in form to someone who is signed in.
+          setUser(null);
+          setNeedsPlan(false);
+          setStatus("unreachable");
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, wait));
+        if (!live()) return;
+      }
     }
+    if (!live()) return;
+    setUser(null);
+    setNeedsPlan(false);
+    setStatus("guest");
   };
 
   useEffect(() => {

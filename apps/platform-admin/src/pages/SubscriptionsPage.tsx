@@ -12,6 +12,8 @@ import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import type { AdminSubscriptionRow } from "@/lib/adminApi";
 import { formatDate, formatMinorMoney, formatRelative } from "@/lib/format";
+import { adminPricingOf } from "@store-builder/api-client";
+import { PricingBadge } from "@/components/billingExtras";
 
 type Filter = "all" | SubscriptionStatus;
 type SortKey = "name" | "mrr" | "next";
@@ -34,6 +36,9 @@ export function SubscriptionsPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortState<SortKey>>({ key: "mrr", dir: "desc" });
+  // handoff 336: MRR over every subscription, or over the ones paid at the plan's price only.
+  const [mrrMode, setMrrMode] = useState<"all" | "paid">("all");
+  const mrrOf = (s: AdminSubscriptionRow) => (mrrMode === "paid" && adminPricingOf(s).pricingKind !== "paid" ? 0 : s.mrr);
 
   const rows = useMemo(() => data ?? [], [data]);
 
@@ -63,7 +68,7 @@ export function SubscriptionsPage() {
     count: value === "all" ? rows.length : rows.filter((s) => s.status === value).length,
   }));
 
-  const totalMrr = filtered.reduce((sum, s) => sum + s.mrr, 0);
+  const totalMrr = filtered.reduce((sum, s) => sum + mrrOf(s), 0);
   // Plans can be priced in different currencies; a single total is only
   // meaningful when every row shares one.
   const currencies = new Set(filtered.map((s) => s.currency));
@@ -95,12 +100,25 @@ export function SubscriptionsPage() {
           />
         ) : (
           <Panel flush>
+            <div className="flex flex-wrap items-center justify-end gap-2 border-b border-line px-5 py-3 text-sm text-ink-soft">
+              <span>MRR counts</span>
+              <FilterChips
+                options={[
+                  { value: "all", label: "All subscriptions" },
+                  { value: "paid", label: "Paid only" },
+                ]}
+                value={mrrMode}
+                onChange={setMrrMode}
+              />
+            </div>
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <SortHead label="Workspace" sortKey="name" sort={sort} onSort={setSort} />
                   <Th>Plan</Th>
                   <Th>Status</Th>
+                  <Th>Pricing</Th>
+                  <Th className="text-end">Price paid</Th>
                   <SortHead label="MRR" sortKey="mrr" sort={sort} onSort={setSort} className="text-end" />
                   <SortHead label="Next billing / trial end" sortKey="next" sort={sort} onSort={setSort} />
                   <Th>Billing</Th>
@@ -132,7 +150,14 @@ export function SubscriptionsPage() {
                           <span className="mt-1 block text-xs text-ink-soft">Cancels at period end</span>
                         )}
                       </Td>
-                      <Td className="tabular text-end">{formatMinorMoney(s.mrr, s.currency)}</Td>
+                      <Td>
+                        <PricingBadge subscription={s} />
+                        {adminPricingOf(s).pricingExpiredAt && (
+                          <span className="mt-1 block text-xs text-danger">Period ended {formatDate(adminPricingOf(s).pricingExpiredAt)}</span>
+                        )}
+                      </Td>
+                      <Td className="tabular text-end">{formatMinorMoney(adminPricingOf(s).effectivePrice, s.currency)}</Td>
+                      <Td className="tabular text-end">{formatMinorMoney(mrrOf(s), s.currency)}</Td>
                       <Td>
                         {next ? (
                           <>
@@ -158,7 +183,7 @@ export function SubscriptionsPage() {
               </TableBody>
               <TableFooter>
                 <TableRow className="hover:bg-transparent">
-                  <Td className="font-medium" colSpan={3}>
+                  <Td className="font-medium" colSpan={5}>
                     Total ({filtered.length})
                   </Td>
                   <Td className="tabular text-end font-semibold">

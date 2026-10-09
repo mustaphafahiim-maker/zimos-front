@@ -9,6 +9,7 @@ import {
   carrierAddressRejection,
   isApiErrorCode,
   isAreaUnmatchedDetails,
+  isOnAccountOrder,
   type AnyCarrierAddressUnmatchedDetails,
   type CarrierAddressInput,
   type CarrierBookingNotSavedDetails,
@@ -26,11 +27,10 @@ import { useCarrierErrorMessage, useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime, formatMoney, placeName } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProviderLogo } from "@/components/ProviderLogo";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import {
@@ -48,13 +48,15 @@ import {
   reservedCourierFor,
   usesCityDistrict,
 } from "@/pages/shipping/carriers";
-import { useManualCancelPrompt } from "@/pages/shipping/useManualCancelPrompt";
 import { useOrderLabels } from "../orderLabels";
 import { BookingWeightField } from "./BookingWeightField";
 import { CityDistrictPicker, LevelAddressPicker, type PickerSource } from "./CarrierAddressPicker";
 import { TypedAddressNames, type TypedNamesProblem } from "./TypedAddressNames";
 import { useLevelLabel } from "./useLevelLabel";
 import { ShipmentDraftNote, ShipmentDraftSaveButton } from "./ShipmentDraftBar";
+import { useCourierShipmentCancel } from "./ShipmentCourierCancel";
+import { ManualShipmentTracking } from "./ManualShipmentTracking";
+import { ParcelFacts, PartialShipment, orderIsSplit } from "./OrderParcels";
 
 const STATUSES: ShipmentStatus[] = [
   "created",
@@ -162,6 +164,7 @@ const STRINGS = {
     booking: "Booking with {carrier}…",
     bookedToast: "Booked with {carrier}. Tracking number {number}.",
     uncertainHint: "Reload this page to book again, after you've checked.",
+    soldSince: "These items were sold after they went back in stock. Add stock first, then book the shipment",
     timeoutNote:
       "If an earlier booking attempt timed out, check your {carrier} dashboard first: the delivery may already exist there.",
     notSavedTitle: "Cancel {number} in your {carrier} dashboard",
@@ -259,6 +262,7 @@ const STRINGS = {
     booking: "بنحجز مع {carrier}…",
     bookedToast: "تم الحجز مع {carrier}. رقم التتبع {number}.",
     uncertainHint: "بعد أن تتأكد، أعد تحميل الصفحة لتحجز مرة أخرى.",
+    soldSince: "المنتجات دي اتباعت بعد ما رجعت للمخزون. زوّد المخزون الأول وبعدين احجز الشحنة",
     timeoutNote: "إذا انتهت مهلة محاولة حجز سابقة، راجع لوحة تحكم {carrier} أولًا: قد تكون الشحنة موجودة هناك بالفعل.",
     notSavedTitle: "ألغِ {number} من لوحة تحكم {carrier}",
     notSaved:
@@ -272,9 +276,11 @@ const isolate = (value: string) => `⁦${value}⁩`;
 interface Props {
   order: Order;
   onChanged: () => void;
+  /** Inside a folding section of the order page: no outline and no title of its own. */
+  frameless?: boolean;
 }
 
-export function ShipmentsSection({ order, onChanged }: Props) {
+export function ShipmentsSection({ order, onChanged, frameless }: Props) {
   const t = useT(STRINGS);
   const labels = useOrderLabels();
   const workspaceId = useWorkspaceId();
@@ -328,8 +334,8 @@ export function ShipmentsSection({ order, onChanged }: Props) {
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="mb-3 font-display text-lg font-medium text-ink">{t.title}</h2>
+    <section className={frameless ? undefined : "rounded-[var(--radius-card)] border border-line p-5"}>
+      {!frameless && <h2 className="mb-3 font-display text-lg font-medium text-ink">{t.title}</h2>}
 
       {unconfirmed && (
         <UnconfirmedCancelAlert shipments={acknowledgedCancels} carrierByCode={carrierByCode} />
@@ -344,7 +350,7 @@ export function ShipmentsSection({ order, onChanged }: Props) {
           {shipments.map((s) => (
             <ShipmentRow
               key={s.id}
-              orderId={order.id}
+              order={order}
               shipment={s}
               carrier={carrierByCode.get(s.carrierCode)}
               canManage={canManage}
@@ -363,11 +369,15 @@ export function ShipmentsSection({ order, onChanged }: Props) {
           <p className="text-sm text-ink-soft">{t.viewOnlyForbidden}</p>
         ) : order.cancelledAt ? (
           <p className="text-sm text-ink-soft">{t.orderCancelled}</p>
+        ) : orderIsSplit(order) ? (
+          // Sent as several parcels (handoff 375): what is left goes out from here.
+          <PartialShipment order={order} carriers={carrierList} canManage={canManage} onChanged={onChanged} />
         ) : active ? (
           <p className="text-sm text-ink-soft">
             {fmt(t.activeBlocks, { status: labels.shipment(active.status) })}
           </p>
         ) : (
+          <>
           <CreateShipmentForm
             order={order}
             carriersConfigured={Boolean(carriers.data?.configured)}
@@ -376,6 +386,8 @@ export function ShipmentsSection({ order, onChanged }: Props) {
             onCourierStale={() => carriers.refresh({ silent: true })}
             onCreated={onChanged}
           />
+          <PartialShipment order={order} carriers={carrierList} canManage={canManage} onChanged={onChanged} />
+          </>
         )}
       </div>
     </section>
@@ -410,7 +422,7 @@ function UnconfirmedCancelAlert({
 // ---------------------------------------------------------------------
 
 function ShipmentRow({
-  orderId,
+  order,
   shipment,
   carrier,
   canManage,
@@ -418,7 +430,7 @@ function ShipmentRow({
   onForbidden,
   onChanged,
 }: {
-  orderId: string;
+  order: Order;
   shipment: Shipment;
   carrier: CarrierInfo | undefined;
   canManage: boolean;
@@ -427,15 +439,12 @@ function ShipmentRow({
   onChanged: () => void;
 }) {
   const t = useT(STRINGS);
-  const common = useCommon();
+  const orderId = order.id;
   const labels = useOrderLabels();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
-  const errorMessage = useErrorMessage();
   const carrierError = useCarrierErrorMessage();
-  const manualCancelPrompt = useManualCancelPrompt();
-  const [busy, setBusy] = useState<"status" | "sync" | "label" | "cancel" | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [busy, setBusy] = useState<"status" | "sync" | "label" | null>(null);
 
   const booked = isCarrierBooked(shipment);
   const carrierName = shipment.carrierCode === "manual" ? t.manual : (carrier?.name ?? shipment.carrierCode);
@@ -509,53 +518,20 @@ function ShipmentRow({
     }
   }
 
-  async function markCancelled() {
-    try {
-      await apiClient.updateShipment(workspaceId, orderId, shipment.id, { status: "cancelled" });
-    } catch (err) {
-      if (onForbidden(err)) {
-        setConfirmCancel(false);
-        return;
-      }
-      throw new Error(errorMessage(err));
-    }
-    setConfirmCancel(false);
-    toast.success(t.cancelledToast);
-    onChanged();
-  }
-
-  /**
-   * A courier without a cancel API: ask as-is first (the server decides
-   * whether an acknowledgement is needed), then repeat with it once the
-   * merchant confirms in the dialog.
-   */
-  async function cancelAtCourierDashboard() {
-    const cancelled = () => {
-      toast.success(t.cancelledToast);
-      onChanged();
-    };
-    setBusy("cancel");
-    try {
-      await apiClient.updateShipment(workspaceId, orderId, shipment.id, { status: "cancelled" });
-      cancelled();
-    } catch (err) {
-      const offered = manualCancelPrompt.offer(err, async () => {
-        try {
-          await apiClient.updateShipment(workspaceId, orderId, shipment.id, {
-            status: "cancelled",
-            acknowledgeManualCancel: true,
-          });
-        } catch (retryErr) {
-          if (onForbidden(retryErr)) return;
-          throw new Error(errorMessage(retryErr));
-        }
-        cancelled();
-      });
-      if (!offered) fail(err);
-    } finally {
-      setBusy(null);
-    }
-  }
+  // Cancel shipment (handoff 351): the server cancels a waiting or failed booking at the courier first;
+  // a refusal stays on the card. A courier without a cancel API still asks for the merchant's word.
+  const courierCancel = useCourierShipmentCancel({
+    orderId,
+    shipment,
+    carrier: { code: shipment.carrierCode, name: carrierName },
+    disabled: busy !== null,
+    onForbidden,
+    onChanged,
+    onSync: () => void sync(),
+    syncing: busy === "sync",
+  });
+  const canCancelBooking =
+    booked && (cancelByHand ? !TERMINAL_SHIPMENT_STATUSES.has(shipment.status) : shipment.status === "created" || shipment.status === "failed");
 
   return (
     <li className="rounded-[0.5rem] border border-line px-4 py-3">
@@ -573,6 +549,8 @@ function ShipmentRow({
         </div>
         <StatusBadge value={shipment.status} text={labels.shipment(shipment.status)} />
       </div>
+
+      <ParcelFacts order={order} shipment={shipment} />
 
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft">
         {shipment.waybillNumber && (
@@ -625,11 +603,10 @@ function ShipmentRow({
           {t.failedNote}
         </p>
       )}
-      {booked && shipment.status === "created" && canManage && (
-        <p className="mt-2 text-xs text-ink-soft">
-          {fmt(cancelByHand ? t.manualCarrierCreatedNote : t.carrierCreatedNote, { carrier: carrierName })}
-        </p>
+      {booked && cancelByHand && shipment.status === "created" && canManage && (
+        <p className="mt-2 text-xs text-ink-soft">{fmt(t.manualCarrierCreatedNote, { carrier: carrierName })}</p>
       )}
+      {!booked && <ManualShipmentTracking orderId={orderId} shipment={shipment} canManage={canManage} disabled={busy !== null} onChanged={onChanged} />}
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {shipment.trackingUrl && (
@@ -645,7 +622,7 @@ function ShipmentRow({
 
         {canManage && booked && (
           <>
-            <Button variant="outline" className="min-h-11" disabled={busy !== null} onClick={sync}>
+            <Button variant="outline" className="min-h-11" disabled={busy !== null || courierCancel.busy} onClick={sync}>
               {busy === "sync" ? t.syncing : t.sync}
             </Button>
             {carrier?.supportsLabel !== false && (
@@ -653,27 +630,7 @@ function ShipmentRow({
                 {busy === "label" ? t.labelLoading : t.label}
               </Button>
             )}
-            {cancelByHand
-              ? !TERMINAL_SHIPMENT_STATUSES.has(shipment.status) && (
-                  <Button
-                    variant="ghost"
-                    className="min-h-11 text-danger hover:bg-danger-soft"
-                    disabled={busy !== null}
-                    onClick={cancelAtCourierDashboard}
-                  >
-                    {busy === "cancel" ? t.cancellingShipment : t.cancelShipment}
-                  </Button>
-                )
-              : shipment.status === "failed" && (
-                  <Button
-                    variant="ghost"
-                    className="min-h-11 text-danger hover:bg-danger-soft"
-                    disabled={busy !== null}
-                    onClick={() => setConfirmCancel(true)}
-                  >
-                    {t.markCancelled}
-                  </Button>
-                )}
+            {canCancelBooking && courierCancel.button}
           </>
         )}
 
@@ -688,18 +645,7 @@ function ShipmentRow({
         )}
       </div>
 
-      <ConfirmDialog
-        open={confirmCancel}
-        title={fmt(t.markCancelledTitle, { carrier: carrierName })}
-        description={fmt(t.markCancelledBody, { carrier: carrierName })}
-        confirmLabel={t.markCancelledConfirm}
-        cancelLabel={common.cancel}
-        busyLabel={common.saving}
-        destructive
-        onCancel={() => setConfirmCancel(false)}
-        onConfirm={markCancelled}
-      />
-      {manualCancelPrompt.dialog}
+      {courierCancel.panel}
     </li>
   );
 }
@@ -850,14 +796,15 @@ function CreateShipmentForm({
     );
   }
   if (order.paymentMethod === "cod" && order.confirmationState !== "confirmed") blockers.push(t.notConfirmed);
-  if (order.paymentMethod !== "cod" && order.financialState !== "paid") blockers.push(t.notPaid);
+  // An on-account order ships before it is paid, like cash on delivery (handoff 229): the customer pays later.
+  if (order.paymentMethod !== "cod" && !isOnAccountOrder(order) && order.financialState !== "paid") blockers.push(t.notPaid);
   if (!order.shippingAddressSnapshot) blockers.push(t.noAddress);
   // A manual shipment has the same confirmation/payment rule as a booking
   // (the server answers ORDER_NOT_CONFIRMED / ORDER_NOT_PAID), none of the
   // courier's own limits.
   const manualBlockers: string[] = [];
   if (order.paymentMethod === "cod" && order.confirmationState !== "confirmed") manualBlockers.push(t.notConfirmedManual);
-  if (order.paymentMethod !== "cod" && order.financialState !== "paid") manualBlockers.push(t.notPaidManual);
+  if (order.paymentMethod !== "cod" && !isOnAccountOrder(order) && order.financialState !== "paid") manualBlockers.push(t.notPaidManual);
 
   const levels = courier ? carrierLevels(courier) : [];
   const listUnavailable = Boolean(
@@ -1094,8 +1041,8 @@ function CreateShipmentForm({
       if (!problems.some((p) => isShown(p.field))) setFormError(errorMessage(err));
       return;
     }
-    // `courier` is set only while booking through one.
-    setFormError(carrierError(err, courier));
+    // `courier` is set only while booking through one. A returned order that was restocked takes its units again.
+    setFormError(carrierError(err, courier, order.stage === "returned" ? { INSUFFICIENT_STOCK: t.soldSince } : undefined));
   }
 
   const address = order.shippingAddressSnapshot;

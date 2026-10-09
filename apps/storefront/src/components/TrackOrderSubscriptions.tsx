@@ -4,6 +4,7 @@ import { trackSubscriptionsOf, type TrackResult } from "@store-builder/api-clien
 import { pickText } from "@/lib/i18n";
 import { useStore } from "@/lib/StoreContext";
 import { StoreLink } from "./StoreRoute";
+import { focusRing } from "./ui";
 
 const TEXT = {
   en: {
@@ -54,12 +55,12 @@ export function TrackOrderSubscriptions({ result }: { result: TrackResult }) {
       <p className="mt-0.5 text-xs text-ink-soft">{t.hint}</p>
       <ul className="mt-2 space-y-2">
         {subscriptions.map((s) => (
-          <li key={s.portalPath} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink">
+          <li key={s.portalPath} className="flex items-center justify-between gap-2 rounded-xl border border-line bg-paper py-0.5 ps-3 pe-1 text-sm text-ink">
             <span className="min-w-0">
               <bdi className="block truncate">{s.productName}</bdi>
               <span className="text-xs text-ink-soft">{(t as Record<string, string>)[`status_${s.status}`] ?? s.status}</span>
             </span>
-            <StoreLink href={s.portalPath as string} className="shrink-0 font-semibold text-primary hover:underline">
+            <StoreLink href={s.portalPath as string} className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg px-3 font-semibold text-primary hover:underline ${focusRing}`}>
               {t.manage}
             </StoreLink>
           </li>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Alert, Button, Card, CardContent, Label } from "@store-builder/ui";
+import { Alert, Label } from "@store-builder/ui";
 import {
   PRODUCT_OPTION_DISPLAY_TYPES,
   catalogUpdateProduct,
@@ -15,6 +15,8 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { Select } from "@/components/Select";
 import { ImageUrlInput } from "./ImageUrlInput";
+import { SectionSaveBar } from "../product/saveQueue";
+import { ProductPageCard } from "./ProductPageCard";
 
 /**
  * How each option of the product is drawn in the store (SPEC §7.2): buttons,
@@ -141,12 +143,8 @@ export function ProductOptionsDisplaySection({
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-4 py-5">
-        <div>
-          <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-          <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-        </div>
+    <ProductPageCard title={t.title} description={t.description}>
+      <div className="space-y-4">
 
         {options.map((option, index) => (
           <div key={option.name} className="space-y-3 rounded-[0.5rem] border border-line p-4">
@@ -207,17 +205,18 @@ export function ProductOptionsDisplaySection({
 
         {error && <Alert variant="danger">{error}</Alert>}
 
-        {dirty && (
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={() => setOptions(baseline)}>
-              {t.discard}
-            </Button>
-            <Button type="button" className="min-h-11" disabled={busy} onClick={() => void save()}>
-              {busy ? t.saving : t.save}
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        <SectionSaveBar
+          section={t.title}
+          dirty={dirty}
+          saving={busy}
+          error={error}
+          onSave={() => void save()}
+          onDiscard={() => {
+            setOptions(baseline);
+            setError(null);
+          }}
+        />
+      </div>
+    </ProductPageCard>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Ban, MapPin, Pencil, UserRound } from "lucide-react";
+import { IconBlock, IconEdit, IconPlace, IconUser } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import { ordersUpdateContact, protectionAddBlocked, type Order } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -83,19 +83,19 @@ export function OrderContactTools({ order, onChanged }: { order: Order; onChange
       {phone && <CopyButton value={phone} label={t.copyPhone} className={toolClass} />}
       {order.customerId && (
         <Link to={`/customers/${order.customerId}`} className={`${toolClass} inline-flex items-center gap-1.5 text-ink hover:text-primary`}>
-          <UserRound className="size-4" aria-hidden />
+          <IconUser className="size-4" aria-hidden />
           {t.customerPage}
         </Link>
       )}
       {onChanged && (
         <Button variant="outline" size="sm" className="min-h-11 gap-1.5" onClick={() => setEditing(true)}>
-          <Pencil className="size-4" aria-hidden />
+          <IconEdit className="size-4" aria-hidden />
           {t.edit}
         </Button>
       )}
       {phone && (
         <Button variant="outline" size="sm" className="min-h-11 gap-1.5 text-danger" onClick={() => setBlocking(true)}>
-          <Ban className="size-4" aria-hidden />
+          <IconBlock className="size-4" aria-hidden />
           {t.block}
         </Button>
       )}
@@ -202,7 +202,7 @@ export function OrderAddressTools({ order }: { order: Order }) {
     <div className="mt-2 flex flex-wrap gap-2">
       <CopyButton value={text} label={t.copyAddress} className={toolClass} />
       <a href={map} target="_blank" rel="noopener noreferrer" className={`${toolClass} inline-flex items-center gap-1.5 text-ink hover:text-primary`}>
-        <MapPin className="size-4" aria-hidden />
+        <IconPlace className="size-4" aria-hidden />
         {t.map}
       </a>
     </div>

@@ -1,34 +1,39 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Alert, Spinner } from "@store-builder/ui";
+import { Button } from "@store-builder/ui";
+import { IconLinkOff, IconVerified } from "@/components/icons";
 import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { errorMessageNow } from "@/lib/errorMessages";
+import { AUTH_SUBMIT, AuthBusy, AuthHeading, AuthLink, AuthShell } from "./AuthShell";
 
 const STRINGS = {
   en: {
-    title: "Verify your email",
-    verifying: "Verifying your email…",
-    success: "Your email is verified. You can sign in now.",
+    title: "Confirming your email",
+    verifying: "One moment…",
+    successTitle: "Your email is confirmed",
+    success: "You can sign in now.",
     signIn: "Sign in",
+    failedTitle: "We couldn't confirm your email",
     badLink: "This link isn't valid. It may be incomplete or copied wrongly.",
     expired: "This link isn't valid or has expired.",
-    hint: "If the link is old or was already used, sign in and ask for a new verification email.",
-    back: "← Back to sign in",
-    failed: "Couldn't verify the email. Try again in a moment.",
+    hint: "If the link is old or was already used, sign in and ask for a new confirmation email.",
+    back: "Back to sign in",
+    failed: "Couldn't confirm the email. Try again in a moment.",
   },
   ar: {
-    title: "تأكيد البريد الإلكتروني",
-    verifying: "بنأكد الإيميل…",
-    success: "تم تأكيد بريدك الإلكتروني بنجاح. يمكنك تسجيل الدخول الآن.",
-    signIn: "تسجيل الدخول",
-    badLink: "الرابط غير صالح. قد يكون ناقصًا أو نُسخ بشكل خاطئ.",
-    expired: "الرابط غير صالح أو انتهت صلاحيته.",
-    hint: "إذا كان الرابط قديمًا أو استُخدم من قبل، سجّل الدخول واطلب رسالة تأكيد جديدة.",
-    back: "← العودة لتسجيل الدخول",
-    failed: "تعذّر تأكيد البريد الإلكتروني. حاول مرة أخرى بعد قليل.",
+    title: "بنأكد إيميلك",
+    verifying: "لحظة واحدة…",
+    successTitle: "إيميلك اتأكد",
+    success: "تقدر تدخل دلوقتي.",
+    signIn: "ادخل",
+    failedTitle: "معرفناش نأكد إيميلك",
+    badLink: "اللينك ده مش شغّال. ممكن يكون ناقص أو اتنسخ غلط.",
+    expired: "اللينك ده مش شغّال أو مدته خلصت.",
+    hint: "لو اللينك قديم أو اتستخدم قبل كده، ادخل واطلب إيميل تأكيد جديد.",
+    back: "ارجع لتسجيل الدخول",
+    failed: "معرفناش نأكد الإيميل. جرّب تاني بعد شوية.",
   },
 } satisfies Messages;
 
@@ -68,9 +73,7 @@ export function VerifyEmailPage() {
         // "INVALID_VERIFICATION_TOKEN") — show its message; fall back to a
         // generic line for anything else (network, unexpected shape).
         setApiState("error");
-        setApiErrorMessage(
-          err instanceof ApiError ? errorMessageNow(err) : true
-        );
+        setApiErrorMessage(err instanceof ApiError ? errorMessageNow(err) : true);
       });
   }, [token]);
 
@@ -80,47 +83,32 @@ export function VerifyEmailPage() {
   const errorMessage = token ? (apiErrorMessage === true ? t.failed : apiErrorMessage) : t.badLink;
 
   return (
-    <div className="auth-glass">
-      <AuthBackdrop />
-      <div className="auth-glass-stage">
-        <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
-
-          {state === "verifying" ? (
-            <div className="mt-8 flex items-center justify-center gap-3 text-sm text-ink-soft">
-              <Spinner className="size-5" />
-              <span>{t.verifying}</span>
-            </div>
-          ) : state === "success" ? (
-            <>
-              <Alert variant="success" className="mt-6">
-                {t.success}
-              </Alert>
-              <Link
-                to="/login"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                {t.signIn}
-              </Link>
-            </>
-          ) : (
-            <>
-              <Alert variant="danger" className="mt-6">
-                {errorMessage ?? t.expired}
-              </Alert>
-              <p className="mt-4 text-sm text-ink-soft">
-                {t.hint}
-              </p>
-              <Link
-                to="/login"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                {t.back}
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+    <AuthShell>
+      {state === "verifying" ? (
+        <>
+          <AuthHeading title={t.title} center />
+          <AuthBusy className="mt-4">{t.verifying}</AuthBusy>
+        </>
+      ) : state === "success" ? (
+        <>
+          <AuthHeading title={t.successTitle} icon={<IconVerified aria-hidden />} tone="success">
+            {t.success}
+          </AuthHeading>
+          <Button asChild className={`mt-6 ${AUTH_SUBMIT}`}>
+            <Link to="/login">{t.signIn}</Link>
+          </Button>
+        </>
+      ) : (
+        <>
+          <AuthHeading title={t.failedTitle} icon={<IconLinkOff aria-hidden />} tone="danger">
+            <span role="alert">{errorMessage ?? t.expired}</span>
+          </AuthHeading>
+          <p className="mt-3 text-sm leading-6 text-ink-soft">{t.hint}</p>
+          <AuthLink to="/login" back className="mt-3">
+            {t.back}
+          </AuthLink>
+        </>
+      )}
+    </AuthShell>
   );
 }

@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Alert, Button } from "@store-builder/ui";
+import { useEffect, useId, useState, type FormEvent } from "react";
+import { Alert, Input } from "@store-builder/ui";
 import { orderEmailsSenderGet, orderEmailsSenderSet } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -7,12 +7,14 @@ import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { isPermissionError } from "@/lib/errors";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
-import { TextField } from "@/components/Field";
+import { SaveBar } from "@/components/SaveBar";
+import { SettingsGroup, SettingsRow } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
 
 const STRINGS = {
   en: {
-    title: "Sender",
+    title: "Who the emails are from",
     fromName: "Sender name",
     fromNameHint: "What customers see as the sender. Empty: “{store}”.",
     replyTo: "Reply-To email",
@@ -22,14 +24,14 @@ const STRINGS = {
     saved: "Sender saved.",
   },
   ar: {
-    title: "المُرسِل",
-    fromName: "اسم المُرسِل",
-    fromNameHint: "ما يراه العميل كاسم المُرسِل. فارغ: «{store}».",
-    replyTo: "بريد الرد (Reply-To)",
-    replyToHint: "حيث يصل رد العميل. فارغ: لن تصلك الردود.",
-    save: "حفظ المُرسِل",
+    title: "الإيميل بيوصل باسم مين",
+    fromName: "اسم المرسل",
+    fromNameHint: "الاسم اللي العميل بيشوفه. فاضي: «{store}».",
+    replyTo: "إيميل الرد (Reply-To)",
+    replyToHint: "رد العميل بيوصل هنا. فاضي: الردود مش هتوصلك.",
+    save: "احفظ المرسل",
     saving: "بنحفظ…",
-    saved: "تم حفظ المُرسِل.",
+    saved: "المرسل اتحفظ.",
   },
 } satisfies Messages;
 
@@ -48,6 +50,12 @@ export function OrderEmailSender() {
   const [replyTo, setReplyTo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const ids = useId();
+
+  const savedName = current.data?.sender.fromName ?? "";
+  const savedReplyTo = current.data?.sender.replyTo ?? "";
+  const dirty = Boolean(current.data) && (fromName.trim() !== savedName || replyTo.trim() !== savedReplyTo);
+  useReportDirty(dirty);
 
   useEffect(() => {
     if (!current.data) return;
@@ -63,7 +71,8 @@ export function OrderEmailSender() {
     setBusy(true);
     setError(null);
     try {
-      await orderEmailsSenderSet(apiClient, workspaceId, { fromName: fromName.trim() || null, replyTo: replyTo.trim() || null });
+      const next = await orderEmailsSenderSet(apiClient, workspaceId, { fromName: fromName.trim() || null, replyTo: replyTo.trim() || null });
+      current.setData(next);
       toast.success(t.saved);
     } catch (err) {
       setError(errorMessage(err));
@@ -73,16 +82,51 @@ export function OrderEmailSender() {
   }
 
   return (
-    <form onSubmit={submit} className="mt-4 space-y-3 rounded-[var(--radius-card)] bg-paper p-4">
-      <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+    <form onSubmit={submit} noValidate className="flex min-w-0 flex-col gap-[var(--bento-gap)]">
+      <SettingsGroup title={t.title}>
+        <SettingsRow
+          label={t.fromName}
+          hint={fmt(t.fromNameHint, { store: current.data.storeName })}
+          htmlFor={`${ids}-name`}
+          control={
+            <Input
+              id={`${ids}-name`}
+              value={fromName}
+              maxLength={70}
+              onChange={(e) => setFromName(e.target.value)}
+              className="h-11 w-full text-base sm:text-sm"
+            />
+          }
+        />
+        <SettingsRow
+          label={t.replyTo}
+          hint={t.replyToHint}
+          htmlFor={`${ids}-reply`}
+          control={
+            <Input
+              id={`${ids}-reply`}
+              type="email"
+              dir="ltr"
+              value={replyTo}
+              maxLength={255}
+              onChange={(e) => setReplyTo(e.target.value)}
+              className="h-11 w-full text-base sm:text-sm"
+            />
+          }
+        />
+      </SettingsGroup>
       {error && <Alert variant="danger">{error}</Alert>}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <TextField label={t.fromName} hint={fmt(t.fromNameHint, { store: current.data.storeName })} value={fromName} maxLength={70} onChange={(e) => setFromName(e.target.value)} />
-        <TextField label={t.replyTo} hint={t.replyToHint} type="email" dir="ltr" value={replyTo} maxLength={255} onChange={(e) => setReplyTo(e.target.value)} />
-      </div>
-      <Button type="submit" size="sm" disabled={busy}>
-        {busy ? t.saving : t.save}
-      </Button>
+      <SaveBar
+        dirty={dirty}
+        saving={busy}
+        saveLabel={t.save}
+        savingLabel={t.saving}
+        onDiscard={() => {
+          setFromName(savedName);
+          setReplyTo(savedReplyTo);
+          setError(null);
+        }}
+      />
     </form>
   );
 }

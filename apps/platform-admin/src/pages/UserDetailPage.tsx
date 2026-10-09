@@ -15,6 +15,7 @@ import { CopyId } from "@/components/CopyId";
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import { formatDate, formatRelative } from "@/lib/format";
+import { AccountStatus, AcquisitionPanel, UserModerationActions, useCanActOnAccount } from "@/components/userModeration";
 
 /** One account: who they are, and every store they own or work in. */
 export function UserDetailPage() {
@@ -25,6 +26,8 @@ export function UserDetailPage() {
   const toast = useToast();
   const [resetting, setResetting] = useState(false);
   const twoFactor = user ? twoFactorRecoveryOfUser(user) : null;
+  // The reset follows the suspend / delete target rule: not yourself, a creator only as a creator, a console account only with admins.manage.
+  const canActOnAccount = useCanActOnAccount(user);
   const MODE: Record<string, string> = { off: "Off", email: "Email code", totp: "Authenticator app", whatsapp: "WhatsApp code" };
 
   return (
@@ -33,6 +36,7 @@ export function UserDetailPage() {
         title={user ? user.fullName : "User"}
         description={user?.username ? `@${user.username}` : undefined}
         back={{ to: "/users", label: "Users" }}
+        actions={user ? <UserModerationActions user={user} onChanged={() => void refresh({ silent: true })} /> : undefined}
       />
       <DataState loading={loading} error={error} onRetry={() => void refresh()}>
         {user && (
@@ -67,7 +71,7 @@ export function UserDetailPage() {
                   <CopyId value={user.id} full />
                 </DetailRow>
                 <DetailRow label="Status">
-                  <Status value={user.status} />
+                  <AccountStatus user={user} />
                 </DetailRow>
                 <DetailRow label="Platform role">{user.platformRole ?? "—"}</DetailRow>
                 <DetailRow label="Joined">
@@ -79,7 +83,7 @@ export function UserDetailPage() {
                   <DetailRow label="Two-step sign-in">
                     {MODE[twoFactor.mode] ?? twoFactor.mode}
                     {twoFactor.enabledAt && <span className="ms-2 text-xs text-ink-soft">since {formatDate(twoFactor.enabledAt)}</span>}
-                    {twoFactor.mode !== "off" && can("support.manage") && (
+                    {twoFactor.mode !== "off" && can("support.manage") && canActOnAccount && (
                       <Button size="sm" variant="outline" className="ms-3" onClick={() => setResetting(true)}>
                         Turn off
                       </Button>
@@ -129,6 +133,8 @@ export function UserDetailPage() {
                 </Table>
               )}
             </Panel>
+
+            <AcquisitionPanel user={user} />
           </div>
         )}
       </DataState>

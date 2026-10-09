@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { Button } from "@store-builder/ui";
 import { pushConfig, pushRegister, pushRemove } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { SettingsGroup, SettingsSwitch } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+// Real web push (handoff 392): the subscription for the server's current VAPID key, and the 422 for one it can't use.
+import { isInvalidPushSubscription, subscribeBrowser } from "@/lib/webPush";
 
 const STRINGS = {
   en: {
     title: "Notifications on this device",
-    off: "Get new orders and alerts as phone or computer notifications, even with the dashboard closed. Choose which ones in the Push column below.",
+    off: "Get new orders and alerts as phone or computer notifications, even with the dashboard closed. Choose which ones under “Tell me about” below.",
     on: "This device gets push notifications.",
     sandbox: "Test server: pushes are recorded in the notification log, not shown.",
     unsupported: "This browser can't show push notifications. On iPhone, add the dashboard to the home screen first.",
@@ -21,20 +23,22 @@ const STRINGS = {
     working: "Working…",
     enabled: "Push notifications are on for this device.",
     disabled: "Push notifications are off for this device.",
+    invalid: "Couldn't turn on notifications in this browser",
   },
   ar: {
-    title: "إشعارات على هذا الجهاز",
-    off: "توصلك الطلبات الجديدة والتنبيهات كإشعارات على الموبايل أو الكمبيوتر حتى ولوحة التحكم مقفولة. اختار أنواعها من عمود الإشعارات بالأسفل.",
-    on: "هذا الجهاز تصله الإشعارات.",
-    sandbox: "سيرفر تجريبي: الإشعارات تُسجّل في سجل الإشعارات ولا تظهر.",
-    unsupported: "هذا المتصفح لا يعرض الإشعارات. على الآيفون أضف لوحة التحكم للشاشة الرئيسية أولًا.",
-    denied: "الإشعارات محظورة لهذا الموقع من إعدادات المتصفح.",
-    unavailable: "الإشعارات غير مفعلة على هذا السيرفر بعد.",
+    title: "إشعارات على الجهاز ده",
+    off: "الأوردرات الجديدة والتنبيهات توصلك كإشعار على الموبايل أو الكمبيوتر حتى والداشبورد مقفولة. اختار أنواعها من «بلّغني عن» تحت.",
+    on: "الجهاز ده بتوصله الإشعارات.",
+    sandbox: "سيرفر تجريبي: الإشعارات بتتسجّل في سجل الإشعارات ومش بتظهر.",
+    unsupported: "المتصفح ده مش بيعرض إشعارات. على الآيفون ضيف الداشبورد للشاشة الرئيسية الأول.",
+    denied: "الإشعارات مقفولة للموقع ده من إعدادات المتصفح.",
+    unavailable: "الإشعارات لسه مش متفعّلة على السيرفر ده.",
     turnOn: "تفعيل",
     turnOff: "إيقاف على هذا الجهاز",
     working: "بننفّذ…",
-    enabled: "تم تفعيل الإشعارات على هذا الجهاز.",
-    disabled: "تم إيقاف الإشعارات على هذا الجهاز.",
+    enabled: "الإشعارات اشتغلت على الجهاز ده.",
+    disabled: "الإشعارات اتقفلت على الجهاز ده.",
+    invalid: "تعذّر تفعيل الإشعارات على المتصفح ده",
   },
 } satisfies Messages;
 
@@ -46,12 +50,6 @@ function storedDevice(): string | null {
   } catch {
     return null;
   }
-}
-
-function keyBytes(base64Url: string): Uint8Array {
-  const pad = "=".repeat((4 - (base64Url.length % 4)) % 4);
-  const raw = window.atob((base64Url + pad).replace(/-/g, "+").replace(/_/g, "/"));
-  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
 /**
@@ -71,7 +69,8 @@ export function PushDeviceToggle() {
 
   const c = config.data;
   if (!c) return null;
-  const sandbox = c.available && !c.publicKey;
+  // Only a sandbox server takes a test token; any other provider needs the browser's real subscription.
+  const sandbox = c.available && c.provider === "sandbox";
   const supported = typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 
   async function turnOn() {
@@ -80,11 +79,13 @@ export function PushDeviceToggle() {
     setNote(null);
     try {
       let token: string;
-      if (c.publicKey) {
+      if (!sandbox && !c.publicKey) return setNote(t.unavailable);
+      if (!sandbox && c.publicKey) {
         if (!supported) return setNote(t.unsupported);
         if ((await Notification.requestPermission()) !== "granted") return setNote(t.denied);
         const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(c.publicKey) as BufferSource });
+        // A subscription made with a key the owner has since rotated is dropped and made again with this one.
+        const subscription = await subscribeBrowser(registration, c.publicKey);
         token = JSON.stringify(subscription);
       } else {
         token = `sandbox:${window.crypto.randomUUID()}`;
@@ -98,7 +99,7 @@ export function PushDeviceToggle() {
       setDeviceId(device.id);
       toast.success(t.enabled);
     } catch (err) {
-      toast.error(errorMessage(err));
+      toast.error(isInvalidPushSubscription(err) ? t.invalid : errorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -125,25 +126,30 @@ export function PushDeviceToggle() {
     }
   }
 
+  const state = !c.available ? t.unavailable : deviceId ? t.on : t.off;
   return (
-    <div className="mt-4 rounded-lg border border-line p-4">
-      <p className="text-sm font-medium text-ink">{t.title}</p>
-      <p className="mt-1 text-sm text-ink-soft">{!c.available ? t.unavailable : deviceId ? t.on : t.off}</p>
-      {sandbox && <p className="mt-1 text-xs text-ink-soft">{t.sandbox}</p>}
-      {note && <p className="mt-1 text-xs font-medium text-danger">{note}</p>}
-      {c.available && (
-        <div className="mt-3">
-          {deviceId ? (
-            <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={() => void turnOff()}>
-              {busy ? t.working : t.turnOff}
-            </Button>
-          ) : (
-            <Button type="button" className="min-h-11" disabled={busy} onClick={() => void turnOn()}>
-              {busy ? t.working : t.turnOn}
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+    <SettingsGroup
+      footer={
+        note || sandbox ? (
+          <>
+            {note && (
+              <span role="alert" className="block font-medium text-danger">
+                {note}
+              </span>
+            )}
+            {sandbox && <span className="block">{t.sandbox}</span>}
+          </>
+        ) : undefined
+      }
+    >
+      <SettingsSwitch
+        label={t.title}
+        hint={state}
+        checked={deviceId !== null}
+        disabled={!c.available}
+        busy={busy}
+        onChange={(next) => void (next ? turnOn() : turnOff())}
+      />
+    </SettingsGroup>
   );
 }

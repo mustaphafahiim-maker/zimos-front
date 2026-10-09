@@ -449,3 +449,140 @@ header[data-overlay] .zimos-logo .zimos-logo-on-dark {
     padding-bottom: calc(5rem + env(safe-area-inset-bottom));
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * The bottom of the screen on a store page.
+ *
+ * A phone has one bottom edge and many things that want it: a page's own
+ * bar (the product page's order bar, the cart's and the checkout's), the
+ * theme's toolbar, the WhatsApp button, the way back up, a sales
+ * notification, the "install the app" card, the cookie banner. They used to
+ * be placed one by one and sat on each other. Here they share a set of
+ * variables on the store wrapper, and each reads the one meant for it.
+ *
+ * THE CONTRACT FOR A PAGE'S BAR — `--sf-bottom-bar-h`
+ *   The height, in px, of whatever is pinned across the bottom of the screen
+ *   right now, measured from the screen's bottom edge (so it includes the
+ *   bar's own safe-area padding). 0px when nothing is pinned, or while the
+ *   bar is slid away. A bar sets it inline on the `.brand-theme` wrapper (and
+ *   may set it on <html> too) while it shows and removes it when it hides:
+ *
+ *     wrapper.style.setProperty("--sf-bottom-bar-h", `${bar.offsetHeight}px`)
+ *
+ *   Everything below then moves clear of the bar by itself. The two rules
+ *   further down do the same from the markers the bars already carry
+ *   (`data-buy-bar`, `data-checkout-bar`) with their usual heights, so a bar
+ *   that does not measure itself is still stood clear of; an inline value
+ *   always wins over them.
+ *
+ *   A bar normally lies over the theme's toolbar, so the taller of the two is
+ *   what the screen loses. A bar drawn above the toolbar instead (the product
+ *   page's, on a store with the toolbar) carries `data-above-toolbar` and
+ *   reports its own height only: for it the two heights are added up.
+ *
+ * What the wrapper works out from it (read these, do not set them):
+ *   --sf-bars-h           the bar or the theme's toolbar, whichever is taller
+ *   --sf-float-bottom     where anything floating starts, above the bars
+ *   --sf-whatsapp-bottom  the WhatsApp button (end corner)
+ *   --sf-top-bottom       the way back up, above the WhatsApp button
+ *   --sf-toast-bottom     the sales notification
+ *   --sf-prompt-bottom    the "install the app" card
+ * ------------------------------------------------------------------ */
+:root {
+  --sf-bottom-bar-h: 0px;
+}
+
+.brand-theme {
+  /* The theme's phone toolbar (shell/ThemeChrome, `.zs-toolbar`), when it is on. */
+  --sf-toolbar-h: 0px;
+  /* The install card's height while it shows (components/StoreAppInstall sets it). */
+  --sf-prompt-h: 0px;
+  /* Room for the theme's floating language button (`.zs-float`, always on the left). */
+  --sf-start-lift: 0px;
+  --sf-end-lift: 0px;
+  /* The WhatsApp button and the gap above it, when the store has one. */
+  --sf-whatsapp-h: 0px;
+  --sf-float-gap: 1rem;
+
+  --sf-bars-h: max(var(--sf-bottom-bar-h, 0px), var(--sf-toolbar-h));
+  --sf-float-bottom: calc(max(var(--sf-bars-h), env(safe-area-inset-bottom, 0px)) + var(--sf-float-gap));
+  /* Below `sm` the install card spans the screen, so both corners wait above it. */
+  --sf-prompt-bottom: calc(var(--sf-float-bottom) + max(var(--sf-start-lift), var(--sf-end-lift)));
+  --sf-toast-bottom: calc(var(--sf-float-bottom) + var(--sf-start-lift) + var(--sf-prompt-h));
+  --sf-whatsapp-bottom: calc(var(--sf-float-bottom) + var(--sf-end-lift) + var(--sf-prompt-h));
+  --sf-top-bottom: calc(var(--sf-whatsapp-bottom) + var(--sf-whatsapp-h));
+}
+
+/* From `sm` the install card keeps to the start corner and the end corner is free of it. */
+@media (width >= 40rem) {
+  .brand-theme {
+    --sf-prompt-bottom: calc(var(--sf-float-bottom) + var(--sf-start-lift));
+    --sf-whatsapp-bottom: calc(var(--sf-float-bottom) + var(--sf-end-lift));
+  }
+}
+
+/* Wide screens have no bars; the floating things keep the 1.5rem they always had there. */
+@media (width >= 48rem) {
+  .brand-theme {
+    --sf-float-gap: 1.5rem;
+  }
+}
+
+.brand-theme:has([data-sf-whatsapp]) {
+  --sf-whatsapp-h: 4.25rem;
+}
+
+/* The language button is pinned to the left: the start corner of an English
+   page, the end corner of an Arabic one. Whatever shares that corner sits above it. */
+.brand-theme:has(.zs-float) {
+  --sf-start-lift: 4.75rem;
+}
+
+.brand-theme[dir="rtl"]:has(.zs-float) {
+  --sf-start-lift: 0px;
+  --sf-end-lift: 4.75rem;
+}
+
+@media (width < 48rem) {
+  .brand-theme:has(.zs-toolbar) {
+    --sf-toolbar-h: calc(55px + env(safe-area-inset-bottom, 0px));
+  }
+  /* A bar that rides above the toolbar rather than over it: the two add up. */
+  .brand-theme:has([data-above-toolbar]:not([aria-hidden="true"]):not([inert])) {
+    --sf-bars-h: calc(var(--sf-bottom-bar-h, 0px) + var(--sf-toolbar-h));
+  }
+  /* The product page's order bar, while it is on screen. */
+  .brand-theme:has([data-buy-bar]:not([aria-hidden="true"]):not([inert])) {
+    --sf-bottom-bar-h: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (width < 64rem) {
+  /* The checkout's order bar, while it is on screen. */
+  .brand-theme:has([data-checkout-bar]:not([inert])) {
+    --sf-bottom-bar-h: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* The cookie banner (components/CookieConsent) rests on the bars rather than
+   over them; the safe-area padding is the bar's to give when there is one. */
+.brand-theme [data-cookie-banner] {
+  bottom: var(--sf-bars-h);
+}
+
+@media (width < 40rem) {
+  .brand-theme [data-cookie-banner] {
+    padding-bottom: max(0.75rem, calc(0.75rem + env(safe-area-inset-bottom, 0px) - var(--sf-bars-h)));
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * A friend's invite (components/rewards/InviteBanner). Whether this visitor
+ * has one is only known in the browser, so the banner cannot be in the
+ * server's HTML. A script beside it marks <html> before the first paint when
+ * one is coming, and its place above the header is held from then on — the
+ * page does not jump down when the banner is drawn into it.
+ * ------------------------------------------------------------------ */
+html[data-sf-invite] [data-invite-slot]:empty {
+  min-height: calc(2.75rem + 1px);
+}

@@ -36,7 +36,15 @@ export function LoginPage() {
         return;
       }
       if (err instanceof ApiError) {
-        setError(err.status === 401 ? "Incorrect email or password." : err.message);
+        setError(
+          err.code === "ACCOUNT_SUSPENDED"
+            ? "This account is suspended. Contact support"
+            : err.code === "ACCOUNT_DELETED"
+              ? "This account was deleted"
+              : err.status === 401
+                ? "Incorrect email or password."
+                : err.message
+        );
       } else {
         setError("Can't reach the server. Check that the backend is running and try again.");
       }

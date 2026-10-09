@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Globe } from "lucide-react";
+import { IconArrowOut, IconGlobe } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import type { WebAnalyticsMetricRow, WebAnalyticsRangeParams, WebAnalyticsSeriesPoint } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -117,7 +117,7 @@ export function SiteAnalytics() {
           <Button asChild size="sm" variant="outline">
             <Link to="/analytics/web">
               {t.full}
-              <ArrowUpRight className="size-4 rtl:-scale-x-100" aria-hidden />
+              <IconArrowOut className="size-4 rtl:-scale-x-100" aria-hidden />
             </Link>
           </Button>
         </>
@@ -126,7 +126,7 @@ export function SiteAnalytics() {
       <div className="mt-4">
         <DataState loading={data.loading} error={data.error} onRetry={() => void data.refresh()}>
           {stats && empty ? (
-            <EmptyState icon={<Globe className="size-6" aria-hidden />} title={t.emptyTitle} description={t.emptyBody} />
+            <EmptyState icon={<IconGlobe className="size-6" aria-hidden />} title={t.emptyTitle} description={t.emptyBody} />
           ) : stats && data.data ? (
             <div className="space-y-5">
               <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">

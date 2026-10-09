@@ -1,356 +1,224 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { ExternalLink, PartyPopper, PencilRuler } from "lucide-react";
-import { Button, Card, CardContent, Input, Label, Alert, Spinner } from "@store-builder/ui";
-import { apiErrorDetails, isApiErrorCode, type PublicPlan, type Workspace } from "@store-builder/api-client";
+import { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Button } from "@store-builder/ui";
+import { storesOverview, type StoreOverview, type Workspace } from "@store-builder/api-client";
+import { IconCaretRight, IconPlus, IconStore } from "@/components/icons";
+import { SkeletonBar } from "@/components/DataState";
+import { StatusBadge } from "@/components/StatusBadge";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAuth } from "@/context/AuthContext";
-import { useSlugCheck } from "@/lib/useSlugCheck";
-import { suggestSlug, storeHost, storeUrl } from "@/lib/storeAddress";
-import { useErrorMessage } from "@/lib/errorMessages";
 import { apiClient } from "@/lib/apiClient";
-import { StoreAddressField } from "@/components/StoreAddressField";
-import { CopyButton } from "@/components/CopyButton";
-import { PlanPicker, type PlanChoice } from "@/components/plans/PlanPicker";
-import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
+import { useAsync } from "@/lib/useAsync";
+import { storeHost } from "@/lib/storeAddress";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { AUTH_SUBMIT, AuthFooter, AuthHeading, AuthLinkButton, AuthShell } from "./AuthShell";
+import { InvitesWaitingLine } from "@/components/account/InvitesLink";
+import {
+  CreateStoreFields,
+  CreateStoreSheet,
+  StoreCreated,
+  StoreCreatedActions,
+  useCreateStoreForm,
+  useCreateStoreLabels,
+} from "./stores/createStore";
 
 const STRINGS = {
   en: {
     choose: "Choose a store",
+    chooseBody: "Open the store you want to work in.",
     setUp: "Let's set up your store",
-    signedInAs: "Signed in as {email}.",
+    setUpBody: "Name it and choose its address. You can change both later.",
+    signedInAs: "Signed in as",
     signOut: "Sign out",
-    open: "Open",
-    createTitle: "Create a new store",
-    storeName: "Store name",
-    referral: "Referral code (optional)",
-    referralPlaceholder: "e.g. CAIRO10",
-    referralHint: "Got a code from a Zimos agent? Enter it now — it can also be added later in Settings.",
-    planTitle: "Plan for this store",
-    create: "Create store",
-    creating: "Creating…",
-    createFailed: "Couldn't create the store. Try again.",
-    limitStores: "You've reached your plan's store limit ({used} of {max}). Upgrade one of your stores' plans to add another.",
-    limitDrafts: "Subscribe to one of your stores before starting another.",
-    planGone: "That plan is no longer available. Choose another one.",
-    planRequired: "Choose a plan for this store.",
-    liveTitle: "{name} is live",
-    liveBody: "Your store has its own address. This is the link to share with customers.",
-    draftTitle: "{name} is ready to build",
-    draftBody:
-      "Your store is in draft mode: add your products and design your website as you like. When you're ready, subscribe to publish it at this address.",
-    addressError: "We couldn't give your store the address you picked — {error} It was created at the address below instead.",
-    linkLabel: "Your store link",
-    linkHint: "You can always find this link at the top of your dashboard.",
-    toDashboard: "Go to dashboard",
-    visit: "Visit store",
-    copyLink: "Copy link",
+    open: "Open {name}",
+    newStore: "New store",
+    draft: "Draft",
+    suspended: "Suspended",
+    live: "Live",
+    loading: "Loading your stores…",
+    stores: "Your stores",
   },
   ar: {
-    choose: "اختار متجرًا",
-    setUp: "لنُعدّ متجرك",
-    signedInAs: "مسجّل الدخول باسم {email}.",
-    signOut: "تسجيل الخروج",
-    open: "فتح",
-    createTitle: "إنشاء متجر جديد",
-    storeName: "اسم المتجر",
-    referral: "كود الإحالة (اختياري)",
-    referralPlaceholder: "مثال: CAIRO10",
-    referralHint: "حصلت على كود من أحد مندوبي Zimos؟ أدخله الآن، ويمكنك أيضًا إضافته لاحقًا من الإعدادات.",
-    planTitle: "خطة هذا المتجر",
-    create: "إنشاء المتجر",
-    creating: "بنعمله…",
-    createFailed: "تعذّر إنشاء المتجر. حاول مرة أخرى.",
-    limitStores: "بلغت الحد الأقصى لعدد المتاجر في خطتك ({used} من {max}). رقِّ خطة أحد متاجرك لإضافة متجر آخر.",
-    limitDrafts: "اشترك في أحد متاجرك قبل بدء متجر جديد.",
-    planGone: "هذه الخطة لم تعد متاحة. اختار خطة أخرى.",
-    planRequired: "اختار خطة لهذا المتجر.",
-    liveTitle: "{name} يعمل الآن",
-    liveBody: "أصبح لمتجرك عنوانه الخاص. هذا هو الرابط الذي تشاركه مع عملائك.",
-    draftTitle: "{name} جاهز للبناء",
-    draftBody:
-      "متجرك في وضع المسودة: أضف منتجاتك وصمّم موقعك كما تشاء. وعندما تكون جاهزًا، اشترك لنشره على هذا العنوان.",
-    addressError: "تعذّر منح متجرك العنوان الذي اخترته — {error} وأُنشئ على العنوان أدناه بدلًا منه.",
-    linkLabel: "رابط متجرك",
-    linkHint: "تجد هذا الرابط دائمًا أعلى لوحة التحكم.",
-    toDashboard: "الانتقال إلى لوحة التحكم",
-    visit: "زيارة المتجر",
-    copyLink: "نسخ الرابط",
+    choose: "اختار متجر",
+    chooseBody: "افتح المتجر اللي عايز تشتغل فيه.",
+    setUp: "يلا نجهّز متجرك",
+    setUpBody: "سمّيه واختار عنوانه. تقدر تغيّر الاتنين بعدين.",
+    signedInAs: "داخل بـ",
+    signOut: "اخرج",
+    open: "افتح {name}",
+    newStore: "متجر جديد",
+    draft: "مسودة",
+    suspended: "موقوف",
+    live: "شغّال",
+    loading: "بنحمّل متاجرك…",
+    stores: "متاجرك",
   },
 } satisfies Messages;
 
+/** Three store rows while the list loads, in the rows' own box. */
+function StoresSkeleton({ label }: { label: string }) {
+  return (
+    <div role="status" aria-live="polite" aria-busy="true" className="mt-5">
+      <span className="sr-only">{label}</span>
+      <ul aria-hidden className="space-y-2.5">
+        {[0, 1, 2].map((row) => (
+          <li key={row} data-slot="store-pick" className="flex min-h-[4.5rem] items-center gap-3 rounded-[1.25rem] border border-line bg-paper-raised px-3.5">
+            <SkeletonBar className="size-11 shrink-0 rounded-[0.875rem]" />
+            <div className="min-w-0 flex-1">
+              <SkeletonBar className="h-3.5 w-2/5" />
+              <SkeletonBar className="mt-2.5 h-2.5 w-3/5" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * Where an account lands after signing in, and where the store switcher's
+ * "all stores" goes: the stores it works in, each one tap from its dashboard,
+ * and a new store — the page itself for the first one, a sheet over the list
+ * after that. Outside the dashboard (no store is chosen yet), so it wears the
+ * frame of the sign-in screens.
+ */
 export function WorkspacePickerPage() {
   const t = useT(STRINGS);
+  const labels = useCreateStoreLabels();
   const { user, logout } = useAuth();
-  const { workspaces, loading, selectWorkspace, createWorkspace } = useWorkspace();
+  const { workspaces, loading, selectWorkspace } = useWorkspace();
   const navigate = useNavigate();
-  const errorMessage = useErrorMessage();
-  const addressId = useId();
-  const referralId = useId();
-  const planHeadingId = useId();
-
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  // Until the merchant touches the address it follows the name, so the common
-  // case needs no thought. Once they have edited it, it is theirs and the name
-  // stops overwriting it.
-  const [slugEdited, setSlugEdited] = useState(false);
-  // An agent's referral code: optional, attached to the new store's plan.
-  const [referralCode, setReferralCode] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ workspace: Workspace; addressError?: string; draft: boolean } | null>(null);
-  // While the server requires plans, a store after the first is created on a
-  // plan chosen here (the first one takes the plan chosen at sign-up).
-  const [plans, setPlans] = useState<PublicPlan[]>([]);
-  const [planRequired, setPlanRequired] = useState(false);
-  const [plan, setPlan] = useState<PlanChoice>({ planId: null, billingCycle: "monthly" });
-
-  const slugCheck = useSlugCheck(slug);
-  const askForPlan = planRequired && plans.length > 0 && workspaces.length > 0;
-
-  useEffect(() => {
-    let cancelled = false;
-    Promise.allSettled([apiClient.getSignupOptions(), apiClient.listPublicPlans()]).then(([opts, list]) => {
-      if (cancelled) return;
-      setPlanRequired(opts.status === "fulfilled" && opts.value.planRequired);
-      setPlans(list.status === "fulfilled" ? list.value : []);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  function onNameChange(value: string) {
-    setName(value);
-    if (!slugEdited) setSlug(suggestSlug(value));
-  }
-
-  function onSlugChange(value: string) {
-    setSlugEdited(true);
-    setSlug(value);
-  }
+  // The first store is made on the page; this form is that one.
+  const first = useCreateStoreForm();
+  // /workspaces?new=1 lands with the new-store sheet already open (a "new store" link from inside the dashboard).
+  const [params] = useSearchParams();
+  const [creating, setCreating] = useState(() => params.get("new") === "1");
+  // Draft / suspended come from the overview every store page already reads; without it a row simply has no chip.
+  const overview = useAsync(() => storesOverview(apiClient).catch((): StoreOverview[] => []), [workspaces.length]);
+  const [failedLogos, setFailedLogos] = useState<ReadonlySet<string>>(new Set());
 
   function goToDashboard(workspaceId: string) {
     selectWorkspace(workspaceId);
     navigate("/");
   }
 
-  function describe(err: unknown): string {
-    if (isApiErrorCode(err, "PLAN_LIMIT_REACHED")) {
-      const details = apiErrorDetails<{ limit?: string; max?: number; used?: number }>(err);
-      if (details?.limit === "draft_stores") return t.limitDrafts;
-      return fmt(t.limitStores, { max: details?.max ?? "", used: details?.used ?? "" });
-    }
-    if (isApiErrorCode(err, "PLAN_NOT_AVAILABLE")) return t.planGone;
-    if (isApiErrorCode(err, "PLAN_REQUIRED")) return t.planRequired;
-    return errorMessage(err) || t.createFailed;
-  }
-
-  async function handleCreate(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-    if (askForPlan && !plan.planId) {
-      setError(t.planRequired);
-      return;
-    }
-    setCreating(true);
-    try {
-      const result = await createWorkspace(
-        name.trim(),
-        slug,
-        referralCode.trim() || undefined,
-        askForPlan && plan.planId ? { planId: plan.planId, billingCycle: plan.billingCycle } : undefined
-      );
-      // A store made while subscriptions are required starts as a draft.
-      const access = await apiClient.getWorkspaceAccess(result.workspace.id).catch(() => null);
-      setCreated({ ...result, draft: Boolean(access?.draft) });
-    } catch (err) {
-      setError(describe(err));
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  // The address has to be known-good before the store is created: a store can
-  // be moved afterwards, but the merchant should not find that out by being
-  // given an address they didn't choose.
-  const canSubmit = name.trim().length > 0 && slugCheck.status === "available" && !creating;
-
-  if (created) {
-    return <StoreCreated {...created} onOpenDashboard={() => goToDashboard(created.workspace.id)} />;
-  }
-
-  return (
-    <div className="min-h-screen bg-paper px-4 py-10 sm:px-6 sm:py-16">
-      <div className="mx-auto max-w-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-medium text-ink">{workspaces.length > 0 ? t.choose : t.setUp}</h1>
-            <p className="mt-2 text-sm text-ink-soft">
-              {fmt(t.signedInAs, { email: user?.email ?? "" })}{" "}
-              <button onClick={() => logout()} className="min-h-11 cursor-pointer text-primary hover:underline">
-                {t.signOut}
-              </button>
-            </p>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="mt-10 flex justify-center text-ink-soft">
-            <Spinner className="size-6" />
-          </div>
-        ) : (
-          <>
-            {workspaces.length > 0 && (
-              <div className="mt-8 space-y-3">
-                {workspaces.map((workspace) => (
-                  <button
-                    key={workspace.id}
-                    onClick={() => goToDashboard(workspace.id)}
-                    className="flex min-h-11 w-full cursor-pointer items-center justify-between rounded-[var(--radius-card)] border border-line bg-paper-raised px-5 py-4 text-start transition-colors hover:border-primary"
-                  >
-                    <div>
-                      <p className="font-medium text-ink">{workspace.name}</p>
-                      <p className="text-xs text-ink-soft" dir="ltr">
-                        {storeHost(workspace.slug)}
-                      </p>
-                    </div>
-                    <span className="text-sm text-primary">
-                      {t.open} <span aria-hidden className="inline-block rtl:rotate-180">→</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <Card className="mt-8">
-              <CardContent className="pt-6">
-                <h2 className="font-display text-lg font-medium text-ink">{t.createTitle}</h2>
-                <form onSubmit={handleCreate} className="mt-4 space-y-4">
-                  {error && <Alert variant="danger">{error}</Alert>}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="workspaceName">{t.storeName}</Label>
-                    <Input
-                      id="workspaceName"
-                      required
-                      value={name}
-                      onChange={(e) => onNameChange(e.target.value)}
-                      placeholder={t.storeName}
-                      className="min-h-11"
-                    />
-                  </div>
-
-                  <StoreAddressField id={addressId} value={slug} onChange={onSlugChange} state={slugCheck} disabled={creating} />
-
-                  {askForPlan && (
-                    <div className="space-y-2">
-                      <h3 id={planHeadingId} className="text-sm font-medium text-ink">
-                        {t.planTitle}
-                      </h3>
-                      <PlanPicker plans={plans} value={plan} onChange={setPlan} disabled={creating} labelledBy={planHeadingId} />
-                    </div>
-                  )}
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor={referralId}>{t.referral}</Label>
-                    <Input
-                      id={referralId}
-                      value={referralCode}
-                      onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                      placeholder={t.referralPlaceholder}
-                      maxLength={32}
-                      dir="ltr"
-                      className="min-h-11 max-w-60 font-mono"
-                      disabled={creating}
-                    />
-                    <p className="text-xs text-ink-soft">{t.referralHint}</p>
-                  </div>
-
-                  <Button type="submit" className="min-h-11" disabled={!canSubmit}>
-                    {creating ? t.creating : t.create}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </div>
-    </div>
+  const account = (
+    <>
+    {/* Team invitations waiting for this account (handoff 358). */}
+    <InvitesWaitingLine />
+    <AuthFooter>
+      {t.signedInAs}
+      <bdi dir="ltr" className="max-w-full truncate font-medium text-ink">
+        {user?.email ?? ""}
+      </bdi>
+      <span aria-hidden>·</span>
+      <AuthLinkButton onClick={() => logout()}>{t.signOut}</AuthLinkButton>
+    </AuthFooter>
+    </>
   );
-}
 
-/**
- * What a merchant sees the moment their store exists.
- *
- * The link is the whole point of this screen: it is the first time the store
- * has a public address, and it is the thing they will need to send to someone.
- * So it gets the screen to itself rather than a line in a toast that is gone in
- * four seconds. A draft store's address works once it is subscribed, which
- * the screen says instead of calling it live.
- */
-function StoreCreated({
-  workspace,
-  addressError,
-  draft,
-  onOpenDashboard,
-}: {
-  workspace: Workspace;
-  addressError?: string;
-  draft: boolean;
-  onOpenDashboard: () => void;
-}) {
-  const t = useT(STRINGS);
-  const url = storeUrl(workspace.slug);
+  // The first store exists: its link gets the card to itself.
+  if (first.created) {
+    const created = first.created;
+    return (
+      <AuthShell size="md">
+        <StoreCreated created={created} heading="h1" />
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+          <StoreCreatedActions created={created} onOpenDashboard={() => goToDashboard(created.workspace.id)} className="max-sm:w-full" />
+        </div>
+      </AuthShell>
+    );
+  }
+
+  if (loading) {
+    return (
+      <AuthShell size="md">
+        <AuthHeading title={t.choose}>{t.chooseBody}</AuthHeading>
+        <StoresSkeleton label={t.loading} />
+      </AuthShell>
+    );
+  }
+
+  // While the first store is being made the list already has it: the form stays until its link is ready.
+  if (workspaces.length === 0 || first.creating) {
+    return (
+      <AuthShell size="md">
+        <AuthHeading title={t.setUp}>{t.setUpBody}</AuthHeading>
+        <form onSubmit={(event) => void first.submit(event)} className="mt-6">
+          <CreateStoreFields form={first} />
+          <Button type="submit" className={`mt-5 ${AUTH_SUBMIT}`} disabled={!first.canSubmit}>
+            {first.creating ? labels.creating : labels.create}
+          </Button>
+        </form>
+        {account}
+      </AuthShell>
+    );
+  }
+
+  const stateOf = (workspace: Workspace) => (overview.data ?? []).find((store) => store.id === workspace.id) ?? null;
 
   return (
-    <div className="min-h-screen bg-paper px-4 py-10 sm:px-6 sm:py-16">
-      <div className="mx-auto max-w-2xl">
-        <div className={draft ? "flex size-12 items-center justify-center rounded-full bg-primary-soft" : "flex size-12 items-center justify-center rounded-full bg-success-soft"}>
-          {draft ? <PencilRuler className="size-6 text-primary" aria-hidden /> : <PartyPopper className="size-6 text-success" aria-hidden />}
-        </div>
-        <h1 className="mt-4 font-display text-3xl font-medium text-ink">
-          {fmt(draft ? t.draftTitle : t.liveTitle, { name: workspace.name })}
-        </h1>
-        <p className="mt-2 text-sm text-ink-soft">{draft ? t.draftBody : t.liveBody}</p>
+    <AuthShell size="md">
+      <AuthHeading title={t.choose}>{t.chooseBody}</AuthHeading>
 
-        {addressError && (
-          <Alert variant="danger" className="mt-6">
-            {fmt(t.addressError, { error: addressError })}
-          </Alert>
-        )}
+      <ul aria-label={t.stores} className="mt-5 space-y-2.5">
+        {workspaces.map((workspace) => {
+          const state = stateOf(workspace);
+          const suspended = (state?.status ?? workspace.status) === "suspended";
+          const logo = state?.logoUrl ?? workspace.logoUrl ?? null;
+          return (
+            <li key={workspace.id}>
+              <button
+                type="button"
+                data-slot="store-pick"
+                onClick={() => goToDashboard(workspace.id)}
+                aria-label={fmt(t.open, { name: workspace.name })}
+                className="flex min-h-[4.5rem] w-full cursor-pointer items-center gap-3 rounded-[1.25rem] border border-line bg-paper-raised px-3.5 py-3 text-start transition-[scale,background-color,border-color] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100"
+              >
+                <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-[0.875rem] bg-primary-soft text-primary">
+                  {logo && !failedLogos.has(workspace.id) ? (
+                    <img
+                      src={logo}
+                      alt=""
+                      className="size-full object-contain"
+                      onError={() => setFailedLogos((failed) => new Set(failed).add(workspace.id))}
+                    />
+                  ) : (
+                    <IconStore className="size-5" weight="duotone" aria-hidden />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span dir="auto" className="min-w-0 truncate text-[15px] leading-6 font-semibold text-ink">
+                      {workspace.name}
+                    </span>
+                    {suspended ? (
+                      <StatusBadge value="suspended" tone="danger" text={t.suspended} className="shrink-0" />
+                    ) : state?.draft ? (
+                      <StatusBadge value="draft" tone="warning" text={t.draft} className="shrink-0" />
+                    ) : state ? (
+                      <StatusBadge value="active" tone="success" text={t.live} className="shrink-0" />
+                    ) : null}
+                  </span>
+                  <bdi dir="ltr" className="block truncate text-start text-[13px] leading-5 text-ink-soft">
+                    {storeHost(workspace.slug)}
+                  </bdi>
+                </span>
+                <IconCaretRight className="size-4 shrink-0 text-ink-soft rtl:-scale-x-100" aria-hidden />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
 
-        <div className="mt-6 rounded-[var(--radius-card)] border border-line bg-paper-raised p-5">
-          <Label>{t.linkLabel}</Label>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            {draft ? (
-              <span className="font-display text-lg font-medium break-all text-ink" dir="ltr">
-                {storeHost(workspace.slug)}
-              </span>
-            ) : (
-              <a href={url} target="_blank" rel="noreferrer" className="font-display text-lg font-medium break-all text-primary hover:underline" dir="ltr">
-                {storeHost(workspace.slug)}
-              </a>
-            )}
-            <CopyButton value={url} label={t.copyLink} />
-          </div>
-          <p className="mt-3 text-xs text-ink-soft">{t.linkHint}</p>
-        </div>
+      <Button type="button" variant="outline" className="mt-4 min-h-12 w-full text-base" onClick={() => setCreating(true)}>
+        <IconPlus weight="bold" className="size-4" aria-hidden />
+        {t.newStore}
+      </Button>
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Button className="min-h-11" onClick={onOpenDashboard}>
-            {t.toDashboard}
-          </Button>
-          {!draft && (
-            <Button variant="outline" className="min-h-11" asChild>
-              <a href={url} target="_blank" rel="noreferrer">
-                <ExternalLink className="size-4" aria-hidden />
-                {t.visit}
-              </a>
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
+      {account}
+
+      <CreateStoreSheet open={creating} onOpenChange={setCreating} onOpenDashboard={goToDashboard} />
+    </AuthShell>
   );
 }

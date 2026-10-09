@@ -22,3 +22,85 @@ which screen. The backend marks them done in its
 - [x] (done by backend: LINK_INVALID / LINK_NOT_HTTPS / LINK_HAS_CREDENTIALS / LINK_NOT_PRODUCT / LINK_NO_PRODUCT_DATA; mapped) **Own error codes for link refusals (180):** "not https", "not a product link" and "the page does not publish product data" all come as one code with English detail text, so the dashboard tells them apart by matching that text. Give each its own code. Screen: Products → Import → «من رابط منتج».
 - [x] (done by backend: any variant buyable) **Wishlist `available` for a product saved as a whole (188):** today it reflects the product's first variant only, so a shirt whose size M is sold out but L is in stock shows «مش متاح» in the wishlist. Make it "any variant can be bought". The storefront works around it with one product request per such item. Screen: storefront account → «المفضلة».
 - [ ] **Store gate: `lockFunnels` in the public gate view (197, nice to have).** The storefront has to call a funnel route to learn whether funnels are locked too; with the flag in `GET /store/:ws` (gate view) it can decide without the extra request. Screen: storefront gate on funnel pages.
+
+## Found while building handoff 201–312 (local desktop chat, 2026-10-07)
+
+Screens for these items exist in the local working tree (not committed). Each line is something the
+frontend could not fix from its side; where it worked around it, the workaround is named so it can go.
+
+### Blocks a real browser or a real role
+- [ ] **CORS: allow `PUT` on the store API.** `src/core/middleware/cors.js` `methods` is GET/POST/PATCH/DELETE/OPTIONS, so a browser cannot send `PUT /store/:ws/survey/orders/:id` (236) or `PUT /store/:ws/account/business` (228); Node/curl pass, which hides it. Workaround: a same-origin relay in the storefront (`app/store/[workspaceId]/api-put/[...path]/route.ts`, allow-list of those two paths) — delete it once PUT is allowed.
+- [ ] **CORS: allow the `X-Funnel-Id` header** (312). The handoff asks for it; the preflight refuses it. Workaround: the storefront sends `?funnelId=` on funnel pages.
+- [ ] **312, locked store with funnels open: these still answer 423 `STORE_LOCKED` with the funnel named** (query or header): `GET products/:id`, `GET products/:id/bumps`, `GET address/config`, `POST coupon-preview`, `POST deposit-quote`, `POST cart`, `GET survey`. A new visitor therefore cannot open a funnel checkout step (the step reads its product). Only the eight calls the handoff lists pass.
+- [ ] **Scan to pack (249) needs `orders.manage`; the `fulfillment` role has `orders.view` + `shipping.manage`** — packers get 403 on `/orders/:id/pack/*` while they can open the pick list and print slips.
+- [ ] **The `accountant` role has neither `customers.view` nor `orders.manage`** — it cannot open «حسابات الآجل» nor record an on-account payment (229).
+
+### Money shown or moved wrongly
+- [ ] **Cancel with a gift-card-paid part (273–274):** the cancel dialog refund tick on a COD order whose paid part is a gift card records a cash refund with no payment named, and the cancel job then has nothing to give back to the card (read in `orderCancelRefund.js`, `giftCardService.js`; not ticked in a browser). Hide it server-side or name the tender.
+- [ ] **`GET /orders/:id/payment-timeline` `refundable`:** 150.00 for a cancelled / rejected COD order where no cash was collected (total 200, gift card 50 already returned); and for an on-account order it is the order total, not what was paid. «استرداد» is offered for money never taken.
+- [ ] **Cart and shipping quote ignore the VIP tier and a referral code (218, 222):** no way to show the discounted total or the waived shipping before the order; the checkout says them as lines "taken off when you place the order". Wanted: `/store/:ws/cart` and the quote take the tier and a `referralCode`.
+- [ ] **Cart marks list-priced (205) and offer-priced (253) lines `priceChanged: true`** — the storefront hides «السعر اتغيّر» on them by comparing with the price list / `cartOffers`.
+- [ ] **Storefront has no tax quote (228):** a taxed shopper sees no tax line at checkout or on the thank-you page; «معفى» is the only tax row there is.
+- [ ] **The on-account credit limit is checked on the full total before gift card / points / credit (229)** — the checkout therefore makes pay-on-account exclusive of them.
+- [ ] **Account history leaks staff text (203, 204):** `GET /store/:ws/account/loyalty` and `/account/store-credit` return staff notes and English system remarks to the shopper (not shown by the storefront).
+- [ ] **`PUT /cart-offers` refuses the shape `GET` answers** (both `discountPercent` and `offerPriceAmount` present, one null → 422) although the handoff says the list is sent back whole; and it **accepts a rule with no condition** (`productIds: null`, `minSubtotal: null`).
+- [ ] **Sales sources (254):** an order whose touch has only `twclid` is counted under "No UTM", not `x`; rows come back under the raw `utm_source` ("bing", "twitter"), not the platform key.
+- [ ] **Bulk sheet update (243/295/297):** preview / apply amounts carry no currency; `apply` does not answer `ignoredColumns`; an error answer is stored and replayed for the same Idempotency-Key; row errors are English sentences without codes.
+
+### Missing fields the screens work around
+- [ ] **Tracking answer has no order `id` and no `shippingAddress` (220/287)** — self-service by token decodes the id from the token format, and the address form opens empty on the tracking page. Also `trackingLimiter` keys on `?phone=&number=`, which the self-service POSTs do not have.
+- [ ] **213:** `GET /digital/products/:id/codes` has no `waitingCodes` (only the `stock.low` notification carries it); the notification links to `/catalog/:id?tab=digital` and the one for 212 to `/products/:id?tab=questions` — the dashboard routes are `/digital?product=:id` and `/catalog/:id` (redirects added).
+- [ ] **249:** `GET /orders/:id/timeline` drops the `order.packed` progress and unknown codes, so the reason of a forced pack is not visible.
+- [ ] **209:** POST/PATCH follow-ups and notes answer `assignee` / `author` as `{ id }` only; "mine" leaves out whole-team follow-ups; no teammates list for staff without `users.manage`.
+- [ ] **248 / 235:** no `erased` flag on a customer (the dashboard detects the `x…` phone); erased customers come back as duplicates of each other by name.
+- [ ] **206 / 207 / 230:** stock count lines and lot rows have no `optionValues`; transfer history has only `variantId` and an `actorUserId`; `GET stock-locations/:id/stock` `q` ignores the SKU and counts archived products; the packing slip does not print the ship-from location.
+- [ ] **224:** `counts` has no `needs_order`.
+- [ ] **219:** the quote page needs `?token=` (no signed-in path, no "my quotes", token in the query string); `accept` takes no `postalCode`; `newCount` counts only the current filter; the list is capped at 200; lines carry no stock; no setting to switch quote requests off.
+- [ ] **229:** invoice PDF prints `Payment method: on_account` raw and no due date; the statement and the list carry no currency; `GET /account/orders/:id` has no `paymentDueAt`; `GET /manual-transfers/orders/:id` returns recorded on-account payments as customer transfers; the two 422 `paymentMethod` refusals differ only in English text.
+- [ ] **222:** the four referral refusals share `VALIDATION_ERROR` and differ only in English sentences; ledger kind `referral` is not in handoff 203/204; `PUT /customer-referrals` requires `referrer.amount ≥ 1` even when disabled.
+- [ ] **263 / 265:** `GET /dropship/providers` has no capability flags for the two switches; `BELOW_SUPPLIER_MINIMUM` has no ar/fr message and no currency; `GET /apps` `external[]` has no `embedded`; `GET /admin/partner-apps` has no developer name or install count; a paused webhook of a removed app gets no `disabledReason`.
+- [ ] **261:** `GET /profit/ads/adapters` does not describe the credential fields of an adapter; campaign rows carry no account / adapter.
+- [ ] **253 / 258:** `cartOffers.locked[]` has no `neededProducts`; `offers[].variant.imageUrl` is the variant picture only; `PUT /spin-wheel` answers `{ config }` only; a spin can be refused by the plan lead limit with no code.
+- [ ] **Reserved page slugs** do not include `quotes`, `compare`, `branches` (new storefront routes would shadow a merchant page with that slug).
+- [ ] **Order tracking (`GET /store/:ws/orders/track`) returns no `deliverySlot` and nothing saying the order is a pickup (221, 225):** the delivery time shows only on the device that ordered, and for pickups the page asks `GET /store/:ws/pickup/orders/:id?token=`, which answers 404 for every other order. The tracking steps also ignore pickups (a collected pickup reads as a shipping order).
+- [ ] **`GET /store/:ws` has no flag for delivery slots or store pickup, and no time zone (221, 225):** the checkout learns "off" from 404s on `/delivery-slots` and `/pickup/locations` (two red console lines per visit); storefront dates are formatted in Africa/Cairo.
+- [ ] **A store with `required: true` demands a slot on pickup orders too** (422 `deliverySlot`) — the handoff does not say which is intended; the checkout keeps the picker for pickups, worded «يوم وميعاد الاستلام».
+- [ ] **The checkout 201 `order` does not carry what is written right after it (216, 225):** no `pickup` / `holiday` in `tags`, no `shippingSnapshot.holiday`.
+- [ ] **No staff endpoint for one order's pickup (225);** the order page reads the place's pending and ready lists. The `fulfillment` role sees the pickups queue but cannot mark ready or hand over (`orders.manage`).
+- [ ] **New refusals are English only** (`DELIVERY_SLOT_FULL` / `_UNAVAILABLE`, `STORE_ON_HOLIDAY`, `PICKUP_OUT_OF_STOCK`, `PICKUP_CODE_WRONG`, the 422 messages on `deliverySlot` and `pickupLocationId`); the UI words them from the codes. Minor: the 423 `details.holiday.shipsFrom` equals `until` on a "pause" saved with `shipsFrom: null`.
+
+### Smaller
+- [ ] 202: the email preview came back in Arabic for a member whose `locale` is `en`.
+- [ ] 210: `imageUrl` is https-only (a local upload returns `http://localhost:4000/uploads/…`); no "this column is a length" flag, so the cm/inch switch leaves the first column alone and converts every other numeric one.
+- [ ] 211: `record` logs any first-page listing that has `search=`, so a sort or a filter counts as another search (read in the code).
+- [ ] 212: no setting to turn product Q&A off.
+- [ ] 227: `POST /price-schedules/preview` validates the whole create body (name and `startsAt` required just to preview).
+- [ ] 231: `GET /store/:ws/specs/products` cannot combine with search / sort / other filters; a specification is accepted with both names empty.
+- [ ] 223: the PUT answer has no `computedAt`; switching the feature off deletes the worked-out pairs.
+- [ ] 234: the history has no price in force at the start of the window, so the chart begins at the first change.
+- [ ] 232: `POST /redirects/import` takes an `http://` target and silently keeps only its path, while a single create refuses http.
+- [ ] 233: `GET /store/:ws` does not say whether the store locator is on (the layout asks `GET /branches` once per render).
+- [ ] 239 / 238 / 240: `inventory-value` `locations[].units` counts only variants with a cost while `totals.units` counts all; `tax` rows group on the raw province text («القاهرة (Cairo)» and "Cairo" are two rows); `slow-stock` totals are computed after the `limit` cut.
+- [ ] 226: pick-list `readyToShip` leaves out test orders while the tab count includes them.
+- [ ] 201 / 203 / 204: the COD path never answers `paidInStore`; `perPayment` lists gateway payments only; `PUT /loyalty` answers only `{ settings, active }`; `POST /store-credit/orders/:id/refund` requires `reason` (not in the handoff).
+
+Not verifiable on the local stack (no bug implied): online payments (`PAYMENTS_ONLINE_ENABLED` unset), a second stock
+location (the demo plan has no `multi_warehouse`), a real Google sign-in (no Google client), a real ads adapter.
+
+## Found while building handoff 302–408 and the go-live AI note (local desktop chat, 2026-10-08)
+
+### Patched in the LOCAL backend checkout only (uncommitted) — please make the same change upstream
+- [ ] **Shipments 500:** `src/modules/shipping/partialShipments.js` asked `db.Product` for attribute `type`; the attribute is `productType`. `POST /orders/:id/shipments` and `GET …/shipments/plan` answered 500 `column "type" does not exist`, so no shipment could be created from the order page. Changed both uses to `productType`; `GET …/shipments/plan` answers 200 again.
+- [ ] **Refund of a hand-taken payment:** `paymentService.js` `PROVIDERS` had no `manual`, so refunding an approved InstaPay / wallet payment (340) or a recorded on-account payment (229) answered 400 `UNKNOWN_PAYMENT_PROVIDER`. Added `providers/manualProvider.js` (records only, like `codProvider`) and registered it. Not exercised with a real refund.
+- [ ] **CORS `X-Funnel-Id`** added to `allowedHeaders` (312). `PUT` is still missing from `methods` (not changed locally); the storefront keeps its same-origin PUT relay.
+
+### Still open
+- [ ] `X-Zimos-Skipped-Ids` is not in CORS `exposedHeaders`, so a cross-origin dashboard cannot read it (303).
+- [ ] `GET /store/:ws` has no `websiteId` (302: the store pages cannot send it on checkout autosave), no `available` on `GET /store/:ws/products/suggest` (390).
+- [ ] `order.orderNumber` now carries its own "#" (381): the storefront stopped adding one; anything else that prints "#" + number will double it.
+- [ ] A link confirmation (388) carries an English-only note; a failed AI job stores an English sentence and no code; `payment.disputed` and other newer notification types / order email keys are missing from nothing on the API side but are English-only where the server writes the title.
+- [ ] Roles on the demo store: `GET /workspaces/:ws/roles` returns `permissions: []` for every built-in role except Owner and Fulfillment (346 then disables everything for an Admin). Stale seed or a bug?
+- [ ] A throw-away account cannot be activated locally (`pending_verification`, the emailed token is logged as `[REDACTED]`), so invites (358) and ownership offers (379) could not be accepted for real.
+- [ ] The console demo login lacks `payment_methods.manage` / `payment_methods.edit_numbers`, and `POST /billing/invoices/open` answers `NO_PAYMENT_METHOD` before `MANUAL_PRICING` (334, 336).
+- [ ] 375: a courier whose address levels are not city / district has no level picker in the split dialog; 372: no "cancelled" in `ReturnStatus`; 391: `status: "approved"` covers only the step's own language, and a rule can be on while its template is pending.
+- [ ] 385: `PATCH /purchases/:id` and the renew answer carry no `manage`; the sandbox registrar prices every name as null (the dashboard keeps Buy enabled only for the sandbox).

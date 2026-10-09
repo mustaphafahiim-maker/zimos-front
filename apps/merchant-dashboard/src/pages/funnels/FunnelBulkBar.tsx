@@ -1,7 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Copy, Pause, Play, Rocket, Trash2, X } from "lucide-react";
-import { Button, Spinner, cn } from "@store-builder/ui";
+import { useState, type ReactNode } from "react";
+import { Button } from "@store-builder/ui";
 import {
   FUNNEL_BULK_MAX,
   funnelBulk,
@@ -14,88 +12,104 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
-import { useToast } from "@/components/Toast";
-import { Modal } from "@/components/Modal";
+import { pluralOf } from "@/lib/plural";
+import { fmt, getIntlLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { IconCopy, IconDelete, IconLaunch, IconPause, IconPlay, type IconComponent } from "@/components/icons";
+import { BulkBar, type BulkAction } from "@/components/list";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Sheet } from "@/components/Sheet";
+import { useToast } from "@/components/Toast";
+import { ViewLink } from "@/components/ViewLink";
 import { useFunnelErrorMessage } from "./funnelAdapter";
 
 /*
- * Bulk actions on the funnels list (frontend-handoff 166): the bar shown while
- * funnels are ticked, the delete confirmation, and the list of funnels that
- * did not change. Each funnel goes through its own button's path on the
+ * Bulk actions on the funnels list (frontend-handoff 166): the bar that rises
+ * while funnels are ticked, the delete confirmation, and the list of funnels
+ * that did not change. Each funnel goes through its own button's path on the
  * server (POST /funnels/bulk), so one refusal never blocks the others.
  */
 
 const STRINGS = {
   en: {
-    toolbar: "Bulk actions",
-    selected: "{n} selected",
-    clear: "Clear selection",
+    selected_one: "1 funnel selected",
+    selected_other: "{n} funnels selected",
     publish: "Publish",
     pause: "Pause",
     resume: "Resume",
     duplicate: "Duplicate",
     delete: "Delete",
-    working: "Working…",
-    max: "Up to 50 at a time",
-    deleteTitle: "Delete {n} funnels? This can't be undone.",
-    deleteDescription: "Their steps and share links stop working at once. Orders already placed are kept.",
+    max: "Up to {n} at a time. Untick a few.",
+    noneLive: "None of them is live.",
+    nonePaused: "None of them is paused.",
+    deleteTitle: "Move {count} to the trash?",
+    moveToTrash: "Move to trash",
+    count_one: "1 funnel",
+    count_other: "{n} funnels",
+    deleteDescription: "It moves to the trash, where you can restore it for 30 days. Its link stops working right away.",
     deleting: "Deleting…",
     cancel: "Cancel",
-    result: "{ok} done, {failed} failed",
-    resultTitle: "These funnels were not changed",
-    unknownFunnel: "A funnel that no longer exists",
-    problems: "Can't be published yet: open it in the editor and fix its problems ({n}).",
+    result: "{ok} done, {failed} not done",
+    resultTitle: "These funnels did not change",
+    unknownFunnel: "A funnel that is no longer there",
+    problems: "It can't be published yet: open it and fix its problems ({n}).",
     close: "Close",
   },
   ar: {
-    toolbar: "إجراءات جماعية",
-    selected: "{n} متحدد",
-    clear: "شيل التحديد",
-    publish: "نشر",
-    pause: "إيقاف",
-    resume: "تشغيل",
-    duplicate: "نسخ",
-    delete: "حذف",
-    working: "ثانية واحدة…",
-    max: "لحد ٥٠ مرة واحدة",
-    deleteTitle: "حذف {n} مسار بيع؟ مش هتقدر ترجعهم.",
-    deleteDescription: "خطواتهم ولينكات المشاركة هتقف فورًا. الأوردرات اللي اتعملت قبل كده محفوظة.",
-    deleting: "بيتحذف…",
+    selected_one: "فانل واحد متحدد",
+    selected_two: "فانلين متحددين",
+    selected_few: "{n} فانلز متحددين",
+    selected_other: "{n} فانل متحدد",
+    publish: "انشر",
+    pause: "وقّف",
+    resume: "شغّل",
+    duplicate: "اعمل نسخ",
+    delete: "امسح",
+    max: "لحد {n} في المرة. شيل التحديد من شوية.",
+    noneLive: "مفيش فيهم فانل شغّال.",
+    nonePaused: "مفيش فيهم فانل متوقف.",
+    deleteTitle: "تنقل {count} لسلة المحذوفات؟",
+    moveToTrash: "انقل للمحذوفات",
+    count_one: "فانل واحد",
+    count_two: "فانلين",
+    count_few: "{n} فانلز",
+    count_other: "{n} فانل",
+    deleteDescription: "هيتنقل لسلة المحذوفات وتقدر ترجعه خلال 30 يوم. الرابط هيوقف فورًا.",
+    deleting: "بنمسح…",
     cancel: "إلغاء",
     result: "{ok} اتعملوا، {failed} ماتعملوش",
-    resultTitle: "مسارات البيع دي ماتغيرتش",
-    unknownFunnel: "مسار بيع مبقاش موجود",
-    problems: "مينفعش يتنشر لسه: افتحه في المحرر وصلّح المشاكل ({n}).",
-    close: "إغلاق",
+    resultTitle: "الفانلز دي ماتغيرتش",
+    unknownFunnel: "فانل مبقاش موجود",
+    problems: "مينفعش يتنشر لسه: افتحه وصلّح مشاكله ({n}).",
+    close: "اقفل",
   },
 } satisfies Messages;
 
-const ICONS: Record<FunnelBulkAction, typeof Play> = {
-  publish: Rocket,
-  pause: Pause,
-  resume: Play,
-  duplicate: Copy,
-  delete: Trash2,
+const ICONS: Record<FunnelBulkAction, IconComponent> = {
+  publish: IconLaunch,
+  pause: IconPause,
+  resume: IconPlay,
+  duplicate: IconCopy,
+  delete: IconDelete,
 };
 
 /**
- * The bar above the funnels table while funnels are ticked. `onDone` gets the
+ * The bar over the funnels list while funnels are ticked. `onDone` gets the
  * answer so the page can refresh and keep the failed funnels selected.
  */
 export function FunnelBulkBar({
   selected,
   onClear,
   onDone,
+  extra,
 }: {
   /** The ticked funnels that are on the page now. */
   selected: FunnelDto[];
   onClear: () => void;
   onDone: (response: FunnelBulkResponse) => void | Promise<void>;
+  /** A line under the actions — the page's "select all". Optional: none by default. */
+  extra?: ReactNode;
 }) {
   const t = useT(STRINGS);
-  const { intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const describeError = useFunnelErrorMessage();
@@ -104,7 +118,7 @@ export function FunnelBulkBar({
   const [failures, setFailures] = useState<FunnelBulkResult[]>([]);
 
   const count = selected.length;
-  const number = (n: number) => new Intl.NumberFormat(intlLocale).format(n);
+  const number = (n: number) => new Intl.NumberFormat(getIntlLocale()).format(n);
   const tooMany = count > FUNNEL_BULK_MAX;
   const busy = running !== null;
 
@@ -140,71 +154,50 @@ export function FunnelBulkBar({
     return describeError(err);
   }
 
-  if (count === 0 && failures.length === 0) return null;
-
   // Pause needs a live funnel and Resume a paused one: off when none of the ticked ones can take it.
   const canPause = selected.some((f) => f.status === "published");
   const canResume = selected.some((f) => f.status === "paused");
-  const actions: Array<{ action: FunnelBulkAction; label: string; enabled: boolean }> = [
-    { action: "publish", label: t.publish, enabled: true },
-    { action: "pause", label: t.pause, enabled: canPause },
-    { action: "resume", label: t.resume, enabled: canResume },
-    { action: "duplicate", label: t.duplicate, enabled: true },
-    { action: "delete", label: t.delete, enabled: true },
+  const tooManyReason = tooMany ? fmt(t.max, { n: number(FUNNEL_BULK_MAX) }) : undefined;
+  const action = (id: FunnelBulkAction, label: string, enabled: boolean, why?: string): BulkAction => ({
+    id,
+    label,
+    icon: ICONS[id],
+    destructive: id === "delete",
+    disabled: busy || tooMany || !enabled,
+    disabledReason: tooManyReason ?? (enabled ? undefined : why),
+    onSelect: () => (id === "delete" ? setConfirmDelete(true) : void run(id)),
+  });
+  const actions: BulkAction[] = [
+    action("publish", t.publish, true),
+    action("pause", t.pause, canPause, t.noneLive),
+    action("resume", t.resume, canResume, t.nonePaused),
+    action("duplicate", t.duplicate, true),
+    action("delete", t.delete, true),
   ];
 
   return (
     <>
-      {count > 0 && (
-        <div
-          role="group"
-          aria-label={t.toolbar}
-          // Sticks just under the top bar (h-14: top-0 on phones, top-3 from md).
-          className="sticky top-16 z-20 mb-3 flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] border border-primary/40 bg-primary-soft px-3 py-2 shadow-[var(--shadow-raised)] md:top-[4.75rem]"
-        >
-          <span className="text-sm font-medium text-ink" aria-live="polite">
-            {fmt(t.selected, { n: number(count) })}
-          </span>
-          {tooMany && (
-            <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent-dark">{t.max}</span>
-          )}
-          {/* Phones: a second row of five equal buttons, icon over label; wider screens: one line. */}
-          <div className="order-last grid w-full grid-cols-5 gap-1.5 sm:order-none sm:flex sm:w-auto sm:flex-wrap sm:items-center">
-            {actions.map(({ action, label, enabled }) => {
-              const Icon = ICONS[action];
-              return (
-                <Button
-                  key={action}
-                  size="sm"
-                  variant={action === "delete" ? "danger" : "outline"}
-                  className={cn(
-                    "h-auto min-h-11 flex-col gap-0.5 px-1 py-1.5 text-xs sm:h-8 sm:min-h-9 sm:flex-row sm:gap-1 sm:px-2.5 sm:py-0 sm:text-sm",
-                    action !== "delete" && "bg-paper-raised"
-                  )}
-                  disabled={busy || tooMany || !enabled}
-                  title={tooMany ? t.max : undefined}
-                  aria-busy={running === action || undefined}
-                  onClick={() => (action === "delete" ? setConfirmDelete(true) : void run(action))}
-                >
-                  {running === action ? <Spinner className="size-4" /> : <Icon className="size-4" aria-hidden />}
-                  {label}
-                  {running === action && <span className="sr-only">{t.working}</span>}
-                </Button>
-              );
-            })}
-          </div>
-          <Button variant="ghost" size="sm" className="ms-auto min-h-11 sm:min-h-9" disabled={busy} onClick={onClear}>
-            <X className="size-4" aria-hidden />
-            {t.clear}
-          </Button>
-        </div>
-      )}
+      <BulkBar
+        count={count}
+        label={pluralOf(t, "selected", count)}
+        onClear={onClear}
+        actions={actions}
+        busy={busy}
+        extra={
+          tooManyReason || extra ? (
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {tooManyReason && <span className="font-medium text-accent-dark">{tooManyReason}</span>}
+              {extra}
+            </span>
+          ) : undefined
+        }
+      />
 
       <ConfirmDialog
         open={confirmDelete}
-        title={fmt(t.deleteTitle, { n: number(count) })}
+        title={fmt(t.deleteTitle, { count: pluralOf(t, "count", count) })}
         description={t.deleteDescription}
-        confirmLabel={t.delete}
+        confirmLabel={t.moveToTrash}
         busyLabel={t.deleting}
         cancelLabel={t.cancel}
         destructive
@@ -212,35 +205,34 @@ export function FunnelBulkBar({
         onConfirm={() => run("delete")}
       />
 
-      <Modal
+      <Sheet
         open={failures.length > 0}
-        onClose={() => setFailures([])}
+        onOpenChange={(open) => {
+          if (!open) setFailures([]);
+        }}
         title={t.resultTitle}
-        footer={
-          <Button className="min-h-11" onClick={() => setFailures([])}>
-            {t.close}
-          </Button>
-        }
+        size="sm"
+        footer={<Button onClick={() => setFailures([])}>{t.close}</Button>}
       >
-        <ul className="max-h-[60vh] space-y-2 overflow-y-auto">
+        <ul className="space-y-2">
           {failures.map((result) => (
-            <li key={result.funnelId} className="rounded-[var(--radius)] bg-paper-sunken/60 px-3 py-2">
+            <li key={result.funnelId} data-slot="funnel-failure" className="zimos-funnel-note rounded-[0.875rem] bg-paper-sunken/60 px-3.5 py-2.5">
               {result.name ? (
-                <Link
+                <ViewLink
                   to={`/funnels/${result.funnelId}`}
-                  className="text-sm font-medium text-ink hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+                  className="inline-flex min-h-11 items-center text-sm font-medium text-ink underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary pointer-fine:min-h-0"
                   dir="auto"
                 >
                   {result.name}
-                </Link>
+                </ViewLink>
               ) : (
                 <span className="text-sm font-medium text-ink">{t.unknownFunnel}</span>
               )}
-              <p className="mt-0.5 text-sm text-ink-soft">{reason(result)}</p>
+              <p className="text-sm leading-6 text-ink-soft">{reason(result)}</p>
             </li>
           ))}
         </ul>
-      </Modal>
+      </Sheet>
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { Languages } from "lucide-react";
+import { IconLanguage } from "@/components/icons";
 import { cn } from "@store-builder/ui";
 import { useLocale, useT } from "@/i18n/LocaleContext";
 
@@ -34,7 +34,7 @@ export function LanguageSwitch({
         className
       )}
     >
-      {!compact && <Languages className="size-4" aria-hidden />}
+      {!compact && <IconLanguage className="size-4" aria-hidden />}
       <span lang={locale === "ar" ? "en" : "ar"}>{target}</span>
     </button>
   );

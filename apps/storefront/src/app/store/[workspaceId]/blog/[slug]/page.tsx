@@ -14,6 +14,7 @@ import { getDictionary } from "@/lib/i18n";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta } from "@/lib/storeMeta";
+import { redirectIfMoved } from "@/lib/urlRedirectsServer";
 
 export const revalidate = 60;
 
@@ -90,6 +91,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function BlogPostPage({ params }: { params: Params }) {
   const { workspaceId, slug } = await params;
   const [store, found] = await Promise.all([getStoreMeta(workspaceId), getPost(workspaceId, slugOf(slug))]);
+  // A post whose address the merchant moved goes on to its new one (Store settings → URL redirects, handoff 232).
+  if (store && !found) await redirectIfMoved(workspaceId, `/blog/${slugOf(slug)}`);
   if (!store || !found) notFound();
   const { post, related } = found;
   const locale = await getStoreLocale(store);

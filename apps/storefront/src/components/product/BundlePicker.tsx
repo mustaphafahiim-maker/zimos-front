@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { storefrontShippingQuoteFor, type ApiClient, type StorefrontBundle, type StorefrontBundleTier, type StorefrontProduct, type StorefrontVariant } from "@store-builder/api-client";
-import { useCart } from "@/lib/CartProvider";
+import { cartErrorMessage, useCart, type LinePreview } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
 import { useStoreCountry } from "@/lib/storeCountry";
 import { useOfferView } from "@/lib/offerViews";
@@ -291,28 +291,40 @@ export function BundlePicker({
 }
 
 /** Adds every line of the bundle to the cart, one after the other, without clearing what is in it. */
-export function BundleAddToCartButton({ selection, disabled }: { selection: BundleSelection; disabled: boolean }) {
+export function BundleAddToCartButton({
+  selection,
+  disabled,
+  preview,
+}: {
+  selection: BundleSelection;
+  disabled: boolean;
+  /** The product as the page shows it: the lines the drawer draws before the server answers (lib/CartProvider). */
+  preview?: LinePreview;
+}) {
   const { locale } = useStore();
   const text = pickText(TEXT, locale);
-  const { addItem, openDrawer } = useCart();
+  const { addItem, openDrawer, reportProblem } = useCart();
   const [status, setStatus] = useState<"idle" | "loading" | "added" | "error">("idle");
 
   async function add() {
     if (disabled || status === "loading") return;
     setStatus("loading");
+    // The tap answers at once: the drawer opens with the lines on their way, as the plain add button does.
+    openDrawer();
     try {
-      for (const line of selection.lines) await addItem(line.variantId, undefined, line.quantity);
+      for (const line of selection.lines) await addItem(line.variantId, undefined, line.quantity, undefined, preview);
       setStatus("added");
-      openDrawer();
       setTimeout(() => setStatus((s) => (s === "added" ? "idle" : s)), 2000);
-    } catch {
+    } catch (err) {
       setStatus("error");
+      // The open drawer says why the line left it.
+      reportProblem("add", cartErrorMessage(err) ?? text.addFailed);
     }
   }
 
   return (
     <div>
-      <button type="button" onClick={() => void add()} disabled={disabled || status === "loading"} className={`${btnSecondary} w-full`}>
+      <button type="button" onClick={() => void add()} disabled={disabled || status === "loading"} aria-busy={status === "loading"} className={`${btnSecondary} w-full touch-manipulation`}>
         {status === "added" ? <CheckIcon /> : <CartGlyph />}
         {status === "loading" ? text.adding : status === "added" ? text.added : text.addToCart}
       </button>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Download } from "lucide-react";
+import { IconCopy, IconDownload, IconMagic } from "@/components/icons";
 import { Alert, Button, Label } from "@store-builder/ui";
 import { couponsBulkGenerate, type CouponBulkPayload, type CouponBulkResult } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -52,7 +52,7 @@ const STRINGS = {
   ar: {
     open: "توليد أكواد",
     title: "توليد أكواد خصم",
-    description: "أكواد عشوائية بنفس الخصم. أعطِ كل مؤثر أو عميل كودًا خاصًا به.",
+    description: "أكواد عشوائية بنفس الخصم. ادّي كل مؤثر أو عميل كود ليه لوحده.",
     count: "العدد",
     prefix: "بادئة",
     prefixHint: "اختياري. حروف وأرقام، مثل RAMADAN ← RAMADAN-X7K2M9QD.",
@@ -62,20 +62,20 @@ const STRINGS = {
     type_free_shipping: "شحن مجاني",
     percent: "نسبة الخصم",
     amount: "مبلغ الخصم",
-    minimum: "الحد الأدنى للطلب",
+    minimum: "الحد الأدنى للأوردر",
     minimumHint: "اختياري.",
     usage: "عدد الاستخدامات لكل كود",
-    usageHint: "1 يجعل كل كود يُستخدم مرة واحدة.",
-    countInvalid: "اكتب رقمًا بين 1 و500.",
+    usageHint: "1 يخلّي كل كود يتستخدم مرة واحدة بس.",
+    countInvalid: "اكتب رقم بين 1 و500.",
     valueInvalid: "اكتب قيمة الخصم.",
     cancel: "إلغاء",
     generate: "توليد {count} كود",
     generating: "بنولّد…",
-    done: "تم إنشاء {count} كود",
-    doneHint: "تجدها في قائمة الخصومات. أي رابط ينتهي بـ ?coupon=CODE يطبّق الكود تلقائيًا.",
-    copy: "نسخ الكل",
+    done: "اتعمل {count} كود",
+    doneHint: "هتلاقيهم في قايمة الخصومات. أي لينك آخره ?coupon=CODE بيطبّق الكود لوحده.",
+    copy: "انسخ الكل",
     copied: "اتنسخت الأكواد.",
-    download: "تحميل CSV",
+    download: "نزّل CSV",
     close: "إغلاق",
   },
 } satisfies Messages;
@@ -87,7 +87,8 @@ export function BulkCodesButton({ onGenerated }: { onGenerated: () => void }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+      <Button type="button" variant="outline" className="min-h-11 rounded-full px-4 md:min-h-9" onClick={() => setOpen(true)}>
+        <IconMagic className="size-4" aria-hidden />
         {t.open}
       </Button>
       {open && <BulkCodesDialog onClose={() => setOpen(false)} onGenerated={onGenerated} />}
@@ -177,18 +178,18 @@ function BulkCodesDialog({ onClose, onGenerated }: { onClose: () => void; onGene
         }
       >
         <div className="space-y-3">
-          <ul dir="ltr" className="grid max-h-64 grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto rounded-[0.5rem] border border-line bg-paper p-3 font-mono text-sm text-ink">
+          <ul dir="ltr" className="zimos-offer-paper grid max-h-64 grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto rounded-[1rem] bg-paper-raised p-3 font-mono text-sm text-ink ring-1 ring-line">
             {result.codes.map((code) => (
               <li key={code}>{code}</li>
             ))}
           </ul>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={() => void copyAll()}>
-              <Copy className="size-4" aria-hidden />
+            <Button type="button" className="min-h-11 rounded-full px-5" onClick={() => void copyAll()}>
+              <IconCopy className="size-4" aria-hidden />
               {t.copy}
             </Button>
-            <Button type="button" variant="outline" onClick={download}>
-              <Download className="size-4" aria-hidden />
+            <Button type="button" variant="outline" className="min-h-11 rounded-full px-5" onClick={download}>
+              <IconDownload className="size-4" aria-hidden />
               {t.download}
             </Button>
           </div>

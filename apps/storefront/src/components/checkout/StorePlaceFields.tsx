@@ -73,12 +73,12 @@ function Slot({
       </label>
       {children}
       {spec.hint && !spec.error && (
-        <p id={`${id}-hint`} className="mt-1 text-xs text-ink-soft">
+        <p id={`${id}-hint`} className="mt-1.5 text-xs text-ink-soft">
           {spec.hint}
         </p>
       )}
       {spec.error && (
-        <p id={`${id}-error`} className="mt-1 text-xs font-medium text-danger">
+        <p id={`${id}-error`} className="mt-1.5 text-sm font-medium text-danger">
           {spec.error}
         </p>
       )}
@@ -100,6 +100,7 @@ export function StorePlaceFields({
   city,
   cityText,
   onCityText,
+  onCityBlur,
   refusal,
 }: {
   idPrefix: string;
@@ -110,6 +111,8 @@ export function StorePlaceFields({
   /** The typed city, for a region of the list that has no cities. */
   cityText: string;
   onCityText: (value: string) => void;
+  /** Optional: the typed city was left (a form that hands typing over on leaving the field). */
+  onCityBlur?: () => void;
   /** The server refused the picked place: said under the pickers. */
   refusal?: string;
 }) {
@@ -156,10 +159,12 @@ export function StorePlaceFields({
               name="city"
               type="text"
               autoComplete="address-level2"
+              enterKeyHint="next"
               required={city.required}
               maxLength={100}
               value={cityText}
               onChange={(e) => onCityText(e.target.value)}
+              onBlur={onCityBlur}
               className={input}
             />
           ) : (
@@ -216,7 +221,7 @@ export function StorePlaceFields({
       )}
 
       {refusal && (
-        <p id={refusalId} className="-mt-2 text-xs font-medium text-danger sm:col-span-2">
+        <p id={refusalId} className="-mt-2 text-sm font-medium text-danger sm:col-span-2">
           {refusal}
         </p>
       )}

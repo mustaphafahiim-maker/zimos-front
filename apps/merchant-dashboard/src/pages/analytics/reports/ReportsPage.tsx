@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { AlertTriangle, Info, Lightbulb, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
+import { IconInfo, IconTip, IconTrendDown, IconTrendUp, IconWarning, type IconComponent } from "@/components/icons";
 import { reportsGetInsights, type ReportsInsight } from "@store-builder/api-client";
 import { cn } from "@store-builder/ui";
 import { FilterTabs } from "@/components/FilterTabs";
@@ -10,11 +10,13 @@ import { formatCount, formatWindow } from "@/lib/analytics";
 import { formatMinorMoney } from "@/lib/format";
 import { useReport, useReportRange, type ReportRange } from "@/lib/reportRange";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { getIntlLocale, fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { CustomersTab, DeliveryTab, ProductsTab } from "./DetailTabs";
 import { OverviewTab } from "./OverviewTab";
 import { DateRangeControl, ExportButton, formatRate } from "./parts";
 import { ReportCurrencySelect, useReportMoney } from "@/lib/reportCurrency";
+import { StoreReportsMenu } from "../storeReports/StoreReportsMenu";
+import { SurveyResultsLink } from "@/pages/survey/SurveyResultsLink";
 
 const STRINGS = {
   en: {
@@ -60,23 +62,23 @@ const STRINGS = {
     days: "الأحد,الإثنين,الثلاثاء,الأربعاء,الخميس,الجمعة,السبت",
     step_product: "صفحة المنتج",
     step_cart: "الإضافة للسلة",
-    step_checkout: "إتمام الطلب",
-    step_purchase: "الطلب",
+    step_checkout: "إتمام الأوردر",
+    step_purchase: "الأوردر",
     sales_up: "المبيعات زادت {percent}% عن فترة المقارنة: {value} مقابل {previous}.",
     sales_down: "المبيعات قلّت {percent}% عن فترة المقارنة: {value} مقابل {previous}.",
     conversion_up: "معدل التحويل زاد {percent}% — {rate} من الزيارات تطلب الآن.",
     conversion_down: "معدل التحويل قلّ {percent}% — {rate} فقط من الزيارات تطلب الآن.",
     funnel_leak: "أكبر تسرّب عند خطوة {step}: {rate} فقط من الزيارات السابقة لها تكمل.",
-    low_confirmation: "{rate} فقط من {orders} طلب دفع عند الاستلام تم تأكيدها. اتصل أسرع أو اطلب عربونًا.",
-    weak_governorate: "{name} يُسلَّم فيها {rate} من الطلبات مقابل {average} في المتوسط ({orders} طلب مشحون). فكّر في الدفع المسبق هناك.",
+    low_confirmation: "{rate} فقط من {orders} أوردر دفع عند الاستلام تم تأكيدها. اتصل أسرع أو اطلب عربونًا.",
+    weak_governorate: "{name} يُسلَّم فيها {rate} من الأوردرات مقابل {average} في المتوسط ({orders} أوردر مشحون). فكّر في الدفع المسبق هناك.",
     strong_governorate: "{name} أكثر منطقة موثوقة عندك: {rate} تسليم مقابل {average} في المتوسط.",
-    carrier_gap: "{best} تسلّم {bestRate}، و{worst} {worstRate} فقط. حوّل طلبات أكثر إلى {best}.",
+    carrier_gap: "{best} تسلّم {bestRate}، و{worst} {worstRate} فقط. حوّل أوردرات أكثر إلى {best}.",
     low_converting_product: "{name} شوهد {views} مرة لكن تحويله {rate} (المتوسط {average}). راجع السعر والصور والعرض.",
     high_return_product: "{name} يرجع بنسبة {rate}. راجع الوصف والتغليف.",
-    abandoned_uncontacted: "{count} طلب مفقود بقيمة {value} لم يتم التواصل معهم بعد.",
-    peak_time: "ذروة الطلبات يوم {day} حوالي الساعة {hour}:00 — جدول الحملات ومكالمات التأكيد في هذا الوقت.",
+    abandoned_uncontacted: "{count} أوردر مفقود بقيمة {value} لم يتم التواصل معهم بعد.",
+    peak_time: "ذروة الأوردرات يوم {day} حوالي الساعة {hour}:00 — جدول الحملات ومكالمات التأكيد في هذا الوقت.",
     returning_share: "{rate} من المشترين عملاء عائدون، وجلبوا {sales}.",
-    openLost: "افتح الطلبات المفقودة",
+    openLost: "افتح الأوردرات المفقودة",
     openProduct: "افتح المنتج",
   },
 } satisfies Messages;
@@ -84,11 +86,11 @@ const STRINGS = {
 type Tab = "overview" | "products" | "delivery" | "customers";
 const TABS: Tab[] = ["overview", "products", "delivery", "customers"];
 
-const TONE: Record<ReportsInsight["tone"], { icon: LucideIcon; className: string }> = {
-  good: { icon: TrendingUp, className: "bg-success-soft text-success" },
-  bad: { icon: TrendingDown, className: "bg-danger-soft text-danger" },
-  warn: { icon: AlertTriangle, className: "bg-accent-soft text-accent-dark" },
-  info: { icon: Info, className: "bg-primary-soft text-primary" },
+const TONE: Record<ReportsInsight["tone"], { icon: IconComponent; className: string }> = {
+  good: { icon: IconTrendUp, className: "bg-success-soft text-success" },
+  bad: { icon: IconTrendDown, className: "bg-danger-soft text-danger" },
+  warn: { icon: IconWarning, className: "bg-accent-soft text-accent-dark" },
+  info: { icon: IconInfo, className: "bg-primary-soft text-primary" },
 };
 
 /** Plain sentences drawn from the reports: what moved, where it leaks, what to do. */
@@ -116,7 +118,8 @@ function Insights({ workspaceId, range }: { workspaceId: string; range: ReportRa
     if (insight.key === "funnel_leak") values.step = t[`step_${String(p.step)}` as keyof typeof t] ?? String(p.step);
     if (insight.key === "peak_time") {
       values.day = t.days.split(",")[Number(p.dow)] ?? "";
-      values.hour = String(p.hour);
+      // The same clock as the heatmap labels («٦ م», "6 PM"), not a bare 18.
+      values.hour = new Intl.DateTimeFormat(getIntlLocale(), { hour: "numeric" }).format(new Date(2000, 0, 1, Number(p.hour)));
     }
     if (insight.key === "sales_up" || insight.key === "sales_down" || insight.key.startsWith("conversion")) {
       values.percent = String(p.percent);
@@ -127,7 +130,7 @@ function Insights({ workspaceId, range }: { workspaceId: string; range: ReportRa
   return (
     <section aria-label={t.insights} className="mb-5 rounded-xl border border-line bg-paper-raised p-4 shadow-[var(--shadow-card)]">
       <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <Lightbulb className="size-4 text-accent-dark" aria-hidden />
+        <IconTip className="size-4 text-accent-dark" aria-hidden />
         {t.insights}
       </h2>
       <ul className="mt-3 grid gap-2.5 lg:grid-cols-2">
@@ -221,6 +224,9 @@ export function ReportsPage() {
       {tab === "products" && <ProductsTab workspaceId={workspaceId} range={range} onError={toast.error} />}
       {tab === "delivery" && <DeliveryTab workspaceId={workspaceId} range={range} onError={toast.error} />}
       {tab === "customers" && <CustomersTab workspaceId={workspaceId} range={range} onError={toast.error} />}
+      <StoreReportsMenu />
+      {/* «نتائج الاستبيان»: the post-purchase survey's answers, as one more card of the list above (handoff 236). */}
+      <SurveyResultsLink />
     </div>
   );
 }

@@ -7,6 +7,10 @@ import { focusRing } from "./ui";
  * − n + as one control, sized for a thumb (44px buttons) and labelled for a
  * screen reader. The value is announced as it changes. Used by the cart
  * drawer, the cart page and the product page so the three agree.
+ *
+ * It only shows the `value` it is given, so a caller that changes the value
+ * with the tap (the cart does: lib/CartProvider `changeQuantity`) gets a
+ * number that moves at once, and quick taps count from the number on screen.
  */
 export function QuantityStepper({
   value,
@@ -28,7 +32,8 @@ export function QuantityStepper({
 }) {
   const { t, intlLocale } = useStore();
   // Both sizes keep the 44px button; `sm` only tightens the number between them.
-  const btn = `inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-lg leading-none text-ink transition-colors hover:bg-paper disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${focusRing}`;
+  // `active:` is the press a thumb sees: hover never fires on a phone.
+  const btn = `inline-flex h-11 w-11 cursor-pointer touch-manipulation select-none items-center justify-center rounded-lg text-lg leading-none text-ink transition-colors hover:bg-paper active:bg-paper disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${focusRing}`;
 
   return (
     <div

@@ -1,29 +1,40 @@
-import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
-import { Button, Card, CardContent } from "@store-builder/ui";
+import { useEffect, useRef, useState } from "react";
+import { Button, Input, cn } from "@store-builder/ui";
 import {
   manualTransferGetSettings,
+  manualTransferListPending,
   manualTransferSaveSettings,
-  type ManualTransferDepositRule,
   type ManualTransferMethod,
 } from "@store-builder/api-client";
+import { IconBank, IconCaretRight, IconDelete, IconPlus, IconReceipt } from "@/components/icons";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage, isPermissionError } from "@/lib/errors";
-import { majorToMinor, minorToMajorInput } from "@/lib/format";
-import { Field, TextField } from "@/components/Field";
-import { MoneyInput } from "@/components/MoneyInput";
-import { Select } from "@/components/Select";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { DataState } from "@/components/DataState";
+import { EmptyState } from "@/components/EmptyState";
+import { Field } from "@/components/Field";
+import { Sheet } from "@/components/Sheet";
+import { StatusBadge } from "@/components/StatusBadge";
 import { Textarea } from "@/components/Textarea";
+import { SettingsGroup, SettingsIconTile, SettingsLinkRow, SettingsRow, SettingsSwitch } from "@/components/settings";
 import { useToast } from "@/components/Toast";
-import { useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+import { FIELD, GROUP_ROW, GROUP_ROW_PRESS, NoAccess, PaneSkeleton, useDiscardGuard } from "./sections/paneParts";
 
 const STRINGS = {
   en: {
     title: "Manual transfer",
-    description: "Let customers pay by InstaPay, Vodafone Cash or bank transfer: they see your instructions at checkout and upload a photo of the receipt. You confirm each transfer from the order.",
+    description:
+      "Let customers pay by InstaPay, Vodafone Cash or bank transfer: they see your instructions at checkout and upload a photo of the receipt. You confirm each transfer from the order.",
+    methodsTitle: "Transfer methods",
     add: "Add a transfer method",
-    empty: "No transfer methods yet.",
+    addTitle: "New transfer method",
+    editTitle: "Edit {name}",
+    empty: "No transfer methods yet",
+    emptyHint: "Add your InstaPay address, wallet number or bank account, and shoppers can pay you directly.",
+    maxReached: "You've reached the most transfer methods a store can have ({n}).",
     name: "Name shown to the customer",
     namePlaceholder: "InstaPay",
     instructions: "Payment instructions",
@@ -31,261 +42,441 @@ const STRINGS = {
     requireReceipt: "Receipt photo is required",
     requireSender: "Ask for the sender's number or account",
     enabled: "Show at checkout",
+    shown: "At checkout",
+    hidden: "Hidden",
     remove: "Remove",
-    depositTitle: "Deposit before cash on delivery",
-    depositDesc: "Ask for part of the order by transfer before a cash-on-delivery order is accepted. The rest is collected on delivery.",
-    depositEnabled: "Ask for a deposit",
-    amountType: "Deposit amount",
-    amountShipping: "The shipping fee",
-    amountFixed: "A fixed amount",
-    fixedAmount: "Amount",
-    appliesTo: "Who pays it",
-    appliesAll: "Every customer",
-    appliesRisky: "Only customers with a poor delivery record",
-    score: "Delivery rate below (%)",
-    scoreHint: "A customer whose orders across all ZIMOS stores were delivered less than this (or who was reported as spam) pays the deposit. Someone new to the platform is judged by your store's own record; a first-time customer never pays it.",
+    removeTitle: "Remove {name}?",
+    removeBody: "Shoppers will no longer be able to pay with it. Transfers already sent stay on their orders.",
+    removed: "{name} removed.",
+    restored: "{name} is back.",
+    pending: "Transfers waiting for your review",
+    pendingHint: "You confirm or reject each transfer from its order.",
+    pendingCap: "{n}+",
+    pendingNone: "None",
+    deposit: "Deposit before cash on delivery",
+    depositHint: "Set with the cash-on-delivery settings.",
+    open: "Open",
     save: "Save",
     saved: "Transfer settings saved.",
     invalid: "Fill in the name and instructions of every method.",
-    invalidAmount: "Enter a valid deposit amount.",
+    nameMissing: "Write the name shoppers will see.",
+    instructionsMissing: "Write where and how to send the money.",
     needMethod: "Add a transfer method before asking for a deposit.",
   },
   ar: {
     title: "التحويل اليدوي",
-    description: "اسمح للعملاء بالدفع عبر إنستاباي أو فودافون كاش أو التحويل البنكي: تظهر لهم تعليماتك عند إتمام الطلب ويرفعون صورة الإيصال، وأنت تؤكد كل تحويل من صفحة الطلب.",
-    add: "أضف طريقة تحويل",
-    empty: "مفيش طرق تحويل لسه.",
-    name: "الاسم الظاهر للعميل",
+    description:
+      "خلّي العملاء يدفعوا بإنستاباي أو فودافون كاش أو تحويل بنكي: بيشوفوا تعليماتك في الفورم ويرفعوا صورة الإيصال، وإنت بتأكّد كل تحويل من صفحة الأوردر.",
+    methodsTitle: "طرق التحويل",
+    add: "ضيف طريقة تحويل",
+    addTitle: "طريقة تحويل جديدة",
+    editTitle: "تعديل {name}",
+    empty: "مفيش طرق تحويل لسه",
+    emptyHint: "ضيف عنوان إنستاباي أو رقم المحفظة أو الحساب البنكي، والعملاء يدفعولك على طول.",
+    maxReached: "وصلت لأكتر عدد طرق تحويل للمتجر ({n}).",
+    name: "الاسم اللي العميل بيشوفه",
     namePlaceholder: "إنستاباي",
     instructions: "تعليمات الدفع",
-    instructionsPlaceholder: "حوّل المبلغ إلى عنوان إنستاباي store@instapay ثم ارفع صورة الإيصال.",
+    instructionsPlaceholder: "حوّل المبلغ على عنوان إنستاباي store@instapay وبعدين ارفع صورة الإيصال.",
     requireReceipt: "صورة الإيصال مطلوبة",
-    requireSender: "اطلب رقم أو حساب المحوِّل",
-    enabled: "تظهر عند إتمام الطلب",
-    remove: "حذف",
-    depositTitle: "عربون قبل الدفع عند الاستلام",
-    depositDesc: "اطلب جزءًا من قيمة الطلب بالتحويل قبل قبول طلب الدفع عند الاستلام، والباقي يُحصَّل عند التسليم.",
-    depositEnabled: "اطلب عربونًا",
-    amountType: "قيمة العربون",
-    amountShipping: "مصاريف الشحن",
-    amountFixed: "مبلغ ثابت",
-    fixedAmount: "المبلغ",
-    appliesTo: "من يدفعه",
-    appliesAll: "كل العملاء",
-    appliesRisky: "العملاء ذوو سجل التسليم الضعيف فقط",
-    score: "نسبة التسليم أقل من (%)",
-    scoreHint: "العميل اللي طلباته في كل متاجر ZIMOS اتسلّمت بنسبة أقل من دي (أو اتبلّغ عنه سبام) بيدفع العربون. العميل الجديد على المنصة بيتحكم عليه بسجله في متجرك، وأول طلب خالص مش بيدفع.",
+    requireSender: "اطلب رقم أو حساب اللي حوّل",
+    enabled: "اعرضها في الفورم",
+    shown: "ظاهرة في الفورم",
+    hidden: "مخفية",
+    remove: "امسح",
+    removeTitle: "تمسح {name}؟",
+    removeBody: "العملاء مش هيقدروا يدفعوا بيها تاني. التحويلات اللي اتبعتت هتفضل على أوردراتها.",
+    removed: "اتمسحت {name}.",
+    restored: "{name} رجعت.",
+    pending: "تحويلات مستنية مراجعتك",
+    pendingHint: "بتأكّد أو ترفض كل تحويل من صفحة الأوردر بتاعه.",
+    pendingCap: "{n}+",
+    pendingNone: "مفيش",
+    deposit: "عربون قبل الدفع عند الاستلام",
+    depositHint: "بيتظبط مع إعدادات الدفع عند الاستلام.",
+    open: "افتح",
     save: "حفظ",
-    saved: "تم حفظ إعدادات التحويل.",
-    invalid: "أكمل اسم وتعليمات كل طريقة.",
-    invalidAmount: "اكتب مبلغ عربون صحيحًا.",
-    needMethod: "أضف طريقة تحويل قبل طلب العربون.",
+    saved: "اتحفظت إعدادات التحويل.",
+    invalid: "اكتب اسم وتعليمات كل طريقة.",
+    nameMissing: "اكتب الاسم اللي العميل هيشوفه.",
+    instructionsMissing: "اكتب الفلوس تتحوّل فين وإزاي.",
+    needMethod: "ضيف طريقة تحويل قبل ما تطلب عربون.",
   },
 } satisfies Messages;
 
-type Draft = Omit<ManualTransferMethod, "id"> & { id?: string; key: string };
-let nextKey = 1;
+/** A method as the save sends it: a new one has no id yet. */
+type MethodDraft = Omit<ManualTransferMethod, "id"> & { id?: string };
 
-/** Manual transfer methods and the deposit rule (SPEC §11.3), on the Payments page. */
+const NEW_METHOD: MethodDraft = { name: "", instructions: "", requireReceipt: true, requireSender: true, enabled: true };
+
+/** `GET /manual-transfers/pending` answers at most this many (pages/home/today/workQueueData.ts). */
+const PENDING_CAP = 50;
+
+/** Which method's sheet is up; `index` null = a new one. `turn` makes every opening a fresh form. */
+interface OpenSheet {
+  index: number | null;
+  turn: number;
+  shown: boolean;
+}
+
+/**
+ * Payments → Bank transfer and wallets (SPEC §11.3): the transfer methods as
+ * a list, each opening in a sheet (add, edit, remove). A sheet's Save sends
+ * the whole list with the deposit rule as it is saved, the same call the page
+ * always made. The deposit rule itself is edited in the Cash-on-delivery
+ * section; the transfers waiting for review are reached from here.
+ */
 export function ManualTransferSettings({
   workspaceId,
-  currency,
   canManage,
+  onForbidden,
+  onGoto,
 }: {
   workspaceId: string;
-  currency: string;
   canManage: boolean;
+  onForbidden?: () => void;
+  /** Opens the Cash-on-delivery section (where the deposit is set). */
+  onGoto?: (section: "cod") => void;
 }) {
   const t = useT(STRINGS);
-  const common = useCommon();
   const toast = useToast();
+  // Null = this role may not read the transfer settings.
   const settings = useAsync(
     () => manualTransferGetSettings(apiClient, workspaceId).catch((err) => (isPermissionError(err) ? null : Promise.reject(err))),
     [workspaceId]
   );
-  const [methods, setMethods] = useState<Draft[]>([]);
-  const [rule, setRule] = useState<ManualTransferDepositRule | null>(null);
-  const [fixed, setFixed] = useState("");
-  const [saving, setSaving] = useState(false);
+  // Only for the count on the review row: a failure just leaves the row without one.
+  const pending = useAsync(() => manualTransferListPending(apiClient, workspaceId).catch(() => null), [workspaceId]);
+  const [sheet, setSheet] = useState<OpenSheet | null>(null);
+  const [busy, setBusy] = useState(false);
 
+  const data = settings.data;
+  // The list as saved right now, for an Undo that runs after this render is gone.
+  const latest = useRef(data);
   useEffect(() => {
-    if (!settings.data) return;
-    setMethods(settings.data.methods.map((m) => ({ ...m, key: m.id })));
-    setRule(settings.data.depositRule);
-    setFixed(minorToMajorInput(settings.data.depositRule.fixedAmount));
-  }, [settings.data]);
+    latest.current = data;
+  }, [data]);
 
-  if (!settings.data || !rule) return null;
-  const max = settings.data.limits.maxMethods;
-  const patch = (key: string, change: Partial<Draft>) => setMethods((list) => list.map((m) => (m.key === key ? { ...m, ...change } : m)));
-
-  async function save() {
-    if (!rule) return;
-    if (methods.some((m) => !m.name.trim() || !m.instructions.trim())) return toast.error(t.invalid);
-    const fixedAmount = rule.amountType === "fixed" ? majorToMinor(fixed) : rule.fixedAmount;
-    if (rule.enabled && rule.amountType === "fixed" && (!Number.isFinite(fixedAmount) || fixedAmount <= 0)) return toast.error(t.invalidAmount);
-    if (rule.enabled && !methods.some((m) => m.enabled)) return toast.error(t.needMethod);
-    setSaving(true);
+  /** Saves the whole list (the deposit rule goes with it, unchanged). False when it was refused. */
+  async function persist(next: MethodDraft[], message: string): Promise<boolean> {
+    const current = latest.current;
+    if (!current) return false;
+    if (next.some((m) => !m.name.trim() || !m.instructions.trim())) {
+      toast.error(t.invalid);
+      return false;
+    }
+    if (current.depositRule.enabled && !next.some((m) => m.enabled)) {
+      toast.error(t.needMethod);
+      return false;
+    }
+    setBusy(true);
     try {
-      const next = await manualTransferSaveSettings(apiClient, workspaceId, {
-        methods: methods.map(({ key: _key, ...m }) => m),
-        depositRule: { ...rule, fixedAmount: Number.isFinite(fixedAmount) ? fixedAmount : 0 },
-      });
-      settings.setData(next);
-      toast.success(t.saved);
+      const saved = await manualTransferSaveSettings(apiClient, workspaceId, { methods: next, depositRule: current.depositRule });
+      latest.current = saved;
+      settings.setData(saved);
+      if (message) toast.success(message);
+      return true;
     } catch (err) {
+      if (isPermissionError(err)) onForbidden?.();
       toast.error(getErrorMessage(err));
+      return false;
     } finally {
-      setSaving(false);
+      setBusy(false);
     }
   }
 
-  const check = (label: string, checked: boolean, onChange: (v: boolean) => void) => (
-    <label className="flex min-h-9 items-center gap-2 text-sm text-ink">
-      <input
-        type="checkbox"
-        className="size-4 accent-[var(--color-primary)]"
-        checked={checked}
-        disabled={!canManage}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      {label}
-    </label>
-  );
+  async function saveMethod(index: number | null, draft: MethodDraft): Promise<boolean> {
+    const list: MethodDraft[] = latest.current?.methods ?? [];
+    const next = index === null ? [...list, draft] : list.map((m, i) => (i === index ? draft : m));
+    return persist(next, t.saved);
+  }
+
+  async function removeMethod(index: number): Promise<boolean> {
+    const list = latest.current?.methods ?? [];
+    const gone = list[index];
+    if (!gone) return false;
+    const ok = await persist(
+      list.filter((_, i) => i !== index),
+      ""
+    );
+    if (!ok) return false;
+    toast.undo(fmt(t.removed, { name: gone.name }), async () => {
+      // Put back as a new method: the server gives it a new id.
+      const rest: MethodDraft = {
+        name: gone.name,
+        instructions: gone.instructions,
+        requireReceipt: gone.requireReceipt,
+        requireSender: gone.requireSender,
+        enabled: gone.enabled,
+      };
+      const back = await persist([...(latest.current?.methods ?? []), rest], fmt(t.restored, { name: gone.name }));
+      if (!back) throw new Error("restore failed");
+    });
+    return true;
+  }
+
+  const open = (index: number | null) => setSheet((prev) => ({ index, turn: (prev?.turn ?? 0) + 1, shown: true }));
+  const close = () => setSheet((prev) => (prev ? { ...prev, shown: false } : prev));
+
+  const count = pending.data?.length ?? null;
+  const oldest = pending.data && pending.data.length > 0 ? [...pending.data].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0] : null;
 
   return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-        <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-      </div>
-
-      {methods.length === 0 && <p className="text-sm text-ink-soft">{t.empty}</p>}
-      {methods.map((m) => (
-        <Card key={m.key}>
-          <CardContent className="space-y-4 p-5">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <TextField
-                label={t.name}
-                placeholder={t.namePlaceholder}
-                value={m.name}
-                maxLength={100}
-                disabled={!canManage}
-                onChange={(e) => patch(m.key, { name: e.target.value })}
+    <>
+      <DataState
+        loading={settings.loading}
+        error={settings.error}
+        onRetry={() => void settings.refresh()}
+        skeleton={<PaneSkeleton rows={3} />}
+      >
+        {!data ? (
+          <NoAccess />
+        ) : (
+          <>
+            {data.methods.length === 0 ? (
+              <EmptyState
+                icon={<IconBank />}
+                title={t.empty}
+                description={t.emptyHint}
+                action={
+                  canManage ? (
+                    <Button className="rounded-full px-5" onClick={() => open(null)}>
+                      <IconPlus className="size-4" weight="bold" aria-hidden />
+                      {t.add}
+                    </Button>
+                  ) : undefined
+                }
               />
-              <Field label={t.instructions} className="md:col-span-2">
-                {({ id }) => (
-                  <Textarea
-                    id={id}
-                    rows={2}
-                    dir="auto"
-                    placeholder={t.instructionsPlaceholder}
-                    value={m.instructions}
-                    maxLength={1000}
-                    disabled={!canManage}
-                    onChange={(e) => patch(m.key, { instructions: e.target.value })}
-                  />
+            ) : (
+              <SettingsGroup
+                title={t.methodsTitle}
+                footer={canManage && data.methods.length >= data.limits.maxMethods ? fmt(t.maxReached, { n: data.limits.maxMethods }) : undefined}
+              >
+                {data.methods.map((m, index) => (
+                  <button key={m.id} type="button" onClick={() => open(index)} className={cn(GROUP_ROW, GROUP_ROW_PRESS, "min-h-16 before:start-14")}>
+                    <SettingsIconTile icon={IconBank} tone="teal" />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-[15px] leading-5 font-medium text-ink" dir="auto">
+                        {m.name}
+                      </span>
+                      <span className="truncate text-[13px] leading-5 text-ink-soft" dir="auto">
+                        {m.instructions}
+                      </span>
+                    </span>
+                    <StatusBadge
+                      value={m.enabled ? "shown" : "hidden"}
+                      tone={m.enabled ? "success" : "neutral"}
+                      text={m.enabled ? t.shown : t.hidden}
+                      className="shrink-0"
+                    />
+                    <IconCaretRight className="size-4 shrink-0 text-ink-soft rtl:-scale-x-100" weight="bold" aria-hidden />
+                  </button>
+                ))}
+                {canManage && data.methods.length < data.limits.maxMethods && (
+                  <button type="button" onClick={() => open(null)} className={cn(GROUP_ROW, GROUP_ROW_PRESS, "text-primary before:start-14")}>
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-primary-soft">
+                      <IconPlus className="size-4" weight="bold" aria-hidden />
+                    </span>
+                    <span className="text-[15px] leading-5 font-medium">{t.add}</span>
+                  </button>
                 )}
-              </Field>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-              {check(t.enabled, m.enabled, (v) => patch(m.key, { enabled: v }))}
-              {check(t.requireReceipt, m.requireReceipt, (v) => patch(m.key, { requireReceipt: v }))}
-              {check(t.requireSender, m.requireSender, (v) => patch(m.key, { requireSender: v }))}
-              {canManage && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="ms-auto text-danger"
-                  onClick={() => setMethods((list) => list.filter((x) => x.key !== m.key))}
-                >
-                  <Trash2 className="size-4" aria-hidden />
-                  {t.remove}
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+              </SettingsGroup>
+            )}
 
-      {canManage && methods.length < max && (
-        <Button
-          variant="outline"
-          onClick={() =>
-            setMethods((list) => [
-              ...list,
-              { key: `new-${nextKey++}`, name: "", instructions: "", requireReceipt: true, requireSender: true, enabled: true },
-            ])
-          }
-        >
-          <Plus className="size-4" aria-hidden />
-          {t.add}
-        </Button>
-      )}
-
-      <Card>
-        <CardContent className="space-y-4 p-5">
-          <div>
-            <h3 className="text-base font-semibold text-ink">{t.depositTitle}</h3>
-            <p className="mt-1 text-sm text-ink-soft">{t.depositDesc}</p>
-          </div>
-          {check(t.depositEnabled, rule.enabled, (v) => setRule({ ...rule, enabled: v }))}
-          {rule.enabled && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Field label={t.amountType}>
-                {({ id }) => (
-                  <Select
-                    id={id}
-                    value={rule.amountType}
-                    disabled={!canManage}
-                    onChange={(e) => setRule({ ...rule, amountType: e.target.value as ManualTransferDepositRule["amountType"] })}
-                  >
-                    <option value="shipping">{t.amountShipping}</option>
-                    <option value="fixed">{t.amountFixed}</option>
-                  </Select>
-                )}
-              </Field>
-              {rule.amountType === "fixed" && (
-                <MoneyInput label={t.fixedAmount} value={fixed} onChange={setFixed} currency={currency} disabled={!canManage} />
-              )}
-              <Field label={t.appliesTo}>
-                {({ id }) => (
-                  <Select
-                    id={id}
-                    value={rule.appliesTo}
-                    disabled={!canManage}
-                    onChange={(e) => setRule({ ...rule, appliesTo: e.target.value as ManualTransferDepositRule["appliesTo"] })}
-                  >
-                    <option value="all">{t.appliesAll}</option>
-                    <option value="risky">{t.appliesRisky}</option>
-                  </Select>
-                )}
-              </Field>
-              {rule.appliesTo === "risky" && (
-                <TextField
-                  label={t.score}
-                  hint={t.scoreHint}
-                  type="number"
-                  min={1}
-                  max={100}
-                  dir="ltr"
-                  value={String(rule.maxReliabilityScore)}
-                  disabled={!canManage}
-                  onChange={(e) => setRule({ ...rule, maxReliabilityScore: Math.min(100, Math.max(1, Number(e.target.value) || 1)) })}
+            <SettingsGroup>
+              <SettingsLinkRow
+                to={oldest ? `/orders/${oldest.orderId}` : "/orders"}
+                icon={IconReceipt}
+                tone="orange"
+                label={t.pending}
+                hint={t.pendingHint}
+                value={
+                  count === null
+                    ? undefined
+                    : count === 0
+                      ? t.pendingNone
+                      : count >= PENDING_CAP
+                        ? fmt(t.pendingCap, { n: PENDING_CAP })
+                        : fmt("{n}", { n: count })
+                }
+              />
+              {onGoto && (
+                <SettingsRow
+                  label={t.deposit}
+                  hint={t.depositHint}
+                  control={
+                    <Button variant="outline" className="min-h-11 rounded-full px-4" onClick={() => onGoto("cod")}>
+                      {t.open}
+                    </Button>
+                  }
                 />
               )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </SettingsGroup>
+          </>
+        )}
+      </DataState>
 
-      {canManage && (
-        <div className="flex justify-end">
-          <Button onClick={() => void save()} disabled={saving}>
-            {saving ? common.saving : t.save}
-          </Button>
-        </div>
+      {sheet && data && (
+        <TransferMethodSheet
+          key={sheet.turn}
+          initial={sheet.index === null ? NEW_METHOD : (data.methods[sheet.index] ?? NEW_METHOD)}
+          isNew={sheet.index === null}
+          open={sheet.shown}
+          onClose={close}
+          canManage={canManage}
+          busy={busy}
+          onSave={(draft) => saveMethod(sheet.index, draft)}
+          onRemove={sheet.index === null ? undefined : () => removeMethod(sheet.index as number)}
+        />
       )}
-    </section>
+    </>
+  );
+}
+
+function TransferMethodSheet({
+  initial,
+  isNew,
+  open,
+  onClose,
+  canManage,
+  busy,
+  onSave,
+  onRemove,
+}: {
+  initial: MethodDraft;
+  isNew: boolean;
+  open: boolean;
+  onClose: () => void;
+  canManage: boolean;
+  busy: boolean;
+  onSave: (draft: MethodDraft) => Promise<boolean>;
+  onRemove?: () => Promise<boolean>;
+}) {
+  const t = useT(STRINGS);
+  const common = useCommon();
+  // The values the sheet opened with: the list underneath changes after a save, the form's start does not.
+  const [start] = useState<MethodDraft>(initial);
+  const [draft, setDraft] = useState<MethodDraft>(initial);
+  const [tried, setTried] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(start);
+  useReportDirty(open && dirty);
+  const guard = useDiscardGuard(dirty && !busy, onClose);
+  const nameMissing = tried && !draft.name.trim();
+  const instructionsMissing = tried && !draft.instructions.trim();
+
+  async function save() {
+    setTried(true);
+    if (!draft.name.trim() || !draft.instructions.trim()) return;
+    if (await onSave(draft)) onClose();
+  }
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !busy) guard.requestClose();
+      }}
+      title={isNew ? t.addTitle : fmt(t.editTitle, { name: start.name })}
+      size="md"
+      footer={
+        canManage ? (
+          <>
+            {onRemove && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="me-auto min-h-11 rounded-full px-4 text-danger hover:bg-danger-soft"
+                disabled={busy}
+                onClick={() => setRemoving(true)}
+              >
+                <IconDelete className="size-4" aria-hidden />
+                {t.remove}
+              </Button>
+            )}
+            <Button type="button" variant="outline" className="min-h-11 rounded-full px-5" disabled={busy} onClick={guard.requestClose}>
+              {common.cancel}
+            </Button>
+            <Button type="button" className="min-h-11 rounded-full px-5" disabled={busy || (!isNew && !dirty)} onClick={() => void save()}>
+              {busy ? common.saving : t.save}
+            </Button>
+          </>
+        ) : undefined
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <Field label={t.name} error={nameMissing ? t.nameMissing : undefined}>
+          {({ id, ...aria }) => (
+            <Input
+              id={id}
+              {...aria}
+              dir="auto"
+              className={FIELD}
+              placeholder={t.namePlaceholder}
+              value={draft.name}
+              maxLength={100}
+              disabled={!canManage || busy}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            />
+          )}
+        </Field>
+        <Field label={t.instructions} error={instructionsMissing ? t.instructionsMissing : undefined}>
+          {({ id, ...aria }) => (
+            <Textarea
+              id={id}
+              {...aria}
+              rows={3}
+              dir="auto"
+              className="text-base md:text-sm"
+              placeholder={t.instructionsPlaceholder}
+              value={draft.instructions}
+              maxLength={1000}
+              disabled={!canManage || busy}
+              onChange={(e) => setDraft({ ...draft, instructions: e.target.value })}
+            />
+          )}
+        </Field>
+        <SettingsGroup>
+          <SettingsSwitch
+            label={t.enabled}
+            checked={draft.enabled}
+            disabled={!canManage || busy}
+            onChange={(v) => setDraft({ ...draft, enabled: v })}
+          />
+          <SettingsSwitch
+            label={t.requireReceipt}
+            checked={draft.requireReceipt}
+            disabled={!canManage || busy}
+            onChange={(v) => setDraft({ ...draft, requireReceipt: v })}
+          />
+          <SettingsSwitch
+            label={t.requireSender}
+            checked={draft.requireSender}
+            disabled={!canManage || busy}
+            onChange={(v) => setDraft({ ...draft, requireSender: v })}
+          />
+        </SettingsGroup>
+      </div>
+
+      {guard.dialog}
+      {onRemove && (
+        <ConfirmDialog
+          open={removing}
+          title={fmt(t.removeTitle, { name: start.name })}
+          description={t.removeBody}
+          confirmLabel={t.remove}
+          cancelLabel={common.cancel}
+          busyLabel={common.loading}
+          destructive
+          onCancel={() => setRemoving(false)}
+          onConfirm={async () => {
+            const ok = await onRemove();
+            setRemoving(false);
+            if (ok) onClose();
+          }}
+        />
+      )}
+    </Sheet>
   );
 }

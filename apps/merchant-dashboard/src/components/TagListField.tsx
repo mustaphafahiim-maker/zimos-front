@@ -1,5 +1,5 @@
 import { useId, useState, type KeyboardEvent } from "react";
-import { X } from "lucide-react";
+import { IconClose } from "@/components/icons";
 import { Button, Input } from "@store-builder/ui";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 
@@ -89,7 +89,7 @@ export function TagListField({
                 aria-label={fmt(t.remove, { tag: value })}
                 className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-paper-raised focus-visible:outline-2 focus-visible:outline-primary"
               >
-                <X className="size-3.5" aria-hidden />
+                <IconClose className="size-3.5" aria-hidden />
               </button>
             </li>
           ))}

@@ -1,5 +1,5 @@
 import { useId, useState, type KeyboardEvent } from "react";
-import { Folder, RefreshCw, Sparkles, X } from "lucide-react";
+import { IconClose, IconFolder, IconRefresh, IconSparkle } from "@/components/icons";
 import { Button, Input, cn } from "@store-builder/ui";
 import {
   SMART_COLLECTION_MAX_TAGS,
@@ -185,7 +185,7 @@ export function SmartCollectionFields({
 
       {value.kind !== "manual" && (
         <p className="flex items-start gap-2 text-xs text-ink-soft">
-          <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
+          <IconSparkle className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
           {t.fillsItself}
         </p>
       )}
@@ -271,7 +271,7 @@ function TagRule({
                   aria-label={fmt(t.removeTag, { tag })}
                   className="inline-flex size-7 cursor-pointer items-center justify-center rounded-full hover:bg-paper-raised focus-visible:outline-2 focus-visible:outline-primary"
                 >
-                  <X className="size-3.5" aria-hidden />
+                  <IconClose className="size-3.5" aria-hidden />
                 </button>
               </li>
             ))}
@@ -400,10 +400,10 @@ export function SmartCollectionNote({ collection, onSynced }: { collection: Coll
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-3 rounded-[var(--radius)] bg-primary-soft/60 px-3 py-2.5 ring-1 ring-primary/20">
-      <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
+      <IconSparkle className="size-4 shrink-0 text-primary" aria-hidden />
       <p className="min-w-0 flex-1 text-sm text-ink">{text}</p>
       <Button type="button" variant="outline" size="sm" className="min-h-11 bg-paper-raised" disabled={busy} onClick={() => void refresh()}>
-        <RefreshCw className={cn("size-4", busy && "animate-spin motion-reduce:animate-none")} aria-hidden />
+        <IconRefresh className={cn("size-4", busy && "animate-spin motion-reduce:animate-none")} aria-hidden />
         {busy ? t.refreshing : t.refresh}
       </Button>
     </div>
@@ -443,13 +443,13 @@ export function CollectionsEmpty({
 
   return (
     <EmptyState
-      icon={<Folder />}
+      icon={<IconFolder />}
       title={title}
       description={t.emptyHint}
       action={
         <div className="flex flex-wrap justify-center gap-2">
           <Button className="min-h-11" disabled={busy} onClick={() => void createAll()}>
-            <Sparkles className="size-4" aria-hidden />
+            <IconSparkle className="size-4" aria-hidden />
             {busy ? t.creatingAll : t.createAll}
           </Button>
           <Button variant="outline" className="min-h-11" disabled={busy} onClick={onCreate}>

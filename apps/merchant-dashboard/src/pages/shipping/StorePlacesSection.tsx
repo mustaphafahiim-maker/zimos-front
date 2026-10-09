@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { ChevronLeft, Download, Eye, EyeOff, FileUp, MapPinned, Pencil, Plus, Trash2 } from "lucide-react";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { IconCaretLeft, IconDelete, IconDownload, IconEdit, IconEye, IconEyeOff, IconFileUp, IconMapPinned, IconPlus } from "@/components/icons";
 import { Alert, Button, Input, cn } from "@store-builder/ui";
 import {
   storePlacesCopyPlatform,
@@ -27,6 +28,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { SaveBar } from "@/components/SaveBar";
 
 const STRINGS = {
   en: {
@@ -214,6 +216,7 @@ export function StorePlacesSection() {
   };
 
   const dirtyIds = Object.keys(draft);
+  useReportDirty(dirtyIds.length > 0);
   const invalidIds = useMemo(
     () => dirtyIds.filter((id) => draft[id].trim() !== "" && !Number.isFinite(majorToMinor(draft[id].trim()))),
     [draft] // eslint-disable-line react-hooks/exhaustive-deps
@@ -288,7 +291,7 @@ export function StorePlacesSection() {
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-ink">{t.title}</h2>
+          <h3 className="text-[15px] font-semibold text-ink">{t.title}</h3>
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">{t.description}</p>
           {counts && !empty && (
             <p className="mt-1 text-xs text-ink-soft">
@@ -320,7 +323,7 @@ export function StorePlacesSection() {
             ))}
           </Select>
           <Button variant="outline" className="min-h-11" onClick={() => setImportOpen(true)}>
-            <FileUp aria-hidden />
+            <IconFileUp aria-hidden />
             {t.importSheet}
           </Button>
           {!empty && (
@@ -336,7 +339,7 @@ export function StorePlacesSection() {
       <DataState loading={list.loading && !list.data} error={list.error} onRetry={() => list.refresh()}>
         {empty ? (
           <EmptyState
-            icon={<MapPinned aria-hidden />}
+            icon={<IconMapPinned aria-hidden />}
             title={t.emptyTitle}
             description={t.emptyBody}
             action={
@@ -345,7 +348,7 @@ export function StorePlacesSection() {
                   {t.fromPlatform}
                 </Button>
                 <Button variant="outline" className="min-h-11" onClick={() => setImportOpen(true)}>
-                  <FileUp aria-hidden />
+                  <IconFileUp aria-hidden />
                   {t.importSheet}
                 </Button>
               </div>
@@ -355,13 +358,13 @@ export function StorePlacesSection() {
           <>
             {/* Phone: where you are, and a way back up. */}
             {phoneLevel !== "region" && (
-              <nav className="flex items-center gap-1 text-sm text-ink-soft lg:hidden" aria-label={t.back}>
+              <nav className="flex items-center gap-1 text-sm text-ink-soft" aria-label={t.back}>
                 <button type="button" className="min-h-11 cursor-pointer px-1 hover:text-ink" onClick={() => setPhoneLevel("region")}>
                   {t.regions}
                 </button>
                 {region && (
                   <>
-                    <ChevronLeft className="size-4 ltr:rotate-180" aria-hidden />
+                    <IconCaretLeft className="size-4 ltr:rotate-180" aria-hidden />
                     <button
                       type="button"
                       className={cn("min-h-11 cursor-pointer px-1 hover:text-ink", phoneLevel === "city" && "font-semibold text-ink")}
@@ -373,7 +376,7 @@ export function StorePlacesSection() {
                 )}
                 {city && phoneLevel === "area" && (
                   <>
-                    <ChevronLeft className="size-4 ltr:rotate-180" aria-hidden />
+                    <IconCaretLeft className="size-4 ltr:rotate-180" aria-hidden />
                     <span className="font-semibold text-ink">
                       <bdi>{city.nameAr}</bdi>
                     </span>
@@ -382,10 +385,10 @@ export function StorePlacesSection() {
               </nav>
             )}
 
-            <div className="grid gap-[var(--bento-gap)] lg:grid-cols-3">
+            <div className="grid gap-[var(--bento-gap)]">
               <PlaceColumn
                 t={t}
-                className={phoneLevel === "region" ? "" : "hidden lg:flex"}
+                className={phoneLevel === "region" ? "" : "hidden"}
                 title={t.regions}
                 addLabel={t.addRegion}
                 items={places}
@@ -408,7 +411,7 @@ export function StorePlacesSection() {
               />
               <PlaceColumn
                 t={t}
-                className={phoneLevel === "city" ? "" : "hidden lg:flex"}
+                className={phoneLevel === "city" ? "" : "hidden"}
                 title={t.cities}
                 addLabel={t.addCity}
                 items={cities}
@@ -436,7 +439,7 @@ export function StorePlacesSection() {
               />
               <PlaceColumn
                 t={t}
-                className={phoneLevel === "area" ? "" : "hidden lg:flex"}
+                className={phoneLevel === "area" ? "" : "hidden"}
                 title={t.areas}
                 addLabel={t.addArea}
                 items={areas}
@@ -461,22 +464,25 @@ export function StorePlacesSection() {
         )}
       </DataState>
 
-      {/* Unsaved prices: one bar, above the phone tab bar. */}
-      {dirtyIds.length > 0 && (
-        <div className="sticky bottom-20 z-20 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] bg-ink p-3 text-paper-raised shadow-[var(--shadow-pop)] md:bottom-4">
-          <span className="text-sm font-medium">
-            {invalidIds.length > 0 ? t.badPrice : fmt(t.pricesChanged, { n: dirtyIds.length })}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="ghost" className="min-h-11 text-paper-raised hover:bg-paper-raised/10" onClick={() => setDraft({})} disabled={savingPrices}>
-              {t.discard}
-            </Button>
-            <Button className="min-h-11" onClick={() => void savePrices()} disabled={savingPrices || invalidIds.length > 0}>
-              {t.savePrices}
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Unsaved prices: the shared save bar, above the phone dock. */}
+      <SaveBar
+        dirty={dirtyIds.length > 0}
+        saving={savingPrices}
+        onSave={() => void savePrices()}
+        onDiscard={() => setDraft({})}
+        saveLabel={t.savePrices}
+        discardLabel={t.discard}
+        disabled={invalidIds.length > 0}
+        message={
+          invalidIds.length > 0 ? (
+            <span role="alert" className="text-danger">
+              {t.badPrice}
+            </span>
+          ) : (
+            fmt(t.pricesChanged, { n: dirtyIds.length })
+          )
+        }
+      />
 
       <ConfirmDialog
         open={deleting !== null}
@@ -645,7 +651,7 @@ function PlaceColumn({
                           const value = e.target.value;
                           setDraft((prev) => ({ ...prev, [place.id]: value }));
                         }}
-                        className={cn("h-10 text-end tabular-nums", place.id in draft && "border-primary")}
+                        className={cn("h-10 text-end tabular-nums pointer-coarse:h-11", place.id in draft && "border-primary")}
                       />
                     </div>
                   </div>
@@ -655,13 +661,13 @@ function PlaceColumn({
                     </span>
                     <span className="flex shrink-0 items-center">
                       <IconButton label={place.hidden ? t.show : t.hide} onClick={() => onToggleHidden(place)} disabled={busy}>
-                        {place.hidden ? <EyeOff /> : <Eye />}
+                        {place.hidden ? <IconEyeOff /> : <IconEye />}
                       </IconButton>
                       <IconButton label={t.rename} onClick={() => onRename(place)} disabled={busy}>
-                        <Pencil />
+                        <IconEdit />
                       </IconButton>
                       <IconButton label={t.delete} onClick={() => onDelete(place)} disabled={busy} danger>
-                        <Trash2 />
+                        <IconDelete />
                       </IconButton>
                     </span>
                   </div>
@@ -671,11 +677,11 @@ function PlaceColumn({
           </ul>
           <form onSubmit={submit} className="space-y-2 border-t border-line p-3">
             <div className="grid grid-cols-2 gap-2">
-              <Input aria-label={t.nameAr} placeholder={t.nameAr} value={nameAr} onChange={(e) => setNameAr(e.target.value)} className="h-10" />
-              <Input aria-label={t.nameEn} placeholder={t.nameEn} value={nameEn} onChange={(e) => setNameEn(e.target.value)} className="h-10" dir="ltr" />
+              <Input aria-label={t.nameAr} placeholder={t.nameAr} value={nameAr} onChange={(e) => setNameAr(e.target.value)} className="h-10 pointer-coarse:h-11" />
+              <Input aria-label={t.nameEn} placeholder={t.nameEn} value={nameEn} onChange={(e) => setNameEn(e.target.value)} className="h-10 pointer-coarse:h-11" dir="ltr" />
             </div>
-            <Button type="submit" variant="outline" className="min-h-10 w-full" disabled={busy || !nameAr.trim()}>
-              <Plus aria-hidden />
+            <Button type="submit" variant="outline" className="min-h-11 w-full rounded-full" disabled={busy || !nameAr.trim()}>
+              <IconPlus aria-hidden />
               {addLabel}
             </Button>
           </form>
@@ -706,7 +712,7 @@ function IconButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex size-9 cursor-pointer items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-paper-sunken hover:text-ink disabled:opacity-50 [&>svg]:size-4",
+        "flex size-9 cursor-pointer items-center justify-center rounded-lg text-ink-soft pointer-coarse:size-11 transition-colors hover:bg-paper-sunken hover:text-ink disabled:opacity-50 [&>svg]:size-4",
         danger && "hover:bg-danger-soft hover:text-danger"
       )}
     >
@@ -862,7 +868,7 @@ function ImportModal({
         <div className="space-y-4 text-sm">
           <p className="text-ink-soft">{t.importHint}</p>
           <a href={sampleHref} download="places-sample.csv" className="inline-flex min-h-11 items-center gap-1.5 font-medium text-primary-dark hover:underline">
-            <Download className="size-4" aria-hidden />
+            <IconDownload className="size-4" aria-hidden />
             {t.sample}
           </a>
           <label className="block space-y-1">

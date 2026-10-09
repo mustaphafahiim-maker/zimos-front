@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Settings2 } from "lucide-react";
+import { IconSliders } from "@/components/icons";
 import { Alert, Button, Input, Label } from "@store-builder/ui";
 import { ApiError, pageScriptsGet, pageScriptsSave, type PageScriptKind } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -74,7 +74,8 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-type Tab = "details" | "seo" | "scripts";
+export type PageSettingsTab = "details" | "seo" | "scripts";
+type Tab = PageSettingsTab;
 
 /** The builder toolbar's "Page settings" button and its dialog. */
 export function PageSettingsButton({
@@ -106,7 +107,7 @@ export function PageSettingsButton({
         title={t.open}
         onClick={() => setOpen(true)}
       >
-        <Settings2 className="size-4" aria-hidden />
+        <IconSliders className="size-4" aria-hidden />
         {!compact && t.open}
       </Button>
       {open && (
@@ -145,20 +146,25 @@ export function PageSettingsDialog({
   onSaveSeo,
   scripts,
   details,
+  initialTab,
   onClose,
 }: {
   name: string;
   seo: Record<string, unknown>;
   details?: ReactNode;
-  showNoindex: boolean;
-  /** Where the SEO goes: "live with your next Publish" / "saved with the funnel". */
-  seoHint: string;
+  /** Left out: shown for a website page, not for a funnel step. */
+  showNoindex?: boolean;
+  /** Where the SEO goes: "live with your next Publish" / "saved with the funnel". Left out: the sentence for this kind of page. */
+  seoHint?: string;
   onSaveSeo: (seo: Record<string, unknown>) => Promise<void> | void;
   scripts: { kind: PageScriptKind; id: string | null };
+  /** The tab it opens on. Left out: Details when there is one, else SEO. */
+  initialTab?: PageSettingsTab;
   onClose: () => void;
 }) {
   const t = useT(STRINGS);
-  const [tab, setTab] = useState<Tab>(details ? "details" : "seo");
+  const isPage = scripts.kind === "page";
+  const [tab, setTab] = useState<Tab>(initialTab && (initialTab !== "details" || details) ? initialTab : details ? "details" : "seo");
   const tabs = [
     ...(details ? [{ value: "details" as const, label: t.details }] : []),
     { value: "seo" as const, label: t.seo },
@@ -171,7 +177,7 @@ export function PageSettingsDialog({
         {tab === "details" ? (
           details
         ) : tab === "seo" ? (
-          <SeoForm seo={seo} showNoindex={showNoindex} hint={seoHint} onSave={onSaveSeo} />
+          <SeoForm seo={seo} showNoindex={showNoindex ?? isPage} hint={seoHint ?? (isPage ? t.hintPage : t.hintStep)} onSave={onSaveSeo} />
         ) : (
           <ScriptsForm kind={scripts.kind} id={scripts.id} />
         )}

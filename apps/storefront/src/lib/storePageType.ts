@@ -31,6 +31,8 @@ const APP_ROUTES = new Set([
   "pay",
   "preview",
   "account",
+  "quotes",
+  "compare",
 ]);
 
 export function pageTypesOf(pathname: string): StorePageType[] {

@@ -1,0 +1,291 @@
+/* Returns and Protection — pages/returns, pages/fraud.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   Nothing here is blurred: the sheet of rows, the chips, the photo thumbnails and the
+   switches all lie in the page flow or inside a pane that is already frosted (Quick Look,
+   a sheet). The selectors are the hooks of the components (data-slot, zimos-*) and never
+   lean on ".glass-app main": the same pieces are drawn in Quick Look and in sheets, which
+   are portalled outside it.
+
+   Text: var(--color-ink) and var(--lg-ink-soft) on the panes. A tinted chip is a drop of
+   its tone over the raised paper, written in the deeper shade of that tone — the recipe of
+   the call / WhatsApp pills (states.css) and of the home chips (home-orders.css), which
+   holds 4.5:1 or better in both themes; these chips use a little less tint, so more. */
+:root:not([data-glass="off"]) {
+  /* How much of its tone goes into a tinted chip, and how much of the chip is the tint. */
+  --rp-mix: 12%;
+  --rp-alpha: 92%;
+  /* A flagged row: how much of the risk colour washes it. */
+  --rp-wash: 6%;
+  /* A well inside a pane: the note of a return, the fields of a rule that is on. */
+  --rp-well: color-mix(in srgb, var(--color-primary-dark) 5%, transparent);
+  /* The track of a switch that is off, and of a bar. */
+  --rp-track: color-mix(in srgb, var(--color-ink) 30%, transparent);
+  --rp-bar: color-mix(in srgb, var(--color-ink) 9%, transparent);
+  --rp-chip-top: rgb(255 255 255 / 0.7);
+
+  &.dark {
+    --rp-mix: 18%;
+    --rp-wash: 9%;
+    --rp-well: rgb(255 255 255 / 0.05);
+    --rp-track: rgb(255 255 255 / 0.22);
+    --rp-bar: rgb(255 255 255 / 0.1);
+    --rp-chip-top: rgb(255 255 255 / 0.12);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The sheet of rows (pages/returns/rowkit/DeskList.tsx). The pane
+   * itself is `zimos-list-sheet` (list.css); here: its tinted head,
+   * the hairlines, and a row that lights up under the pointer, the
+   * keyboard or a finger — the tint a table row takes. The row whose
+   * preview is open is washed with the store's colour. No blur and no
+   * glow per row: a list is fifty of these.
+   * ---------------------------------------------------------------- */
+  [data-slot="queue-head"] {
+    background-color: var(--lg-thead);
+    border-color: var(--lg-hairline);
+    color: var(--lg-ink-soft);
+  }
+  [data-slot="queue-row"] {
+    border-color: var(--lg-hairline);
+  }
+  @media (hover: hover) {
+    [data-slot="queue-row"][data-pressable]:hover {
+      background-color: var(--lg-row-lit);
+    }
+  }
+  [data-slot="queue-row"][data-pressable]:has([data-row-open]:is(:focus-visible, :active)) {
+    background-color: var(--lg-row-lit);
+  }
+  [data-slot="queue-row"][data-current],
+  [data-slot="queue-row"][data-current]:hover {
+    background-color: var(--list-selected, color-mix(in srgb, var(--color-primary) 10%, var(--lg-control-lit)));
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Flagged rows: a wash of the risk colour — amber, or red for a
+   * heavy flag — behind the accent the component draws at the start
+   * edge. Six to nine per cent of the tone: the ink of the row keeps
+   * its contrast, and the reasons are written on the row, so nothing
+   * rests on the colour. Under the pointer the row lights like any
+   * other (the accent stays).
+   * ---------------------------------------------------------------- */
+  .zimos-flagged {
+    --rp-risk: var(--color-accent);
+  }
+  .zimos-flagged-danger {
+    --rp-risk: var(--color-danger);
+  }
+  .zimos-row-card.zimos-flagged {
+    background-color: color-mix(in srgb, var(--rp-risk) var(--rp-wash), var(--lg-fill));
+  }
+  [data-slot="queue-row"].zimos-flagged:not([data-current]) {
+    background-color: color-mix(in srgb, var(--rp-risk) var(--rp-wash), transparent);
+  }
+  @media (hover: hover) {
+    [data-slot="queue-row"].zimos-flagged[data-pressable]:not([data-current]):hover {
+      background-color: color-mix(in srgb, var(--rp-risk) var(--rp-wash), var(--lg-row-lit));
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Tinted chips: the summary chip of a folded rules section, a reason
+   * in the preview of a flagged order, «من العميل» on a return. One
+   * recipe — a drop of the tone over the raised paper, a lit top edge,
+   * a hairline of the tone, and the deeper shade for the words.
+   * ---------------------------------------------------------------- */
+  [data-slot="rule-chip"],
+  [data-slot="flagged-reasons"] > li,
+  [data-slot="return-source"] {
+    --rp-tone: var(--color-ink-soft);
+    --rp-ink: var(--lg-ink-soft);
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--rp-tone) var(--rp-mix), var(--color-paper-raised)) var(--rp-alpha), transparent);
+    color: var(--rp-ink);
+    box-shadow:
+      inset 0 1px 0 0 var(--rp-chip-top),
+      inset 0 0 0 1px color-mix(in srgb, var(--rp-tone) 16%, transparent);
+  }
+  [data-slot="rule-chip"][data-tone="on"] {
+    --rp-tone: var(--color-success);
+    --rp-ink: var(--lg-text-success);
+  }
+  [data-slot="rule-chip"][data-tone="alert"],
+  [data-slot="flagged-reasons"][data-tone="danger"] > li {
+    --rp-tone: var(--color-danger);
+    --rp-ink: var(--lg-text-danger);
+  }
+  [data-slot="flagged-reasons"] > li {
+    --rp-tone: var(--color-accent);
+    --rp-ink: var(--color-accent-dark);
+  }
+  [data-slot="return-source"] {
+    --rp-tone: var(--color-primary);
+    --rp-ink: var(--lg-text-primary);
+  }
+  /* A quiet fact of a row (how many photos, how many pieces): a bead of the pane, no tone. */
+  [data-slot="return-fact"] {
+    background-color: color-mix(in srgb, var(--color-ink) 7%, transparent);
+    color: var(--lg-ink-soft);
+  }
+  &.dark [data-slot="return-fact"] {
+    background-color: rgb(255 255 255 / 0.09);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Photos of a return. A thumbnail is a small lit pane with the
+   * picture in it: a rim of light drawn over the picture (an inset
+   * shadow would lie under it), a hairline and the card shadow. Under
+   * the pointer it lifts; the one that is open wears the brand ring.
+   * The stage a photo grows into is a well with the same hairline.
+   * ---------------------------------------------------------------- */
+  .zimos-return-photo {
+    position: relative;
+    background-color: var(--lg-control);
+    box-shadow:
+      0 0 0 1px var(--lg-edge),
+      var(--shadow-card);
+  }
+  .zimos-return-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.55),
+      inset 0 0 0 1px rgb(255 255 255 / 0.2);
+    pointer-events: none;
+  }
+  &.dark .zimos-return-photo::after {
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.22),
+      inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  }
+  @media (hover: hover) {
+    .zimos-return-photo:hover {
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--color-primary) 40%, transparent),
+        var(--shadow-raised);
+    }
+  }
+  .zimos-return-photo[aria-pressed="true"] {
+    box-shadow:
+      0 0 0 2px var(--lg-brand-solid),
+      var(--lg-brand-glow);
+  }
+  [data-slot="return-photo-stage"] {
+    background-color: var(--rp-well);
+    box-shadow: inset 0 0 0 1px var(--lg-hairline);
+  }
+  [data-slot="return-photo-stage"] > figcaption {
+    border-color: var(--lg-hairline);
+  }
+
+  /* Wells inside a pane: the words of the customer, the fields of a rule that is on. */
+  [data-slot="return-note"],
+  [data-slot="rule-detail"] {
+    background-color: var(--rp-well);
+    box-shadow: inset 0 0 0 1px var(--lg-hairline);
+  }
+  /* The hairlines between the blocks of a preview take the colour of its pane. */
+  [data-slot="return-peek-rule"],
+  [data-slot="flagged-peek-rule"] {
+    background-color: var(--lg-hairline);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The switch of a rule. Off: a sunken grey track. On: the shared
+   * selection fill — the one the main button and the chosen chip have
+   * — with its glow. The thumb is a bead of light; on the brand fill
+   * of the dark theme (which is light) it takes the dark ink instead,
+   * so it is never light on light.
+   * ---------------------------------------------------------------- */
+  .zimos-switch {
+    background-color: var(--rp-track);
+    box-shadow: inset 0 1px 2px 0 rgb(0 0 0 / 0.14);
+  }
+  .zimos-switch:checked {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.28),
+      var(--lg-brand-glow);
+  }
+  .zimos-switch::before {
+    box-shadow:
+      0 1px 3px 0 rgb(0 0 0 / 0.28),
+      inset 0 1px 0 0 rgb(255 255 255 / 0.9);
+  }
+  .zimos-switch:checked::before {
+    background-color: var(--lg-on-brand);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The one action of a row, when it is the destructive one: the small
+   * pane of a secondary button, written in the danger shade that holds
+   * 4.5:1 on glass, and washed with it under the pointer. (The same
+   * weight as the outline rule of liquid-glass.css, and later.)
+   * ---------------------------------------------------------------- */
+  .zimos-row-action[data-slot="button"][data-variant="outline"][data-tone="danger"] {
+    color: var(--lg-text-danger);
+  }
+  .zimos-row-action[data-slot="button"][data-variant="outline"][data-tone="danger"]:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-danger) 12%, var(--lg-control-lit));
+    color: var(--lg-text-danger);
+  }
+
+  /* «امسح الكل» after the filter chips, and the links of a row: the brand shade that reads on glass. */
+  [data-slot="active-filters-clear"] {
+    color: var(--lg-text-primary);
+  }
+  @media (hover: hover) {
+    [data-slot="active-filters-clear"]:hover {
+      background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    }
+  }
+
+  /* The bars of «ليه الأوردرات اترفضت»: a quiet track, and the brand fill for how much of it. */
+  [data-slot="stat-bar"] {
+    background-color: var(--rp-bar);
+  }
+  [data-slot="stat-bar-fill"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28);
+  }
+
+  /* If forced colours are on while this layer still is: system colours, no gradient. */
+  @media (forced-colors: active) {
+    .zimos-switch:checked,
+    [data-slot="stat-bar-fill"] {
+      background-color: Highlight;
+      background-image: none;
+    }
+    .zimos-switch:checked::before {
+      background-color: HighlightText;
+    }
+  }
+}
+
+/* The same preferences the off switch follows (see the end of liquid-glass.css):
+   if the attribute was not set, the tints of this file turn solid too. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root:not([data-glass="off"]),
+  :root:not([data-glass="off"]).dark {
+    --rp-alpha: 100%;
+    --rp-well: var(--color-paper-sunken);
+    --rp-track: var(--color-line-strong);
+    --rp-bar: var(--color-line);
+  }
+}
+
+/* A photo of a return growing into its stage inside Quick Look: it fades in and settles, opacity and
+   transform only. The component asks for it through motion-safe, so nothing moves for people who
+   asked for less. */
+@keyframes returns-photo-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}

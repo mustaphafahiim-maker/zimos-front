@@ -1,20 +1,15 @@
 import { useState, type FormEvent } from "react";
 import { Alert, Button } from "@store-builder/ui";
 import {
-  ApiError,
   securityConfirmAuthenticator,
   securityDisableTwoFactor,
   securityEnableEmailCode,
-  securityEndAllSessions,
-  securityEndSession,
   securityForgetDevices,
-  securityListDevices,
   securitySetupAuthenticator,
   securityTwoFactorStatus,
   supportAccessGet,
   supportAccessGrant,
   supportAccessRevoke,
-  type SignedInDevice,
   type TwoFactorStatus,
   twoFactorEnableWhatsapp,
 } from "@store-builder/api-client";
@@ -22,51 +17,47 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
+import { formatDateTime } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { useAuth } from "@/context/AuthContext";
 import { DataState } from "@/components/DataState";
 import { Modal } from "@/components/Modal";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
+import { IconKey } from "@/components/icons";
+import { SettingsGroup, SettingsLinkRow, SettingsRow } from "@/components/settings";
 import { BackupCodesPanel } from "./BackupCodesPanel";
+import { PaneSkeleton } from "./sections/SettingsCard";
 
 /**
- * Settings → Security (SPEC §17.2): where the account is signed in, two-step
- * sign-in, and letting ZIMOS support into the store for a while.
+ * Settings → «الأمان» (SPEC §17.2): two-step sign-in with its methods and
+ * backup codes, the way to a new password, and letting ZIMOS support into the
+ * store for a while. Where the account is signed in is its own section
+ * (sections/DevicesSection.tsx).
  */
 
 const STRINGS = {
   en: {
-    title: "Security",
-    description: "Who is signed in to your account, a second step at sign-in, and support access to this store.",
-    devicesTitle: "Signed-in devices",
-    devicesHint: "Every browser and app signed in to your account. End any you do not recognise.",
-    thisDevice: "This device",
-    unknownDevice: "Unknown device",
-    on: "{browser} on {os}",
-    lastActive: "Last active {when}",
-    end: "End",
-    endAll: "Sign out everywhere",
-    endAllTitle: "Sign out everywhere?",
-    endAllBody: "Every device, this one included, is signed out. You will sign in again here.",
-    ended: "That device was signed out.",
-    noDevices: "No other device is signed in.",
     twoTitle: "Two-step sign-in",
     twoHint: "After your password, a code is asked for when you sign in from a device we do not know.",
+    status: "Now",
     off: "Off",
+    on: "On",
     emailMode: "Code by email",
+    emailModeHint: "A code is sent to your sign-in email.",
     appMode: "Authenticator app",
-    useEmail: "Use a code by email",
-    useApp: "Use an authenticator app",
+    appModeHint: "Google Authenticator or a similar app shows the code.",
     whatsappMode: "Code on WhatsApp",
-    useWhatsapp: "Use a code on WhatsApp",
+    whatsappModeHint: "A code is sent to your verified phone.",
+    use: "Use this",
     whatsappOn: "Sign-in codes now go to your phone on WhatsApp.",
-    needPhone: "Verify your phone under \u201cYour account\u201d to get codes on WhatsApp.",
+    needPhone: "Verify your phone under “Profile” to get codes on WhatsApp.",
+    turnOffRow: "Turn off two-step sign-in",
+    turnOffHint: "You sign in with your password alone.",
     turnOff: "Turn off",
-    remembered: "{count} remembered device(s)",
+    remembered: "{count} remembered device(s) are not asked for a code.",
     forget: "Forget them",
     forgotten: "Remembered devices were forgotten.",
     password: "Your password",
@@ -82,6 +73,9 @@ const STRINGS = {
     manual: "Or type this key into the app:",
     code: "Code from the app",
     confirm: "Turn on",
+    passwordTitle: "Password",
+    resetPassword: "Change your password",
+    resetPasswordHint: "We email you a link to set a new one.",
     supportTitle: "Support access",
     supportHint: "The ZIMOS team cannot open this store's data unless you let them in. Access ends by itself.",
     supportOff: "Support has no access to this store.",
@@ -96,179 +90,77 @@ const STRINGS = {
     revoked: "Support access ended.",
   },
   ar: {
-    title: "الأمان",
-    description: "مين داخل على حسابك، خطوة تانية عند الدخول، وإذن الدعم للمتجر ده.",
-    devicesTitle: "الأجهزة المسجّل منها الدخول",
-    devicesHint: "كل متصفح وتطبيق داخل على حسابك. اقفل أي جهاز مش عارفه.",
-    thisDevice: "الجهاز ده",
-    unknownDevice: "جهاز غير معروف",
-    on: "{browser} على {os}",
-    lastActive: "آخر نشاط {when}",
-    end: "إنهاء",
-    endAll: "خروج من كل الأجهزة",
-    endAllTitle: "خروج من كل الأجهزة؟",
-    endAllBody: "كل الأجهزة، ومنها الجهاز ده، هتخرج. هتسجّل دخول تاني من هنا.",
-    ended: "تم تسجيل الخروج من الجهاز ده.",
-    noDevices: "مفيش جهاز تاني داخل.",
     twoTitle: "الدخول بخطوتين",
     twoHint: "بعد كلمة السر، هيتطلب كود لما تدخل من جهاز مش معروف.",
-    off: "متوقف",
+    status: "دلوقتي",
+    off: "مقفول",
+    on: "شغّال",
     emailMode: "كود بالإيميل",
+    emailModeHint: "الكود بيتبعت على إيميل الدخول بتاعك.",
     appMode: "تطبيق المصادقة",
+    appModeHint: "Google Authenticator أو تطبيق شبهه بيطلّع الكود.",
     whatsappMode: "كود على واتساب",
-    useWhatsapp: "استخدم كود على واتساب",
+    whatsappModeHint: "الكود بيتبعت على موبايلك الموثّق.",
+    use: "استخدمه",
     whatsappOn: "أكواد الدخول توصل دلوقتي على واتساب موبايلك.",
-    needPhone: "وثّق موبايلك من «حسابك» علشان توصلك الأكواد على واتساب.",
-    useEmail: "استخدم كود بالإيميل",
-    useApp: "استخدم تطبيق مصادقة",
-    turnOff: "إيقاف",
-    remembered: "{count} جهاز محفوظ",
+    needPhone: "وثّق موبايلك من «الملف الشخصي» علشان توصلك الأكواد على واتساب.",
+    turnOffRow: "اقفل الدخول بخطوتين",
+    turnOffHint: "هتدخل بكلمة السر بس.",
+    turnOff: "اقفله",
+    remembered: "{count} جهاز محفوظ مش بيتطلب منهم كود.",
     forget: "انساهم",
     forgotten: "اتنست الأجهزة المحفوظة.",
     password: "كلمة السر",
     passwordHint: "عشان نتأكد إنه إنت.",
-    continue: "متابعة",
+    continue: "كمّل",
     working: "بننفّذ…",
     cancel: "إلغاء",
-    emailOn: "الدخول بخطوتين بالإيميل اتفعّل.",
-    appOn: "الدخول بخطوتين بالتطبيق اتفعّل.",
-    turnedOff: "الدخول بخطوتين اتوقف.",
+    emailOn: "الدخول بخطوتين بالإيميل اشتغل.",
+    appOn: "الدخول بخطوتين بالتطبيق اشتغل.",
+    turnedOff: "الدخول بخطوتين اتقفل.",
     scanTitle: "جهّز تطبيق المصادقة",
     scanBody: "امسح الكود ده بـ Google Authenticator أو تطبيق شبهه، وبعدين اكتب الكود اللي من ٦ أرقام.",
     manual: "أو اكتب المفتاح ده في التطبيق:",
     code: "الكود من التطبيق",
-    confirm: "تفعيل",
+    confirm: "شغّله",
+    passwordTitle: "كلمة السر",
+    resetPassword: "غيّر كلمة السر",
+    resetPasswordHint: "هنبعتلك لينك على إيميلك تعمل بيه كلمة سر جديدة.",
     supportTitle: "إذن الدعم",
     supportHint: "فريق ZIMOS ميقدرش يفتح بيانات المتجر ده غير لما تسمح له. الإذن بينتهي لوحده.",
     supportOff: "الدعم ملوش أي دخول على المتجر ده.",
     supportOn: "الدعم عنده إذن لحد {when}.",
     supportUsed: "آخر استخدام {when}.",
     allow: "اسمح بالدخول",
-    revoke: "إنهاء الإذن دلوقتي",
+    revoke: "اقفل الإذن دلوقتي",
     duration: "لمدة قد إيه",
     hours: "{count} ساعة",
     days: "{count} يوم",
     granted: "الدعم يقدر يفتح المتجر لحد {when}.",
-    revoked: "إذن الدعم انتهى.",
+    revoked: "إذن الدعم اتقفل.",
   },
 } satisfies Messages;
 
 type T = Record<keyof (typeof STRINGS)["en"], string>;
-const when = (iso: string) => new Date(iso).toLocaleString();
 
 export function SecuritySection() {
   const t = useT(STRINGS);
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-      <div className="mt-5 space-y-8">
-        <TwoStepPanel t={t} />
-        <DevicesPanel t={t} />
-        <SupportAccessPanel t={t} />
-      </div>
-    </section>
-  );
-}
-
-// ───────────────────────────── devices ─────────────────────────────
-
-function DevicesPanel({ t }: { t: T }) {
-  const toast = useToast();
-  const errorMessage = useErrorMessage();
-  const devices = useAsync(() => securityListDevices(apiClient), []);
-  const [ending, setEnding] = useState<string | null>(null);
-  const [confirmAll, setConfirmAll] = useState(false);
-
-  const label = (device: SignedInDevice) =>
-    device.browser && device.os ? fmt(t.on, { browser: device.browser, os: device.os }) : device.browser ?? device.os ?? t.unknownDevice;
-
-  async function end(device: SignedInDevice) {
-    setEnding(device.id);
-    try {
-      await securityEndSession(apiClient, device.id);
-      toast.success(t.ended);
-      await devices.refresh({ silent: true });
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setEnding(null);
-    }
-  }
-
-  return (
-    <div>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="font-medium text-ink">{t.devicesTitle}</h3>
-          <p className="text-sm text-ink-soft">{t.devicesHint}</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setConfirmAll(true)}>
-          {t.endAll}
-        </Button>
-      </div>
-      <div className="mt-3">
-        <DataState
-          loading={devices.loading}
-          error={devices.error}
-          empty={(devices.data ?? []).length === 0}
-          emptyMessage={t.noDevices}
-          onRetry={() => void devices.refresh()}
-        >
-          <ul className="divide-y divide-line rounded-md border border-line">
-            {(devices.data ?? []).map((device) => (
-              <li key={device.id} className="flex flex-wrap items-center gap-3 p-3">
-                <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
-                    {label(device)}
-                    {device.isCurrent && <StatusBadge value="current" tone="success" text={t.thisDevice} />}
-                  </p>
-                  <p className="text-xs text-ink-soft">
-                    {fmt(t.lastActive, { when: when(device.lastActiveAt) })}
-                    {device.ipAddress ? (
-                      <>
-                        {" · "}
-                        <span dir="ltr">{device.ipAddress}</span>
-                      </>
-                    ) : null}
-                  </p>
-                </div>
-                {!device.isCurrent && (
-                  <Button size="sm" variant="outline" disabled={ending === device.id} onClick={() => end(device)}>
-                    {ending === device.id ? t.working : t.end}
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </DataState>
-      </div>
-      <ConfirmDialog
-        open={confirmAll}
-        title={t.endAllTitle}
-        description={t.endAllBody}
-        confirmLabel={t.endAll}
-        cancelLabel={t.cancel}
-        busyLabel={t.working}
-        destructive
-        onCancel={() => setConfirmAll(false)}
-        onConfirm={async () => {
-          try {
-            await securityEndAllSessions(apiClient);
-          } catch (err) {
-            throw new Error(errorMessage(err));
-          }
-          apiClient.clearSession();
-          window.location.href = "/login";
-        }}
-      />
-    </div>
+    <>
+      <TwoStepPanel t={t} />
+      {/* There is no change-password call: the way to a new password is the reset link (/forgot-password). */}
+      <SettingsGroup title={t.passwordTitle}>
+        <SettingsLinkRow to="/forgot-password" icon={IconKey} tone="gray" label={t.resetPassword} hint={t.resetPasswordHint} />
+      </SettingsGroup>
+      <SupportAccessPanel t={t} />
+    </>
   );
 }
 
 // ───────────────────────────── two-step ─────────────────────────────
 
-type Step = { kind: "password"; next: "email" | "totp" | "whatsapp" | "off" } | { kind: "scan"; secret: string; qr: string | null } | null;
+type Method = "email" | "totp" | "whatsapp";
+type Step = { kind: "password"; next: Method | "off" } | { kind: "scan"; secret: string; qr: string | null } | null;
 
 function TwoStepPanel({ t }: { t: T }) {
   const toast = useToast();
@@ -282,7 +174,7 @@ function TwoStepPanel({ t }: { t: T }) {
 
   const data = status.data;
   const modeLabel: Record<TwoFactorStatus["mode"], string> = { off: t.off, email: t.emailMode, totp: t.appMode, whatsapp: t.whatsappMode };
-  // The WhatsApp code goes to the verified phone (PhoneVerification in "Your account").
+  // The WhatsApp code goes to the verified phone (PhoneVerification in the profile).
   const { user } = useAuth();
   const phoneVerified = Boolean(user?.phone && user?.phoneVerifiedAt);
 
@@ -294,13 +186,13 @@ function TwoStepPanel({ t }: { t: T }) {
   }
 
   // An account without a password (Google sign-in) is not asked for one.
-  function start(next: "email" | "totp" | "whatsapp" | "off") {
+  function start(next: Method | "off") {
     setError(null);
     if (data && !data.hasPassword) void run(next, "");
     else setStep({ kind: "password", next });
   }
 
-  async function run(next: "email" | "totp" | "whatsapp" | "off", pass: string) {
+  async function run(next: Method | "off", pass: string) {
     setBusy(true);
     setError(null);
     try {
@@ -323,7 +215,7 @@ function TwoStepPanel({ t }: { t: T }) {
       }
     } catch (err) {
       // A wrong password comes back as a field problem (422).
-      setError(err instanceof ApiError && err.status === 422 ? errorMessage(err) : errorMessage(err));
+      setError(errorMessage(err));
       if (!step) toast.error(errorMessage(err));
     } finally {
       setBusy(false);
@@ -345,61 +237,70 @@ function TwoStepPanel({ t }: { t: T }) {
     }
   }
 
+  async function forget() {
+    try {
+      status.setData(await securityForgetDevices(apiClient));
+      toast.success(t.forgotten);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  }
+
+  /** One method: «شغّال» on the one in use, a button on the others. */
+  const methodRow = (method: Method, label: string, hint: string, blocked = false) => (
+    <SettingsRow
+      label={label}
+      hint={hint}
+      control={
+        data?.mode === method ? (
+          <StatusBadge value="on" tone="success" text={t.on} />
+        ) : (
+          <Button variant="outline" className="min-h-11" disabled={busy || blocked} onClick={() => start(method)}>
+            {t.use}
+          </Button>
+        )
+      }
+    />
+  );
+
   return (
-    <div>
-      <h3 className="font-medium text-ink">{t.twoTitle}</h3>
-      <p className="text-sm text-ink-soft">{t.twoHint}</p>
-      <div className="mt-3">
-        <DataState loading={status.loading} error={status.error} onRetry={() => void status.refresh()}>
-          {data && (
-            <div className="flex flex-wrap items-center gap-3 rounded-md border border-line p-3">
-              <StatusBadge value={data.mode} tone={data.mode === "off" ? "neutral" : "success"} text={modeLabel[data.mode]} />
-              {data.mode !== "off" && data.rememberedDevices > 0 && (
-                <span className="text-xs text-ink-soft">
-                  {fmt(t.remembered, { count: data.rememberedDevices })}{" "}
-                  <button
-                    type="button"
-                    className="font-medium text-primary hover:underline"
-                    onClick={async () => {
-                      try {
-                        status.setData(await securityForgetDevices(apiClient));
-                        toast.success(t.forgotten);
-                      } catch (err) {
-                        toast.error(errorMessage(err));
-                      }
-                    }}
-                  >
-                    {t.forget}
-                  </button>
-                </span>
-              )}
-              <div className="ms-auto flex flex-wrap gap-2">
-                {data.mode !== "email" && (
-                  <Button size="sm" variant="outline" disabled={busy} onClick={() => start("email")}>
-                    {t.useEmail}
-                  </Button>
-                )}
-                {data.mode !== "whatsapp" && (
-                  <Button size="sm" variant="outline" disabled={busy || !phoneVerified} title={phoneVerified ? undefined : t.needPhone} onClick={() => start("whatsapp")}>
-                    {t.useWhatsapp}
-                  </Button>
-                )}
-                {data.mode !== "totp" && (
-                  <Button size="sm" variant="outline" disabled={busy} onClick={() => start("totp")}>
-                    {t.useApp}
-                  </Button>
-                )}
-                {data.mode !== "off" && (
-                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => start("off")}>
+    <>
+      <DataState loading={status.loading} error={status.error} onRetry={() => void status.refresh()} skeleton={<PaneSkeleton rows={4} />}>
+        {data && (
+          <SettingsGroup title={t.twoTitle} description={t.twoHint}>
+            <SettingsRow
+              label={t.status}
+              hint={data.mode !== "off" && data.rememberedDevices > 0 ? fmt(t.remembered, { count: data.rememberedDevices }) : undefined}
+              control={
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <StatusBadge value={data.mode} tone={data.mode === "off" ? "neutral" : "success"} text={modeLabel[data.mode]} />
+                  {data.mode !== "off" && data.rememberedDevices > 0 && (
+                    <Button variant="ghost" className="min-h-11" onClick={() => void forget()}>
+                      {t.forget}
+                    </Button>
+                  )}
+                </div>
+              }
+            />
+            {methodRow("email", t.emailMode, t.emailModeHint)}
+            {/* A phone never shows a tooltip: the reason the button is held is the row's own hint. */}
+            {methodRow("whatsapp", t.whatsappMode, phoneVerified || data.mode === "whatsapp" ? t.whatsappModeHint : t.needPhone, !phoneVerified)}
+            {methodRow("totp", t.appMode, t.appModeHint)}
+            {data.mode !== "off" && <BackupCodesPanel status={data} onChanged={(next) => status.setData({ ...data, ...next })} />}
+            {data.mode !== "off" && (
+              <SettingsRow
+                label={t.turnOffRow}
+                hint={t.turnOffHint}
+                control={
+                  <Button variant="ghost" className="min-h-11 text-danger hover:bg-danger-soft" disabled={busy} onClick={() => start("off")}>
                     {t.turnOff}
                   </Button>
-                )}
-              </div>
-            </div>
-          )}
-          {data && data.mode !== "off" && <BackupCodesPanel status={data} onChanged={(next) => status.setData({ ...data, ...next })} />}
-        </DataState>
-      </div>
+                }
+              />
+            )}
+          </SettingsGroup>
+        )}
+      </DataState>
 
       <Modal open={step?.kind === "password"} onClose={close} title={t.twoTitle}>
         <form
@@ -420,10 +321,10 @@ function TwoStepPanel({ t }: { t: T }) {
             onChange={(e) => setPassword(e.target.value)}
           />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={close} disabled={busy}>
+            <Button type="button" variant="outline" className="min-h-11" onClick={close} disabled={busy}>
               {t.cancel}
             </Button>
-            <Button type="submit" disabled={busy || password === ""}>
+            <Button type="submit" className="min-h-11" disabled={busy || password === ""}>
               {busy ? t.working : t.continue}
             </Button>
           </div>
@@ -434,10 +335,10 @@ function TwoStepPanel({ t }: { t: T }) {
         {step?.kind === "scan" && (
           <form className="space-y-4" onSubmit={confirm}>
             {error && <Alert variant="danger">{error}</Alert>}
-            {step.qr && <img src={step.qr} alt="" className="mx-auto size-44 rounded-md border border-line bg-white p-2" />}
-            <p className="text-xs text-ink-soft">
+            {step.qr && <img src={step.qr} alt="" className="mx-auto size-44 rounded-xl bg-white p-2 ring-1 ring-line" />}
+            <p className="text-[13px] leading-5 text-ink-soft">
               {t.manual}{" "}
-              <code dir="ltr" className="break-all font-mono text-ink">
+              <code dir="ltr" className="font-mono break-all text-ink">
                 {step.secret}
               </code>
             </p>
@@ -452,17 +353,17 @@ function TwoStepPanel({ t }: { t: T }) {
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             />
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={close} disabled={busy}>
+              <Button type="button" variant="outline" className="min-h-11" onClick={close} disabled={busy}>
                 {t.cancel}
               </Button>
-              <Button type="submit" disabled={busy || code.length !== 6}>
+              <Button type="submit" className="min-h-11" disabled={busy || code.length !== 6}>
                 {busy ? t.working : t.confirm}
               </Button>
             </div>
           </form>
         )}
       </Modal>
-    </div>
+    </>
   );
 }
 
@@ -493,23 +394,19 @@ function SupportAccessPanel({ t }: { t: T }) {
   }
 
   return (
-    <div>
-      <h3 className="font-medium text-ink">{t.supportTitle}</h3>
-      <p className="text-sm text-ink-soft">{t.supportHint}</p>
-      <div className="mt-3">
-        <DataState loading={state.loading} error={state.error} onRetry={() => void state.refresh()}>
-          <div className="flex flex-wrap items-center gap-3 rounded-md border border-line p-3">
-            <p className="min-w-0 flex-1 text-sm text-ink">
-              {active ? fmt(t.supportOn, { when: when(active.expiresAt) }) : t.supportOff}
-              {active?.lastUsedAt && <span className="block text-xs text-ink-soft">{fmt(t.supportUsed, { when: when(active.lastUsedAt) })}</span>}
-            </p>
-            {active ? (
+    <DataState loading={state.loading} error={state.error} onRetry={() => void state.refresh()} skeleton={<PaneSkeleton rows={1} />}>
+      <SettingsGroup title={t.supportTitle} description={t.supportHint}>
+        <SettingsRow
+          label={active ? fmt(t.supportOn, { when: formatDateTime(active.expiresAt) }) : t.supportOff}
+          hint={active?.lastUsedAt ? fmt(t.supportUsed, { when: formatDateTime(active.lastUsedAt) }) : undefined}
+          control={
+            active ? (
               <Button
-                size="sm"
                 variant="outline"
+                className="min-h-11"
                 disabled={busy}
                 onClick={() =>
-                  act(async () => {
+                  void act(async () => {
                     await supportAccessRevoke(apiClient, workspaceId);
                     toast.success(t.revoked);
                   })
@@ -518,8 +415,8 @@ function SupportAccessPanel({ t }: { t: T }) {
                 {busy ? t.working : t.revoke}
               </Button>
             ) : (
-              <>
-                <Select aria-label={t.duration} className="h-9 w-auto" value={hours} onChange={(e) => setHours(Number(e.target.value))}>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Select aria-label={t.duration} className="h-11 w-auto" value={hours} onChange={(e) => setHours(Number(e.target.value))}>
                   {durations.map((h) => (
                     <option key={h} value={h}>
                       {durationLabel(h)}
@@ -527,22 +424,22 @@ function SupportAccessPanel({ t }: { t: T }) {
                   ))}
                 </Select>
                 <Button
-                  size="sm"
+                  className="min-h-11"
                   disabled={busy}
                   onClick={() =>
-                    act(async () => {
+                    void act(async () => {
                       const grant = await supportAccessGrant(apiClient, workspaceId, hours);
-                      toast.success(fmt(t.granted, { when: when(grant.expiresAt) }));
+                      toast.success(fmt(t.granted, { when: formatDateTime(grant.expiresAt) }));
                     })
                   }
                 >
                   {busy ? t.working : t.allow}
                 </Button>
-              </>
-            )}
-          </div>
-        </DataState>
-      </div>
-    </div>
+              </div>
+            )
+          }
+        />
+      </SettingsGroup>
+    </DataState>
   );
 }

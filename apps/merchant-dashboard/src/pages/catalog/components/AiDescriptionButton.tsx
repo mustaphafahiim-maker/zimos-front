@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { IconSparkle } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import type { AiDialect, AiProductOutput } from "@store-builder/api-client";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -63,7 +63,7 @@ export function AiDescriptionButton({ name, onWritten }: { name: string; onWritt
           ))}
         </Select>
         <Button type="button" size="sm" variant="outline" className="min-h-11" onClick={() => void write()} disabled={busy}>
-          <Sparkles className="size-4" aria-hidden />
+          <IconSparkle className="size-4" aria-hidden />
           {busy ? t.writing : t.write}
         </Button>
       </div>

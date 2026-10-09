@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ImageIcon } from "lucide-react";
+import { IconImage } from "@/components/icons";
 import { cn } from "@store-builder/ui";
 import type { ProductMedia } from "@store-builder/api-client";
 import { mediaSrc } from "@/lib/media";
@@ -31,7 +31,7 @@ export function ProductImage({ media, alt, className, iconClassName }: ProductIm
   if (!src || erroredSrc === src) {
     return (
       <div className={box} aria-label={`${alt} (no image)`} role="img">
-        <ImageIcon className={cn("text-ink-soft/40", iconClassName ?? "size-5")} aria-hidden />
+        <IconImage className={cn("text-ink-soft/40", iconClassName ?? "size-5")} aria-hidden />
       </div>
     );
   }

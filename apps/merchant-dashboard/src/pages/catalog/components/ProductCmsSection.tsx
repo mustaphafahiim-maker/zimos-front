@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import { Alert, Button, Card, CardContent, Input, Label } from "@store-builder/ui";
+import { IconArrowDown, IconArrowUp, IconDelete, IconPlus } from "@/components/icons";
+import { Alert, Button, Input, Label } from "@store-builder/ui";
 import {
   catalogUpdateProduct,
   resolveProductCms,
@@ -17,7 +17,10 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { Textarea } from "@/components/Textarea";
 import { Select } from "@/components/Select";
+import { Segmented } from "@/components/Segmented";
 import { ImageUrlInput } from "./ImageUrlInput";
+import { SectionSaveBar } from "../product/saveQueue";
+import { ProductPageCard } from "./ProductPageCard";
 
 /**
  * The product's structured content (SPEC §7.4): features, testimonials and
@@ -98,7 +101,7 @@ type Tab = keyof typeof LIMITS;
 const TABS: Tab[] = ["features", "testimonials", "faqs"];
 
 const iconButton =
-  "inline-flex size-10 cursor-pointer items-center justify-center rounded-[0.5rem] text-ink-soft transition-colors hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-paper hover:text-ink focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none";
 
 function normalize(cms: ProductCms): ProductCms {
   return {
@@ -184,7 +187,7 @@ export function ProductCmsSection({ product, onChanged }: { product: CatalogProd
         <div className="min-w-0 flex-1 space-y-3">{children}</div>
         <div className="flex shrink-0 flex-col">
           <button type="button" className={iconButton} aria-label={t.moveUp} disabled={busy || index === 0} onClick={() => move(key, index, index - 1)}>
-            <ArrowUp className="size-4" aria-hidden />
+            <IconArrowUp className="size-4" aria-hidden />
           </button>
           <button
             type="button"
@@ -193,7 +196,7 @@ export function ProductCmsSection({ product, onChanged }: { product: CatalogProd
             disabled={busy || index === cms[key].length - 1}
             onClick={() => move(key, index, index + 1)}
           >
-            <ArrowDown className="size-4" aria-hidden />
+            <IconArrowDown className="size-4" aria-hidden />
           </button>
           <button
             type="button"
@@ -202,7 +205,7 @@ export function ProductCmsSection({ product, onChanged }: { product: CatalogProd
             disabled={busy}
             onClick={() => remove(key, index)}
           >
-            <Trash2 className="size-4" aria-hidden />
+            <IconDelete className="size-4" aria-hidden />
           </button>
         </div>
       </div>
@@ -217,30 +220,16 @@ export function ProductCmsSection({ product, onChanged }: { product: CatalogProd
   );
 
   return (
-    <Card>
-      <CardContent className="space-y-4 py-5">
-        <div>
-          <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-          <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-        </div>
+    <ProductPageCard title={t.title} description={t.description}>
+      <div className="space-y-4">
 
-        <div role="tablist" className="flex flex-wrap gap-1 border-b border-line">
-          {TABS.map((key) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={tab === key}
-              onClick={() => setTab(key)}
-              className={`-mb-px min-h-11 cursor-pointer border-b-2 px-3 text-sm font-medium transition-colors ${
-                tab === key ? "border-primary text-primary" : "border-transparent text-ink-soft hover:text-ink"
-              }`}
-            >
-              {t[`tab_${key}`]}
-              <span className="ms-1.5 text-xs text-ink-soft">{cms[key].length}</span>
-            </button>
-          ))}
-        </div>
+        <Segmented<Tab>
+          label={t.title}
+          value={tab}
+          onChange={setTab}
+          options={TABS.map((key) => ({ value: key, label: t[`tab_${key}`], count: cms[key].length }))}
+          className="w-full sm:w-auto"
+        />
 
         {tab === "testimonials" && <p className="text-xs text-ink-soft">{t.testimonialsNote}</p>}
         {cms[tab].length === 0 && <p className="text-sm text-ink-soft">{t[`empty_${tab}`]}</p>}
@@ -391,32 +380,24 @@ export function ProductCmsSection({ product, onChanged }: { product: CatalogProd
           disabled={busy || cms[tab].length >= LIMITS[tab]}
           onClick={() => add(tab)}
         >
-          <Plus className="size-4" aria-hidden />
+          <IconPlus className="size-4" aria-hidden />
           {t[`add_${tab}`]}
         </Button>
 
         {error && <Alert variant="danger">{error}</Alert>}
 
-        {dirty && (
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="min-h-11"
-              disabled={busy}
-              onClick={() => {
-                setCms(saved);
-                setError(null);
-              }}
-            >
-              {t.discard}
-            </Button>
-            <Button type="button" className="min-h-11" disabled={busy} onClick={() => void save()}>
-              {busy ? t.saving : t.save}
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        <SectionSaveBar
+          section={t.title}
+          dirty={dirty}
+          saving={busy}
+          error={error}
+          onSave={() => void save()}
+          onDiscard={() => {
+            setCms(saved);
+            setError(null);
+          }}
+        />
+      </div>
+    </ProductPageCard>
   );
 }

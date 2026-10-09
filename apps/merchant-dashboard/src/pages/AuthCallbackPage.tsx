@@ -1,23 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Spinner } from "@store-builder/ui";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { takeAfterAuth } from "@/lib/emailConfirm";
+import { TwoFactorStep } from "@/components/TwoFactorStep";
+import { AuthBusy, AuthHeading, AuthShell } from "./AuthShell";
+import { GoogleCallbackError, googleCallbackChallenge } from "./auth/GoogleCallbackSteps";
 
 const STRINGS = {
   en: {
-    failedTitle: "Couldn't sign in with Google",
-    failedBody: "Something went wrong while signing in with your Google account. Please try again.",
-    back: "← Back to sign in",
-    signingIn: "Signing in…",
+    title: "Signing you in",
+    signingIn: "One moment…",
   },
   ar: {
-    failedTitle: "تعذّر تسجيل الدخول بجوجل",
-    failedBody: "حدث خطأ أثناء تسجيل الدخول بحساب جوجل. من فضلك حاول مرة أخرى.",
-    back: "← العودة لتسجيل الدخول",
-    signingIn: "بندخّلك…",
+    title: "بندخّلك",
+    signingIn: "لحظة واحدة…",
   },
 } satisfies Messages;
 
@@ -41,6 +39,9 @@ export function AuthCallbackPage() {
   const cookieSession = searchParams.get("status") === "ok";
   const hasTokens = Boolean(accessToken && refreshToken) || cookieSession;
 
+  // An account with two-step sign-in is not signed in yet: it finishes with its code (handoff 347).
+  const [challenge] = useState(() => googleCallbackChallenge(searchParams));
+
   const [refreshFailed, setRefreshFailed] = useState(false);
   const handled = useRef(false);
 
@@ -51,40 +52,37 @@ export function AuthCallbackPage() {
     if (accessToken && refreshToken) apiClient.setTokens({ accessToken, refreshToken });
     else apiClient.adoptCookieSession();
     refreshUser()
-      .then(() => navigate("/workspaces", { replace: true }))
+      .then(() => navigate(takeAfterAuth() ?? "/workspaces", { replace: true }))
       .catch(() => setRefreshFailed(true));
   }, [accessToken, refreshToken, hasTokens, navigate, refreshUser]);
 
   const failed = !hasTokens || refreshFailed;
 
+  if (challenge && !hasTokens) {
+    return (
+      <AuthShell>
+        <TwoFactorStep
+          challenge={challenge}
+          onBack={() => navigate("/login", { replace: true })}
+          onVerified={async () => {
+            await refreshUser();
+            navigate(takeAfterAuth() ?? "/workspaces", { replace: true });
+          }}
+        />
+      </AuthShell>
+    );
+  }
+
   return (
-    <div className="auth-glass">
-      <AuthBackdrop />
-      <div className="auth-glass-stage">
-        <div className="w-full max-w-sm text-center">
-          {failed ? (
-            <>
-              <h2 className="font-display text-2xl font-medium text-ink">
-                {t.failedTitle}
-              </h2>
-              <p className="mt-3 text-sm text-ink-soft">
-                {t.failedBody}
-              </p>
-              <Link
-                to="/login"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                {t.back}
-              </Link>
-            </>
-          ) : (
-            <div className="flex items-center justify-center gap-3 text-sm text-ink-soft">
-              <Spinner className="size-5" />
-              <span>{t.signingIn}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <AuthShell>
+      {failed ? (
+        <GoogleCallbackError code={searchParams.get("error")} />
+      ) : (
+        <>
+          <AuthHeading title={t.title} center />
+          <AuthBusy className="mt-4">{t.signingIn}</AuthBusy>
+        </>
+      )}
+    </AuthShell>
   );
 }

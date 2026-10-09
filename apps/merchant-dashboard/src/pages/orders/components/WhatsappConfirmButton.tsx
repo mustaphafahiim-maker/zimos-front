@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MessageCircle } from "lucide-react";
+import { IconWhatsApp } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import { ordersWhatsappConfirm, ordersWhatsappFallbackLink, type Order } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -64,7 +64,7 @@ export function WhatsappConfirmButton({ order, onChanged }: { order: Order; onCh
   return (
     <>
       <Button variant="outline" size="sm" className="min-h-11 gap-1.5" onClick={send} disabled={busy}>
-        <MessageCircle className="size-4" aria-hidden />
+        <IconWhatsApp className="size-4" aria-hidden />
         {busy ? t.sending : t.confirm}
       </Button>
       {link && (

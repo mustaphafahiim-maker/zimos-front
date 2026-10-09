@@ -19,7 +19,28 @@
  */
 import type { ApiClient } from "../client";
 
-export type TrackingPixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity" | "pinterest";
+export type TrackingPixelPlatform =
+  | "meta"
+  | "tiktok"
+  | "snapchat"
+  | "google"
+  | "gtm"
+  | "clarity"
+  | "pinterest"
+  // Handoff 251 (endpoints/adPlatformPixels.ts): X, Reddit and Microsoft Ads also have a server API (255).
+  | "x"
+  | "taboola"
+  | "outbrain"
+  | "kwai"
+  | "reddit"
+  | "microsoft";
+
+/**
+ * Whether a platform's server events really leave the server (handoff 257):
+ * `sandbox` = built and logged only, until the platform is switched on;
+ * null = no server API (or a Google `AW-` id).
+ */
+export type TrackingPixelServerMode = "live" | "sandbox" | null;
 export type TrackingPixelScopeType = "all" | "funnels" | "products";
 
 export interface TrackingPixelScope {
@@ -40,6 +61,8 @@ export interface TrackingPixelDto {
   capiEnabled: boolean;
   /** False for platforms/IDs with no server API (GTM, Clarity, a Google Ads id). */
   capiSupported: boolean;
+  /** Handoff 257; missing from an older API. */
+  serverMode?: TrackingPixelServerMode;
   capiTokenSet: boolean;
   capiTokenMask: string | null;
   testEventCode: string | null;
@@ -56,6 +79,8 @@ export interface TrackingPixelPlatformInfo {
   name: TrackingPixelPlatform;
   capi: boolean;
   testEventCode: boolean;
+  /** Handoff 257; missing from an older API. */
+  serverMode?: TrackingPixelServerMode;
 }
 
 export interface TrackingPixelList {
@@ -153,6 +178,8 @@ export async function trackingPixelsListEvents(
 
 export interface TrackingPixelTestResult {
   ok: boolean;
+  /** True when the platform has no test event to send (X): nothing went out, its keys are checked by the first order. */
+  skipped?: boolean;
   /** The platform's own words when it refused the event. */
   error: string | null;
   eventId: string;

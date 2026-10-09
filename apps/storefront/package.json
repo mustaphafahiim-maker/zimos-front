@@ -10,6 +10,7 @@
     "test": "node --test \"src/**/*.test.mjs\""
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@store-builder/api-client": "^0.1.0",
     "@store-builder/error-reporter": "^0.1.0",
     "@store-builder/image-tools": "^0.1.0",

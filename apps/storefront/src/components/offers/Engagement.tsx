@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import {
   storefrontNewsletter,
@@ -13,9 +13,11 @@ import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
 import { track } from "@/lib/track";
 import { StoreLink } from "../StoreRoute";
-import { CheckIcon } from "../Icons";
-import { btnPrimary, btnSecondary, card, container, input, label as labelClass } from "../ui";
+import { CheckIcon, CrossIcon } from "../Icons";
+import { btnPrimary, btnSecondary, card, container, focusRing, input, label as labelClass } from "../ui";
 import { pickText } from "@/lib/i18n";
+// The bot guard's token rides the sign-up, and its per-address limit has its own sentence (handoff 363).
+import { signupGuardFields, signupTooMany } from "@/lib/signupGuard";
 
 /*
  * Sales notifications and the newsletter sign-up (SPEC §10.7, §10.9).
@@ -23,6 +25,9 @@ import { pickText } from "@/lib/i18n";
  * The notifications are real purchases the server hands over — a first name,
  * a governorate, the product and when. Nothing is generated here: when the
  * server has too few real orders it sends nothing and nothing is shown.
+ *
+ * Neither is needed to see a page or to buy from it, so neither is asked for
+ * while the page is still loading: see "When the page is idle" below.
  */
 
 const TEXT = {
@@ -66,7 +71,82 @@ const TEXT = {
   },
 };
 
+/** The pages that already ask something of the shopper: nothing pops up over them. */
 const quietPath = (pathname: string) => /\/(checkout|orders|pay|offer|track|f)(\/|$)/.test(pathname);
+
+// ------------------------------------------------- when the page is idle --
+
+/*
+ * The store's extras — the exit popup, the wheel, the sales notifications, the
+ * newsletter form — each start with a request for their settings. None of them
+ * is needed to paint a page or to place an order, so those requests wait until
+ * the page has loaded and the browser has a quiet moment, instead of competing
+ * with the product's photo on a phone's connection. And a page where an extra
+ * never shows (the checkout, the thank-you page…) does not ask for it at all.
+ */
+
+/** How long the browser may look for a quiet moment once the page has loaded. */
+const IDLE_TIMEOUT_MS = 2500;
+/** Where there is no requestIdleCallback (Safari): this long after the page has loaded. */
+const IDLE_FALLBACK_MS = 1200;
+/** A page whose last photo or script never finishes still gets its extras after this long. */
+const IDLE_MAX_WAIT_MS = 8000;
+
+let idle: Promise<void> | null = null;
+
+/** Settles once per page load; every later caller gets the same, already settled, answer. */
+function pageIdle(): Promise<void> {
+  if (idle) return idle;
+  idle = new Promise<void>((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+    const whenLoaded = () => {
+      if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(finish, { timeout: IDLE_TIMEOUT_MS });
+      else window.setTimeout(finish, IDLE_FALLBACK_MS);
+    };
+    if (document.readyState === "complete") whenLoaded();
+    else window.addEventListener("load", whenLoaded, { once: true });
+    window.setTimeout(finish, IDLE_MAX_WAIT_MS);
+  });
+  return idle;
+}
+
+/**
+ * False until the page has loaded and gone quiet, then true for good — it
+ * never goes back, so what it switches on stays on as the shopper moves from
+ * page to page. `allowed` false holds it back: a component passes whether the
+ * current page is one it may show on, and so asks for nothing from a page
+ * where it has nothing to show.
+ */
+export function useAfterIdle(allowed = true): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (ready || !allowed) return;
+    let live = true;
+    void pageIdle().then(() => {
+      if (live) setReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [ready, allowed]);
+  return ready;
+}
+
+/**
+ * Mounts what is inside it once the page is idle, on a page where the store's
+ * popups may show (the layout wraps the exit popup in it: that component asks
+ * for its settings the moment it mounts).
+ */
+export function AfterIdle({ children }: { children: ReactNode }) {
+  const pathname = usePathname() ?? "";
+  const ready = useAfterIdle(!quietPath(pathname));
+  return ready ? <>{children}</> : null;
+}
 
 // ------------------------------------------------------------ social proof --
 
@@ -77,12 +157,15 @@ export function SocialProofPopup({ workspaceId }: { workspaceId: string }) {
   const { locale } = useStore();
   const text = pickText(TEXT, locale);
   const pathname = usePathname() ?? "";
+  // Asked for once the page is idle, and never from a page where no notification would show.
+  const ready = useAfterIdle(!quietPath(pathname));
   const [config, setConfig] = useState<StorefrontSocialProof | null>(null);
   const [index, setIndex] = useState<number | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const next = useRef(0);
 
   useEffect(() => {
+    if (!ready) return;
     let cancelled = false;
     storefrontSocialProof(createStorefrontApiClient(), workspaceId)
       .then((result) => {
@@ -94,7 +177,7 @@ export function SocialProofPopup({ workspaceId }: { workspaceId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId]);
+  }, [ready, workspaceId]);
 
   const allowed =
     config !== null &&
@@ -141,15 +224,21 @@ export function SocialProofPopup({ workspaceId }: { workspaceId: string }) {
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(item.at).getTime()) / 60000));
 
   return (
+    // A lane along the bottom that stops short of the end corner, where the
+    // WhatsApp button and the way back up live, and starts above whatever bar
+    // is pinned to a phone's bottom edge (globals.css, `--sf-toast-bottom`).
+    // The lane itself lets taps through; only the card takes them.
     <div
       role="status"
       aria-live="polite"
-      className={`fixed bottom-20 z-30 max-w-[calc(100vw-2rem)] md:bottom-6 ${config.position === "bottom_end" ? "end-4" : "start-4"}`}
+      className={`pointer-events-none fixed start-4 end-[5.25rem] bottom-[var(--sf-toast-bottom,5rem)] z-30 flex ${
+        config.position === "bottom_end" ? "justify-end" : "justify-start"
+      }`}
     >
-      <div className={`${card} flex w-80 max-w-full items-center gap-3 p-3 shadow-lg`}>
+      <div className={`${card} pointer-events-auto flex w-80 max-w-full items-center gap-3 p-3 shadow-lg`}>
         {item.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.imageUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg border border-line object-cover" />
+          <img src={item.imageUrl} alt="" width={48} height={48} loading="lazy" decoding="async" className="h-12 w-12 shrink-0 rounded-lg border border-line object-cover" />
         )}
         <div className="min-w-0 flex-1 text-sm">
           <p className="text-ink-soft">{text.bought(item.firstName, item.city)}</p>
@@ -162,9 +251,9 @@ export function SocialProofPopup({ workspaceId }: { workspaceId: string }) {
           type="button"
           aria-label={text.dismiss}
           onClick={() => setDismissed(true)}
-          className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-ink-soft hover:bg-paper hover:text-ink"
+          className={`-me-1 inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-ink-soft hover:bg-paper hover:text-ink ${focusRing}`}
         >
-          ×
+          <CrossIcon size={16} />
         </button>
       </div>
     </div>
@@ -206,7 +295,9 @@ function NewsletterFields({
     setBusy(true);
     setError(null);
     try {
-      const answer = await storefrontSubscribe(createStorefrontApiClient(), workspaceId, {
+      const client = createStorefrontApiClient();
+      const answer = await storefrontSubscribe(client, workspaceId, {
+        ...(await signupGuardFields(client, workspaceId)),
         phone: phone.trim(),
         ...(fullName.trim() ? { fullName: fullName.trim() } : {}),
         ...(email.trim() ? { email: email.trim() } : {}),
@@ -216,8 +307,9 @@ function NewsletterFields({
       // A sign-up is the ad platforms' Lead (SPEC §13.2), like a funnel opt-in; never a bot's.
       if (!website) track("Lead", { contentName: "newsletter" });
       onDone();
-    } catch {
-      setError(text.failed);
+    } catch (err) {
+      // What was typed stays in the fields.
+      setError(signupTooMany(err, locale) ?? text.failed);
     } finally {
       setBusy(false);
     }
@@ -311,15 +403,29 @@ function NewsletterFields({
 /**
  * The store's sign-up form where the merchant put it: a band above the
  * footer, or a popup after a delay (once per visitor, never on checkout).
+ *
+ * Its settings arrive after the page does, so the band cannot be in the
+ * server's HTML. It is drawn in only while its place is off screen — below
+ * the fold, which is where the end of a page almost always is — so nothing the
+ * shopper is looking at moves. On a page short enough that the footer is
+ * already in view, it waits for that place to scroll away or for the
+ * shopper's next tap or key press, after which a change on screen is expected.
  */
 export function NewsletterSignup({ workspaceId }: { workspaceId: string }) {
   const { locale } = useStore();
   const text = pickText(TEXT, locale);
   const pathname = usePathname() ?? "";
+  const quiet = quietPath(pathname);
+  // Asked for once the page is idle, and never from a page where the form would not show.
+  const ready = useAfterIdle(!quiet);
   const [config, setConfig] = useState<StorefrontNewsletter | null>(null);
   const [open, setOpen] = useState(false);
+  // The band's place above the footer, and whether the band has been drawn into it yet.
+  const slot = useRef<HTMLDivElement>(null);
+  const [placed, setPlaced] = useState(false);
 
   useEffect(() => {
+    if (!ready) return;
     let cancelled = false;
     storefrontNewsletter(createStorefrontApiClient(), workspaceId)
       .then((result) => {
@@ -331,7 +437,7 @@ export function NewsletterSignup({ workspaceId }: { workspaceId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [workspaceId]);
+  }, [ready, workspaceId]);
 
   const remember = () => {
     try {
@@ -342,6 +448,8 @@ export function NewsletterSignup({ workspaceId }: { workspaceId: string }) {
   };
 
   const popup = config?.placement === "popup";
+  const band = config !== null && !popup;
+
   useEffect(() => {
     if (!popup || !config || quietPath(pathname)) return;
     try {
@@ -358,6 +466,30 @@ export function NewsletterSignup({ workspaceId }: { workspaceId: string }) {
   }, [popup, config, pathname, workspaceId]);
 
   useEffect(() => {
+    if (!band || placed || quiet) return;
+    const el = slot.current;
+    if (!el) return;
+    const place = () => setPlaced(true);
+    if (typeof IntersectionObserver === "undefined") {
+      const soon = window.setTimeout(place, 0);
+      return () => window.clearTimeout(soon);
+    }
+    // The observer reports once straight away: off screen means the band can go in now.
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => !entry.isIntersecting)) place();
+    });
+    observer.observe(el);
+    // On screen: after the shopper's own tap or key press the page may change under them.
+    window.addEventListener("click", place, { once: true });
+    window.addEventListener("keydown", place, { once: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("click", place);
+      window.removeEventListener("keydown", place);
+    };
+  }, [band, placed, quiet, pathname]);
+
+  useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -370,19 +502,25 @@ export function NewsletterSignup({ workspaceId }: { workspaceId: string }) {
   const heading = config.title || text.nlTitle;
 
   if (!popup) {
-    if (quietPath(pathname)) return null;
+    if (quiet) return null;
     return (
-      <section aria-labelledby="newsletter-title" className="border-t border-line bg-paper-raised">
-        <div className={`${container} grid gap-6 py-10 md:grid-cols-2 md:items-center`}>
-          <div>
-            <h2 id="newsletter-title" className="text-xl font-semibold text-ink">
-              {heading}
-            </h2>
-            {config.text && <p className="mt-2 text-sm leading-relaxed text-ink-soft">{config.text}</p>}
-          </div>
-          <NewsletterFields workspaceId={workspaceId} config={config} idPrefix="nl-footer" onDone={remember} />
-        </div>
-      </section>
+      <>
+        {/* Marks the band's place; takes no room of its own. */}
+        <div ref={slot} aria-hidden className="-mb-px h-px" />
+        {placed && (
+          <section aria-labelledby="newsletter-title" className="border-t border-line bg-paper-raised">
+            <div className={`${container} grid gap-6 py-10 md:grid-cols-2 md:items-center`}>
+              <div>
+                <h2 id="newsletter-title" className="text-xl font-semibold text-ink">
+                  {heading}
+                </h2>
+                {config.text && <p className="mt-2 text-sm leading-relaxed text-ink-soft">{config.text}</p>}
+              </div>
+              <NewsletterFields workspaceId={workspaceId} config={config} idPrefix="nl-footer" onDone={remember} />
+            </div>
+          </section>
+        )}
+      </>
     );
   }
 

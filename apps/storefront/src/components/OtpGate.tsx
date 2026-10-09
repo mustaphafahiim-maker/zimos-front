@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { ApiError, protectionResendCheckoutOtp, protectionVerifyCheckoutOtp } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
-import { registerOtpPrompt, type OtpPromptRequest } from "@/lib/checkoutOtp";
+import { closeOtpStepBecause, registerOtpPrompt, type OtpPromptRequest } from "@/lib/checkoutOtp";
+import { checkoutRefusalText } from "@/lib/checkoutRefusals";
 import { useStore } from "@/lib/StoreContext";
+import { useDialog } from "@/lib/useDialog";
 import { btnGhost, btnPrimaryLg, input } from "./ui";
 
 const COPY = {
@@ -89,13 +91,22 @@ export function OtpGate() {
     return () => window.clearInterval(id);
   }, [pending]);
 
-  if (!pending) return null;
-  const { challenge } = pending;
-
   function close(token: string | null) {
     pending?.resolve(token);
     setPending(null);
   }
+
+  // A modal step: Tab stays inside the sheet, the page behind does not scroll, and Escape is «تغيير الرقم» —
+  // the order is not placed and the shopper is back on the form. Not while a code is being checked.
+  const sheet = useDialog<HTMLDivElement>({
+    open: pending !== null,
+    onClose: () => {
+      if (!busy) close(null);
+    },
+  });
+
+  if (!pending) return null;
+  const { challenge } = pending;
 
   function messageFor(err: unknown): string {
     const errorCode = err instanceof ApiError ? (err.code as string) : "";
@@ -103,7 +114,17 @@ export function OtpGate() {
     if (errorCode === "EXPIRED") return t.expired;
     if (errorCode === "TOO_MANY_ATTEMPTS") return t.tooMany;
     if (errorCode === "OTP_RESEND_TOO_SOON" || errorCode === "OTP_RATE_LIMITED") return t.wait;
+    // Over 10 verify + resend calls a minute from this address (handoff 348): the code field and the countdown stay as they are.
+    if (errorCode === "RATE_LIMITED") return checkoutRefusalText(locale).otpTooMany;
     return t.generic;
+  }
+
+  /** The store sent this phone no code in the last 30 minutes (handoff 348): the step closes, the form stays filled and says to order again. */
+  function notRequested(err: unknown): boolean {
+    if (!(err instanceof ApiError) || (err.code as string) !== "OTP_NOT_REQUESTED") return false;
+    closeOtpStepBecause(checkoutRefusalText(locale).orderAgain);
+    close(null);
+    return true;
   }
 
   async function submit(e: FormEvent) {
@@ -130,17 +151,19 @@ export function OtpGate() {
       setNotice(t.resent);
       setSecondsLeft(challenge.resendAfterSeconds);
     } catch (err) {
-      setError(messageFor(err));
+      if (!notRequested(err)) setError(messageFor(err));
     }
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/50 p-0 sm:items-center sm:p-4">
       <div
+        ref={sheet}
         role="dialog"
         aria-modal="true"
         aria-labelledby="otp-gate-title"
-        className="w-full max-w-md rounded-t-2xl border border-line bg-paper-raised p-5 shadow-xl sm:rounded-2xl sm:p-6"
+        tabIndex={-1}
+        className="w-full max-w-md rounded-t-2xl border border-line bg-paper-raised p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl outline-none sm:rounded-2xl sm:p-6"
       >
         <h2 id="otp-gate-title" className="font-display text-lg font-bold text-ink">
           {t.title}
@@ -160,19 +183,22 @@ export function OtpGate() {
             <input
               id="otp-gate-code"
               ref={inputRef}
+              data-autofocus=""
               dir="ltr"
               inputMode="numeric"
+              enterKeyHint="done"
               autoComplete="one-time-code"
               pattern="[0-9]*"
               maxLength={challenge.codeLength}
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, challenge.codeLength))}
               aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "otp-gate-message" : undefined}
               className={`${input} text-center text-2xl tracking-[0.5em]`}
             />
           </div>
 
-          <div aria-live="polite" className="empty:hidden">
+          <div id="otp-gate-message" aria-live="polite" className="empty:hidden">
             {error && <p className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}
             {!error && notice && <p className="text-sm text-ink-soft">{notice}</p>}
           </div>

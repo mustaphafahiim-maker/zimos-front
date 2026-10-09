@@ -39,6 +39,11 @@ import { QueuesPage } from "@/pages/QueuesPage";
 import { UsagePage } from "@/pages/UsagePage";
 import { NetworkStatsPage } from "@/pages/NetworkStatsPage";
 import { MarketplaceReviewPage } from "@/pages/MarketplaceReviewPage";
+import { PartnerAppsPage } from "@/pages/PartnerAppsPage";
+import { NotificationsPage } from "@/pages/NotificationsPage";
+import { SiteTrafficPage } from "@/pages/SiteTrafficPage";
+import { PaymentMethodsPage } from "@/pages/PaymentMethodsPage";
+import { PaymentProofDetailPage, PaymentProofsPage } from "@/pages/PaymentProofsPage";
 import { P } from "@/lib/permissions";
 
 /** A console page that needs `permission` (the view key its endpoints check). */
@@ -64,12 +69,17 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
+                <Route path="/notifications" element={gated(P.OVERVIEW_VIEW, <NotificationsPage />)} />
+                <Route path="/site-traffic" element={gated(P.OVERVIEW_VIEW, <SiteTrafficPage />)} />
                 <Route path="/workspaces" element={gated(P.WORKSPACES_VIEW, <WorkspacesPage />)} />
                 <Route path="/workspaces/:id" element={gated(P.WORKSPACES_VIEW, <WorkspaceDetailPage />)} />
                 <Route path="/users" element={gated(P.WORKSPACES_VIEW, <UsersPage />)} />
                 <Route path="/users/:id" element={gated(P.WORKSPACES_VIEW, <UserDetailPage />)} />
                 <Route path="/subscriptions" element={gated(P.SUBSCRIPTIONS_VIEW, <SubscriptionsPage />)} />
                 <Route path="/plans" element={gated(P.PLANS_VIEW, <PlansPage />)} />
+                <Route path="/payment-methods" element={gated(P.PAYMENTS_RECORD, <PaymentMethodsPage />)} />
+                <Route path="/payment-proofs" element={gated(P.PAYMENTS_RECORD, <PaymentProofsPage />)} />
+                <Route path="/payment-proofs/:id" element={gated(P.PAYMENTS_RECORD, <PaymentProofDetailPage />)} />
                 <Route path="/agents" element={gated(P.AGENTS_VIEW, <AgentsPage />)} />
                 <Route path="/agents/:id" element={gated(P.AGENTS_VIEW, <AgentDetailPage />)} />
                 <Route path="/referral-program" element={gated(P.AGENTS_VIEW, <ReferralProgramPage />)} />
@@ -79,6 +89,7 @@ export default function App() {
                 <Route path="/suppliers" element={gated(P.TEMPLATES_VIEW, <SuppliersPage />)} />
                 <Route path="/apps" element={gated(P.TEMPLATES_VIEW, <AppsPage />)} />
                 <Route path="/marketplace" element={gated(P.TEMPLATES_VIEW, <MarketplaceReviewPage />)} />
+                <Route path="/partner-apps" element={gated(P.PROVIDERS_VIEW, <PartnerAppsPage />)} />
                 <Route path="/admin/marketplace" element={<Navigate to="/marketplace" replace />} />
                 <Route path="/carriers" element={gated(P.PROVIDERS_VIEW, <ProvidersPage kind="carrier" />)} />
                 <Route path="/carriers/:code/areas" element={gated(P.PROVIDERS_VIEW, <CarrierAreasPage />)} />

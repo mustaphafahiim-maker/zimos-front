@@ -58,17 +58,21 @@ function unusable(card: GiftCardBalance, currency: string, copy: Copy): string |
   return null;
 }
 
-/** Cash on delivery, and not a manual transfer: the only way a gift card goes with an order. */
+/**
+ * Cash on delivery or an online payment (handoff 201): every way to pay takes
+ * a gift card but a manual bank transfer.
+ */
 function takesGiftCard(method: StorefrontPaymentMethod | undefined): boolean {
-  return method?.method === "cod" && method.provider !== "manual";
+  return Boolean(method) && method?.provider !== "manual";
 }
 
 /**
  * The checkout's gift card (handoff 189): the code the shopper applied, what
  * it takes off this order's estimated total, and the `giftCardCode` the order
- * carries — only with cash on delivery, the one method the API takes it with.
- * The card is checked when applied (POST /gift-cards/check); the order checks
- * it again and takes at most what is due.
+ * carries — with cash on delivery or an online payment (handoff 201), never a
+ * bank transfer. The card is checked when applied (POST /gift-cards/check);
+ * the order checks it again and takes at most what is due. With an online
+ * payment its part is held and the gateway charges the rest.
  */
 export function useGiftCard({
   client,
@@ -189,7 +193,14 @@ export type GiftCardState = ReturnType<typeof useGiftCard>;
  * applied, it shows «كارت هدية ••••X9UK: −250» and «تدفع عند الاستلام: …».
  * Another way to pay keeps the card but says it goes with cash on delivery.
  */
-export function GiftCardField({ state }: { state: GiftCardState }) {
+export function GiftCardField({
+  state,
+  remainder = true,
+}: {
+  state: GiftCardState;
+  /** False when what is left to pay is said below it, with points and store credit (tenders/CheckoutTenders). */
+  remainder?: boolean;
+}) {
   const { t, money } = useStore();
   const copy = t.giftCards;
   const inputId = "checkout-gift-card";
@@ -235,10 +246,12 @@ export function GiftCardField({ state }: { state: GiftCardState }) {
           </div>
           {state.usable ? (
             <dl className="space-y-1 text-sm">
+              {remainder && (
               <div className="flex justify-between gap-3 font-bold text-ink">
                 <dt>{copy.payOnDelivery}</dt>
                 <dd>{money(Math.max(0, state.total - state.off), state.currency)}</dd>
               </div>
+              )}
               <div className="flex justify-between gap-3 text-xs text-ink-soft">
                 <dt className="sr-only">{copy.balance}</dt>
                 <dd>{copy.balanceAfter(money(Math.max(0, parseMoney(state.card.balanceAmount) - state.off), state.currency))}</dd>

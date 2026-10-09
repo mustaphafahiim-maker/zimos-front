@@ -1,18 +1,6 @@
 import { useMemo, useState } from "react";
-import { Copy } from "lucide-react";
-import {
-  Alert,
-  Button,
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Label,
-} from "@store-builder/ui";
+import { IconCopy } from "@/components/icons";
+import { Alert, Button, Input, Label } from "@store-builder/ui";
 import { funnelsList, resolveCheckoutForm, type Discount } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -20,6 +8,7 @@ import { useAsync } from "@/lib/useAsync";
 import { storeUrl } from "@/lib/storeAddress";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Select } from "@/components/Select";
+import { Sheet } from "@/components/Sheet";
 import { useToast } from "@/components/Toast";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useStoreProducts } from "../offers/OfferRuleParts";
@@ -146,7 +135,7 @@ export function CouponLinkDialog({
   };
 
   return (
-    <Dialog
+    <Sheet
       open={open}
       onOpenChange={(next) => {
         if (!next) {
@@ -154,53 +143,59 @@ export function CouponLinkDialog({
           onClose();
         }
       }}
+      size="md"
+      title={fmt(t.title, { code })}
+      description={fmt(t.description, { code })}
+      footer={
+        <Button
+          type="button"
+          variant="outline"
+          className="rounded-full px-5"
+          onClick={() => {
+            setPicked(null);
+            onClose();
+          }}
+        >
+          {t.close}
+        </Button>
+      }
     >
-      <DialogContent showCloseButton={false} className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{fmt(t.title, { code })}</DialogTitle>
-          <DialogDescription>{fmt(t.description, { code })}</DialogDescription>
-        </DialogHeader>
-
-        {!base ? (
-          <Alert variant="danger">{t.noAddress}</Alert>
-        ) : (
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="coupon-link-target">{t.opensOn}</Label>
-              <Select
-                id="coupon-link-target"
-                value={current?.value ?? ""}
-                disabled={loading || destinations.length === 0}
-                onChange={(e) => setPicked(e.target.value)}
-              >
-                {group("home", t.home)}
-                {group("products", t.products)}
-                {group("funnels", t.funnels)}
-              </Select>
-              {onlyProducts && <p className="text-xs text-ink-soft">{t.onlyProducts}</p>}
-              {onlyFunnels && <p className="text-xs text-ink-soft">{t.onlyFunnels}</p>}
-            </div>
-            {current && (
-              <div className="space-y-1.5">
-                <Label htmlFor="coupon-link-url">{t.link}</Label>
-                <div className="flex gap-2">
-                  <Input id="coupon-link-url" dir="ltr" readOnly value={current.url} onFocus={(e) => e.target.select()} className="min-w-0 flex-1" />
-                  <Button type="button" className="shrink-0" onClick={() => void copy()}>
-                    <Copy className="size-4" aria-hidden />
-                    {t.copy}
-                  </Button>
-                </div>
-              </div>
-            )}
-            {statusText && <Alert variant="danger">{fmt(t.inactive, { code, status: statusText })}</Alert>}
-            {!codesOn && <Alert variant="danger">{t.codesOff}</Alert>}
+      {!base ? (
+        <Alert variant="danger">{t.noAddress}</Alert>
+      ) : (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="coupon-link-target">{t.opensOn}</Label>
+            <Select
+              id="coupon-link-target"
+              value={current?.value ?? ""}
+              disabled={loading || destinations.length === 0}
+              onChange={(e) => setPicked(e.target.value)}
+              className="h-11"
+            >
+              {group("home", t.home)}
+              {group("products", t.products)}
+              {group("funnels", t.funnels)}
+            </Select>
+            {onlyProducts && <p className="text-xs text-ink-soft">{t.onlyProducts}</p>}
+            {onlyFunnels && <p className="text-xs text-ink-soft">{t.onlyFunnels}</p>}
           </div>
-        )}
-
-        <DialogFooter>
-          <DialogClose render={<Button type="button" variant="outline" />}>{t.close}</DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          {current && (
+            <div className="space-y-1.5">
+              <Label htmlFor="coupon-link-url">{t.link}</Label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input id="coupon-link-url" dir="ltr" readOnly value={current.url} onFocus={(e) => e.target.select()} className="h-11 min-w-0 flex-1" />
+                <Button type="button" className="min-h-11 shrink-0 rounded-full px-5" onClick={() => void copy()}>
+                  <IconCopy className="size-4" weight="bold" aria-hidden />
+                  {t.copy}
+                </Button>
+              </div>
+            </div>
+          )}
+          {statusText && <Alert variant="danger">{fmt(t.inactive, { code, status: statusText })}</Alert>}
+          {!codesOn && <Alert variant="danger">{t.codesOff}</Alert>}
+        </div>
+      )}
+    </Sheet>
   );
 }

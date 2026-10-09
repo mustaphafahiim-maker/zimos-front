@@ -33,7 +33,7 @@ export function ProductContent({ cms, locale }: { cms: ProductCms; locale: Local
               <li key={i} className={`${card} overflow-hidden`}>
                 {feature.image && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={feature.image} alt="" loading="lazy" className="aspect-[4/3] w-full object-cover" />
+                  <img src={feature.image} alt="" width={640} height={480} loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover" />
                 )}
                 <div className="p-5">
                   <h3 className="text-base font-semibold text-ink">{feature.title}</h3>
@@ -60,7 +60,7 @@ export function ProductContent({ cms, locale }: { cms: ProductCms; locale: Local
                 <div className="flex items-center gap-3">
                   {item.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.image} alt="" loading="lazy" className="h-10 w-10 rounded-full object-cover" />
+                    <img src={item.image} alt="" width={40} height={40} loading="lazy" decoding="async" className="h-10 w-10 rounded-full object-cover" />
                   ) : (
                     <span
                       aria-hidden

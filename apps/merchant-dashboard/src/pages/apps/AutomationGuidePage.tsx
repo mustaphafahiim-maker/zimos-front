@@ -1,7 +1,7 @@
 import { useId, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Button } from "@store-builder/ui";
-import { ExternalLink, KeyRound, Workflow } from "lucide-react";
+import { IconExternal, IconFlow, IconKey } from "@/components/icons";
 import {
   developersCreateApiKey,
   developersListWebhooks,
@@ -201,14 +201,14 @@ export function AutomationGuidePage({ tool }: { tool: AutomationTool }) {
                   <p className="text-sm text-ink">{fmt(step, { tool: name })}</p>
                   {index === 0 && (
                     <Button type="button" className="min-h-11" onClick={() => setCreating(true)}>
-                      <KeyRound className="size-4" aria-hidden />
+                      <IconKey className="size-4" aria-hidden />
                       {t.createKey}
                     </Button>
                   )}
                   {index === 1 && (
                     <Button variant="outline" className="min-h-11" asChild>
                       <a href={TOOL_SITE[tool]} target="_blank" rel="noreferrer">
-                        <ExternalLink className="size-4" aria-hidden />
+                        <IconExternal className="size-4" aria-hidden />
                         {fmt(t.openTool, { tool: name })}
                       </a>
                     </Button>
@@ -232,7 +232,7 @@ export function AutomationGuidePage({ tool }: { tool: AutomationTool }) {
             <div className="space-y-3">
               {mine.length === 0 ? (
                 <EmptyState
-                  icon={<Workflow />}
+                  icon={<IconFlow />}
                   title={fmt(t.noneTitle, { tool: name })}
                   description={fmt(t.noneBody, { tool: name })}
                   className="py-8"
@@ -368,7 +368,7 @@ function AutomationKeyDialog({
             rel="noreferrer"
             className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary hover:underline"
           >
-            <ExternalLink className="size-4" aria-hidden />
+            <IconExternal className="size-4" aria-hidden />
             {fmt(t.openTool, { tool: toolName })}
           </a>
         </div>

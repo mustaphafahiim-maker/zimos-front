@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useImperativeHandle, useState, type FormEvent, type Ref } from "react";
 import { Alert, Button } from "@store-builder/ui";
 import { ApiError, isApiErrorCode, ordersCancelWithOptions, type Order, type UpdateOrderPayload } from "@store-builder/api-client";
 import { formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
@@ -17,6 +17,7 @@ import { Textarea } from "@/components/Textarea";
 import { Select } from "@/components/Select";
 import { isCarrierBooked } from "@/pages/shipping/carriers";
 import { useManualCancelPrompt } from "@/pages/shipping/useManualCancelPrompt";
+import { BookingLockLink } from "./courierBookingLock";
 
 const SHIPPED_STATES = ["fulfilled", "partially_fulfilled", "returned"];
 
@@ -117,14 +118,35 @@ interface Props {
   onChanged: () => void;
 }
 
+/** What a caller that lists these actions somewhere else (a menu) may trigger. */
+export interface OrderActionsHandle {
+  editAddress: () => void;
+  downloadWaybill: () => void;
+  cancelOrder: () => void;
+}
+
+/** The gates the buttons below use, for a caller that lists the same actions in a menu. */
+export function orderActionGates(order: Order): { isCancelled: boolean; isShipped: boolean; canCancel: boolean; canEdit: boolean } {
+  const isCancelled = Boolean(order.cancelledAt);
+  const isShipped = SHIPPED_STATES.includes(order.fulfillmentState);
+  return { isCancelled, isShipped, canCancel: !isCancelled && !isShipped, canEdit: !isCancelled && !isShipped };
+}
+
 /**
  * `only="tools"` renders the everyday tools (edit address, waybill);
  * `only="cancel"` renders the cancel button and the cancelled / shipped note,
  * so the order page can put cancel last and apart (re-audit N-16).
+ * `only="dialogs"` renders no button at all: the dialogs stay mounted and
+ * `actionsRef` opens them (the order page's «…» menu and stage chip).
  */
-export function OrderActions({ order, onChanged, only }: Props & { only?: "tools" | "cancel" }) {
-  const showTools = only !== "cancel";
-  const showCancel = only !== "tools";
+export function OrderActions({
+  order,
+  onChanged,
+  only,
+  actionsRef,
+}: Props & { only?: "tools" | "cancel" | "dialogs"; actionsRef?: Ref<OrderActionsHandle> }) {
+  const showTools = only === undefined || only === "tools";
+  const showCancel = only === undefined || only === "cancel";
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const t = useT(STRINGS);
@@ -142,10 +164,18 @@ export function OrderActions({ order, onChanged, only }: Props & { only?: "tools
   const [giveBack, setGiveBack] = useState(false);
   const [refundAmount, setRefundAmount] = useState(minorToMajorInput(refundable));
 
-  const isCancelled = Boolean(order.cancelledAt);
-  const isShipped = SHIPPED_STATES.includes(order.fulfillmentState);
-  const canCancel = !isCancelled && !isShipped;
-  const canEdit = !isCancelled && !isShipped;
+  const { isCancelled, isShipped, canCancel, canEdit } = orderActionGates(order);
+  useImperativeHandle(actionsRef, () => ({
+    editAddress: () => {
+      if (canEdit) setEditing(true);
+    },
+    downloadWaybill: () => void downloadWaybill(),
+    cancelOrder: () => {
+      if (!canCancel) return;
+      setReason("");
+      setCancelling(true);
+    },
+  }));
   // The backend cancels 'created' and 'failed' courier deliveries at the
   // courier first (cancelCarrierShipmentsForOrder), all-or-nothing.
   const courierToCancel = (order.shipments ?? []).some(
@@ -386,6 +416,7 @@ function EditOrderForm({
       {formError && (
         <Alert variant="danger" role="alert">
           {formError}
+          <BookingLockLink message={formError} onGo={onCancel} />
         </Alert>
       )}
       <p className="text-sm text-ink-soft">{t.editNote}</p>

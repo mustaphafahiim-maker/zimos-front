@@ -8,7 +8,8 @@
  *   PATCH /workspaces/:workspaceId/webhooks/:endpointId   { url?, events?, isActive?, filter?, customHeaders? }
  *
  * - Up to 10; `name` is an HTTP header token (≤64), `value` ≤1000 characters
- *   with no line breaks; names are unique, ignoring case.
+ *   with no line breaks, Latin letters, digits and symbols only (item 304);
+ *   names are unique, ignoring case.
  * - PATCH replaces the whole list. `{ name, keep: true }` keeps the value
  *   already stored under that name, so the dashboard never needs to know it
  *   (422 when nothing is stored under that name).
@@ -29,6 +30,13 @@ export const WEBHOOK_HEADER_VALUE_MAX = 1000;
 
 /** An HTTP header token, as the server checks it. */
 export const WEBHOOK_HEADER_NAME_PATTERN = /^[A-Za-z0-9!#$%&'*+.^_`|~-]{1,64}$/;
+
+/**
+ * What a header value can hold, as the server checks it (handoff item 304):
+ * tab, printable ASCII and Latin-1. Arabic, emoji and control characters are
+ * refused with 422 on `customHeaders.<i>.value` — a delivery could not carry them.
+ */
+export const WEBHOOK_HEADER_VALUE_PATTERN = /^[\t\x20-\x7e\x80-\xff]*$/;
 
 /** Headers Zimos sets itself, or that belong to the transport: never accepted. */
 export const WEBHOOK_RESERVED_HEADER =

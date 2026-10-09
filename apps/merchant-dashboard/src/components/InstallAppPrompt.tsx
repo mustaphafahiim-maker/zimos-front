@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, Share, X } from "lucide-react";
+import { IconClose, IconDownload, IconExport } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 
@@ -13,10 +13,10 @@ const STRINGS = {
   },
   ar: {
     title: "ثبّت زيموس على موبايلك",
-    body: "افتح طلباتك من الشاشة الرئيسية، بملء الشاشة، مثل أي تطبيق.",
+    body: "افتح أوردراتك من الشاشة الرئيسية، بملء الشاشة، زي أي تطبيق.",
     install: "تثبيت",
-    iosBody: "اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية».",
-    dismiss: "ليس الآن",
+    iosBody: "دوس على زر المشاركة وبعدين «إضافة إلى الشاشة الرئيسية».",
+    dismiss: "مش دلوقتي",
   },
 } satisfies Messages;
 
@@ -108,13 +108,16 @@ export function InstallAppPrompt() {
   }
 
   return (
+    // Above the phone tab bar — and, on a page whose primary action floats
+    // there too (PageHeader's `data-page-action` bar: 2.75rem tall plus a
+    // 0.75rem gap), above that bar as well. From md up it keeps its corner.
     <div
       role="dialog"
       aria-label={t.title}
-      className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 md:bottom-3 mx-auto flex max-w-md items-start gap-3 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4 shadow-xl"
+      className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] max-md:[body:has([data-page-action])_&]:bottom-[calc(9rem+env(safe-area-inset-bottom))] z-40 md:bottom-3 mx-auto flex max-w-md items-start gap-3 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4 shadow-xl"
     >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-        {ios ? <Share className="size-5" aria-hidden /> : <Download className="size-5" aria-hidden />}
+        {ios ? <IconExport className="size-5" aria-hidden /> : <IconDownload className="size-5" aria-hidden />}
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-ink">{t.title}</p>
@@ -132,7 +135,7 @@ export function InstallAppPrompt() {
         title={t.dismiss}
         className="cursor-pointer rounded-md p-1 text-ink-soft hover:bg-primary-soft hover:text-ink"
       >
-        <X className="size-4" aria-hidden />
+        <IconClose className="size-4" aria-hidden />
       </button>
     </div>
   );

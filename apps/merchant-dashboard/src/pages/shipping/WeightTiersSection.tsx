@@ -12,6 +12,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
 import { majorToMinor, minorToMajorInput } from "@/lib/format";
 import { formatKg, gramsToKgInput, kgInputToGrams } from "@/lib/weight";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
@@ -150,6 +151,20 @@ type Strings = (typeof STRINGS)["en"];
 
 const cellKey = (zoneId: string, tierId: string) => `${zoneId}:${tierId}`;
 
+/** A pane of this section: the dashboard's card. */
+const PANE =
+  "min-w-0 rounded-[var(--radius-card)] bg-card p-4 text-card-foreground shadow-[var(--shadow-card)] ring-1 ring-line [--radius-card:1.25rem]";
+
+/** The filled cells of a price grid as one string, whatever order they were typed in. */
+function cellsSignature(values: Record<string, string>): string {
+  return JSON.stringify(
+    Object.entries(values)
+      .map(([key, value]) => [key, value.trim()] as const)
+      .filter(([, value]) => value !== "")
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+  );
+}
+
 // The forms below seed their state from the server once; a new key after any
 // saved change re-seeds them all from the fresh read.
 function bodyKey(data: WeightTierSettings): string {
@@ -190,10 +205,7 @@ export function WeightTiersSection({ zones, workspace, currency, onWorkspaceChan
 
   return (
     <section className="space-y-5">
-      <div>
-        <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-        <p className="mt-1 text-sm text-ink-soft">{t.intro}</p>
-      </div>
+      <p className="px-1 text-sm leading-6 text-ink-soft">{t.intro}</p>
       <DataState loading={settings.loading} error={settings.error} onRetry={() => settings.refresh()}>
         {settings.data && (
           <WeightTiersBody
@@ -263,17 +275,19 @@ function WeightTiersBody({
         </Alert>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-line p-4">
+      <div data-slot="card" className={cn(PANE, "flex flex-wrap items-center justify-between gap-3")}>
         <div className="flex items-center gap-2 text-sm text-ink">
           <span className="text-ink-soft">{t.modeLabel}:</span>
           <StatusBadge value={data.pricingMode} tone={tierMode ? "info" : "neutral"} text={tierMode ? t.modeTiers : t.modeRates} />
         </div>
         {tierMode ? (
-          <Button variant="outline" onClick={() => setConfirmRates(true)}>
+          <Button variant="outline" className="min-h-11 rounded-full px-4" onClick={() => setConfirmRates(true)}>
             {t.switchToRates}
           </Button>
         ) : (
-          <Button onClick={() => setWizardOpen(true)}>{t.switchToTiers}</Button>
+          <Button className="min-h-11 rounded-full px-4" onClick={() => setWizardOpen(true)}>
+            {t.switchToTiers}
+          </Button>
         )}
       </div>
 
@@ -321,6 +335,8 @@ function DefaultWeightForm({ data, t, onSaved }: { data: WeightTierSettings; t: 
   const [value, setValue] = useState(gramsToKgInput(data.defaultItemWeightGrams));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // A weight typed and not saved: a switch to another section asks first.
+  useReportDirty(value.trim() !== gramsToKgInput(data.defaultItemWeightGrams).trim());
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -343,7 +359,7 @@ function DefaultWeightForm({ data, t, onSaved }: { data: WeightTierSettings; t: 
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
+    <form onSubmit={submit} data-slot="card" className={cn(PANE, "flex flex-wrap items-end gap-3")}>
       <WeightInput
         label={t.defaultWeight}
         unit={t.kg}
@@ -354,7 +370,7 @@ function DefaultWeightForm({ data, t, onSaved }: { data: WeightTierSettings; t: 
         required={data.pricingMode === "weight_tiers"}
         className="w-full sm:w-72"
       />
-      <Button type="submit" variant="outline" disabled={saving} className="mb-6">
+      <Button type="submit" variant="outline" disabled={saving} className="mb-6 min-h-11 rounded-full px-4">
         {saving ? t.saving : t.saveDefaultWeight}
       </Button>
     </form>
@@ -377,6 +393,12 @@ function TierEditor({ data, t, onSaved }: { data: WeightTierSettings; t: Strings
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // The tiers as the server holds them, in the rows' own shape: while the rows differ, they are unsaved.
+  const savedRows = useMemo(
+    () => JSON.stringify(data.tiers.map((tier) => ({ id: tier.id, upTo: gramsToKgInput(tier.upToGrams), open: tier.upToGrams === null }))),
+    [data.tiers]
+  );
+  useReportDirty(JSON.stringify(rows) !== savedRows);
 
   const update = (i: number, patch: Partial<TierRow>) =>
     setRows((prev) => prev.map((row, j) => (j === i ? { ...row, ...patch } : row)));
@@ -428,8 +450,8 @@ function TierEditor({ data, t, onSaved }: { data: WeightTierSettings; t: Strings
     return acc;
   }, []);
   return (
-    <div className="rounded-[var(--radius-card)] border border-line p-4">
-      <h3 className="font-medium text-ink">{t.tiersHeading}</h3>
+    <div data-slot="card" className={PANE}>
+      <h3 className="text-[15px] font-semibold text-ink">{t.tiersHeading}</h3>
       <p className="mt-1 text-sm text-ink-soft">{t.tiersHint}</p>
       {formError && (
         <Alert variant="danger" className="mt-3">
@@ -464,8 +486,8 @@ function TierEditor({ data, t, onSaved }: { data: WeightTierSettings; t: Strings
                 </div>
               )}
               {isLast && (
-                <label className="flex items-center gap-1.5 text-sm text-ink">
-                  <input type="checkbox" checked={row.open} onChange={(e) => update(i, { open: e.target.checked })} />
+                <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
+                  <input type="checkbox" className="size-[18px] accent-[var(--color-primary)]" checked={row.open} onChange={(e) => update(i, { open: e.target.checked })} />
                   {t.openEnded}
                 </label>
               )}
@@ -484,10 +506,10 @@ function TierEditor({ data, t, onSaved }: { data: WeightTierSettings; t: Strings
         })}
       </ol>
       <div className="mt-4 flex flex-wrap justify-between gap-2">
-        <Button type="button" variant="outline" onClick={addTier} disabled={rows.length >= MAX_TIERS}>
+        <Button type="button" variant="outline" className="min-h-11 rounded-full px-4" onClick={addTier} disabled={rows.length >= MAX_TIERS}>
           {t.addTier}
         </Button>
-        <Button type="button" onClick={save} disabled={saving || rows.length === 0}>
+        <Button type="button" className="min-h-11 rounded-full px-4" onClick={save} disabled={saving || rows.length === 0}>
           {saving ? t.saving : t.saveTiers}
         </Button>
       </div>
@@ -623,6 +645,9 @@ function TierPriceGrid({
   const [invalid, setInvalid] = useState<ReadonlySet<string>>(new Set());
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Prices typed and not saved (a cell typed in and emptied again is not a change).
+  const savedCells = useMemo(() => cellsSignature(gridFrom(data.prices)), [data.prices]);
+  useReportDirty(cellsSignature(values) !== savedCells);
 
   async function save() {
     const { invalid: bad, byZone } = gridToZonePrices(zones, data.tiers, values);
@@ -645,8 +670,8 @@ function TierPriceGrid({
   }
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-line p-4">
-      <h3 className="font-medium text-ink">{t.gridHeading}</h3>
+    <div data-slot="card" className={PANE}>
+      <h3 className="text-[15px] font-semibold text-ink">{t.gridHeading}</h3>
       <p className="mt-1 text-sm text-ink-soft">{t.gridHint}</p>
       {formError && (
         <Alert variant="danger" className="mt-3">
@@ -671,7 +696,7 @@ function TierPriceGrid({
             />
           </div>
           <div className="mt-4 flex justify-end">
-            <Button type="button" onClick={save} disabled={saving}>
+            <Button type="button" className="min-h-11 rounded-full px-4" onClick={save} disabled={saving}>
               {saving ? t.saving : t.savePrices}
             </Button>
           </div>

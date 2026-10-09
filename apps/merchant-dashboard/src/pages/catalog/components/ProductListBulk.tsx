@@ -1,45 +1,34 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@store-builder/ui";
-import { catalogDuplicateProduct, type Product } from "@store-builder/api-client";
-import { apiClient } from "@/lib/apiClient";
-import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useErrorMessage } from "@/lib/errorMessages";
+import { useCallback, useMemo, useState } from "react";
+import { IconEdit } from "@/components/icons";
+import { BulkBar, type BulkAction } from "@/components/list";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
-import { useToast } from "@/components/Toast";
+import { pluralOf } from "@/lib/plural";
 import { ProductBulkEditDialog } from "./ProductBulkEditDialog";
-import { ProductTransferDialog } from "./ProductTransferDialog";
 
 /**
- * The product list's multi-select pieces (SPEC §7.5): the selection itself,
- * the bar that appears once something is ticked, the row checkbox, and the
- * per-row "Duplicate" button.
+ * The product list's multi-select pieces (SPEC §7.5): the selection itself
+ * and the bar that rises once something is ticked. The bar is the list kit's
+ * (components/list/BulkBar.tsx); what it does is what the list always did in
+ * bulk — the bulk edit dialog (status, shipping, collection, price), which
+ * the server applies to all the selected products or to none.
  */
 
 const STRINGS = {
   en: {
-    selected: "{count} selected",
+    selected_one: "1 product selected",
+    selected_other: "{n} products selected",
     bulkEdit: "Bulk edit",
-    clear: "Clear selection",
-    selectAll: "Select all products on this page",
-    selectAllShort: "Select all",
-    selectRow: "Select {name}",
-    transfer: "Import / export",
-    duplicate: "Duplicate",
-    duplicating: "Duplicating…",
-    duplicated: "“{name}” created as a draft.",
+    selectShown: "Select all {n} shown",
+    shownSelected: "All {n} shown are selected.",
   },
   ar: {
-    selected: "اخترت {count}",
+    selected_one: "منتج واحد متحدد",
+    selected_two: "منتجين متحددين",
+    selected_few: "{n} منتجات متحددة",
+    selected_other: "{n} منتج متحدد",
     bulkEdit: "تعديل جماعي",
-    clear: "إلغاء التحديد",
-    selectAll: "اختار كل المنتجات في الصفحة دي",
-    selectAllShort: "اختار الكل",
-    selectRow: "تحديد {name}",
-    transfer: "استيراد / تصدير",
-    duplicate: "نسخ",
-    duplicating: "بننسخ…",
-    duplicated: "تم إنشاء «{name}» كمسودة.",
+    selectShown: "اختار كل اللي ظاهر ({n})",
+    shownSelected: "كل اللي ظاهر متحدد ({n}).",
   },
 } satisfies Messages;
 
@@ -52,16 +41,18 @@ export interface ProductSelection {
 
 export function useProductSelection(): ProductSelection {
   const [ids, setIds] = useState<ReadonlySet<string>>(new Set());
-  return {
-    ids,
-    toggle: (id) =>
+  const toggle = useCallback(
+    (id: string) =>
       setIds((current) => {
         const next = new Set(current);
         if (next.has(id)) next.delete(id);
         else next.add(id);
         return next;
       }),
-    setAll: (list, on) =>
+    []
+  );
+  const setAll = useCallback(
+    (list: string[], on: boolean) =>
       setIds((current) => {
         const next = new Set(current);
         for (const id of list) {
@@ -70,122 +61,71 @@ export function useProductSelection(): ProductSelection {
         }
         return next;
       }),
-    clear: () => setIds(new Set()),
-  };
+    []
+  );
+  const clear = useCallback(() => setIds((current) => (current.size === 0 ? current : new Set())), []);
+  return useMemo(() => ({ ids, toggle, setAll, clear }), [ids, toggle, setAll, clear]);
 }
 
-/** The header checkbox: ticks or clears every product shown. */
-export function SelectAllCheckbox({
+const LINK =
+  "inline-flex min-h-8 cursor-pointer items-center rounded-full font-semibold text-primary-dark underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary pointer-coarse:min-h-11 dark:text-primary";
+
+/**
+ * The bar over the list while anything is ticked: how many, «تعديل جماعي»,
+ * and a way to take every product shown — the one way to select all on a
+ * phone and in the grid, where there is no table head to tick.
+ */
+export function ProductBulkBar({
   selection,
-  products,
-  withLabel,
+  shownIds,
+  onDone,
+  onClear,
 }: {
   selection: ProductSelection;
-  products: Product[];
-  /** Phones: the words beside the box, not a lone 16 px square (re-audit N-25). */
-  withLabel?: boolean;
+  /** The products on screen, in order. */
+  shownIds: readonly string[];
+  /** The bulk edit went through: the list is out of date. */
+  onDone: () => void;
+  /** The selection was let go from the bar (also turns «حدّد» off). */
+  onClear: () => void;
 }) {
   const t = useT(STRINGS);
-  const all = products.length > 0 && products.every((p) => selection.ids.has(p.id));
-  const box = (
-    <input
-      type="checkbox"
-      className="size-4 cursor-pointer accent-primary"
-      aria-label={withLabel ? undefined : t.selectAll}
-      checked={all}
-      onChange={() => selection.setAll(products.map((p) => p.id), !all)}
-    />
-  );
-  if (!withLabel) return box;
-  return (
-    <label className="flex min-h-11 cursor-pointer items-center gap-2 pe-2">
-      {box}
-      <span>{t.selectAllShort}</span>
-    </label>
-  );
-}
-
-export function SelectRowCheckbox({ selection, product }: { selection: ProductSelection; product: Product }) {
-  const t = useT(STRINGS);
-  return (
-    <input
-      type="checkbox"
-      className="size-4 cursor-pointer accent-primary"
-      aria-label={fmt(t.selectRow, { name: product.name })}
-      checked={selection.ids.has(product.id)}
-      onChange={() => selection.toggle(product.id)}
-    />
-  );
-}
-
-/** Shown above the list while anything is ticked. */
-export function ProductBulkBar({ selection, onDone }: { selection: ProductSelection; onDone: () => void }) {
-  const t = useT(STRINGS);
   const [editing, setEditing] = useState(false);
-  if (selection.ids.size === 0) return null;
+  const count = selection.ids.size;
+  const allShown = shownIds.length > 0 && shownIds.every((id) => selection.ids.has(id));
+
+  const actions: BulkAction[] = [{ id: "edit", label: t.bulkEdit, icon: IconEdit, onSelect: () => setEditing(true) }];
+
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-3 rounded-[0.5rem] border border-primary/30 bg-primary-soft px-4 py-2.5">
-      <span className="text-sm font-semibold text-ink">{fmt(t.selected, { count: selection.ids.size })}</span>
-      <Button type="button" size="sm" onClick={() => setEditing(true)}>
-        {t.bulkEdit}
-      </Button>
-      <Button type="button" size="sm" variant="ghost" onClick={selection.clear}>
-        {t.clear}
-      </Button>
+    <>
+      <BulkBar
+        count={count}
+        label={pluralOf(t, "selected", count)}
+        onClear={onClear}
+        actions={actions}
+        extra={
+          shownIds.length > 1 ? (
+            allShown ? (
+              <span role="status">{fmt(t.shownSelected, { n: shownIds.length })}</span>
+            ) : (
+              <button type="button" className={LINK} onClick={() => selection.setAll([...shownIds], true)}>
+                {fmt(t.selectShown, { n: shownIds.length })}
+              </button>
+            )
+          ) : undefined
+        }
+      />
       {editing && (
         <ProductBulkEditDialog
           productIds={[...selection.ids]}
           onClose={() => setEditing(false)}
           onDone={() => {
             setEditing(false);
-            selection.clear();
+            onClear();
             onDone();
           }}
         />
       )}
-    </div>
-  );
-}
-
-/** The header button that opens the import / export dialog. */
-export function ProductTransferButton({ onImported }: { onImported: () => void }) {
-  const t = useT(STRINGS);
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
-        {t.transfer}
-      </Button>
-      {open && <ProductTransferDialog onClose={() => setOpen(false)} onImported={onImported} />}
     </>
-  );
-}
-
-/** Copies the product as a draft and opens the copy. */
-export function DuplicateProductButton({ product }: { product: Product }) {
-  const t = useT(STRINGS);
-  const workspaceId = useWorkspaceId();
-  const navigate = useNavigate();
-  const toast = useToast();
-  const errorMessage = useErrorMessage();
-  const [busy, setBusy] = useState(false);
-
-  async function duplicate() {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const copy = await catalogDuplicateProduct(apiClient, workspaceId, product.id);
-      toast.success(fmt(t.duplicated, { name: copy.name }));
-      navigate(`/catalog/${copy.id}`);
-    } catch (err) {
-      toast.error(errorMessage(err));
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Button size="sm" variant="ghost" disabled={busy} onClick={() => void duplicate()}>
-      {busy ? t.duplicating : t.duplicate}
-    </Button>
   );
 }

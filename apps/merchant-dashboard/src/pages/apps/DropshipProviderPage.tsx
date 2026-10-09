@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ExternalLink } from "lucide-react";
+import { IconExternal } from "@/components/icons";
 import { Alert, Button } from "@store-builder/ui";
 import {
   ApiError,
@@ -23,6 +23,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { Section } from "@/components/Section";
 import { DropshipForwardSettings } from "./DropshipForwardSettings";
+import { DropshipSupplierRules } from "./DropshipSupplierRules";
 import { TextField } from "@/components/Field";
 import { StatusBadge } from "@/components/StatusBadge";
 import { dropshipProviderName, isStoreProvider } from "./dropshipStores";
@@ -366,7 +367,7 @@ function ProviderCard({ t, provider, onChanged }: { t: T; provider: DropshipProv
                   className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
                 >
                   {t.helpLink}
-                  <ExternalLink className="size-3.5" aria-hidden />
+                  <IconExternal className="size-3.5" aria-hidden />
                 </a>
               )}
             </p>
@@ -414,6 +415,8 @@ function ProviderCard({ t, provider, onChanged }: { t: T; provider: DropshipProv
           </form>
 
           <DropshipForwardSettings provider={provider} onChanged={onChanged} />
+          {/* The supplier's own shipping rates and minimum order (handoff 263): a supplier's rules, not the merchant's other store's. */}
+          {!store && <DropshipSupplierRules provider={provider} name={name} onChanged={onChanged} />}
 
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-ink">{t.stockTitle}</h3>

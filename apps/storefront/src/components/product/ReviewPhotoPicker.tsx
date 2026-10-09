@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ApiError, apiErrorCode } from "@store-builder/api-client";
+import { PHOTO_MAX_BYTES } from "@/lib/photoLimit";
 import { compressImageIfNeeded } from "@store-builder/image-tools";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
@@ -18,7 +19,8 @@ import { btnSecondary, focusRing, label as labelClass } from "../ui";
 const MAX = 3;
 const ACCEPT = "image/jpeg,image/png,image/webp";
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
-const RAW_LIMIT = 15 * 1024 * 1024;
+// Shoppers' photos are refused above 5 MB (handoff 400).
+const RAW_LIMIT = PHOTO_MAX_BYTES;
 const COMPRESS = { maxBytes: 4 * 1024 * 1024, maxEdgeSteps: [2400, 2000, 1600, 1200], qualitySteps: [0.85, 0.75, 0.65] };
 
 type Photo = { key: string; preview: string; status: "uploading" | "done" | "error"; uploadId?: string; message?: string };

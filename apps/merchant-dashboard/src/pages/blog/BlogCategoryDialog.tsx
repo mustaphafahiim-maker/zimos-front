@@ -99,6 +99,15 @@ export function BlogCategoryDialog({
     setFormError(null);
   }, [open, category, nextPosition]);
 
+  /** The first marked field, on screen and under the cursor — once the marks are drawn. */
+  function focusFirstProblem() {
+    window.requestAnimationFrame(() => {
+      const field = document.querySelector<HTMLElement>("#blog-category-form [aria-invalid='true']");
+      field?.scrollIntoView({ block: "center" });
+      field?.focus({ preventScroll: true });
+    });
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     // Opened from the post editor: the submit must not reach anything around the dialog.
@@ -110,7 +119,10 @@ export function BlogCategoryDialog({
     if (slug.trim().length > 140) found.slug = t.tooLong;
     if (description.trim().length > 500) found.description = t.tooLong;
     setErrors(found);
-    if (Object.keys(found).length > 0) return;
+    if (Object.keys(found).length > 0) {
+      focusFirstProblem();
+      return;
+    }
 
     const order = Math.min(10000, Math.max(0, Number.parseInt(position, 10) || 0));
     setSaving(true);
@@ -124,6 +136,7 @@ export function BlogCategoryDialog({
     } catch (err) {
       if (apiErrorCode(err) === "SLUG_TAKEN") {
         setErrors({ slug: t.slugTaken });
+        focusFirstProblem();
       } else {
         const problems = apiFieldProblems(err);
         const byField: Partial<Record<FieldKey, string>> = {};
@@ -131,8 +144,10 @@ export function BlogCategoryDialog({
           const key = p.field.split(".")[0] as FieldKey;
           if (key === "name" || key === "slug" || key === "description" || key === "position") byField[key] = t.checkField;
         }
-        if (Object.keys(byField).length > 0) setErrors(byField);
-        else setFormError(errorMessage(err));
+        if (Object.keys(byField).length > 0) {
+          setErrors(byField);
+          focusFirstProblem();
+        } else setFormError(errorMessage(err));
       }
     } finally {
       setSaving(false);
@@ -146,10 +161,10 @@ export function BlogCategoryDialog({
       title={category ? t.editTitle : t.newTitle}
       footer={
         <>
-          <Button type="button" variant="outline" className="min-h-11 sm:min-h-10" disabled={saving} onClick={onClose}>
+          <Button type="button" variant="outline" className="rounded-full px-5" disabled={saving} onClick={onClose}>
             {t.cancel}
           </Button>
-          <Button type="submit" form="blog-category-form" className="min-h-11 sm:min-h-10" disabled={saving}>
+          <Button type="submit" form="blog-category-form" className="rounded-full px-5" disabled={saving}>
             {saving ? t.saving : category ? t.save : t.add}
           </Button>
         </>

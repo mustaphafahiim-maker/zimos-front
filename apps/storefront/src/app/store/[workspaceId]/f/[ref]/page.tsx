@@ -8,7 +8,7 @@ type Params = Promise<{ workspaceId: string; ref: string }>;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 // Ad-click and campaign parameters worth keeping on the session.
-const ATTRIBUTION_KEY = /^(utm_[a-z_]+|fbclid|gclid|ttclid|sccid|ref)$/;
+const ATTRIBUTION_KEY = /^(utm_[a-z_]+|fbclid|gclid|ttclid|sccid|twclid|rdt_cid|msclkid|tblci|ref)$/;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { workspaceId } = await params;

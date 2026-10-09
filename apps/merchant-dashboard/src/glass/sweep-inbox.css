@@ -1,0 +1,229 @@
+/* The inbox, the bot's settings and support — pages/inbox/*, pages/support/*.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the components stand
+   on their own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   What lies in the page flow is never blurred: the two panes of the inbox are one glass
+   sheet (the shared rule for a raised card gives it its fill), and the header, the bot
+   strip and the composer are parts of that sheet, so they drop their own fill. On a phone
+   an open conversation is a full-screen layer: a flat ground in the colours of the page
+   pane (nothing shows through it), with its bars near solid. Only the reply bar of a
+   support ticket floats over the page with the thread passing beneath, so only it is
+   frosted. The selectors are the components' own hooks (data-slot) and do not lean on
+   ".glass-app main": the same bubbles are drawn in Quick Look and the customer's sheet,
+   which are portalled outside it.
+
+   Text: var(--color-ink) and var(--lg-ink-soft) on the panes and on both bubbles. An
+   incoming bubble is the solid raised paper; an outgoing one is a drop of the store's
+   colour over the same paper (13% light, 24% dark), so ink on it keeps the contrast it
+   has on a card — 12:1 or better for the words, 5:1 or better for the time under them. */
+:root:not([data-glass="off"]) {
+  /* The ground of the messages inside the pane: a faint well, so the bubbles stand on something. */
+  --inbox-well: color-mix(in srgb, var(--color-primary-dark) 4%, transparent);
+  /* The ground of a conversation that covers a phone: the page pane, flattened over its base. */
+  --inbox-ground: color-mix(in srgb, var(--color-paper-raised) 50%, var(--lg-bg-base));
+  /* An outgoing bubble, and the light on its top edge. */
+  --inbox-out: color-mix(in srgb, var(--color-primary) 13%, var(--color-paper-raised));
+  --inbox-out-rim: inset 0 1px 0 0 rgb(255 255 255 / 0.6), 0 0 0 1px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  --inbox-in-rim: 0 0 0 1px var(--lg-edge), 0 1px 2px rgb(18 44 110 / 0.06);
+  /* Something on a pane under the pointer or the finger. */
+  --inbox-press: color-mix(in srgb, var(--color-ink) 7%, transparent);
+  --inbox-track: color-mix(in srgb, var(--color-ink) 9%, transparent);
+
+  &.dark {
+    --inbox-well: rgb(0 0 0 / 0.16);
+    --inbox-ground: color-mix(in srgb, var(--color-paper-raised) 58%, var(--lg-bg-base));
+    --inbox-out: color-mix(in srgb, var(--color-primary) 24%, var(--color-paper-raised));
+    --inbox-out-rim: inset 0 1px 0 0 rgb(255 255 255 / 0.08), 0 0 0 1px color-mix(in srgb, var(--color-primary) 22%, transparent);
+    --inbox-in-rim: 0 0 0 1px var(--lg-edge);
+    --inbox-press: rgb(255 255 255 / 0.09);
+    --inbox-track: rgb(255 255 255 / 0.1);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The pane (md up). Its parts share the one sheet: the bars lose
+   * their fill and their hairlines take the pane's colour; the
+   * messages lie in a faint well. States inside the list are part of
+   * the pane too, not cards on it.
+   * ---------------------------------------------------------------- */
+  @media (min-width: 48rem) {
+    [data-slot="inbox"] :is([data-slot="chat-head"], [data-slot="chat-strip"], [data-slot="chat-composer"]) {
+      background-color: transparent;
+      border-color: var(--lg-hairline);
+    }
+    [data-slot="inbox"] [data-slot="chat-scroll"] {
+      background-color: var(--inbox-well);
+    }
+    [data-slot="inbox"] :is([data-slot="chat-list"], [data-slot="chat-list-head"]) {
+      border-color: var(--lg-hairline);
+    }
+    [data-slot="chat-list"] :is([data-slot="empty-state"], [data-slot="data-state"]) {
+      border-color: transparent;
+      background-color: transparent;
+      background-image: none;
+      box-shadow: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * A conversation over a phone screen. A flat ground — the page is
+   * behind it and must not show — and three bars that are near solid.
+   * No blur: the bars and the messages are stacked, nothing passes
+   * beneath a bar.
+   * ---------------------------------------------------------------- */
+  @media (max-width: 47.99rem) {
+    [data-slot="chat-thread"] {
+      background-color: var(--inbox-ground);
+    }
+    [data-slot="chat-thread"] [data-slot="chat-scroll"] {
+      background-color: transparent;
+    }
+    [data-slot="chat-thread"] :is([data-slot="chat-head"], [data-slot="chat-strip"], [data-slot="chat-composer"]) {
+      background-color: var(--lg-frost);
+      border-color: var(--lg-edge);
+    }
+    [data-slot="chat-thread"] [data-slot="chat-head"] {
+      box-shadow: var(--lg-rim-line);
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * A line of the conversations list (the pane). Under the pointer it
+   * lights like a table row; the open one is washed with the store's
+   * colour, the selection of the list kit.
+   * ---------------------------------------------------------------- */
+  @media (hover: hover) {
+    [data-slot="chat-row"]:not([data-current]):hover {
+      background-color: var(--lg-row-lit);
+    }
+  }
+  [data-slot="chat-row"]:not([data-current]):is(:active, :focus-visible) {
+    background-color: var(--lg-row-lit);
+  }
+  [data-slot="chat-row"][data-current] {
+    background-color: var(--list-selected, color-mix(in srgb, var(--color-primary) 10%, var(--lg-control-lit)));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  }
+
+  /* The round mark of a customer: a bead of the store's colour, lit from above. */
+  [data-slot="chat-avatar"] {
+    background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-paper-raised));
+    background-image: linear-gradient(160deg, rgb(255 255 255 / 0.5) 0%, rgb(255 255 255 / 0) 60%);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px color-mix(in srgb, var(--color-primary) 16%, transparent);
+    color: var(--lg-text-primary);
+  }
+  &.dark [data-slot="chat-avatar"] {
+    background-color: color-mix(in srgb, var(--color-primary) 22%, var(--color-paper-raised));
+    background-image: none;
+  }
+
+  /* How many wait unread: the selection fill, like the count on the Filters pill. */
+  [data-slot="chat-unread"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Bubbles — of a WhatsApp conversation, of a support ticket, of the
+   * bot's trial answer. Solid, so the words never sit on the backdrop.
+   * ---------------------------------------------------------------- */
+  [data-slot="chat-bubble"][data-dir="in"] {
+    background-color: var(--color-paper-raised);
+    box-shadow: var(--inbox-in-rim);
+  }
+  [data-slot="chat-bubble"][data-dir="out"] {
+    background-color: var(--inbox-out);
+    box-shadow: var(--inbox-out-rim);
+  }
+  [data-slot="chat-bubble"][data-failed] {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger) 55%, transparent);
+  }
+  [data-slot="chat-bubble"] .text-ink-soft {
+    color: var(--lg-ink-soft);
+  }
+
+  /* Small beads on the ground of a conversation or in a row: the day, «البوت», who has the conversation. */
+  [data-slot="chat-day"],
+  [data-slot="chat-bot-badge"],
+  [data-slot="chat-owner"] {
+    background-color: var(--lg-control-lit);
+    box-shadow: 0 0 0 1px var(--lg-edge);
+    color: var(--lg-ink-soft);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The message box and the tools beside it. The box is a small pane
+   * that turns solid and glows in the brand colour while it is typed
+   * in, like every field of the pages.
+   * ---------------------------------------------------------------- */
+  [data-slot="chat-box"],
+  [data-slot="support-reply"] textarea {
+    border-color: var(--lg-edge);
+    background-color: var(--lg-control-lit);
+    box-shadow: var(--lg-rim-line);
+  }
+  [data-slot="chat-box"]:focus-visible,
+  [data-slot="support-reply"] textarea:focus-visible {
+    border-color: color-mix(in srgb, var(--color-primary) 60%, transparent);
+    background-color: var(--color-paper-raised);
+    box-shadow: var(--lg-rim-line), 0 0 0 4px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  }
+  @media (hover: hover) {
+    .zimos-chat-tool:hover:not(:disabled),
+    [data-slot="chat-choice"]:hover:not(:disabled) {
+      background-color: var(--inbox-press);
+    }
+  }
+  .zimos-chat-tool:is(:active, [aria-expanded="true"]):not(:disabled),
+  [data-slot="chat-choice"]:active:not(:disabled) {
+    background-color: var(--inbox-press);
+  }
+
+  /* An amber note: the 24-hour window is closed; support waits for the store's reply. */
+  [data-slot="chat-window-note"],
+  [data-slot="support-note"] {
+    background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-paper-raised));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 22%, transparent);
+    color: var(--color-accent-dark);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The customer's sheet: an order is a well in the pane, and the
+   * delivery rate runs on a quiet track.
+   * ---------------------------------------------------------------- */
+  [data-slot="chat-order"] {
+    background-color: var(--inbox-press);
+    box-shadow: 0 0 0 1px var(--lg-edge);
+  }
+  [data-slot="chat-rate"] {
+    background-color: var(--inbox-track);
+  }
+  [data-slot="chat-customer"] .text-ink-soft {
+    color: var(--lg-ink-soft);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The reply bar of a support ticket. It stays above the dock while
+   * the thread scrolls beneath it: frost, the small rim, a hairline
+   * and the raised shadow.
+   * ---------------------------------------------------------------- */
+  [data-slot="support-reply"] {
+    background-color: var(--lg-frost);
+    -webkit-backdrop-filter: var(--lg-blur);
+    backdrop-filter: var(--lg-blur);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), var(--shadow-raised);
+  }
+}
+
+/* An open conversation arrives on a phone from the side the list is not on (the
+   component sets --sweep-inbox-from, mirrored in Arabic). Transform and opacity only;
+   the component asks for it under motion-safe, and the house durations are zero for
+   anyone who asked for less motion. */
+@keyframes sweep-inbox-push {
+  from {
+    opacity: 0;
+    transform: translateX(var(--sweep-inbox-from, 1.5rem));
+  }
+}

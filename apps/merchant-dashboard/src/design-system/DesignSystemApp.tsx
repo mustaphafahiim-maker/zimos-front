@@ -1,14 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { DirectionProvider } from "@base-ui/react/direction-provider";
-import {
-  Check,
-  ChevronDown,
-  Layers,
-  Menu,
-  Plus,
-  Search,
-  X,
-} from "lucide-react";
+import { IconCaretDown, IconCheck, IconClose, IconLayers, IconMore, IconPlus, IconSearch } from "@/components/icons";
 import {
   Button,
   Card,
@@ -164,7 +156,7 @@ function DialogExample() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant="primary" className="min-h-11" />}>
-        <Plus className="size-4" aria-hidden />
+        <IconPlus className="size-4" aria-hidden />
         {t.openDialog}
       </DialogTrigger>
       <GlassDialogContent showCloseButton={false}>
@@ -182,7 +174,7 @@ function DialogExample() {
           }
           aria-label={t.close}
         >
-          <X className="size-4" aria-hidden />
+          <IconClose className="size-4" aria-hidden />
         </DialogClose>
         <form
           className="space-y-5"
@@ -306,7 +298,7 @@ function Lab() {
               : "text-ink-soft hover:bg-muted hover:text-ink",
           )}
         >
-          <Icon className="size-[18px]" strokeWidth={1.75} aria-hidden />
+          <Icon className="size-[18px]" aria-hidden />
           {t[id]}
         </a>
       ))}
@@ -360,11 +352,11 @@ function Lab() {
                   aria-controls="lab-mobile-nav"
                   aria-label={navOpen ? t.close : t.menu}
                 >
-                  <Menu className="size-5" aria-hidden />
+                  <IconMore className="size-5" aria-hidden />
                 </Button>
-                <Layers
+                <IconLayers
                   className="hidden size-[18px] text-primary sm:block"
-                  strokeWidth={1.75}
+                 
                   aria-hidden
                 />
                 <span className="text-sm font-semibold">{t.lab}</span>
@@ -375,7 +367,7 @@ function Lab() {
                   aria-pressed={glass}
                   onClick={() => setGlass(!glass)}
                 >
-                  <Layers className="size-4" aria-hidden />
+                  <IconLayers className="size-4" aria-hidden />
                   {glass ? t.glassOn : t.glassOff}
                 </GlassButton>
                 <LanguageSwitch className="min-h-11" />
@@ -464,7 +456,7 @@ function Lab() {
                         render={<GlassButton className="min-h-11" />}
                       >
                         {t.quickActions}
-                        <ChevronDown className="size-4" aria-hidden />
+                        <IconCaretDown className="size-4" aria-hidden />
                       </DropdownMenuTrigger>
                       <GlassDropdownMenuContent
                         align="end"
@@ -473,7 +465,7 @@ function Lab() {
                         <DropdownMenuItem
                           onClick={() => toast.success(t.toast)}
                         >
-                          <Check className="size-4" aria-hidden />
+                          <IconCheck className="size-4" aria-hidden />
                           {t.showToast}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={reset}>
@@ -488,7 +480,7 @@ function Lab() {
                       <label className="sr-only" htmlFor="lab-order-search">
                         {t.search}
                       </label>
-                      <Search
+                      <IconSearch
                         className="pointer-events-none absolute start-3 top-3 size-4 text-ink-soft"
                         aria-hidden
                       />
@@ -669,7 +661,7 @@ function Lab() {
                             key={key}
                             className="flex flex-col items-center gap-2 rounded-lg border border-line p-3 text-center"
                           >
-                            <Icon size={18} strokeWidth={1.75} aria-hidden />
+                            <Icon size={18} aria-hidden />
                             <span className="text-xs text-ink-soft">
                               {navLabels[key]}
                             </span>

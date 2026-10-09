@@ -86,9 +86,12 @@ Control borders use `line-strong`/`--input`; decorative borders use `line`.
 | Native form selection | `components/Select.tsx` |
 | Filtering choices | `components/FilterTabs.tsx` |
 | Business status | `components/StatusBadge.tsx` |
-| Loading, error and permission handling | `components/DataState.tsx` |
+| Loading, error and permission handling | `components/DataState.tsx` — loading is a content-shaped skeleton (`skeleton="card" \| "table" \| "tiles"`), never a bare spinner |
 | Empty content | `components/EmptyState.tsx` |
 | Toast feedback | `components/Toast.tsx` |
+| A long form's save action, kept in reach | `components/SaveBar.tsx` — appears when dirty, sticks above the phone tab bar |
+| A page's one creation action | `PageHeader primaryAction` — header on desktop, a fixed bar above the tab bar on phones (`PageActionBar` for tabs without a header) |
+| Unsaved edits vs a tab switch | `lib/useUnsavedGuard.ts` — `UnsavedGuardProvider` around the tabs, `useReportDirty(dirty)` in each form, `confirmLeave()` before switching |
 | Live application shell | `components/DashboardLayout.tsx` |
 | Commerce navigation icon meanings | `lib/navigation.ts` |
 
@@ -129,6 +132,11 @@ to repeat a CSS effect. A new component needs a distinct reusable behavior.
 | Short dialog chrome / secondary floating actions | Glass permitted after review |
 | Data tables, financial values, charts, dense forms, builder canvas | Opaque Card / Section |
 | Merchant storefront | Merchant-controlled branding; untouched by this proposal |
+
+This table is for the `Glass*` components above and for any other app. The
+merchant dashboard's sheets no longer follow its third row: since 2026-10-07
+its cards and tables are glass through the layer described under "Liquid
+glass in the merchant dashboard" below.
 
 This implementation uses CSS translucency and backdrop blur. It does not
 simulate optical refraction. Fill is 84% of the host raised-surface token in
@@ -172,31 +180,98 @@ The brief rules out glass, glow, gradients as structure and 3D for the logo.
 For the product surface the owner chose Glass on 2026-10-04 (below); the mark
 itself stays flat.
 
-## Glass in the merchant dashboard
+## Liquid glass in the merchant dashboard
 
-Adopted in one bounded change to the frame, not page by page:
+History: the owner chose Glass for the product surface on 2026-10-04; the
+`ux-redesign` branch retired it on 2026-10-06 for calm opaque surfaces
+(`docs/ux/06-design-system.md`); on 2026-10-07 the owner asked for a liquid
+glass look again, tables first. It is now one layer on top of the calm
+surfaces, not a rewrite of them.
 
-- `components/DashboardLayout.tsx`: the sidebar and the top bar are
-  `zimos-glass glass-nav` panels that follow the theme (no more navy frame with
-  a forced `dark` class), floating with a 12px inset from `md` up.
-- `index.css`, under "Glass dashboard": `.glass-app` paints the backdrop and
-  makes every shared `Card` translucent through `--card`; outline buttons get
-  a translucent fill and a highlight; menus, selects, popovers, dialogs and
-  `Modal` are glass with blur.
-- Blur is used only on the frame and on overlays. Cards and buttons are
-  translucent without it, so a table full of them stays cheap to draw.
-- Routing, role visibility, the store switcher and the mobile drawer are
-  unchanged.
+Source: `apps/merchant-dashboard/src/liquid-glass.css`, imported after
+`index.css` in `main.tsx`. Delete that import and the dashboard is the calm
+design again. Nothing in `index.css`, the tokens or the page files changed.
 
-The light tokens moved to the brief's palette in the same change: ink
-`#081F5C`, primary `#165DFF`, paper `#F6F9FF`, and a new `--color-cyan` used
-only in the backdrop. The table under "Current dashboard foundations" above
-predates this; `index.css` is authoritative.
+What the layer does:
 
-Everything falls back to solid surfaces under `prefers-reduced-transparency`,
-forced colours, or `data-glass="off"` on `<html>`. A page that puts its own
-background on a `Card` keeps it. Surfaces drawn with raw `bg-paper-raised`
-classes instead of `Card` stay solid.
+- **Backdrop.** Still pools of light in `--color-primary` and `--color-cyan`
+  behind the app, on fixed pseudo-elements of `.glass-app`. Nothing moves.
+- **Sheets.** The shared `Card` (so `Section`, `KpiCard`), the cards pages
+  draw by hand (`bg-paper-raised` with a card-sized radius), outlined
+  sections, bento tiles and the side menu are translucent panes with a bright
+  rim and a soft sheen.
+- **Tables.** A table is one sheet: its card or wrapper is the pane, the head
+  is a tint of the pane rather than an opaque band, hairlines are translucent
+  and the row under the pointer lights up. This covers `DataTable`, the shared
+  `Table` and the raw tables in pages.
+- **Frame and overlays.** The top bar, the phone tab bar, menus, selects,
+  dialogs, `Modal`, the command bar and toasts are frosted, at 88–94% so their
+  text holds over a photo or the brand tile passing beneath.
+- **Controls.** Outline buttons, text fields and segmented tracks are small
+  panes; the main action keeps the flat brand fill and gains a gloss on its
+  top edge.
+- **Stat tiles** settle in one after another when a page of figures arrives,
+  and a `KpiCard` takes the colour of its trend under the pointer.
+
+Blur is used only where content passes beneath a surface (top bar, tab bar,
+overlays). Sheets in the page flow have only the still backdrop behind them,
+so they are translucent without `backdrop-filter`: a page of tables costs no
+more to draw, and no sheet becomes a containing block for a fixed child. The
+side menu and the phone menu are deliberately not blurred for the same reason
+(the store switcher keeps a full-screen click-catcher); the phone menu is
+solid.
+
+On a phone the layer is lighter: the top bar is solid (one blurred bar, the
+tab bar, not two), `Modal` and the command bar are solid sheets, and list
+cards keep the two crisp rim lines without the two soft inner glows.
+
+Pages reach the layer through shared components and through class patterns,
+not by opting in one by one. A new surface gets it by using `Card`/`Section`,
+or the existing hand-drawn recipe. Do not add per-page glass classes. The
+layer is unlayered CSS, so it also beats Tailwind hover utilities: a rule that
+sets a colour must leave room for the element's own state (see the
+`hover:text-` and `hover:border-` exemptions in the file).
+
+**Off switch.** `data-glass="off"` on `<html>` removes the layer: it is
+written under `:root:not([data-glass="off"])`. It is set by Settings → Account
+→ Language and appearance (`components/GlassToggle.tsx`, stored as
+`zimos.glass`), and by the pre-paint script in `index.html` when the device
+asks for reduced transparency or forced colours. A media query in the layer
+turns the panes solid for the same two preferences if the script did not run.
+With the switch off, the orders page is pixel-identical to a capture taken
+before the layer existed.
+
+**Contrast.** Inside `.glass-app` secondary ink and coloured text are one step
+deeper than on a white card (`--lg-ink-soft`, `--lg-text-*`, `--destructive`).
+Worst-case ratios for sheets in the page, measured on rendered pixels against
+the strongest part of the backdrop (Edge, 1440 × 900, 2026-10-07), light /
+dark:
+
+| Text | Page ground | Sheet | Table head | Side menu |
+| --- | --- | --- | --- | --- |
+| ink | 13.4 / 11.0 | 16.0 / 11.4 | 16.9 / 11.6 | 14.9 / 10.1 |
+| ink-soft | 5.5 / 6.1 | 6.6 / 6.3 | 6.9 / 6.4 | 6.1 / 5.6 |
+| primary text | 4.8 / 5.5 | 5.8 / 5.7 | 6.1 / 5.8 | 5.4 / 5.1 |
+| success text | 4.9 / 6.2 | 5.9 / 6.4 | 6.3 / 6.5 | 5.5 / 5.7 |
+| danger text | 5.0 / 6.0 | 5.9 / 6.2 | 6.3 / 6.3 | 5.5 / 5.5 |
+| accent-dark | 4.7 / 7.0 | 5.6 / 7.3 | 5.9 / 7.4 | 5.2 / 6.4 |
+
+For what floats, computed from the live tokens with pure white, pure black and
+the brand fill beneath: the bars' lowest is 4.99 light / 4.65 dark (the active
+tab label), menus 5.04 / 6.28 (`ink-soft`), and the delete button of a `Modal`
+4.65 / 4.70.
+
+The light backdrop is as strong as these numbers allow: `ink-soft` has only
+6.3:1 on pure white, so a more vivid backdrop would take page-ground text under
+4.5:1. Change a fill or a glow only together with this measurement.
+
+**Not covered.** The reference component's optical refraction (an SVG
+displacement filter) is not used: it works in Chromium only, costs too much on
+a data surface, and has nothing to bend when only a soft backdrop is behind a
+sheet. The full-screen editors, the sign-in pages, platform-admin, the
+storefront and marketing are untouched (the main action's gloss and the
+frosted menus do reach the editors and sign-in, since they are not scoped to
+the shell). Not measured on a real low-end phone or in Safari/Firefox.
 
 ## Review before rollout
 

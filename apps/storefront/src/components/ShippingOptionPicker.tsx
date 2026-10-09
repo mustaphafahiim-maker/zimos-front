@@ -33,10 +33,18 @@ export function ShippingOptionPicker({ choice, idPrefix }: { choice: ShippingCho
           <label
             key={o.key}
             htmlFor={id}
-            className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-lg border border-line bg-paper px-3 py-2 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary-soft"
+            className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-lg border border-line bg-paper px-3 py-2.5 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary-soft has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary"
           >
-            <span className="flex items-center gap-2">
-              <input id={id} type="radio" name={`${idPrefix}-shipping-option`} checked={choice.value === o.key} onChange={() => choice.choose(o.key)} />
+            {/* The whole row is the target (48px); the dot itself is drawn at 20px so it reads as one. */}
+            <span className="flex items-center gap-3">
+              <input
+                id={id}
+                type="radio"
+                name={`${idPrefix}-shipping-option`}
+                checked={choice.value === o.key}
+                onChange={() => choice.choose(o.key)}
+                className="size-5 shrink-0 cursor-pointer accent-primary"
+              />
               <span>
                 <span className="font-medium text-ink">{name}</span>
                 {eta && <span className="block text-xs text-ink-soft">{eta}</span>}

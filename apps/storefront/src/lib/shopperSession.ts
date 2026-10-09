@@ -32,7 +32,8 @@ const listeners = new Set<() => void>();
 /** Set when the API said the token stopped working: the sign-in says so once. */
 let droppedByServer = false;
 
-function readToken(storeId: string): string | null {
+/** The token as it is right now, outside React (the cart's own client reads it per request: lib/shopperCart.ts). */
+export function readToken(storeId: string): string | null {
   if (!storeId || typeof window === "undefined") return null;
   try {
     return window.localStorage.getItem(tokenKey(storeId));
@@ -90,13 +91,48 @@ export function isAccountsOffError(err: unknown): boolean {
 
 // ------------------------------------------------------------- config --
 
-// One request per store for the page's life: the header, the account and the checkout share it.
+// One request per store for the tab's session: the header, the account and the checkout share
+// it, and the answer is kept in sessionStorage for ten minutes so the next page (every page has
+// the header's account link) does not ask again. Ten minutes because this is a switch the
+// merchant flips: a store that turns accounts on or off is seen so by a browsing shopper within
+// that time, and an account call the API refuses in between still says why. `reload` asks afresh.
 const configs = new Map<string, Promise<ShopperAccountsSettings>>();
+const CONFIG_MS = 10 * 60 * 1000;
+const configKey = (storeId: string) => `zimos_shopper_config_${storeId}`;
+
+function readCachedConfig(storeId: string): ShopperAccountsSettings | null {
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(configKey(storeId)) ?? "null") as {
+      at?: unknown;
+      config?: Partial<ShopperAccountsSettings> | null;
+    } | null;
+    const config = saved?.config;
+    if (!saved || typeof saved.at !== "number" || Date.now() - saved.at > CONFIG_MS || saved.at > Date.now()) return null;
+    if (!config || typeof config.enabled !== "boolean" || !Array.isArray(config.channels)) return null;
+    return { enabled: config.enabled, channels: config.channels };
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedConfig(storeId: string, config: ShopperAccountsSettings) {
+  try {
+    window.sessionStorage.setItem(configKey(storeId), JSON.stringify({ at: Date.now(), config }));
+  } catch {
+    // Storage is blocked or full: asked again on the next page.
+  }
+}
 
 function loadConfig(client: ApiClient, storeId: string, fresh = false): Promise<ShopperAccountsSettings> {
   const known = fresh ? undefined : configs.get(storeId);
   if (known) return known;
-  const request = shopperAccountConfig(client, storeId);
+  const cached = fresh ? null : readCachedConfig(storeId);
+  const request = cached
+    ? Promise.resolve(cached)
+    : shopperAccountConfig(client, storeId).then((config) => {
+        writeCachedConfig(storeId, config);
+        return config;
+      });
   configs.set(storeId, request);
   request.catch(() => {
     if (configs.get(storeId) === request) configs.delete(storeId);

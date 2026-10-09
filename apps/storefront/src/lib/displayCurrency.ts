@@ -11,6 +11,13 @@ import { createStorefrontApiClient } from "./apiClient";
  * choice is remembered per store on this device; with the store's
  * "convert automatically" on, a first visit picks the visitor's own
  * currency when the store lists it.
+ *
+ * The store's list and its rates are asked for once and kept for the tab's
+ * session (sessionStorage, 30 minutes): they are the same on every page, and
+ * every page with a price on it reads them. Half an hour is long enough for a
+ * whole visit and short enough that a rate the merchant refreshed, or a
+ * currency they added, reaches a shopper who is still browsing; the amounts
+ * are marked approximate either way, and no order is priced from them.
  */
 
 type State = { data: StorefrontCurrencies | null; chosen: string | null };
@@ -18,6 +25,8 @@ const states = new Map<string, State>();
 const loading = new Map<string, Promise<void>>();
 const CHANGE = "zimos-display-currency";
 const keyFor = (workspaceId: string) => `zimos_display_currency_${workspaceId}`;
+const cacheKeyFor = (workspaceId: string) => `zimos_currencies_${workspaceId}`;
+const CACHE_MS = 30 * 60 * 1000;
 
 // A visitor's region → its currency, for "convert automatically".
 const REGION_CURRENCY: Record<string, string> = {
@@ -46,15 +55,52 @@ function visitorCurrency(): string | null {
   return null;
 }
 
+/** The store's answer from earlier in this session, while it is still fresh. */
+function readCached(workspaceId: string): StorefrontCurrencies | null {
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(cacheKeyFor(workspaceId)) ?? "null") as {
+      at?: unknown;
+      data?: Partial<StorefrontCurrencies> | null;
+    } | null;
+    const data = saved?.data;
+    if (!saved || typeof saved.at !== "number" || Date.now() - saved.at > CACHE_MS || saved.at > Date.now()) return null;
+    if (!data || typeof data.baseCurrency !== "string" || !Array.isArray(data.displayCurrencies)) return null;
+    if (!data.rates || typeof data.rates !== "object") return null;
+    return data as StorefrontCurrencies;
+  } catch {
+    return null;
+  }
+}
+
+function writeCached(workspaceId: string, data: StorefrontCurrencies) {
+  try {
+    window.sessionStorage.setItem(cacheKeyFor(workspaceId), JSON.stringify({ at: Date.now(), data }));
+  } catch {
+    // Storage is blocked or full: asked again on the next page.
+  }
+}
+
+/** The store's currencies with this shopper's choice among them: saved, else their own, else none. */
+function settle(workspaceId: string, data: StorefrontCurrencies) {
+  const listed = (c: string | null): c is string => Boolean(c && (c === data.baseCurrency || data.displayCurrencies.includes(c)));
+  const saved = readChoice(workspaceId);
+  const auto = data.autoConvert ? visitorCurrency() : null;
+  const chosen = listed(saved) ? saved : listed(auto) ? auto : null;
+  states.set(workspaceId, { data, chosen: chosen === data.baseCurrency ? null : chosen });
+}
+
 function load(workspaceId: string) {
-  if (states.has(workspaceId) || loading.has(workspaceId)) return;
+  if (!workspaceId || states.has(workspaceId) || loading.has(workspaceId)) return;
+  const cached = readCached(workspaceId);
+  if (cached) {
+    settle(workspaceId, cached);
+    emit();
+    return;
+  }
   const work = storefrontCurrencies(createStorefrontApiClient(), workspaceId)
     .then((data) => {
-      const listed = (c: string | null): c is string => Boolean(c && (c === data.baseCurrency || data.displayCurrencies.includes(c)));
-      const saved = readChoice(workspaceId);
-      const auto = data.autoConvert ? visitorCurrency() : null;
-      const chosen = listed(saved) ? saved : listed(auto) ? auto : null;
-      states.set(workspaceId, { data, chosen: chosen === data.baseCurrency ? null : chosen });
+      settle(workspaceId, data);
+      writeCached(workspaceId, data);
     })
     .catch(() => {
       // No display currencies: prices show as they are.

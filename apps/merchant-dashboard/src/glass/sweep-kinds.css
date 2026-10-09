@@ -1,0 +1,116 @@
+/* Quotes, subscriptions, services, courses and digital products — pages/quotes, pages/subscriptions,
+   pages/services, pages/courses, pages/digital.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the same switch, so with
+   data-glass="off" none of it applies and the components stand on their own solid Tailwind classes.
+
+   These pages are built from the shared kit (the list kit, Quick Look, sheets, the queue sheet of
+   returns-protection.css, the switch of the same file), so little is left to say here: the wells inside a
+   pane, the quiet beads of a row, the lesson rows of a course and the hairlines of a fact list. Nothing is
+   blurred — all of it lies in the page flow or inside a pane that is already frosted.
+
+   Text: var(--color-ink) and var(--lg-ink-soft) on the panes; a toned bead is a drop of its tone over the
+   raised paper, written in the deeper shade of that tone (the recipe of returns-protection.css), which
+   holds 4.5:1 in both themes. */
+:root:not([data-glass="off"]) {
+  --kinds-well: color-mix(in srgb, var(--color-primary-dark) 5%, transparent);
+  --kinds-bead: color-mix(in srgb, var(--color-ink) 7%, transparent);
+  --kinds-mix: 12%;
+  --kinds-top: rgb(255 255 255 / 0.7);
+
+  &.dark {
+    --kinds-well: rgb(255 255 255 / 0.05);
+    --kinds-bead: rgb(255 255 255 / 0.09);
+    --kinds-mix: 18%;
+    --kinds-top: rgb(255 255 255 / 0.12);
+  }
+
+  /* Wells inside a pane: somebody's own words, a link to copy, the list of codes. */
+  [data-slot="kinds-well"] {
+    background-color: var(--kinds-well);
+    box-shadow: inset 0 0 0 1px var(--lg-hairline);
+  }
+  [data-slot="kinds-well"] > li {
+    border-color: var(--lg-hairline);
+  }
+
+  /* The hairlines between the lines of a fact list take the colour of their pane. */
+  [data-slot="kinds-facts"] > div {
+    border-color: var(--lg-hairline);
+  }
+  [data-slot="kinds-facts"] dt {
+    color: var(--lg-ink-soft);
+  }
+
+  /* A quiet fact of a row: a bead of the pane; with a tone, a drop of it and the deeper shade for the words. */
+  [data-slot="kinds-fact"] {
+    background-color: var(--kinds-bead);
+    color: var(--lg-ink-soft);
+  }
+  [data-slot="kinds-fact"][data-tone] {
+    --kinds-tone: var(--color-accent);
+    --kinds-ink: var(--color-accent-dark);
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--kinds-tone) var(--kinds-mix), var(--color-paper-raised)) 92%, transparent);
+    color: var(--kinds-ink);
+    box-shadow:
+      inset 0 1px 0 0 var(--kinds-top),
+      inset 0 0 0 1px color-mix(in srgb, var(--kinds-tone) 16%, transparent);
+  }
+  [data-slot="kinds-fact"][data-tone="danger"] {
+    --kinds-tone: var(--color-danger);
+    --kinds-ink: var(--lg-text-danger);
+  }
+  [data-slot="kinds-fact"][data-tone="success"] {
+    --kinds-tone: var(--color-success);
+    --kinds-ink: var(--lg-text-success);
+  }
+
+  /* A lesson of a course: a small pane inside its chapter, lit under the pointer, the keyboard or a finger. */
+  [data-slot="lesson-row"] {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  @media (hover: hover) {
+    [data-slot="lesson-row"]:hover {
+      background-color: var(--lg-control-lit);
+    }
+  }
+  [data-slot="lesson-row"]:has(> button:is(:focus-visible, :active)) {
+    background-color: var(--lg-control-lit);
+  }
+
+  /* The lines of a quote: hairlines of the pane; a line left out of the offer steps back a little. */
+  [data-slot="quote-line"] {
+    border-color: var(--lg-hairline);
+  }
+  [data-slot="quote-line"][data-off] {
+    background-color: var(--kinds-well);
+  }
+
+  /* The strip of figures over the subscriptions: on a phone it scrolls, and fades at the side with more to see. */
+  @media (max-width: 39.99rem) {
+    [data-slot="kinds-kpis"] {
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 0.875rem, #000 calc(100% - 0.875rem), transparent);
+      mask-image: linear-gradient(to right, transparent, #000 0.875rem, #000 calc(100% - 0.875rem), transparent);
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
+  /* A provider's logo tile on a service card. */
+  [data-slot="service-logo"] {
+    box-shadow: inset 0 0 0 1px var(--lg-hairline);
+  }
+}
+
+/* The same preferences the off switch follows (see the end of liquid-glass.css): if the attribute was not
+   set, the tints of this file turn solid too. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root:not([data-glass="off"]),
+  :root:not([data-glass="off"]).dark {
+    --kinds-well: var(--color-paper-sunken);
+    --kinds-bead: var(--color-paper-sunken);
+  }
+  :root:not([data-glass="off"]) [data-slot="kinds-kpis"] {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}

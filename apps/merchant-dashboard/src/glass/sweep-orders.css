@@ -1,0 +1,229 @@
+/* The Orders corner brought to the system — pages/orders/OrderBoardPage.tsx, pages/orders/ShipmentBatchPage.tsx,
+   pages/orders/packing/*, pages/deliverySlots/*, pages/pickup/*, pages/exports/*.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills and rims come from the --lg-* variables.
+
+   Nothing here is blurred. The board's columns, the packing station, the progress panes
+   and the wells inside them all lie in the page flow (or inside a sheet that is already
+   frosted): translucent, lit along the rim, no backdrop-filter. The big panes themselves —
+   a raised fill with the card radius — are already glass by liquid-glass.css; this file
+   only adds what those pages draw that the shared layer does not know: wells, tracks,
+   the scan field, the tinted signals.
+
+   Text: var(--color-ink) and var(--lg-ink-soft) on the panes and the wells; on a tint,
+   the deeper --lg-text-* shade of that tone. A tint is a drop of its tone over a
+   near-solid fill (the recipe of the list kit's counts, glass/list.css), so its words
+   hold 4.5:1 whatever part of the backdrop is behind the pane, in both themes. */
+:root:not([data-glass="off"]) {
+  /* A well: a quieter box inside a pane, or a column on the page pane. */
+  --so-well: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  --so-well-edge: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  /* The track a fill runs in. */
+  --so-track: color-mix(in srgb, var(--color-ink) 10%, transparent);
+  /* Something on a pane under the pointer or the finger. */
+  --so-press: color-mix(in srgb, var(--color-ink) 6%, transparent);
+  /* A drop target with a card held over it, and the line whose turn it is: the store's colour, thin. */
+  --so-brand-wash: color-mix(in srgb, var(--color-primary) 9%, transparent);
+  /* The three tints: a drop of the tone over a near-solid fill. */
+  --so-tint-success: color-mix(in srgb, var(--color-success) 14%, var(--lg-control-lit));
+  --so-tint-danger: color-mix(in srgb, var(--color-danger) 13%, var(--lg-control-lit));
+  --so-tint-attention: color-mix(in srgb, var(--color-accent) 22%, var(--lg-control-lit));
+
+  &.dark {
+    --so-well: rgb(255 255 255 / 0.05);
+    --so-well-edge: rgb(255 255 255 / 0.08);
+    --so-track: rgb(255 255 255 / 0.12);
+    --so-press: rgb(255 255 255 / 0.08);
+    --so-brand-wash: color-mix(in srgb, var(--color-primary) 16%, transparent);
+    --so-tint-success: color-mix(in srgb, var(--color-success) 18%, var(--lg-control-lit));
+    --so-tint-danger: color-mix(in srgb, var(--color-danger) 18%, var(--lg-control-lit));
+    --so-tint-attention: color-mix(in srgb, var(--color-accent) 18%, var(--lg-control-lit));
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The board (OrderBoardPage). A column is a well on the page pane:
+   * its cards are the list kit's sheet panes (glass/list.css) and stand
+   * out of it. A column with a card held over it takes the store's
+   * colour — a wash and the selection ring — so the drop target is
+   * plain before the card is let go.
+   * ---------------------------------------------------------------- */
+  .zimos-board,
+  .zimos-board-body {
+    scrollbar-color: color-mix(in srgb, var(--color-ink) 22%, transparent) transparent;
+  }
+  .zimos-board-col {
+    background-color: var(--so-well);
+    --tw-ring-color: var(--so-well-edge);
+  }
+  .zimos-board-col[data-over] {
+    background-color: var(--so-brand-wash);
+    --tw-ring-color: var(--lg-brand-solid);
+  }
+  .zimos-board-col h2 + .zimos-chip-count {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line);
+  }
+  .zimos-board-empty {
+    border-color: var(--so-well-edge);
+    color: var(--lg-ink-soft);
+  }
+  /* A stage in the «انقل لـ…» sheet lights up like a menu row. */
+  @media (hover: hover) {
+    .zimos-board-stage:hover {
+      background-color: var(--so-press);
+    }
+  }
+  .zimos-board-stage:is(:active, :focus-visible) {
+    background-color: var(--so-press);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Wells inside a pane: the three figures of a booking, the item whose
+   * turn it is at the packing station, the place of a pickup. No rim and
+   * no shadow — a step down, not another card.
+   * ---------------------------------------------------------------- */
+  .zimos-batch-figure,
+  .zimos-pack-current,
+  .zimos-pickup-place {
+    background-color: var(--so-well);
+    box-shadow: inset 0 0 0 1px var(--so-well-edge);
+  }
+  .zimos-pack-current[data-state="done"] {
+    background-color: var(--so-tint-success);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 22%, transparent);
+  }
+  :is(.zimos-batch-figure, .zimos-pack-current, .zimos-pickup-place, .zimos-batch-hero, .zimos-pack-station, .zimos-pick-summary, .zimos-export-pane)
+    :where(.text-ink-soft):not([class*="hover:text-"]) {
+    color: var(--lg-ink-soft);
+  }
+  .zimos-pickup-place .border-line {
+    border-color: var(--lg-hairline);
+  }
+
+  /* The note over a list: what has to be fixed before sending again. Amber, tinted, never a solid block. */
+  .zimos-batch-hint {
+    background-color: var(--so-tint-attention);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 26%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Progress: a quiet track and the brand fill, which grows by
+   * transform alone (scaleX from the start edge; the component sets
+   * it). Complete, it turns to the success colour; a slot that is full
+   * or over keeps the tone the component gave it.
+   * ---------------------------------------------------------------- */
+  .zimos-meter {
+    background-color: var(--so-track);
+  }
+  .zimos-meter-fill:not([data-done], [data-tone]) {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The pick list. A line that is picked sinks a little; the order
+   * numbers under it are small panes.
+   * ---------------------------------------------------------------- */
+  .zimos-pick-line {
+    border-color: var(--lg-hairline);
+  }
+  .zimos-pick-line[data-done] {
+    background-color: var(--so-well);
+  }
+  .zimos-pick-order {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  @media (hover: hover) {
+    .zimos-pick-order:hover {
+      background-color: var(--lg-control-lit);
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The packing station (ScanToPackPage). The scan field is one large
+   * pane that turns solid and glows in the brand colour while it is
+   * typed in, like every field of the pages. A wrong scan frames the
+   * whole station in the danger colour for a moment (the component
+   * sets data-flash); the words under the field carry the meaning.
+   * ---------------------------------------------------------------- */
+  .zimos-pack-station[data-flash] {
+    --tw-ring-color: var(--lg-text-danger);
+    box-shadow: var(--lg-rim), 0 0 0 2px var(--lg-text-danger), 0 0 0 6px color-mix(in srgb, var(--color-danger) 16%, transparent), var(--shadow-card);
+  }
+  .zimos-pack-field {
+    background-color: var(--lg-control);
+    --tw-ring-color: var(--lg-edge);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  .zimos-pack-field:focus-within {
+    background-color: var(--color-paper-raised);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 0 0 4px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  }
+  .zimos-pack-field > svg,
+  .zimos-pack-field input::placeholder {
+    color: var(--lg-ink-soft);
+  }
+  /* What the last scan did. */
+  .zimos-pack-signal[data-tone="ok"] {
+    background-color: var(--so-tint-success);
+    color: var(--lg-text-success);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 22%, transparent);
+  }
+  .zimos-pack-signal[data-tone="wrong"],
+  .zimos-pack-unknown {
+    background-color: var(--so-tint-danger);
+    color: var(--lg-text-danger);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 24%, transparent);
+  }
+  /* The line whose turn it is, in the list of the order's items. */
+  .zimos-pack-line {
+    border-color: var(--lg-hairline);
+  }
+  .zimos-pack-line[data-current] {
+    background-color: var(--so-brand-wash);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The delivery schedule. The two round steps of the date are small
+   * panes; the orders booked into a slot are a list in a hairline box,
+   * each line lighting up like a table row; a slot chosen in the
+   * "change the time" sheet takes the selection ring.
+   * ---------------------------------------------------------------- */
+  .zimos-slot-step {
+    background-color: var(--lg-control);
+    --tw-ring-color: var(--lg-edge);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  @media (hover: hover) {
+    .zimos-slot-step:hover {
+      background-color: var(--lg-control-lit);
+    }
+  }
+  .zimos-slot-step:active {
+    background-color: var(--lg-control-lit);
+  }
+  .zimos-slot-orders {
+    --tw-ring-color: var(--lg-hairline);
+    background-color: var(--so-well);
+  }
+  .zimos-slot-orders > li {
+    border-color: var(--lg-hairline);
+  }
+  @media (hover: hover) {
+    .zimos-slot-order:hover {
+      background-color: var(--lg-row-lit);
+    }
+  }
+  .zimos-slot-order:is(:active, :focus-visible) {
+    background-color: var(--lg-row-lit);
+  }
+  .zimos-slot-order .text-ink-soft {
+    color: var(--lg-ink-soft);
+  }
+  .zimos-slot-choice:has(input:checked) {
+    background-color: var(--list-selected, var(--so-brand-wash));
+    --tw-ring-color: var(--lg-brand-solid);
+  }
+}

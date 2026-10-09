@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore, type MouseEvent } from "react";
-import { ExternalLink } from "lucide-react";
+import { IconExternal } from "@/components/icons";
 import { cn } from "@store-builder/ui";
 import { CopyButton } from "@/components/CopyButton";
 import { storeHost, storeUrl } from "@/lib/storeAddress";
@@ -9,8 +9,18 @@ import { getGoLiveState, subscribeGoLive } from "@/lib/goLive";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
-  en: { draft: "Draft", previewTitle: "Preview your draft store", copy: "Copy link" },
-  ar: { draft: "مسودة", previewTitle: "معاينة متجرك (مسودة)", copy: "نسخ الرابط" },
+  en: {
+    draft: "Draft",
+    openTitle: "Open your store in a new tab",
+    previewTitle: "Preview your draft store",
+    copy: "Copy link",
+  },
+  ar: {
+    draft: "مسودة",
+    openTitle: "افتح متجرك في تاب جديد",
+    previewTitle: "شوف متجرك قبل النشر (مسودة)",
+    copy: "انسخ اللينك",
+  },
 } satisfies Messages;
 
 /**
@@ -25,6 +35,11 @@ const STRINGS = {
  *
  * A draft store (not subscribed yet) is invisible to the public, so its link
  * opens a staff preview instead: the store with a short-lived preview token.
+ *
+ * Drawn as a toolbar chip: one 36px pill holding the host in secondary ink and
+ * two 28px round buttons, open and copy. The host and the open button are one
+ * link, so the whole start of the chip opens the store. The chip's glass is in
+ * glass/states.css (`[data-slot="store-link"]`).
  */
 export function StoreLinkBar({ slug, className }: { slug: string; className?: string }) {
   const t = useT(STRINGS);
@@ -68,17 +83,25 @@ export function StoreLinkBar({ slug, className }: { slug: string; className?: st
   }
 
   return (
-    <div className={cn("flex min-w-0 items-center gap-1", className)}>
+    <div
+      data-slot="store-link"
+      className={cn(
+        "flex h-9 max-w-full min-w-0 items-center gap-0.5 rounded-full border border-line bg-paper-raised ps-3 pe-1 lg:max-w-64",
+        className
+      )}
+    >
       <a
         href={url}
         target="_blank"
         rel="noreferrer"
         onClick={openPreview}
-        title={draft ? t.previewTitle : `Open ${url}`}
-        className="inline-flex min-w-0 items-center gap-1.5 rounded-[0.5rem] px-2 py-1 text-xs font-medium text-ink-soft transition-colors hover:bg-paper hover:text-primary"
+        title={draft ? t.previewTitle : t.openTitle}
+        // The chip is 36px; on a touch screen the link's target reaches 44px without changing how it looks.
+        className="group/open relative flex h-full min-w-0 flex-1 items-center gap-1.5 rounded-full text-xs font-medium text-ink-soft outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:-inset-y-1.5 pointer-coarse:before:content-['']"
       >
-        <ExternalLink className="size-3.5 shrink-0" aria-hidden />
-        <span className="truncate" dir="ltr">
+        {/* Left-to-right so a long address is cut at its end, never its start; in Arabic it
+            still hugs the chip's leading edge. */}
+        <span className="min-w-0 flex-1 truncate text-start rtl:text-end" dir="ltr">
           {storeHost(slug)}
         </span>
         {draft && (
@@ -86,8 +109,14 @@ export function StoreLinkBar({ slug, className }: { slug: string; className?: st
             {t.draft}
           </span>
         )}
+        <span
+          data-slot="store-link-open"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full transition-[scale,background-color,color] duration-[var(--dur-fade)] ease-[var(--ease-out)] group-hover/open:bg-paper-sunken group-hover/open:text-primary group-active/open:scale-[0.94] motion-reduce:transition-none motion-reduce:group-active/open:scale-100"
+        >
+          <IconExternal className="size-4 rtl:-scale-x-100" aria-hidden />
+        </span>
       </a>
-      <CopyButton value={url} label={t.copy} labelClassName="hidden lg:inline" className="shrink-0" />
+      <CopyButton value={url} label={t.copy} iconOnly />
     </div>
   );
 }

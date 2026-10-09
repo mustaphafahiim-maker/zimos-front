@@ -1,0 +1,94 @@
+/* The loyalty and audience pages of the sweep: loyalty points, VIP tiers, refer a friend,
+   store credit (pages/loyalty/*, pages/vipTiers/*, pages/customerReferrals/*,
+   pages/storeCredit/*), affiliates (pages/affiliates/*), the contact import and the form
+   inbox (pages/customers/ContactImportPage.tsx, FormSubmissionsPage.tsx).
+   Part of the liquid-glass layer (../liquid-glass.css): with data-glass="off" none of it
+   applies and every piece stands on its own solid Tailwind classes. Nothing here is
+   blurred: every piece lies in the page flow, or inside a sheet that is already frosted.
+   The wells below are small panes inside a card or a sheet; ink on --lg-control is the
+   same pair as the segmented track (4.5:1 or better in both themes). */
+:root:not([data-glass="off"]) {
+  /* Small wells: the sentence a customer reads, a figure of an affiliate or of an import,
+     a link ready to copy, the balance and the message at the top of a preview. */
+  [data-slot="programme-example"],
+  [data-slot="invite-void"],
+  [data-slot="credit-balance"],
+  [data-slot="affiliate-figure"],
+  [data-slot="affiliate-share"],
+  [data-slot="affiliate-link-preview"],
+  [data-slot="import-figure"],
+  [data-slot="form-message"] {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+
+  /* The box a sheet is dropped into: a lit control with a dashed rim; once a file is chosen the rim is solid. */
+  [data-slot="import-file"] {
+    background-color: var(--lg-control);
+    border-color: color-mix(in srgb, var(--color-ink) 22%, transparent);
+  }
+  [data-slot="import-file"]:hover,
+  [data-slot="import-file"][data-chosen] {
+    background-color: var(--lg-control-lit);
+  }
+  [data-slot="import-file"][data-chosen] {
+    border-style: solid;
+    border-color: var(--lg-edge);
+    box-shadow: var(--lg-rim-line);
+  }
+
+  /* The rows of a sheet the server could not take: a pane of their own inside the card. */
+  [data-slot="import-errors"] {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+
+  /* The amber note about marketing consent: the "watch this" tint, as on the money pages. */
+  [data-slot="import-note"] {
+    background-color: color-mix(in srgb, var(--color-accent-soft) 88%, transparent);
+    box-shadow:
+      var(--lg-rim-line),
+      0 0 0 1px color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+  &.dark [data-slot="import-note"] {
+    background-color: color-mix(in srgb, var(--color-accent) 15%, var(--lg-control-lit));
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.1),
+      0 0 0 1px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  }
+
+  /* Green beads: a column that was matched, the import that went through. */
+  [data-slot="import-match"][data-found],
+  [data-slot="import-done-icon"] {
+    background-color: color-mix(in srgb, var(--color-success-soft) 88%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 18%, transparent);
+    color: var(--lg-text-success);
+  }
+  &.dark [data-slot="import-match"][data-found],
+  &.dark [data-slot="import-done-icon"] {
+    background-color: color-mix(in srgb, var(--color-success) 18%, var(--lg-control-lit));
+  }
+  [data-slot="import-match"]:not([data-found]) {
+    background-color: var(--lg-control);
+    box-shadow: inset 0 0 0 1px var(--lg-edge);
+  }
+
+  /* The numbered beads of "how it works", and the count of unread messages beside the title. */
+  [data-slot="affiliate-step"],
+  [data-slot="form-unread-badge"] {
+    background-color: color-mix(in srgb, var(--color-primary-soft) 88%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 16%, transparent);
+    color: var(--lg-text-primary);
+  }
+  &.dark [data-slot="affiliate-step"],
+  &.dark [data-slot="form-unread-badge"] {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, var(--lg-control-lit));
+  }
+
+  /* A message not read yet: the brand's dot, lit. */
+  [data-slot="form-unread-dot"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    box-shadow: var(--lg-brand-glow);
+  }
+}

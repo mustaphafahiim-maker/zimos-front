@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { IconSparkle } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import { translationsAiApply, translationsAiStart, type ContentEntity, type StoreLocale, type TranslatableEntity } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -85,8 +85,8 @@ export function AiTranslateButton({
   }
 
   return (
-    <Button type="button" variant="outline" size="sm" disabled={running !== null} onClick={() => void run()}>
-      <Sparkles className="size-4" aria-hidden />
+    <Button type="button" variant="outline" className="min-h-11 rounded-full px-4 sm:min-h-9" disabled={running !== null} onClick={() => void run()}>
+      <IconSparkle className="size-4" aria-hidden />
       {running !== null ? fmt(t.running, { n: running }) : t.run}
     </Button>
   );

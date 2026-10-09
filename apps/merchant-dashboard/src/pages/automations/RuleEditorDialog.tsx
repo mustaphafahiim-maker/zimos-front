@@ -1,5 +1,8 @@
 import { useRef, useState, type FormEvent } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { IconArrowDown, IconArrowUp, IconDelete, IconPlus } from "@/components/icons";
+import { FilterGroup } from "@/components/list";
+import { focusFirstInvalid } from "@/pages/marketing/kit/form";
+import { SwitchRow } from "@/pages/marketing/kit/Switch";
 import { Alert, Button, Input } from "@store-builder/ui";
 import {
   automationFlowsCreate,
@@ -16,6 +19,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getFieldErrors } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { pluralOf } from "@/lib/plural";
 import { SegmentConditionFields, type SegmentConditions } from "./SegmentConditionFields";
 import { ProductFunnelConditionFields } from "./ProductFunnelConditionFields";
 import { Modal } from "@/components/Modal";
@@ -24,6 +28,8 @@ import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { AUTOMATION_STRINGS, emptyStep, stepProblem, stepTypeLabel, triggerLabel } from "./automationText";
 import { TemplatePicker } from "@/components/WhatsappTemplates";
+import { NotifyChannelFields } from "./NotifyChannelFields";
+import { ConfirmLinkTokenHint } from "@/components/ConfirmLinkTokenHint";
 
 const STRINGS = {
   en: {
@@ -85,6 +91,18 @@ const STRINGS = {
     coupon: "Coupon code for {{coupon_code}}",
     delayDays: "Days after delivery",
     stopOnChange: "Stop the remaining steps if the order's status changes while waiting",
+    nameShort: "Give it a name of two letters or more.",
+    conditionsHint: "Leave everything as it is to run for every order.",
+    conditionsSet_one: "1 condition set",
+    conditionsSet_other: "{n} conditions set",
+    fix_wait: "Type how long to wait: 1 to 720.",
+    fix_whatsapp_template: "Type the template name as approved in Meta (lowercase letters, numbers, _) and its language, e.g. ar or en_US.",
+    fix_sms: "Type the message.",
+    fix_email: "Type the subject and the message.",
+    fix_webhook: "Type a link that starts with https://",
+    fix_add_tag: "Type the tag.",
+    fix_notify_team: "Type the message to the team.",
+    fix_notify_channel: "Choose the channel and type the message.",
     needsAction: "Add at least one step that is not a wait.",
     endsOnWait: "The sequence cannot end with a wait.",
     save: "Save",
@@ -93,65 +111,79 @@ const STRINGS = {
   },
   ar: {
     createTitle: "أتمتة جديدة",
-    editTitle: "تعديل الأتمتة",
+    editTitle: "عدّل الأتمتة",
     name: "الاسم",
-    trigger: "عندما يحدث",
-    stepsTitle: "نفّذ هذه الخطوات بالترتيب",
+    trigger: "لما ده يحصل",
+    stepsTitle: "نفّذ الخطوات دي بالترتيب",
     stepN: "الخطوة {n}",
-    addStep: "إضافة خطوة",
-    moveUp: "تحريك الخطوة {n} لأعلى",
-    moveDown: "تحريك الخطوة {n} لأسفل",
-    removeStep: "حذف الخطوة {n}",
+    addStep: "ضيف خطوة",
+    moveUp: "طلّع الخطوة {n} لفوق",
+    moveDown: "نزّل الخطوة {n} لتحت",
+    removeStep: "امسح الخطوة {n}",
     waitAmount: "المدة",
     waitUnit: "الوحدة",
     templateName: "اسم القالب",
-    templateHint: "كما هو معتمد في Meta تمامًا: حروف إنجليزية صغيرة وأرقام وشرطة سفلية.",
+    templateHint: "زي ما هو معتمد في Meta بالظبط: حروف إنجليزي صغيرة وأرقام وشرطة سفلية.",
     language: "اللغة",
     variables: "متغيرات القالب",
-    variablesHint: "بالترتيب: أول خانة تملأ أول متغير في القالب.",
+    variablesHint: "بالترتيب: أول خانة بتملا أول متغير في القالب.",
     variable: "المتغير {n}",
-    addVariable: "إضافة متغير",
-    removeVariable: "حذف المتغير {n}",
+    addVariable: "ضيف متغير",
+    removeVariable: "امسح المتغير {n}",
     smsBody: "نص الرسالة",
     emailSubject: "العنوان",
     emailBody: "نص الرسالة",
-    emailHint: "تُرسل فقط إذا كان للطلب بريد إلكتروني.",
-    webhookUrl: "الرابط",
-    webhookHint: "يستقبل طلب POST بصيغة JSON فيه الحدث وبيانات الطلب.",
+    emailHint: "بتتبعت بس لو الأوردر فيه إيميل.",
+    webhookUrl: "اللينك",
+    webhookHint: "بيوصله POST بصيغة JSON فيه الحدث وبيانات الأوردر.",
     tag: "الوسم",
     status: "الحالة الجديدة",
-    statusHint: "تُنفَّذ باسم مالك المتجر. التأكيد يخص طلبات الدفع عند الاستلام.",
+    statusHint: "بتتنفّذ باسم صاحب المتجر. التأكيد بيخص أوردرات الدفع عند الاستلام.",
     teamMessage: "رسالة للفريق",
-    tokens: "أدرج بيانًا:",
-    conditionsTitle: "فقط إذا (اختياري)",
+    tokens: "حط بيان:",
+    conditionsTitle: "بس لو (اختياري)",
     paymentMethod: "طريقة الدفع",
     any: "أي",
     cod: "الدفع عند الاستلام",
-    card: "بطاقة",
+    card: "كارت",
     wallet: "محفظة",
     valu: "تقسيط valU",
     kiosk: "الدفع في الكشك (أمان / مصاري)",
     paypal: "باي بال",
     bank_transfer: "تحويل بنكي",
-    minTotal: "إجمالي الطلب لا يقل عن",
-    source: "مصدر الطلب",
+    minTotal: "إجمالي الأوردر مش أقل من",
+    source: "مصدر الأوردر",
     sourceStore: "المتجر",
-    sourceFunnel: "قمع بيع",
+    sourceFunnel: "مسار بيع",
     governorates: "المحافظات",
-    listHint: "افصل بفاصلة.",
-    tags: "الطلب عليه أحد هذه الوسوم",
+    listHint: "افصل بينهم بفاصلة.",
+    tags: "الأوردر عليه واحد من الوسوم دي",
     firstOrder: "العميل",
-    firstOnly: "أول طلب فقط",
-    returningOnly: "العملاء العائدون فقط",
+    firstOnly: "أول أوردر بس",
+    returningOnly: "العملاء اللي اشتروا قبل كده بس",
     risk: "مستوى الخطورة",
-    risk_low: "منخفض",
+    risk_low: "قليل",
     risk_medium: "متوسط",
-    risk_high: "مرتفع",
+    risk_high: "عالي",
     coupon: "كود الخصم لـ {{coupon_code}}",
-    delayDays: "عدد الأيام بعد التسليم",
-    stopOnChange: "إيقاف باقي الخطوات إذا تغيّرت حالة الطلب أثناء الانتظار",
-    needsAction: "أضف خطوة واحدة على الأقل غير الانتظار.",
-    endsOnWait: "لا يمكن أن ينتهي التسلسل بانتظار.",
+    delayDays: "كام يوم بعد التسليم",
+    stopOnChange: "وقّف باقي الخطوات لو حالة الأوردر اتغيّرت وهي مستنية",
+    nameShort: "اكتب اسم من حرفين على الأقل.",
+    conditionsHint: "سيب كل حاجة زي ما هي عشان تشتغل على كل الأوردرات.",
+    conditionsSet_one: "شرط واحد متحدد",
+    conditionsSet_two: "شرطين متحددين",
+    conditionsSet_few: "{n} شروط متحددة",
+    conditionsSet_other: "{n} شرط متحدد",
+    fix_wait: "اكتب مدة الانتظار: من 1 لـ 720.",
+    fix_whatsapp_template: "اكتب اسم القالب زي ما هو معتمد في Meta (حروف إنجليزي صغيرة وأرقام و _) ولغته، زي ar أو en_US.",
+    fix_sms: "اكتب نص الرسالة.",
+    fix_email: "اكتب العنوان ونص الرسالة.",
+    fix_webhook: "اكتب لينك بيبدأ بـ https://",
+    fix_add_tag: "اكتب الوسم.",
+    fix_notify_team: "اكتب الرسالة للفريق.",
+    fix_notify_channel: "اختار القناة واكتب الرسالة.",
+    needsAction: "ضيف خطوة واحدة على الأقل غير الانتظار.",
+    endsOnWait: "السلسلة ماينفعش تخلص بانتظار. ضيف خطوة بعده أو امسحه.",
     save: "حفظ",
     saving: "بنحفظ…",
     cancel: "إلغاء",
@@ -205,10 +237,12 @@ export function RuleEditorDialog({
   const [coupon, setCoupon] = useState(c.couponCode ?? "");
   const [delayDays, setDelayDays] = useState(String(c.delayDays ?? 3));
   const [stopOnChange, setStopOnChange] = useState(c.stopOnStatusChange !== false);
-  const [newType, setNewType] = useState<AutomationStepType>("wait");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const target = useRef<Target>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  // True once a save was tried: from then on every problem is said under its field.
+  const [tried, setTried] = useState(false);
 
   const patchStep = (index: number, patch: Partial<AutomationStep>) =>
     setSteps((prev) => prev.map((s, i) => (i === index ? ({ ...s, ...patch } as AutomationStep) : s)));
@@ -238,13 +272,32 @@ export function RuleEditorDialog({
     );
   }
 
+  const conditionCount = [
+    paymentMethod !== "",
+    minTotal.trim() !== "",
+    source !== "",
+    governorates.trim() !== "",
+    tags.trim() !== "",
+    firstOrder !== "",
+    risk.length > 0,
+    segment.segmentId !== null,
+    segment.excludeSegmentId !== null,
+    scope.productIds.length > 0,
+    scope.funnelIds.length > 0,
+    coupon.trim() !== "",
+  ].filter(Boolean).length;
   const actionable = steps.some((s) => s.type !== "wait");
   const endsOnWait = steps.length > 0 && steps[steps.length - 1].type === "wait";
   const invalid = name.trim().length < 2 || steps.length === 0 || !actionable || endsOnWait || steps.some(stepProblem);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (invalid) return;
+    if (saving) return;
+    if (invalid) {
+      setTried(true);
+      focusFirstInvalid(formRef.current);
+      return;
+    }
     setSaving(true);
     setFormError(null);
     const min = minTotal.trim() === "" ? null : Number(parseMoney(minTotal));
@@ -288,20 +341,27 @@ export function RuleEditorDialog({
       className="max-w-2xl"
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="outline" className="rounded-full px-5" onClick={onClose} disabled={saving}>
             {t.cancel}
           </Button>
-          <Button type="submit" form="automation-rule-form" disabled={saving || invalid}>
+          <Button type="submit" form="automation-rule-form" className="rounded-full px-5" disabled={saving}>
             {saving ? t.saving : t.save}
           </Button>
         </>
       }
     >
-      <form id="automation-rule-form" onSubmit={submit} noValidate className="space-y-5">
+      <form id="automation-rule-form" ref={formRef} onSubmit={submit} noValidate className="space-y-5">
         {formError && <Alert variant="danger">{formError}</Alert>}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField label={t.name} required value={name} maxLength={200} onChange={(e) => setName(e.target.value)} />
+          <TextField
+            label={t.name}
+            required
+            value={name}
+            maxLength={200}
+            onChange={(e) => setName(e.target.value)}
+            error={tried && name.trim().length < 2 ? t.nameShort : undefined}
+          />
           <Field label={t.trigger}>
             {({ id }) => (
               <Select id={id} value={trigger} onChange={(e) => setTrigger(e.target.value)}>
@@ -327,13 +387,15 @@ export function RuleEditorDialog({
                   // Keeps focus (and so the insertion target) in the text field.
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => insertToken(token)}
-                  className="cursor-pointer rounded-full border border-line bg-paper px-2 py-0.5 font-mono text-ink-soft hover:border-primary hover:text-primary"
+                  className="zimos-chip inline-flex h-8 cursor-pointer items-center rounded-full bg-paper-raised px-2.5 font-mono text-ink ring-1 ring-line transition-[scale,background-color] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-paper-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:h-11 pointer-coarse:px-3.5"
                 >
                   {token}
                 </button>
               ))}
             </div>
           )}
+          {/* What {{confirm_link}} is: the shopper confirms a cash-on-delivery order from it (handoff 388). */}
+          <ConfirmLinkTokenHint tokens={tokens} className="mt-2" />
 
           <ol className="mt-3 space-y-0">
             {steps.map((step, index) => (
@@ -346,7 +408,15 @@ export function RuleEditorDialog({
                 >
                   {index + 1}
                 </span>
-                <div className="mb-3 rounded-[0.5rem] border border-line p-3">
+                <div
+                  data-slot="sweep-well"
+                  // A step that cannot be saved yet says so under its fields, and is where the form goes on a refused save.
+                  role="group"
+                  aria-label={fmt(t.stepN, { n: index + 1 })}
+                  aria-invalid={tried && stepProblem(step) ? true : undefined}
+                  tabIndex={-1}
+                  className="mb-3 rounded-2xl bg-paper-sunken px-3.5 py-3 outline-none focus-visible:ring-2 focus-visible:ring-primary aria-invalid:ring-2 aria-invalid:ring-danger"
+                >
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-ink">
                       <span className="sr-only">{fmt(t.stepN, { n: index + 1 })}: </span>
@@ -354,7 +424,7 @@ export function RuleEditorDialog({
                     </span>
                     <span className="flex items-center gap-0.5">
                       <Button type="button" size="icon-sm" variant="ghost" disabled={index === 0} aria-label={fmt(t.moveUp, { n: index + 1 })} onClick={() => move(index, -1)}>
-                        <ArrowUp className="size-4" aria-hidden />
+                        <IconArrowUp className="size-4" aria-hidden />
                       </Button>
                       <Button
                         type="button"
@@ -364,7 +434,7 @@ export function RuleEditorDialog({
                         aria-label={fmt(t.moveDown, { n: index + 1 })}
                         onClick={() => move(index, 1)}
                       >
-                        <ArrowDown className="size-4" aria-hidden />
+                        <IconArrowDown className="size-4" aria-hidden />
                       </Button>
                       <Button
                         type="button"
@@ -374,11 +444,14 @@ export function RuleEditorDialog({
                         aria-label={fmt(t.removeStep, { n: index + 1 })}
                         onClick={() => setSteps((prev) => prev.filter((_, i) => i !== index))}
                       >
-                        <Trash2 className="size-4 text-danger" aria-hidden />
+                        <IconDelete className="size-4 text-danger" aria-hidden />
                       </Button>
                     </span>
                   </div>
                   <StepFields t={t} at={at} step={step} index={index} onChange={(patch) => patchStep(index, patch)} onFocus={(where) => (target.current = where)} />
+                  {tried && stepProblem(step) && (
+                    <p className="mt-2 text-xs font-medium text-danger">{(t as Record<string, string>)[`fix_${step.type}`] ?? t.needsAction}</p>
+                  )}
                 </div>
               </li>
             ))}
@@ -388,25 +461,26 @@ export function RuleEditorDialog({
           {actionable && endsOnWait && <p className="text-xs font-medium text-danger">{t.endsOnWait}</p>}
 
           {steps.length < 12 && (
-            <div className="mt-2 flex items-center gap-2">
-              <Select aria-label={t.addStep} value={newType} onChange={(e) => setNewType(e.target.value as AutomationStepType)} className="max-w-56">
-                {stepTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {stepTypeLabel(at, type)}
-                  </option>
-                ))}
-              </Select>
-              <Button type="button" variant="outline" onClick={() => setSteps((prev) => [...prev, emptyStep(newType)])}>
-                <Plus className="size-4" aria-hidden />
-                {t.addStep}
-              </Button>
+            <div role="group" aria-label={t.addStep} className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="text-[13px] font-medium text-ink-soft">{t.addStep}:</span>
+              {stepTypes.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setSteps((prev) => [...prev, emptyStep(type)])}
+                  className="zimos-chip inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-full bg-paper-raised ps-3 pe-3.5 text-sm font-medium text-ink ring-1 ring-line transition-[scale,background-color] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-paper-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:h-11"
+                >
+                  <IconPlus className="size-4 text-ink-soft" weight="bold" aria-hidden />
+                  {stepTypeLabel(at, type)}
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        <div>
-          <h3 className="text-sm font-semibold text-ink">{t.conditionsTitle}</h3>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        {/* Used rarely: folded, with how many are set on the closed row. The fields stay mounted, so nothing typed is lost by folding. */}
+        <FilterGroup label={t.conditionsTitle} hint={conditionCount > 0 ? pluralOf(t, "conditionsSet", conditionCount) : t.conditionsHint} collapsible defaultOpen={conditionCount > 0 || trigger === "review.request"}>
+          <div className="grid gap-4 sm:grid-cols-2">
             {trigger === "review.request" && (
               <TextField label={t.delayDays} type="number" min={1} max={60} dir="ltr" value={delayDays} onChange={(e) => setDelayDays(e.target.value)} />
             )}
@@ -452,10 +526,10 @@ export function RuleEditorDialog({
               <legend className="mb-1.5 text-sm font-medium text-ink">{t.risk}</legend>
               <div className="flex flex-wrap gap-3">
                 {(["low", "medium", "high"] as const).map((level) => (
-                  <label key={level} className="flex cursor-pointer items-center gap-1.5 text-sm text-ink">
+                  <label key={level} className="flex min-h-9 cursor-pointer items-center gap-2 text-sm text-ink pointer-coarse:min-h-11">
                     <input
                       type="checkbox"
-                      className="size-4 cursor-pointer accent-primary"
+                      className="size-[18px] cursor-pointer accent-primary"
                       checked={risk.includes(level)}
                       onChange={(e) => setRisk((prev) => (e.target.checked ? [...prev, level] : prev.filter((r) => r !== level)))}
                     />
@@ -465,11 +539,8 @@ export function RuleEditorDialog({
               </div>
             </fieldset>
           </div>
-          <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm text-ink">
-            <input type="checkbox" className="mt-0.5 size-4 cursor-pointer accent-primary" checked={stopOnChange} onChange={(e) => setStopOnChange(e.target.checked)} />
-            {t.stopOnChange}
-          </label>
-        </div>
+          <SwitchRow className="mt-4" checked={stopOnChange} onChange={setStopOnChange} label={t.stopOnChange} />
+        </FilterGroup>
       </form>
     </Modal>
   );
@@ -552,14 +623,14 @@ function StepFields({
                     aria-label={fmt(t.removeVariable, { n: p + 1 })}
                     onClick={() => onChange({ params: step.params.filter((_, i) => i !== p) })}
                   >
-                    <Trash2 className="size-4" aria-hidden />
+                    <IconDelete className="size-4" aria-hidden />
                   </Button>
                 </div>
               ))}
             </div>
             {step.params.length < 20 && (
               <Button type="button" size="sm" variant="ghost" className="mt-1" onClick={() => onChange({ params: [...step.params, ""] })}>
-                <Plus className="size-4" aria-hidden />
+                <IconPlus className="size-4" aria-hidden />
                 {t.addVariable}
               </Button>
             )}
@@ -602,6 +673,9 @@ function StepFields({
           {({ id }) => <Textarea id={id} dir="auto" maxLength={500} value={step.message} onFocus={focus("message")} onChange={(e) => onChange({ message: e.target.value })} />}
         </Field>
       );
+    // A message to one of the store's Telegram / Slack / Discord channels (handoff 378).
+    case "notify_channel":
+      return <NotifyChannelFields teamChannelId={step.teamChannelId} message={step.message} onChange={onChange} onMessageFocus={focus("message")} />;
     default:
       return null;
   }

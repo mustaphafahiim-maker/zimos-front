@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Button, Card, CardContent } from "@store-builder/ui";
+import { Button } from "@store-builder/ui";
+import { IconEdit, IconDelete, IconPlus } from "@/components/icons";
 import type { Offer, Variant } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -12,13 +13,16 @@ import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useCatalogLabels } from "../catalogLabels";
 import { OfferForm } from "./OfferForm";
+import { ProductPageCard } from "./ProductPageCard";
 
 const STRINGS = {
   en: {
-    title: "Offers",
-    description: "Priced bundles of one or more variants.",
-    create: "Create offer",
-    empty: "No offers yet.",
+    title: "Bundles",
+    description: "Priced bundles of one or more variants: “2 for 400”, “buy 3, pay less”.",
+    create: "Add a bundle",
+    empty: "No bundles yet. A bundle sells several pieces at one price.",
+    editName: "Edit “{name}”",
+    deleteName: "Archive “{name}”",
     computedPrice: "Computed price",
     variantFallback: "Variant {id}",
     archivedWithProduct: "Archived with product",
@@ -36,10 +40,12 @@ const STRINGS = {
     savedToast: "Offer saved.",
   },
   ar: {
-    title: "العروض",
-    description: "باقات بسعر محدد من متغير واحد أو أكثر.",
-    create: "إنشاء عرض",
-    empty: "مفيش عروض لسه.",
+    title: "الباقات",
+    description: "باقات بسعر واحد من متغير أو أكتر: «قطعتين بـ٤٠٠»، «اشتري ٣ وادفع أقل».",
+    create: "ضيف باقة",
+    empty: "مفيش باقات لسه. الباقة بتبيع كذا قطعة بسعر واحد.",
+    editName: "عدّل «{name}»",
+    deleteName: "أرشف «{name}»",
     computedPrice: "سعر محسوب",
     variantFallback: "متغير {id}",
     archivedWithProduct: "مؤرشف مع المنتج",
@@ -57,6 +63,9 @@ const STRINGS = {
     savedToast: "تم حفظ العرض.",
   },
 } satisfies Messages;
+
+const rowButton =
+  "inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-colors duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-paper-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none";
 
 interface Props {
   productId: string;
@@ -93,64 +102,52 @@ export function OffersSection({ productId, offers, variants, onChanged }: Props)
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-            <p className="text-sm text-ink-soft">{t.description}</p>
-          </div>
-          <Button size="sm" onClick={() => setAdding(true)}>
-            {t.create}
-          </Button>
-        </div>
-
-        {offers.length === 0 ? (
-          <p className="rounded-[0.5rem] border border-dashed border-line px-4 py-6 text-center text-sm text-ink-soft">
-            {t.empty}
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {offers.map((offer) => (
-              <li
-                key={offer.id}
-                className="flex flex-wrap items-start justify-between gap-3 rounded-[0.5rem] border border-line px-4 py-3"
+    <ProductPageCard
+      title={t.title}
+      description={t.description}
+      actions={
+        <Button type="button" variant="outline" className="min-h-11 md:min-h-9" onClick={() => setAdding(true)}>
+          <IconPlus className="size-4" weight="bold" aria-hidden />
+          {t.create}
+        </Button>
+      }
+    >
+      {offers.length === 0 ? (
+        <p className="rounded-[var(--radius)] border border-dashed border-line px-4 py-6 text-center text-sm text-ink-soft">{t.empty}</p>
+      ) : (
+        <ul className="divide-y divide-line rounded-[var(--radius)] ring-1 ring-line">
+          {offers.map((offer) => (
+            <li key={offer.id} className="flex items-center gap-2 py-2 ps-3.5 pe-1.5">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <bdi className="min-w-0 truncate text-sm font-medium text-ink">{offer.name}</bdi>
+                  {offer.isDefault && <StatusBadge value="default" tone="info" text={labels.defaultOffer} />}
+                  <StatusBadge value={offer.status} text={offer.archivedWithProduct ? t.archivedWithProduct : labels.status(offer.status)} />
+                </div>
+                <p className="mt-0.5 text-[13px] leading-5 text-ink-soft">
+                  <span className="font-medium whitespace-nowrap text-ink tabular-nums">
+                    {offer.pricingMode === "fixed" ? formatMoney(offer.priceAmount, offer.currency) : t.computedPrice}
+                  </span>
+                  {" · "}
+                  {offer.lines.map((l) => `${l.quantity}× ${variantName(l.variantId)}`).join(", ")}
+                </p>
+              </div>
+              <button type="button" className={rowButton} aria-label={fmt(t.editName, { name: offer.name })} title={t.edit} onClick={() => setEditing(offer)}>
+                <IconEdit className="size-[18px]" aria-hidden />
+              </button>
+              <button
+                type="button"
+                className={`${rowButton} hover:bg-danger-soft hover:text-danger`}
+                aria-label={fmt(t.deleteName, { name: offer.name })}
+                title={t.delete}
+                onClick={() => setDeleting(offer)}
               >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-ink">{offer.name}</span>
-                    {offer.isDefault && <StatusBadge value="default" tone="info" text={labels.defaultOffer} />}
-                    <StatusBadge
-                      value={offer.status}
-                      text={offer.archivedWithProduct ? t.archivedWithProduct : labels.status(offer.status)}
-                    />
-                  </div>
-                  <div className="mt-1 text-sm text-ink-soft">
-                    {offer.pricingMode === "fixed"
-                      ? formatMoney(offer.priceAmount, offer.currency)
-                      : t.computedPrice}
-                    {" · "}
-                    {offer.lines.map((l) => `${l.quantity}× ${variantName(l.variantId)}`).join(", ")}
-                  </div>
-                </div>
-                <div className="whitespace-nowrap">
-                  <Button size="sm" variant="ghost" onClick={() => setEditing(offer)}>
-                    {t.edit}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-danger hover:bg-danger-soft"
-                    onClick={() => setDeleting(offer)}
-                  >
-                    {t.delete}
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
+                <IconDelete className="size-[18px]" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <Modal open={adding} onClose={() => setAdding(false)} title={t.createTitle}>
         <OfferForm
@@ -192,6 +189,6 @@ export function OffersSection({ productId, offers, variants, onChanged }: Props)
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
       />
-    </Card>
+    </ProductPageCard>
   );
 }

@@ -1,7 +1,8 @@
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
 import { Link } from "react-router-dom";
-import { Alert, Button, Input, cn } from "@store-builder/ui";
-import { Info, X } from "lucide-react";
+import { Button, Input, cn } from "@store-builder/ui";
+import { IconClose, IconGlobe, IconInfo, IconText } from "@/components/icons";
 import {
   COOKIE_CONSENT_LIMITS,
   COOKIE_CONSENT_LOCALES,
@@ -21,12 +22,16 @@ import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { AccordionSection } from "@/components/Accordion";
 import { DataState } from "@/components/DataState";
 import { Field } from "@/components/Field";
-import { Section } from "@/components/Section";
+import { SaveBar } from "@/components/SaveBar";
+import { Segmented } from "@/components/Segmented";
 import { Select } from "@/components/Select";
+import { SettingsGroup, SettingsRow } from "@/components/settings";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
+import { GroupBlock, STACK, SettingsSkeleton, TOUCH_FIELDS } from "./sections/parts";
 
 const STRINGS = {
   en: {
@@ -45,6 +50,9 @@ const STRINGS = {
     countries: "Ask only visitors from",
     countriesHint: "Leave it empty to ask everyone. A visitor whose country we can't tell is asked too.",
     everyone: "Everyone is asked.",
+    countriesCount: "{n} countries",
+    wordingDefault: "The store's own wording",
+    wordingCustom: "Your wording: {languages}",
     addCountry: "Add a country",
     addEurope: "Add European countries",
     removeAll: "Remove all",
@@ -90,6 +98,9 @@ const STRINGS = {
     countries: "اسأل بس الزوار من",
     countriesHint: "سيبها فاضية عشان تسأل كل الزوار. الزائر اللي مش عارفين هو منين بيتسأل برضه.",
     everyone: "كل الزوار بيتسألوا.",
+    countriesCount: "{n} بلد",
+    wordingDefault: "الكلام الجاهز بتاع المتجر",
+    wordingCustom: "كلامك انت: {languages}",
     addCountry: "ضيف بلد",
     addEurope: "ضيف دول أوروبا",
     removeAll: "شيل الكل",
@@ -232,6 +243,7 @@ export function PrivacyTab() {
   }, [loaded.data]);
 
   const dirty = loaded.data ? JSON.stringify(toBody(draft)) !== JSON.stringify(toBody(toDraft(loaded.data))) : false;
+  useReportDirty(dirty);
   const hasPrivacyPolicy = !!resolveLegal((currentWorkspace?.settings as Record<string, unknown> | undefined)?.legal).privacy_policy.trim();
 
   const sortedCountries = useMemo(() => {
@@ -269,51 +281,117 @@ export function PrivacyTab() {
   const words = draft.texts[lang];
   const defaults = STORE_DEFAULTS[lang];
   const optIn = draft.mode === "opt_in";
+  // The languages the merchant wrote something of their own in: the folded row names them.
+  const customLanguages = COOKIE_CONSENT_LOCALES.filter((l) => Object.values(draft.texts[l]).some((text) => text.trim() !== ""));
 
   return (
-    <Section title={t.title} description={t.description}>
-      <DataState loading={loaded.loading && !loaded.data} error={loaded.error} onRetry={() => void loaded.refresh()}>
-        <form onSubmit={(e) => void save(e)} noValidate className="space-y-6">
-          <fieldset className="space-y-2">
-            <legend id={ids.mode} className="mb-2 text-sm font-semibold text-ink">
-              {t.modeLegend}
-            </legend>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {MODES.map((mode) => (
-                <label
-                  key={mode}
-                  className={cn(
-                    "flex min-h-11 cursor-pointer gap-3 rounded-[var(--radius)] border p-3 text-sm transition-colors",
-                    "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary",
-                    draft.mode === mode ? "border-primary bg-primary-soft" : "border-line-strong/40 hover:border-primary/50"
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name="cookie-consent-mode"
-                    value={mode}
-                    checked={draft.mode === mode}
-                    onChange={() => setDraft((prev) => ({ ...prev, mode }))}
-                    className="mt-0.5 size-4 shrink-0 accent-primary"
-                  />
-                  <span className="min-w-0">
-                    <span className="block font-medium text-ink">{t[mode]}</span>
-                    <span className="mt-0.5 block text-xs text-ink-soft">{t[`${mode}Hint`]}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-            {optIn && (
-              <p className="flex items-start gap-2 rounded-[var(--radius)] bg-primary-soft px-3 py-2.5 text-sm text-primary-dark">
-                <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+    <DataState loading={loaded.loading && !loaded.data} error={loaded.error} onRetry={() => void loaded.refresh()} skeleton={<SettingsSkeleton />}>
+      <form onSubmit={(e) => void save(e)} noValidate className={STACK}>
+        <SettingsGroup title={t.modeLegend} description={t.description}>
+          <GroupBlock>
+            <fieldset disabled={busy}>
+              <legend id={ids.mode} className="sr-only">
+                {t.modeLegend}
+              </legend>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {MODES.map((mode) => (
+                  <label
+                    key={mode}
+                    className={cn(
+                      "flex min-h-11 cursor-pointer gap-3 rounded-[1rem] border p-3 text-sm transition-colors motion-reduce:transition-none",
+                      "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary",
+                      draft.mode === mode ? "border-primary bg-primary-soft/60" : "border-line hover:border-line-strong"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="cookie-consent-mode"
+                      value={mode}
+                      checked={draft.mode === mode}
+                      onChange={() => setDraft((prev) => ({ ...prev, mode }))}
+                      className="mt-0.5 size-4 shrink-0 accent-primary"
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-medium text-ink">{t[mode]}</span>
+                      <span className="mt-0.5 block text-[13px] leading-5 text-ink-soft">{t[`${mode}Hint`]}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          </GroupBlock>
+          {optIn && (
+            <GroupBlock>
+              <p className="flex items-start gap-2 text-sm text-primary-dark dark:text-primary">
+                <IconInfo className="mt-0.5 size-4 shrink-0" aria-hidden />
                 {t.optInNote}
               </p>
-            )}
-          </fieldset>
+            </GroupBlock>
+          )}
 
-          {optIn && (
-            <div role="group" aria-labelledby={ids.countries} aria-describedby={ids.countriesHint} className="space-y-2">
-              <p id={ids.countries} className="text-sm font-semibold text-ink">
+          {draft.mode !== "off" && (
+            <SettingsRow
+              label={t.policy}
+              hint={t.policyHint}
+              htmlFor="cookie-policy-url"
+              error={policyError ?? undefined}
+              stacked
+              control={
+                <>
+                  <Input
+                    id="cookie-policy-url"
+                    dir="ltr"
+                    inputMode="url"
+                    autoComplete="off"
+                    maxLength={2000}
+                    placeholder={`${PRIVACY_PAGE}  ·  https://`}
+                    value={draft.policyUrl}
+                    aria-invalid={policyError ? true : undefined}
+                    onChange={(e) => {
+                      setPolicyError(null);
+                      setDraft((prev) => ({ ...prev, policyUrl: e.target.value }));
+                    }}
+                    className={cn("min-h-11 text-start", policyError && "border-danger")}
+                  />
+                  {hasPrivacyPolicy ? (
+                    draft.policyUrl.trim() !== PRIVACY_PAGE && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-11 self-start rounded-full px-4"
+                        onClick={() => {
+                          setPolicyError(null);
+                          setDraft((prev) => ({ ...prev, policyUrl: PRIVACY_PAGE }));
+                        }}
+                      >
+                        {t.usePolicy}
+                      </Button>
+                    )
+                  ) : (
+                    <Link
+                      to="/store-settings/policies"
+                      className="inline-flex min-h-11 items-center self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      {t.writePolicy}
+                    </Link>
+                  )}
+                </>
+              }
+            />
+          )}
+        </SettingsGroup>
+
+        {/* Who is asked: only matters for "ask first", and most stores leave it on everyone — folded. */}
+        {optIn && (
+          <AccordionSection
+            title={t.countries}
+            icon={IconGlobe}
+            summary={draft.countries.length === 0 ? t.everyone : fmt(t.countriesCount, { n: draft.countries.length })}
+            persistKey="store-settings:privacy:countries"
+            keepMounted
+          >
+            <div role="group" aria-labelledby={ids.countries} aria-describedby={ids.countriesHint} className="space-y-3">
+              <p id={ids.countries} className="sr-only">
                 {t.countries}
               </p>
               {draft.countries.length > 0 ? (
@@ -321,16 +399,17 @@ export function PrivacyTab() {
                   {draft.countries.map((code) => (
                     <li
                       key={code}
-                      className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary-soft py-0.5 ps-2.5 pe-1 text-sm text-primary-dark dark:text-primary"
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary-soft py-0.5 ps-3 pe-0.5 text-sm text-primary-dark dark:text-primary"
                     >
                       {countryName(code)}
                       <button
                         type="button"
                         onClick={() => setCountries(draft.countries.filter((c) => c !== code))}
                         aria-label={fmt(t.removeCountry, { name: countryName(code) })}
-                        className="inline-flex size-7 cursor-pointer items-center justify-center rounded-full hover:bg-paper-raised focus-visible:outline-2 focus-visible:outline-primary"
+                        // 32px to the eye, 44px to the thumb.
+                        className="relative inline-flex size-8 cursor-pointer items-center justify-center rounded-full before:absolute before:-inset-1.5 before:content-[''] hover:bg-paper-raised focus-visible:outline-2 focus-visible:outline-primary"
                       >
-                        <X className="size-3.5" aria-hidden />
+                        <IconClose className="size-3.5" aria-hidden />
                       </button>
                     </li>
                   ))}
@@ -342,7 +421,7 @@ export function PrivacyTab() {
                 <Select
                   aria-label={t.addCountry}
                   value=""
-                  className="h-11 sm:max-w-xs"
+                  className="min-h-11 text-base sm:max-w-xs sm:text-sm"
                   disabled={draft.countries.length >= COOKIE_CONSENT_LIMITS.countries}
                   onChange={(e) => {
                     const code = e.target.value;
@@ -369,191 +448,149 @@ export function PrivacyTab() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="min-h-11"
+                    className="min-h-11 rounded-full px-4"
                     disabled={EUROPE.every((c) => draft.countries.includes(c))}
                     onClick={() => setCountries([...draft.countries, ...EUROPE.filter((c) => !draft.countries.includes(c))])}
                   >
                     {t.addEurope}
                   </Button>
                   {draft.countries.length > 1 && (
-                    <Button type="button" variant="ghost" className="min-h-11" onClick={() => setCountries([])}>
+                    <Button type="button" variant="ghost" className="min-h-11 rounded-full px-4" onClick={() => setCountries([])}>
                       {t.removeAll}
                     </Button>
                   )}
                 </div>
               </div>
-              <p id={ids.countriesHint} className="text-xs text-ink-soft">
+              <p id={ids.countriesHint} className="text-[13px] leading-5 text-ink-soft">
                 {t.countriesHint}
               </p>
             </div>
-          )}
+          </AccordionSection>
+        )}
 
-          {draft.mode !== "off" && (
-            <>
-              <div className="space-y-1.5">
-                <label htmlFor="cookie-policy-url" className="block text-sm font-semibold text-ink">
-                  {t.policy}
-                </label>
-                <Input
-                  id="cookie-policy-url"
-                  dir="ltr"
-                  inputMode="url"
-                  autoComplete="off"
-                  maxLength={2000}
-                  placeholder={`${PRIVACY_PAGE}  ·  https://`}
-                  value={draft.policyUrl}
-                  aria-invalid={policyError ? true : undefined}
-                  aria-describedby="cookie-policy-hint"
-                  onChange={(e) => {
-                    setPolicyError(null);
-                    setDraft((prev) => ({ ...prev, policyUrl: e.target.value }));
-                  }}
-                  className={cn("h-11 text-start", policyError && "border-danger")}
+        {/* The wording per language, with the banner as the shopper gets it. Kept mounted: a fold never drops what was typed. */}
+        {draft.mode !== "off" && (
+          <AccordionSection
+            title={t.wording}
+            icon={IconText}
+            summary={customLanguages.length === 0 ? t.wordingDefault : fmt(t.wordingCustom, { languages: customLanguages.map((l) => t[l]).join(" · ") })}
+            defaultOpen
+            persistKey="store-settings:privacy:wording"
+            keepMounted
+          >
+            <fieldset className={`space-y-3 ${TOUCH_FIELDS}`}>
+              <legend className="sr-only">{t.wording}</legend>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="min-w-0 flex-1 basis-48 text-[13px] leading-5 text-ink-soft">{t.wordingHint}</p>
+                <Segmented
+                  label={t.language}
+                  size="sm"
+                  value={lang}
+                  onChange={setLang}
+                  options={COOKIE_CONSENT_LOCALES.map((l) => ({ value: l, label: t[l] }))}
                 />
-                <p id="cookie-policy-hint" className={cn("text-xs", policyError ? "font-medium text-danger" : "text-ink-soft")}>
-                  {policyError ?? t.policyHint}
-                </p>
-                {hasPrivacyPolicy ? (
-                  draft.policyUrl.trim() !== PRIVACY_PAGE && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="min-h-11"
-                      onClick={() => {
-                        setPolicyError(null);
-                        setDraft((prev) => ({ ...prev, policyUrl: PRIVACY_PAGE }));
-                      }}
-                    >
-                      {t.usePolicy}
-                    </Button>
-                  )
-                ) : (
-                  <Link
-                    to="/store-settings/policies"
-                    className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
-                  >
-                    {t.writePolicy}
-                  </Link>
-                )}
               </div>
 
-              <fieldset className="space-y-3 rounded-[var(--radius)] bg-paper-sunken p-3">
-                <legend className="sr-only">{t.wording}</legend>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-ink" aria-hidden>
-                      {t.wording}
-                    </p>
-                    <p className="text-xs text-ink-soft">{t.wordingHint}</p>
-                  </div>
-                  <div role="radiogroup" aria-label={t.language} className="flex gap-1 rounded-full bg-paper-raised p-1 ring-1 ring-line">
-                    {COOKIE_CONSENT_LOCALES.map((l) => (
-                      <label
-                        key={l}
-                        className={cn(
-                          "inline-flex min-h-11 cursor-pointer items-center rounded-full px-3 text-sm transition-colors",
-                          "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary",
-                          lang === l ? "bg-primary-soft font-semibold text-primary-dark dark:text-primary" : "text-ink-soft hover:text-ink"
-                        )}
-                      >
-                        <input type="radio" name="cookie-consent-lang" className="sr-only" checked={lang === l} onChange={() => setLang(l)} />
-                        {t[l]}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <Field label={t.message} hint={fmt(t.count, { n: words.message.length, max: COOKIE_CONSENT_LIMITS.message })}>
+              <Field label={t.message} hint={fmt(t.count, { n: words.message.length, max: COOKIE_CONSENT_LIMITS.message })}>
+                {({ id }) => (
+                  <Textarea
+                    id={id}
+                    lang={lang}
+                    dir={lang === "ar" ? "rtl" : "ltr"}
+                    rows={3}
+                    maxLength={COOKIE_CONSENT_LIMITS.message}
+                    placeholder={defaults.message}
+                    value={words.message}
+                    onChange={(e) => setText("message", e.target.value)}
+                  />
+                )}
+              </Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label={optIn ? t.acceptButton : t.okButton}>
                   {({ id }) => (
-                    <Textarea
+                    <Input
                       id={id}
                       lang={lang}
                       dir={lang === "ar" ? "rtl" : "ltr"}
-                      rows={3}
-                      maxLength={COOKIE_CONSENT_LIMITS.message}
-                      placeholder={defaults.message}
-                      value={words.message}
-                      onChange={(e) => setText("message", e.target.value)}
+                      maxLength={COOKIE_CONSENT_LIMITS.button}
+                      placeholder={optIn ? defaults.accept : defaults.ok}
+                      value={words.accept}
+                      onChange={(e) => setText("accept", e.target.value)}
                     />
                   )}
                 </Field>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label={optIn ? t.acceptButton : t.okButton}>
+                {optIn && (
+                  <Field label={t.rejectButton}>
                     {({ id }) => (
                       <Input
                         id={id}
                         lang={lang}
                         dir={lang === "ar" ? "rtl" : "ltr"}
-                        className="h-11"
                         maxLength={COOKIE_CONSENT_LIMITS.button}
-                        placeholder={optIn ? defaults.accept : defaults.ok}
-                        value={words.accept}
-                        onChange={(e) => setText("accept", e.target.value)}
+                        placeholder={defaults.reject}
+                        value={words.reject}
+                        onChange={(e) => setText("reject", e.target.value)}
                       />
                     )}
                   </Field>
-                  {optIn && (
-                    <Field label={t.rejectButton}>
-                      {({ id }) => (
-                        <Input
-                          id={id}
-                          lang={lang}
-                          dir={lang === "ar" ? "rtl" : "ltr"}
-                          className="h-11"
-                          maxLength={COOKIE_CONSENT_LIMITS.button}
-                          placeholder={defaults.reject}
-                          value={words.reject}
-                          onChange={(e) => setText("reject", e.target.value)}
-                        />
-                      )}
-                    </Field>
-                  )}
-                </div>
+                )}
+              </div>
 
-                {/* The banner as the shopper gets it, in the language being edited. */}
-                <figure aria-labelledby={ids.preview} className="space-y-1.5">
-                  <figcaption id={ids.preview} className="text-xs text-ink-soft">
-                    {t.preview} · {t.previewHint}
-                  </figcaption>
-                  <div
-                    lang={lang}
-                    dir={lang === "ar" ? "rtl" : "ltr"}
-                    className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-paper-raised p-4 shadow-[var(--shadow-card)] ring-1 ring-line sm:flex-row sm:items-center"
-                  >
-                    <p className="min-w-0 flex-1 text-sm text-ink">
-                      {words.message.trim() || defaults.message}
-                      {draft.policyUrl.trim() && (
-                        <>
-                          {" "}
-                          <span className="font-medium text-primary underline underline-offset-2">{defaults.policy}</span>
-                        </>
-                      )}
-                    </p>
-                    <div className="flex shrink-0 gap-2" aria-hidden>
-                      {optIn && (
-                        <span className="inline-flex min-h-10 flex-1 items-center justify-center rounded-[var(--radius)] bg-primary px-4 text-sm font-semibold text-primary-foreground sm:flex-none">
-                          {words.reject.trim() || defaults.reject}
-                        </span>
-                      )}
+              {/* The banner as the shopper gets it, in the language being edited. */}
+              <figure aria-labelledby={ids.preview} className="space-y-1.5">
+                <figcaption id={ids.preview} className="text-xs text-ink-soft">
+                  {t.preview} · {t.previewHint}
+                </figcaption>
+                <div
+                  lang={lang}
+                  dir={lang === "ar" ? "rtl" : "ltr"}
+                  className="flex flex-col gap-3 rounded-[var(--radius-card)] bg-paper-raised p-4 shadow-[var(--shadow-card)] ring-1 ring-line sm:flex-row sm:items-center"
+                >
+                  <p className="min-w-0 flex-1 text-sm text-ink">
+                    {words.message.trim() || defaults.message}
+                    {draft.policyUrl.trim() && (
+                      <>
+                        {" "}
+                        <span className="font-medium text-primary underline underline-offset-2">{defaults.policy}</span>
+                      </>
+                    )}
+                  </p>
+                  <div className="flex shrink-0 gap-2" aria-hidden>
+                    {optIn && (
                       <span className="inline-flex min-h-10 flex-1 items-center justify-center rounded-[var(--radius)] bg-primary px-4 text-sm font-semibold text-primary-foreground sm:flex-none">
-                        {words.accept.trim() || (optIn ? defaults.accept : defaults.ok)}
+                        {words.reject.trim() || defaults.reject}
                       </span>
-                    </div>
+                    )}
+                    <span className="inline-flex min-h-10 flex-1 items-center justify-center rounded-[var(--radius)] bg-primary px-4 text-sm font-semibold text-primary-foreground sm:flex-none">
+                      {words.accept.trim() || (optIn ? defaults.accept : defaults.ok)}
+                    </span>
                   </div>
-                </figure>
-              </fieldset>
-            </>
-          )}
+                </div>
+              </figure>
+            </fieldset>
+          </AccordionSection>
+        )}
 
-          {error && <Alert variant="danger">{error}</Alert>}
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            {dirty && <p className="text-xs text-ink-soft">{t.unsaved}</p>}
-            <Button type="submit" className="min-h-11" disabled={busy || !dirty}>
-              {busy ? t.saving : t.save}
-            </Button>
-          </div>
-        </form>
-      </DataState>
-    </Section>
+        {/* No onSave: inside the form the bar's button submits it, through the link check above. */}
+        <SaveBar
+          dirty={dirty}
+          saving={busy}
+          onDiscard={() => {
+            if (loaded.data) setDraft(toDraft(loaded.data));
+            setPolicyError(null);
+            setError(null);
+          }}
+          saveLabel={t.save}
+          savingLabel={t.saving}
+          message={
+            error ? (
+              <span role="alert" className="text-danger">
+                {error}
+              </span>
+            ) : undefined
+          }
+        />
+      </form>
+    </DataState>
   );
 }

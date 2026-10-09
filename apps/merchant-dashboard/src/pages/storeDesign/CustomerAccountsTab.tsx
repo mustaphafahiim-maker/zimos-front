@@ -1,6 +1,6 @@
-import { useEffect, useId, useState } from "react";
-import { Alert, Button } from "@store-builder/ui";
-import { Info } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { IconInfo } from "@/components/icons";
 import {
   shopperAccountsGet,
   shopperAccountsSave,
@@ -13,8 +13,10 @@ import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
-import { Section } from "@/components/Section";
+import { SaveBar } from "@/components/SaveBar";
+import { SettingsGroup, SettingsSwitch } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+import { STACK, SettingsSkeleton } from "./sections/parts";
 
 const STRINGS = {
   en: {
@@ -77,20 +79,18 @@ export function CustomerAccountsTab() {
   const [draft, setDraft] = useState<ShopperAccountsSettings>(DEFAULTS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const hintId = useId();
-  const channelsHintId = useId();
-  const channelsTitleId = useId();
 
   useEffect(() => {
     if (loaded.data) setDraft(loaded.data);
   }, [loaded.data]);
 
   const dirty = loaded.data ? !same(draft, loaded.data) : false;
+  useReportDirty(dirty);
 
   function toggleChannel(channel: ShopperChannel, on: boolean) {
     setDraft((prev) => {
       const next = on ? [...prev.channels, channel] : prev.channels.filter((c) => c !== channel);
-      // The API needs at least one; the last one stays ticked.
+      // The API needs at least one; the last one stays on.
       return next.length ? { ...prev, channels: CHANNELS.filter((c) => next.includes(c)) } : prev;
     });
   }
@@ -110,73 +110,65 @@ export function CustomerAccountsTab() {
   }
 
   return (
-    <Section title={t.title} description={t.description}>
-      <DataState loading={loaded.loading && !loaded.data} error={loaded.error} onRetry={() => void loaded.refresh()}>
-        <div className="space-y-5">
-          <div className="space-y-1">
-            <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium text-ink">
-              <input
-                type="checkbox"
-                role="switch"
-                className="size-5 shrink-0 cursor-pointer accent-primary"
-                checked={draft.enabled}
-                aria-describedby={hintId}
-                onChange={(e) => setDraft((prev) => ({ ...prev, enabled: e.target.checked }))}
-              />
-              {t.enabled}
-            </label>
-            <p id={hintId} className="text-xs text-ink-soft">
-              {t.enabledHint}
-            </p>
-          </div>
+    <DataState loading={loaded.loading && !loaded.data} error={loaded.error} onRetry={() => void loaded.refresh()} skeleton={<SettingsSkeleton />}>
+      {/* Its own column: the save bar stays with this form, apart from the Google part under it. */}
+      <div className={STACK}>
+        <SettingsGroup description={t.description}>
+          <SettingsSwitch
+            label={t.enabled}
+            hint={t.enabledHint}
+            checked={draft.enabled}
+            disabled={busy}
+            onChange={(enabled) => setDraft((prev) => ({ ...prev, enabled }))}
+          />
+        </SettingsGroup>
 
-          <div role="group" aria-labelledby={channelsTitleId} aria-describedby={channelsHintId} className="space-y-1 rounded-[var(--radius)] bg-paper-sunken p-3">
-            <p id={channelsTitleId} className="text-sm font-semibold text-ink">
-              {t.channels}
-            </p>
-            {CHANNELS.map((channel) => {
-              const checked = draft.channels.includes(channel);
-              const last = checked && draft.channels.length === 1;
-              return (
-                <div key={channel}>
-                  <label className="flex min-h-11 cursor-pointer items-center gap-3 py-1 text-sm text-ink">
-                    <input
-                      type="checkbox"
-                      className="size-5 shrink-0 cursor-pointer accent-primary disabled:cursor-default"
-                      checked={checked}
-                      // The only ticked one stays: the API needs one way to sign in.
-                      aria-disabled={last || undefined}
-                      onChange={(e) => toggleChannel(channel, e.target.checked)}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-medium">{channel === "sms" ? t.sms : t.email}</span>
-                      <span className="block text-xs text-ink-soft">{channel === "sms" ? t.smsHint : t.emailHint}</span>
-                    </span>
-                  </label>
-                </div>
-              );
-            })}
-            <p id={channelsHintId} className="text-xs text-ink-soft">
-              {t.atLeastOne}
-            </p>
-          </div>
+        <SettingsGroup
+          title={t.channels}
+          footer={
+            <>
+              <span className="block">{t.atLeastOne}</span>
+              {draft.channels.includes("sms") && (
+                <span className="mt-1 flex items-start gap-1.5">
+                  <IconInfo className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  {t.smsNote}
+                </span>
+              )}
+            </>
+          }
+        >
+          {CHANNELS.map((channel) => (
+            <SettingsSwitch
+              key={channel}
+              label={channel === "sms" ? t.sms : t.email}
+              hint={channel === "sms" ? t.smsHint : t.emailHint}
+              checked={draft.channels.includes(channel)}
+              disabled={busy}
+              // The only one that is on stays on (toggleChannel refuses): the API needs one way to sign in.
+              onChange={(on) => toggleChannel(channel, on)}
+            />
+          ))}
+        </SettingsGroup>
 
-          {draft.channels.includes("sms") && (
-            <p className="flex items-start gap-2 rounded-[var(--radius)] bg-primary-soft px-3 py-2.5 text-sm text-primary-dark">
-              <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
-              {t.smsNote}
-            </p>
-          )}
-
-          {error && <Alert variant="danger">{error}</Alert>}
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            {dirty && <p className="text-xs text-ink-soft">{t.unsaved}</p>}
-            <Button type="button" className="min-h-11" disabled={busy || !dirty} onClick={() => void save()}>
-              {busy ? t.saving : t.save}
-            </Button>
-          </div>
-        </div>
-      </DataState>
-    </Section>
+        <SaveBar
+          dirty={dirty}
+          saving={busy}
+          onSave={() => void save()}
+          onDiscard={() => {
+            if (loaded.data) setDraft(loaded.data);
+            setError(null);
+          }}
+          saveLabel={t.save}
+          savingLabel={t.saving}
+          message={
+            error ? (
+              <span role="alert" className="text-danger">
+                {error}
+              </span>
+            ) : undefined
+          }
+        />
+      </div>
+    </DataState>
   );
 }

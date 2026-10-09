@@ -4,6 +4,7 @@ import { Alert, Button, Table, TableBody, TableHeader, TableRow } from "@store-b
 import { ApiError, adminSupportView, type AdminSupportView } from "@store-builder/api-client";
 import { DetailRow } from "@/components/Drawer";
 import { Mono, Panel, Td, Th } from "@/components/Panel";
+import { DomainNotes } from "@/components/supportViewDomainNotes";
 import { Status, humanize } from "@/components/StatusBadge";
 import { TextField } from "@/components/forms";
 import { useAuth } from "@/context/AuthContext";
@@ -111,6 +112,7 @@ function SupportViewBody({ data }: { data: AdminSupportView }) {
             {domains.map((d) => (
               <DetailRow key={d.hostname} label={d.isPrimary ? "Primary" : "Domain"}>
                 <Mono>{d.hostname}</Mono> <Status value={d.status} /> <span className="text-xs text-ink-soft">SSL {d.sslStatus}</span>
+                <DomainNotes domain={d} />
               </DetailRow>
             ))}
           </dl>

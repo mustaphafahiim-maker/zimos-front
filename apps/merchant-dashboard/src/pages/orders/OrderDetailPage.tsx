@@ -1,203 +1,182 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
-import { ChevronDown } from "lucide-react";
-import { Button, cn } from "@store-builder/ui";
-import { OrderDigitalSection } from "@/pages/digital/OrderDigitalSection";
+import type { Order } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
+import { useCachedAsync } from "@/lib/useCachedAsync";
+import { refreshWorkCounts } from "@/lib/workCounts";
 import { formatDateTime } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
-import { PageHeader } from "@/components/PageHeader";
+import { PageActionBar, PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
-import { StatusBadge } from "@/components/StatusBadge";
-import { OrderSummary } from "./components/OrderSummary";
+import type { ConfirmationPanelHandle } from "./components/ConfirmationPanel";
+import { OrderFulfilmentPlan } from "./components/OrderFulfilmentPlan";
 import { OrderHero } from "./components/OrderHero";
-import { OrderActions } from "./components/OrderActions";
-import { WhatsappConfirmButton } from "./components/WhatsappConfirmButton";
-import { OrderDiscountsCard } from "./components/OrderDiscountsCard";
-import { ResendToWebhookButton } from "@/pages/settings/WebhookExtras";
-import { ConfirmationPanel } from "./components/ConfirmationPanel";
-import { ShipmentsSection } from "./components/ShipmentsSection";
-import { OrderSupplierCard } from "./components/OrderSupplierCard";
-import { ReturnsSection } from "./components/ReturnsSection";
-import { PaymentsSection } from "./components/PaymentsSection";
-import { StatusChanger } from "./components/StatusChanger";
-import { OrderTimelineSection } from "./components/OrderTimelineSection";
-import { OrderNotesCard } from "./components/OrderNotesCard";
-import { EditItemsButton } from "./components/EditItemsDialog";
-import { FulfillButton } from "./components/FulfillAndRefundLines";
-import { OrderTagsCard } from "./components/OrderTagsCard";
-import { OrderMetaActions, OrderMetaBadges, OrderNeighborArrows, useMarkSeen } from "./components/OrderHeaderTools";
-import { STAGE_TONE, useOrderLabels } from "./orderLabels";
-import { OrderProtectionSection } from "@/pages/fraud/OrderProtectionSection";
-import { OrderAttributionSection } from "@/pages/marketing/OrderAttributionSection";
-import { CustomerHistoryBadge, OrderSessionCard, useLastActionText, useOrderSessionDetails } from "./components/OrderSessionDetails";
+import { RestockReturnedCard } from "./components/RestockReturnedCard";
+import { OrderNeighborArrows, useMarkSeen, useOrderNeighbors } from "./components/OrderHeaderTools";
+import { useOrderSessionDetails } from "./components/OrderSessionDetails";
+import { OrderMoreMenu } from "./detail/OrderMoreMenu";
+import { NextStepButton } from "./detail/OrderNextStep";
+import { OrderPageSkeleton } from "./detail/OrderPageSkeleton";
+import { OrderSections } from "./detail/OrderSections";
+import { OrderStageChip } from "./detail/OrderStageChip";
+import { useConfirmationGate } from "./detail/useConfirmationGate";
+import { useOrderNextStep } from "./detail/useOrderNextStep";
+import { useOrderPageActions } from "./detail/useOrderPageActions";
+import { useSectionOpen } from "./detail/useSectionOpen";
 
 const STRINGS = {
   en: {
     order: "Order",
     back: "Orders",
     placed: "Placed {date}",
-    confirmation: "Confirmation",
-    payment: "Payment",
-    moreTools: "More",
-    payOnDelivery: "Paid on delivery",
-    fulfillment: "Fulfillment",
   },
   ar: {
     order: "الأوردر",
     back: "الأوردرات",
     placed: "اتطلب {date}",
-    confirmation: "التأكيد",
-    payment: "الدفع",
-    moreTools: "أكتر",
-    payOnDelivery: "هيتدفع عند الاستلام",
-    fulfillment: "التنفيذ",
   },
 } satisfies Messages;
 
-export function OrderDetailPage() {
-  const { orderId } = useParams<{ orderId: string }>();
-  const workspaceId = useWorkspaceId();
-  const t = useT(STRINGS);
-  const labels = useOrderLabels();
-  const [toolsOpen, setToolsOpen] = useState(false);
+/** An order number is read left to right wherever it stands; the title is plain text, so the marks do what <bdi> would. */
+const isolate = (value: string) => `⁦${value}⁩`;
 
-  const order = useAsync(
-    () => apiClient.getOrder(workspaceId, orderId as string),
-    [workspaceId, orderId]
-  );
-  const data = order.data;
+/**
+ * One order (/orders/:orderId).
+ *
+ * What used to be twenty always-open cards is a hero, three open cards and
+ * folding sections (docs/ux/REDESIGN_PROMPT.md §6):
+ *
+ *   header   back · the order number · the stage chip (press it to move the
+ *            order in place, with Undo) · previous / next · «…» with every
+ *            other action                      detail/OrderStageChip, OrderMoreMenu
+ *   hero     who · how much · where · the next step as one button
+ *                                              components/OrderHero, detail/useOrderNextStep
+ *   below    holiday / pickup / delivery-time notes, then items, money and
+ *            notes open, and everything else folded with a one-line summary
+ *                                              detail/OrderSections
+ *
+ * This file loads the order and composes those. Each order gets a page of
+ * its own (the key), so nothing opened or typed on one follows the merchant
+ * to the next — and an order already seen in this session is on screen from
+ * the first frame (lib/useCachedAsync), refreshed behind.
+ */
+export function OrderDetailPage() {
+  const { orderId = "" } = useParams<{ orderId: string }>();
+  const workspaceId = useWorkspaceId();
+  return <OrderPage key={`${workspaceId}:${orderId}`} workspaceId={workspaceId} orderId={orderId} />;
+}
+
+function OrderPage({ workspaceId, orderId }: { workspaceId: string; orderId: string }) {
+  const t = useT(STRINGS);
+  const loaded = useCachedAsync(`order-page:${workspaceId}:${orderId}`, () => apiClient.getOrder(workspaceId, orderId), [workspaceId, orderId]);
+  const order = loaded.data;
   // Bumped on every reload: notes and seen do not move the order's updatedAt.
   const [refreshCount, setRefreshCount] = useState(0);
   const reload = () => {
     setRefreshCount((n) => n + 1);
-    return order.refresh({ silent: true });
+    return loaded.refresh({ silent: true });
   };
+
+  // Asked for beside the order (not after it), and shown in either state of the page.
+  const neighbors = useOrderNeighbors(orderId);
+  const arrows = <OrderNeighborArrows neighbors={neighbors} />;
+
+  if (!order || loaded.error) {
+    return (
+      <div className="max-w-6xl">
+        <PageHeader title={t.order} back={{ to: "/orders", label: t.back }} actions={arrows} />
+        {/* Not found, no permission and a dropped connection each get DataState's own pane. */}
+        <DataState loading={loaded.loading} error={loaded.error} onRetry={() => loaded.refresh()} skeleton={<OrderPageSkeleton />}>
+          {null}
+        </DataState>
+      </div>
+    );
+  }
+
+  return <LoadedOrder order={order} arrows={arrows} reload={reload} refreshCount={refreshCount} />;
+}
+
+function LoadedOrder({
+  order,
+  arrows,
+  reload,
+  refreshCount,
+}: {
+  order: Order;
+  arrows: ReactNode;
+  reload: () => Promise<void>;
+  refreshCount: number;
+}) {
+  const t = useT(STRINGS);
   // Opening the page is what "seen" means.
-  useMarkSeen(data, reload);
+  useMarkSeen(order, reload);
   // Session details, the customer's order count and the last action (SPEC §4.4).
-  const session = useOrderSessionDetails(data?.id, `${data?.updatedAt}:${refreshCount}`);
-  const lastAction = useLastActionText()(session.data?.lastAction);
+  const session = useOrderSessionDetails(order.id, `${order.updatedAt}:${refreshCount}`);
+
+  // Every dialog of the page's actions, mounted once; the header's menus and the hero open them.
+  const { actions, host } = useOrderPageActions(order, reload);
+  const gate = useConfirmationGate(order);
+  const sections = useSectionOpen(order, gate.open);
+  const confirmRef = useRef<ConfirmationPanelHandle>(null);
+  const nextStep = useOrderNextStep(order, {
+    gate,
+    confirm: () => confirmRef.current?.confirm() ?? Promise.resolve(false),
+    sections,
+  });
+
+  // The side menu, the dock and home count orders by stage: tell them when this one moved.
+  const lastStage = useRef(order.stage);
+  useEffect(() => {
+    if (lastStage.current === order.stage) return;
+    lastStage.current = order.stage;
+    refreshWorkCounts();
+  }, [order.stage]);
 
   return (
-    <div className="max-w-6xl space-y-[var(--bento-gap)]">
-      <PageHeader
-        title={data ? data.orderNumber : t.order}
-        back={{ to: "/orders", label: t.back }}
-        description={data ? [fmt(t.placed, { date: formatDateTime(data.createdAt) }), lastAction].filter(Boolean).join(" · ") : undefined}
-        titleBadge={
-          data?.stage ? (
-            <StatusBadge value={data.stage} tone={STAGE_TONE[data.stage]} text={labels.stage(data.stage)} />
-          ) : undefined
-        }
-        actions={
-          data ? (
+    <div className="zimos-order-page max-w-6xl">
+      {/* The three parts a row of the orders list travels into: the stage chip here, the name and the total in the hero. */}
+      <div data-vt-target>
+        <PageHeader
+          title={isolate(order.orderNumber)}
+          back={{ to: "/orders", label: t.back }}
+          description={fmt(t.placed, { date: formatDateTime(order.createdAt) })}
+          titleBadge={<OrderStageChip order={order} onChanged={reload} actions={actions} />}
+          actions={
             <>
-              <OrderNeighborArrows order={data} />
-              <StatusChanger order={data} onChanged={reload} />
+              {arrows}
+              <OrderMoreMenu order={order} onChanged={reload} actions={actions} />
             </>
-          ) : undefined
-        }
-      />
+          }
+        />
+        <OrderHero order={order} session={session.data} nextStep={nextStep} onChanged={reload} onReveal={sections.reveal} />
+      </div>
 
-      <DataState loading={order.loading} error={order.error} onRetry={() => order.refresh()}>
-        {data && (
-          <div className="space-y-[var(--bento-gap)]">
-            {/* Who, how to reach them, what they owe and the one next step. */}
-            <OrderHero order={data} />
+      <div className="mt-[var(--bento-gap)] flex flex-col gap-[var(--bento-gap)]">
+        {/* The pickup place instead of an address, the delivery time with "Change", a holiday order's note (handoff 225, 221, 216). */}
+        <OrderFulfilmentPlan order={order} onChanged={reload} />
+        {/* A parcel that came back undelivered: give its units back to the stock (handoff 354). */}
+        <RestockReturnedCard order={order} onChanged={reload} />
+        <OrderSections
+          order={order}
+          reload={reload}
+          session={session.data}
+          timelineKey={`${order.stage}:${order.updatedAt}:${refreshCount}`}
+          gate={gate}
+          sections={sections}
+          ownsConfirm={nextStep?.ownsConfirm ?? false}
+          confirmRef={confirmRef}
+        />
+      </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge
-                label={t.confirmation}
-                value={data.confirmationState}
-                text={labels.confirmation(data.confirmationState)}
-              />
-              {/* Unpaid is the normal state of a cash-on-delivery order, not a warning (re-audit N-15). */}
-              {data.paymentMethod === "cod" && data.financialState === "pending" ? (
-                <StatusBadge label={t.payment} value="cod_pending" tone="neutral" text={t.payOnDelivery} />
-              ) : (
-                <StatusBadge label={t.payment} value={data.financialState} text={labels.financial(data.financialState)} />
-              )}
-              <StatusBadge
-                label={t.fulfillment}
-                value={data.fulfillmentState}
-                text={labels.fulfillment(data.fulfillmentState)}
-              />
-              <OrderMetaBadges order={data} />
-              <CustomerHistoryBadge details={session.data} />
-            </div>
+      {/* On a phone the next step is the bar above the dock: the same button, where the thumb is. No step, no bar. */}
+      {nextStep?.action && (
+        <PageActionBar>
+          <NextStepButton action={nextStep.action} />
+        </PageActionBar>
+      )}
 
-            {/* The order's actions (re-audit N-16): the step that moves it on stays in view, the
-                everyday tools fold under «أكتر», and cancel sits last, apart. */}
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <WhatsappConfirmButton order={data} onChanged={reload} />
-                <FulfillButton order={data} onChanged={reload} />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="min-h-11 gap-1"
-                  aria-expanded={toolsOpen}
-                  aria-controls="order-more-tools"
-                  onClick={() => setToolsOpen((open) => !open)}
-                >
-                  {t.moreTools}
-                  <ChevronDown className={cn("size-4 transition-transform", toolsOpen && "rotate-180")} aria-hidden />
-                </Button>
-                <div className="ms-auto">
-                  <OrderActions order={data} onChanged={reload} only="cancel" />
-                </div>
-              </div>
-              <div id="order-more-tools" hidden={!toolsOpen} className="flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] bg-paper-sunken p-2">
-                <OrderActions order={data} onChanged={reload} only="tools" />
-                <EditItemsButton order={data} onChanged={reload} />
-                <OrderMetaActions order={data} onChanged={reload} />
-                <ResendToWebhookButton orderId={data.id} />
-              </div>
-            </div>
-
-            {/* The work (confirm, items, ship, pay, return) on the wide side;
-                notes, tags and the background details beside it. On a phone
-                the work comes first. */}
-            <div className="grid items-start gap-[var(--bento-gap)] lg:grid-cols-3">
-              <div className="min-w-0 space-y-[var(--bento-gap)] lg:col-span-2">
-                <div id="order-confirmation" className="scroll-mt-24">
-                  <ConfirmationPanel order={data} onChanged={reload} />
-                </div>
-
-                <OrderSummary order={data} onChanged={reload} />
-
-                <div id="order-shipments" className="scroll-mt-24">
-                  <ShipmentsSection order={data} onChanged={reload} />
-                </div>
-
-                <div id="order-payments" className="scroll-mt-24">
-                  <PaymentsSection order={data} onChanged={reload} />
-                </div>
-
-                <OrderDigitalSection orderId={data.id} paid={data.financialState === "paid"} />
-
-                <ReturnsSection order={data} onOrderMaybeChanged={reload} />
-
-                <OrderTimelineSection order={data} refreshKey={`${data.stage}:${data.updatedAt}:${refreshCount}`} />
-              </div>
-
-              <div className="min-w-0 space-y-[var(--bento-gap)]">
-                <OrderNotesCard order={data} onChanged={reload} />
-                <OrderTagsCard order={data} onChanged={reload} />
-                <OrderDiscountsCard order={data} />
-                <OrderProtectionSection order={data} />
-                {/* Where the customer came from (first/last touch); nothing for an order without it. */}
-                <OrderAttributionSection order={data} />
-                <OrderSessionCard details={session.data} />
-                <OrderSupplierCard order={data} onChanged={reload} />
-              </div>
-            </div>
-          </div>
-        )}
-      </DataState>
+      {host}
     </div>
   );
 }

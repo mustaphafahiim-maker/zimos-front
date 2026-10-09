@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Alert, Button } from "@store-builder/ui";
+import { Alert, Button, cn } from "@store-builder/ui";
 import {
   shippingProfileCreate,
   shippingProfileDelete,
@@ -18,6 +18,10 @@ import { formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataState } from "@/components/DataState";
+import { EmptyState } from "@/components/EmptyState";
+import { IconDelete, IconEdit, IconLayers, IconPlus } from "@/components/icons";
+import { ListSkeleton } from "@/components/list";
+import { LIST_CARD, RowIconButton } from "./sections/RowControls";
 import { TextField } from "@/components/Field";
 import { Modal } from "@/components/Modal";
 import { MoneyInput } from "@/components/MoneyInput";
@@ -30,6 +34,9 @@ const STRINGS = {
     description:
       "Products that cost more (or less) to send, with prices of their own — a sofa next to T-shirts. An order pays the highest price among its products; products in no group use the prices above.",
     add: "New group",
+    emptyTitle: "No shipping groups yet",
+    editNamed: "Edit {name}",
+    removeNamed: "Delete {name}",
     empty: "No shipping groups. Every product uses the store's prices.",
     products: "{count} products",
     anywhere: "{price} anywhere",
@@ -64,6 +71,9 @@ const STRINGS = {
     description:
       "منتجات تكلفة شحنها مختلفة ولها أسعار خاصة — كنبة جنب التيشيرتات. الطلب يدفع أعلى سعر بين منتجاته، والمنتجات اللي مش في مجموعة تستخدم الأسعار اللي فوق.",
     add: "مجموعة جديدة",
+    emptyTitle: "مفيش مجموعات شحن لسه",
+    editNamed: "عدّل «{name}»",
+    removeNamed: "امسح «{name}»",
     empty: "مفيش مجموعات شحن. كل المنتجات تستخدم أسعار المتجر.",
     products: "{count} منتج",
     anywhere: "{price} لأي مكان",
@@ -113,47 +123,60 @@ export function ShippingProfilesSection({ currency: fallbackCurrency = "EGP" }: 
   const [removing, setRemoving] = useState<ShippingProfile | null>(null);
 
   return (
-    <section>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="max-w-2xl">
-          <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-          <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-        </div>
-        <Button className="min-h-11" onClick={() => setEditing("new")}>
-          {t.add}
-        </Button>
+    <section className="flex min-w-0 flex-col gap-[var(--bento-gap)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        <p className="min-w-0 flex-[1_1_14rem] text-sm leading-6 text-ink-soft">{t.description}</p>
+        {(list.data?.length ?? 0) > 0 && (
+          <Button className="min-h-11 rounded-full px-4" onClick={() => setEditing("new")}>
+            <IconPlus weight="bold" aria-hidden />
+            {t.add}
+          </Button>
+        )}
       </div>
-      <div className="mt-4">
+      <div>
         <DataState
           loading={list.loading && !list.data}
           error={list.error}
           onRetry={() => void list.refresh()}
-          empty={list.data?.length === 0}
-          emptyMessage={t.empty}
+          skeleton={<ListSkeleton rows={3} variant="card" />}
         >
-          <ul className="divide-y divide-line rounded-[var(--radius-card)] border border-line">
+          {list.data?.length === 0 ? (
+            <EmptyState
+              icon={<IconLayers aria-hidden />}
+              title={t.emptyTitle}
+              description={t.empty}
+              action={
+                <Button className="min-h-11 rounded-full px-5" onClick={() => setEditing("new")}>
+                  <IconPlus weight="bold" aria-hidden />
+                  {t.add}
+                </Button>
+              }
+            />
+          ) : (
+          <ul role="list" data-slot="card" className={cn(LIST_CARD, "divide-y divide-line")}>
             {(list.data ?? []).map((p) => (
-              <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-ink">{p.name}</p>
-                  <p className="text-xs text-ink-soft">
+              <li key={p.id} className="flex min-h-13 flex-wrap items-center gap-x-2 py-1.5 ps-4 pe-2">
+                <div className="min-w-0 flex-[1_1_10rem]">
+                  <p className="truncate text-sm leading-5 font-medium text-ink">{p.name}</p>
+                  <p className="text-[13px] leading-5 text-ink-soft">
                     {p.currency && p.currency !== currency ? fmt(t.forFunnels, { currency: p.currency }) : fmt(t.products, { count: p.productCount })} ·{" "}
                     {p.flatAmount !== null ? fmt(t.anywhere, { price: formatMoney(p.flatAmount, p.currency ?? currency) }) : t.noFlat}
                     {Object.keys(p.governorateAmounts).length > 0 &&
                       ` ${fmt(t.governorates, { count: Object.keys(p.governorateAmounts).length })}`}
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="min-h-11" onClick={() => setEditing(p)}>
-                    {t.edit}
-                  </Button>
-                  <Button size="sm" variant="ghost" className="min-h-11 text-danger" onClick={() => setRemoving(p)}>
-                    {t.remove}
-                  </Button>
+                <div className="ms-auto flex shrink-0 items-center">
+                  <RowIconButton label={fmt(t.editNamed, { name: p.name })} onClick={() => setEditing(p)}>
+                    <IconEdit aria-hidden />
+                  </RowIconButton>
+                  <RowIconButton label={fmt(t.removeNamed, { name: p.name })} onClick={() => setRemoving(p)} danger>
+                    <IconDelete aria-hidden />
+                  </RowIconButton>
                 </div>
               </li>
             ))}
           </ul>
+          )}
         </DataState>
       </div>
 

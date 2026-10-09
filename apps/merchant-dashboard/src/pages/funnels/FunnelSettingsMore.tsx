@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSheetDirty } from "./sheet/sheetKit";
 import { Button, Input, Label } from "@store-builder/ui";
 import { funnelsGet, funnelsUpdate, isApiErrorCode, shippingProfilesList, type FunnelOwnSettings } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -16,6 +17,7 @@ import { useFunnelErrorMessage } from "./funnelAdapter";
 const STRINGS = {
   en: {
     link: "Funnel link",
+    linkIrreversible: "Changing the link takes effect at once, on its own button.",
     linkHint: "Lowercase letters, numbers and dashes. The old link stops working once you change it — update your ads.",
     saveLink: "Change link",
     linkSaved: "Link changed.",
@@ -33,29 +35,37 @@ const STRINGS = {
     codeHint: "Runs on this funnel's pages only, after the store's own custom code. Not on payment or preview pages.",
   },
   ar: {
-    link: "رابط مسار البيع",
+    link: "رابط الفانل",
+    linkIrreversible: "تغيير الرابط بيتنفّذ فورًا من الزرار بتاعه.",
     linkHint: "حروف إنجليزي صغيرة وأرقام وشرطات. الرابط القديم هيبطل يشتغل أول ما تغيّره — حدّث إعلاناتك.",
-    saveLink: "تغيير الرابط",
+    saveLink: "غيّر الرابط",
     linkSaved: "اتغيّر الرابط.",
-    linkTaken: "فيه مسار بيع تاني مستخدم الرابط ده.",
+    linkTaken: "فيه فانل تاني واخد الرابط ده.",
     linkInvalid: "استخدم من 3 لـ 63 حرف إنجليزي صغير أو رقم أو شرطة.",
     shipping: "مجموعة الشحن",
     shippingNone: "شحن كل منتج زي ما هو",
-    shippingHint: "كل طلب من مسار البيع ده بيتحسب شحنه بالمجموعة دي (الشحن ← مجموعات الشحن).",
-    shippingForeign: "مسار البيع ده بيبيع بـ {currency}: شحنه بيتحسب بس من مجموعة أسعارها بـ {currency}، وأسعار المتجر والاختيارات الإضافية مش بتتطبق. مش هيتنشر غير لما يبقى ليه مجموعة.",
+    shippingHint: "كل أوردر من الفانل ده بيتحسب شحنه بالمجموعة دي (الشحن ← مجموعات الشحن).",
+    shippingForeign: "الفانل ده بيبيع بـ {currency}: شحنه بيتحسب بس من مجموعة أسعارها بـ {currency}، وأسعار المتجر والاختيارات الإضافية مش بتتطبق. مش هيتنشر غير لما يبقى ليه مجموعة.",
     threshold: "شحن مجاني من",
-    thresholdHint: "حد الشحن المجاني الخاص بمسار البيع ده، بعملته. فارغ = حد المتجر.",
-    thresholdForeignHint: "حد الشحن المجاني الخاص بمسار البيع ده، بـ {currency}. فارغ = مفيش شحن مجاني (حد المتجر بـ {store}).",
+    thresholdHint: "حد الشحن المجاني بتاع الفانل ده، بعملته. لو سبته فاضي = حد المتجر.",
+    thresholdForeignHint: "حد الشحن المجاني بتاع الفانل ده، بـ {currency}. لو سبته فاضي = مفيش شحن مجاني (حد المتجر بـ {store}).",
     headCode: "كود في <head> (كل الخطوات)",
     bodyCode: "كود في آخر الصفحة (كل الخطوات)",
-    codeHint: "بيشتغل على صفحات مسار البيع ده بس، بعد الكود الخاص بالمتجر. مش على صفحات الدفع أو المعاينة.",
+    codeHint: "بيشتغل على صفحات الفانل ده بس، بعد الكود الخاص بالمتجر. مش على صفحات الدفع أو المعاينة.",
   },
 } satisfies Messages;
 
 const LINK = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
 /** The funnel's link (SPEC §9.7 "domain or subdomain"): /f/<subdomain>, changeable. */
-export function FunnelLinkSetting({ funnelId }: { funnelId: string }) {
+export function FunnelLinkSetting({
+  funnelId,
+  onSaved,
+}: {
+  funnelId: string;
+  /** Optional: told the new link once it is saved (the open editor can then show it). */
+  onSaved?: (subdomain: string) => void;
+}) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -66,6 +76,8 @@ export function FunnelLinkSetting({ funnelId }: { funnelId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const value = draft ?? current;
+  // Typed and not changed yet: the sheet asks before it closes over it.
+  useSheetDirty("funnel-link", draft !== null && draft.trim() !== current);
 
   async function save() {
     const next = value.trim().toLowerCase();
@@ -80,6 +92,7 @@ export function FunnelLinkSetting({ funnelId }: { funnelId: string }) {
       await loaded.refresh({ silent: true });
       setDraft(null);
       toast.success(t.linkSaved);
+      onSaved?.(next);
     } catch (err) {
       setError(isApiErrorCode(err, "FUNNEL_SUBDOMAIN_TAKEN") ? t.linkTaken : describeError(err));
     } finally {
@@ -94,7 +107,7 @@ export function FunnelLinkSetting({ funnelId }: { funnelId: string }) {
         <Input
           id="fs-link"
           dir="ltr"
-          className="min-w-0 flex-1"
+          className="h-11 min-w-0 flex-1"
           maxLength={63}
           value={value}
           disabled={busy || loaded.loading}
@@ -105,30 +118,28 @@ export function FunnelLinkSetting({ funnelId }: { funnelId: string }) {
             setDraft(e.target.value);
           }}
         />
-        <Button type="button" variant="outline" className="min-h-11" disabled={busy || !value.trim() || value.trim() === current} onClick={() => void save()}>
+        <Button type="button" variant="outline" className="min-h-11 rounded-full px-4" disabled={busy || !value.trim() || value.trim() === current} onClick={() => void save()}>
           {t.saveLink}
         </Button>
       </div>
-      <p id="fs-link-hint" className={error ? "text-sm text-danger" : "text-xs text-ink-soft"} role={error ? "alert" : undefined}>
-        {error ?? t.linkHint}
+      <p id="fs-link-hint" className={error ? "text-sm text-danger" : "text-xs leading-5 text-ink-soft"} role={error ? "alert" : undefined}>
+        {error ?? `${t.linkHint} ${t.linkIrreversible}`}
       </p>
     </div>
   );
 }
 
-/**
- * The funnel's scripts and shipping group (SPEC §9.7), edited with the rest
- * of the funnel settings (same draft, same Save).
- */
-export function FunnelCodeAndShippingFields({
-  value,
-  onChange,
-  disabled,
-}: {
+interface SettingsFieldsProps {
   value: (key: keyof FunnelOwnSettings) => string;
   onChange: (key: keyof FunnelOwnSettings, next: string) => void;
   disabled?: boolean;
-}) {
+}
+
+/**
+ * The funnel's shipping group and its own free-shipping threshold (SPEC §9.7),
+ * edited with the rest of the funnel settings (same draft, same Save).
+ */
+export function FunnelShippingFields({ value, onChange, disabled }: SettingsFieldsProps) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   // Shipping groups need shipping.manage; without it the select just offers "none".
@@ -140,10 +151,10 @@ export function FunnelCodeAndShippingFields({
   // Typed in major units, kept in the draft in minor units (the API's).
   const [threshold, setThreshold] = useState(() => minorToMajorInput(value("freeShippingThresholdAmount") || null));
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="fs-shipping">{t.shipping}</Label>
-        <Select id="fs-shipping" value={value("shippingProfileId")} disabled={disabled} onChange={(e) => onChange("shippingProfileId", e.target.value)}>
+        <Select id="fs-shipping" className="h-11" value={value("shippingProfileId")} disabled={disabled} onChange={(e) => onChange("shippingProfileId", e.target.value)}>
           <option value="">{t.shippingNone}</option>
           {(profiles.data ?? []).map((p) => (
             <option key={p.id} value={p.id}>
@@ -151,7 +162,7 @@ export function FunnelCodeAndShippingFields({
             </option>
           ))}
         </Select>
-        <p className="text-xs text-ink-soft">{currency !== store ? fmt(t.shippingForeign, { currency }) : t.shippingHint}</p>
+        <p className="text-xs leading-5 text-ink-soft">{currency !== store ? fmt(t.shippingForeign, { currency }) : t.shippingHint}</p>
       </div>
       <MoneyInput
         label={t.threshold}
@@ -166,6 +177,15 @@ export function FunnelCodeAndShippingFields({
           onChange("freeShippingThresholdAmount", Number.isFinite(minor) && minor >= 0 ? String(minor) : "");
         }}
       />
+    </div>
+  );
+}
+
+/** The funnel's own scripts, on every step (SPEC §9.7) — same draft, same Save as the rest of the settings. */
+export function FunnelCodeFields({ value, onChange, disabled }: SettingsFieldsProps) {
+  const t = useT(STRINGS);
+  return (
+    <div className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="fs-head">{t.headCode}</Label>
         <Textarea id="fs-head" dir="ltr" rows={4} className="font-mono text-xs" maxLength={20000} value={value("headCode")} disabled={disabled} onChange={(e) => onChange("headCode", e.target.value)} />
@@ -173,8 +193,21 @@ export function FunnelCodeAndShippingFields({
       <div className="space-y-1.5">
         <Label htmlFor="fs-body">{t.bodyCode}</Label>
         <Textarea id="fs-body" dir="ltr" rows={4} className="font-mono text-xs" maxLength={20000} value={value("bodyCode")} disabled={disabled} onChange={(e) => onChange("bodyCode", e.target.value)} />
-        <p className="text-xs text-ink-soft">{t.codeHint}</p>
+        <p className="text-xs leading-5 text-ink-soft">{t.codeHint}</p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The funnel's scripts and shipping group together, as one block (the shape
+ * this file had before the settings sheet folded the code under «متقدّم»).
+ */
+export function FunnelCodeAndShippingFields(props: SettingsFieldsProps) {
+  return (
+    <div className="space-y-4">
+      <FunnelShippingFields {...props} />
+      <FunnelCodeFields {...props} />
     </div>
   );
 }

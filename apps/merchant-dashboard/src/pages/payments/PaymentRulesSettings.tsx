@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Card, CardContent } from "@store-builder/ui";
+import { Button, Input } from "@store-builder/ui";
 import {
   funnelsList,
   paymentRulesGet,
@@ -7,15 +7,23 @@ import {
   type PaymentMethodEntry,
   type PaymentRuleAdjustment,
   type PaymentRuleMethod,
+  type PaymentRules,
 } from "@store-builder/api-client";
+import { IconBank, IconCard, IconCash, IconClock, IconFunnels, IconStore, IconWallet, type IconComponent } from "@/components/icons";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage, isPermissionError } from "@/lib/errors";
-import { basisPointsToPercentInput, majorToMinor, minorToMajorInput, percentToBasisPoints } from "@/lib/format";
+import { basisPointsToPercentInput, formatMoney, majorToMinor, minorToMajorInput, percentToBasisPoints } from "@/lib/format";
+import { pluralOf } from "@/lib/plural";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { AccordionSection } from "@/components/Accordion";
+import { DataState } from "@/components/DataState";
+import { Field } from "@/components/Field";
+import { SaveBar } from "@/components/SaveBar";
 import { Select } from "@/components/Select";
-import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
-import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+import { FIELD, NoAccess, PaneSkeleton } from "./sections/paneParts";
 
 const STRINGS = {
   en: {
@@ -31,15 +39,24 @@ const STRINGS = {
     none: "No change",
     fee: "Add a fee",
     discount: "Give a discount",
+    feeOf: "Fee {amount}",
+    discountOf: "Discount {amount}",
+    percentOf: "{n}%",
     fixed: "Fixed amount",
     percent: "Percent",
     kind: "Rule for {method}",
+    kindLabel: "Rule",
     valueType: "Amount type",
     value: "Value",
     label: "Name on the order",
     labelPlaceholder: "Cash on delivery fee",
     funnelsTitle: "Payment methods per funnel",
     funnelsDesc: "Choose which payment methods each funnel's checkout offers. A funnel with nothing ticked offers all of them.",
+    funnelsAll: "Every funnel offers all methods",
+    funnelsSome_one: "1 funnel has its own methods",
+    funnelsSome_two: "2 funnels have their own methods",
+    funnelsSome_few: "{n} funnels have their own methods",
+    funnelsSome_other: "{n} funnels have their own methods",
     noFunnels: "No funnels yet.",
     save: "Save",
     saved: "Payment rules saved.",
@@ -48,32 +65,42 @@ const STRINGS = {
     otherCurrency: "Currency",
     otherValue: "Amount",
     removeOther: "Remove",
-    othersHint: "A fixed amount is in the store's currency ({store}); an order in another currency (a funnel selling in it) gets the amount set for that currency, else none.",
+    othersHint:
+      "A fixed amount is in the store's currency ({store}); an order in another currency (a funnel selling in it) gets the amount set for that currency, else none.",
     othersHintPercent: "An order in a currency listed here gets that fixed amount instead of the percentage.",
     invalidCurrency: "Use a 3-letter currency code (like USD), once per method — beside a fixed amount, not the store's own.",
   },
   ar: {
     title: "قواعد الدفع",
-    description: "أضف رسومًا أو امنح خصمًا حسب طريقة دفع العميل، ويظهر كبند مستقل في الطلب.",
+    description: "ضيف رسوم أو ادّي خصم حسب طريقة دفع العميل، وبيظهر بند لوحده في الأوردر.",
     cod: "الدفع عند الاستلام",
-    card: "بطاقة",
+    card: "كارت",
     wallet: "محفظة إلكترونية",
     valu: "تقسيط valU",
     kiosk: "الدفع في الكشك (أمان / مصاري)",
     paypal: "باي بال",
     bank_transfer: "تحويل يدوي",
-    none: "بدون تغيير",
-    fee: "أضف رسومًا",
-    discount: "امنح خصمًا",
+    none: "من غير تغيير",
+    fee: "ضيف رسوم",
+    discount: "ادّي خصم",
+    feeOf: "رسوم {amount}",
+    discountOf: "خصم {amount}",
+    percentOf: "{n}%",
     fixed: "مبلغ ثابت",
     percent: "نسبة مئوية",
     kind: "قاعدة {method}",
+    kindLabel: "القاعدة",
     valueType: "نوع القيمة",
     value: "القيمة",
-    label: "الاسم في الطلب",
+    label: "الاسم في الأوردر",
     labelPlaceholder: "رسوم الدفع عند الاستلام",
     funnelsTitle: "طرق الدفع لكل مسار بيع",
-    funnelsDesc: "اختار طرق الدفع التي يعرضها كل مسار بيع عند إتمام الطلب. المسار الذي لم يُحدَّد له شيء يعرض كل الطرق.",
+    funnelsDesc: "اختار طرق الدفع اللي كل مسار بيع بيعرضها في الفورم. المسار اللي مش متعلّم له حاجة بيعرض كل الطرق.",
+    funnelsAll: "كل المسارات بتعرض كل الطرق",
+    funnelsSome_one: "مسار واحد له طرقه",
+    funnelsSome_two: "مسارين ليهم طرقهم",
+    funnelsSome_few: "{n} مسارات ليها طرقها",
+    funnelsSome_other: "{n} مسار ليهم طرقهم",
     noFunnels: "مفيش مسارات بيع لسه.",
     save: "حفظ",
     saved: "اتحفظت قواعد الدفع.",
@@ -81,12 +108,21 @@ const STRINGS = {
     addOther: "+ مبلغ بعملة تانية",
     otherCurrency: "العملة",
     otherValue: "المبلغ",
-    removeOther: "حذف",
-    othersHint: "المبلغ الثابت بعملة المتجر ({store})؛ الطلب بعملة تانية (مسار بيع بيبيع بيها) بياخد المبلغ المحدد للعملة دي، وإلا مفيش.",
-    othersHintPercent: "الطلب بعملة من اللي هنا بياخد المبلغ الثابت ده بدل النسبة.",
+    removeOther: "امسح",
+    othersHint: "المبلغ الثابت بعملة المتجر ({store})؛ الأوردر بعملة تانية (مسار بيع بيبيع بيها) بياخد المبلغ المحدد للعملة دي، وإلا مفيش.",
+    othersHintPercent: "الأوردر بعملة من اللي هنا بياخد المبلغ الثابت ده بدل النسبة.",
     invalidCurrency: "اكتب كود عملة من 3 حروف (زي USD)، مرة واحدة لكل طريقة — وجنب المبلغ الثابت مش عملة المتجر نفسها.",
   },
 } satisfies Messages;
+
+const METHOD_ICON: Record<PaymentRuleMethod, IconComponent> = {
+  cod: IconCash,
+  card: IconCard,
+  wallet: IconWallet,
+  valu: IconClock,
+  kiosk: IconStore,
+  bank_transfer: IconBank,
+};
 
 interface Draft {
   kind: "none" | "fee" | "discount";
@@ -115,7 +151,26 @@ function toDraft(rules: PaymentRuleAdjustment[], store: string): Draft {
   };
 }
 
-/** Fee/discount per payment method and the methods each funnel offers (SPEC §11.4). */
+function draftsOf(data: PaymentRules): Record<string, Draft> {
+  const store = data.storeCurrency ?? "EGP";
+  return Object.fromEntries(data.methods.map((m) => [m, toDraft(data.adjustments.filter((a) => a.method === m), store)]));
+}
+
+/** One text for "is anything changed": the per-funnel map is compared whatever order its keys and ids are in. */
+function snapshot(methods: readonly string[], drafts: Record<string, Draft>, byFunnel: Record<string, string[]>): string {
+  return JSON.stringify([
+    methods.map((m) => drafts[m] ?? EMPTY),
+    Object.keys(byFunnel)
+      .sort()
+      .map((id) => [id, [...(byFunnel[id] ?? [])].sort()]),
+  ]);
+}
+
+/**
+ * Payments → Payment rules (SPEC §11.4): a fee or a discount per payment
+ * method — each method folds to one row that says its rule — and the methods
+ * each funnel offers. One save for both, from the save bar.
+ */
 export function PaymentRulesSettings({
   workspaceId,
   methods,
@@ -127,8 +182,8 @@ export function PaymentRulesSettings({
   canManage: boolean;
 }) {
   const t = useT(STRINGS);
-  const common = useCommon();
   const toast = useToast();
+  // Null = this role may not read the rules.
   const rules = useAsync(
     () => paymentRulesGet(apiClient, workspaceId).catch((err) => (isPermissionError(err) ? null : Promise.reject(err))),
     [workspaceId]
@@ -138,22 +193,28 @@ export function PaymentRulesSettings({
   const [byFunnel, setByFunnel] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
 
+  const data = rules.data;
   useEffect(() => {
-    if (!rules.data) return;
-    const store = rules.data.storeCurrency ?? "EGP";
-    setDrafts(Object.fromEntries(rules.data.methods.map((m) => [m, toDraft(rules.data!.adjustments.filter((a) => a.method === m), store)])));
-    setByFunnel(rules.data.methodsByFunnel);
-  }, [rules.data]);
+    if (!data) return;
+    setDrafts(draftsOf(data));
+    setByFunnel(data.methodsByFunnel);
+  }, [data]);
 
-  if (!rules.data) return null;
+  const dirty =
+    data !== null &&
+    Object.keys(drafts).length > 0 &&
+    snapshot(data.methods, drafts, byFunnel) !== snapshot(data.methods, draftsOf(data), data.methodsByFunnel);
+  useReportDirty(dirty);
+
   const patch = (method: string, change: Partial<Draft>) =>
     setDrafts((d) => ({ ...d, [method]: { ...(d[method] ?? EMPTY), ...change } }));
 
-  const store = rules.data.storeCurrency ?? "EGP";
+  const store = data?.storeCurrency ?? "EGP";
 
   async function save() {
+    if (!data) return;
     const adjustments: PaymentRuleAdjustment[] = [];
-    for (const method of rules.data!.methods) {
+    for (const method of data.methods) {
       const d = drafts[method] ?? EMPTY;
       if (d.kind === "none") continue;
       const value = d.valueType === "percent" ? percentToBasisPoints(d.value) : majorToMinor(d.value);
@@ -182,163 +243,227 @@ export function PaymentRulesSettings({
     }
   }
 
+  function discard() {
+    if (!data) return;
+    setDrafts(draftsOf(data));
+    setByFunnel(data.methodsByFunnel);
+  }
+
+  /** The closed row of a method: what its rule is, in words. */
+  function summaryOf(d: Draft): string {
+    if (d.kind === "none") return t.none;
+    const typed = Number(d.value.trim());
+    if (d.value.trim() === "" || !Number.isFinite(typed)) return d.kind === "fee" ? t.fee : t.discount;
+    const amount = d.valueType === "percent" ? fmt(t.percentOf, { n: typed }) : formatMoney(majorToMinor(d.value), store);
+    return fmt(d.kind === "fee" ? t.feeOf : t.discountOf, { amount });
+  }
+
   const offered = methods.filter((m) => m.available);
   const methodLabel = (m: PaymentMethodEntry) => (m.provider ? `${m.provider} · ${t[m.method]}` : t[m.method]);
+  const funnelRows = funnels.data ?? [];
+  const customised = Object.keys(byFunnel).length;
 
   return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-        <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-      </div>
-
-      <Card>
-        <CardContent className="divide-y divide-line p-0">
-          {rules.data.methods.map((method: PaymentRuleMethod) => {
-            const d = drafts[method] ?? EMPTY;
-            return (
-              <div key={method} className="grid grid-cols-1 items-end gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
-                <div>
-                  <p className="mb-1.5 text-sm font-medium text-ink">{t[method]}</p>
-                  <Select
-                    aria-label={t.kind.replace("{method}", t[method])}
-                    value={d.kind}
-                    disabled={!canManage}
-                    onChange={(e) => patch(method, { kind: e.target.value as Draft["kind"] })}
-                  >
-                    <option value="none">{t.none}</option>
-                    <option value="fee">{t.fee}</option>
-                    <option value="discount">{t.discount}</option>
-                  </Select>
-                </div>
-                {d.kind !== "none" && (
-                  <>
-                    <div>
-                      <p className="mb-1.5 text-sm font-medium text-ink">{t.valueType}</p>
-                      <Select
-                        aria-label={t.valueType}
-                        value={d.valueType}
-                        disabled={!canManage}
-                        onChange={(e) => patch(method, { valueType: e.target.value as Draft["valueType"], value: "" })}
-                      >
-                        <option value="fixed">{t.fixed}</option>
-                        <option value="percent">{t.percent}</option>
-                      </Select>
-                    </div>
-                    <TextField
-                      label={d.valueType === "percent" ? `${t.value} %` : t.value}
-                      inputMode="decimal"
-                      dir="ltr"
-                      value={d.value}
-                      disabled={!canManage}
-                      onChange={(e) => patch(method, { value: e.target.value })}
-                    />
-                    <TextField
-                      label={t.label}
-                      placeholder={t.labelPlaceholder}
-                      value={d.label}
-                      maxLength={100}
-                      disabled={!canManage}
-                      className="lg:col-span-2"
-                      onChange={(e) => patch(method, { label: e.target.value })}
-                    />
-                    <div className="space-y-2 sm:col-span-2 lg:col-span-5">
-                      {d.others.map((other, i) => (
-                        <div key={i} className="flex flex-wrap items-end gap-3">
-                          <TextField
-                            label={t.otherCurrency}
-                            dir="ltr"
-                            maxLength={3}
-                            className="w-28"
-                            value={other.currency}
-                            disabled={!canManage}
-                            onChange={(e) => patch(method, { others: d.others.map((o, j) => (j === i ? { ...o, currency: e.target.value.toUpperCase() } : o)) })}
-                          />
-                          <TextField
-                            label={t.otherValue}
-                            inputMode="decimal"
-                            dir="ltr"
-                            className="w-40"
-                            value={other.value}
-                            disabled={!canManage}
-                            onChange={(e) => patch(method, { others: d.others.map((o, j) => (j === i ? { ...o, value: e.target.value } : o)) })}
-                          />
+    <DataState loading={rules.loading} error={rules.error} onRetry={() => void rules.refresh()} skeleton={<PaneSkeleton rows={6} />}>
+      {!data ? (
+        <NoAccess />
+      ) : (
+        <>
+          <div className="flex flex-col gap-2">
+            {data.methods.map((method: PaymentRuleMethod) => {
+              const d = drafts[method] ?? EMPTY;
+              return (
+                <AccordionSection
+                  key={method}
+                  title={t[method]}
+                  summary={summaryOf(d)}
+                  icon={METHOD_ICON[method]}
+                  keepMounted
+                  defaultOpen={method === "cod"}
+                  persistKey={`payments:rules:${method}`}
+                >
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Field label={t.kindLabel}>
+                      {({ id }) => (
+                        <Select
+                          id={id}
+                          className={FIELD}
+                          aria-label={t.kind.replace("{method}", t[method])}
+                          value={d.kind}
+                          disabled={!canManage}
+                          onChange={(e) => patch(method, { kind: e.target.value as Draft["kind"] })}
+                        >
+                          <option value="none">{t.none}</option>
+                          <option value="fee">{t.fee}</option>
+                          <option value="discount">{t.discount}</option>
+                        </Select>
+                      )}
+                    </Field>
+                    {d.kind !== "none" && (
+                      <>
+                        <Field label={t.valueType}>
+                          {({ id }) => (
+                            <Select
+                              id={id}
+                              className={FIELD}
+                              value={d.valueType}
+                              disabled={!canManage}
+                              onChange={(e) => patch(method, { valueType: e.target.value as Draft["valueType"], value: "" })}
+                            >
+                              <option value="fixed">{t.fixed}</option>
+                              <option value="percent">{t.percent}</option>
+                            </Select>
+                          )}
+                        </Field>
+                        <Field label={d.valueType === "percent" ? `${t.value} %` : t.value}>
+                          {({ id }) => (
+                            <Input
+                              id={id}
+                              className={FIELD}
+                              inputMode="decimal"
+                              dir="ltr"
+                              value={d.value}
+                              disabled={!canManage}
+                              onChange={(e) => patch(method, { value: e.target.value })}
+                            />
+                          )}
+                        </Field>
+                        <Field label={t.label}>
+                          {({ id }) => (
+                            <Input
+                              id={id}
+                              className={FIELD}
+                              dir="auto"
+                              placeholder={t.labelPlaceholder}
+                              value={d.label}
+                              maxLength={100}
+                              disabled={!canManage}
+                              onChange={(e) => patch(method, { label: e.target.value })}
+                            />
+                          )}
+                        </Field>
+                        <div className="flex flex-col gap-2 sm:col-span-2">
+                          {d.others.map((other, i) => (
+                            <div key={i} className="flex flex-wrap items-end gap-3">
+                              <Field label={t.otherCurrency} className="w-24">
+                                {({ id }) => (
+                                  <Input
+                                    id={id}
+                                    className={FIELD}
+                                    dir="ltr"
+                                    maxLength={3}
+                                    value={other.currency}
+                                    disabled={!canManage}
+                                    onChange={(e) =>
+                                      patch(method, { others: d.others.map((o, j) => (j === i ? { ...o, currency: e.target.value.toUpperCase() } : o)) })
+                                    }
+                                  />
+                                )}
+                              </Field>
+                              <Field label={t.otherValue} className="min-w-0 flex-1 sm:max-w-40">
+                                {({ id }) => (
+                                  <Input
+                                    id={id}
+                                    className={FIELD}
+                                    inputMode="decimal"
+                                    dir="ltr"
+                                    value={other.value}
+                                    disabled={!canManage}
+                                    onChange={(e) => patch(method, { others: d.others.map((o, j) => (j === i ? { ...o, value: e.target.value } : o)) })}
+                                  />
+                                )}
+                              </Field>
+                              {canManage && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  className="min-h-11 rounded-full px-3 text-danger"
+                                  onClick={() => patch(method, { others: d.others.filter((_, j) => j !== i) })}
+                                >
+                                  {t.removeOther}
+                                </Button>
+                              )}
+                            </div>
+                          ))}
                           {canManage && (
-                            <Button type="button" variant="ghost" className="min-h-11 text-danger" onClick={() => patch(method, { others: d.others.filter((_, j) => j !== i) })}>
-                              {t.removeOther}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="min-h-11 self-start rounded-full px-4"
+                              onClick={() => patch(method, { others: [...d.others, { currency: "", value: "" }] })}
+                            >
+                              {t.addOther}
                             </Button>
                           )}
+                          <p className="text-[13px] leading-5 text-ink-soft">
+                            {d.valueType === "percent" ? t.othersHintPercent : fmt(t.othersHint, { store })}
+                          </p>
                         </div>
-                      ))}
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                        {canManage && (
-                          <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={() => patch(method, { others: [...d.others, { currency: "", value: "" }] })}>
-                            {t.addOther}
-                          </Button>
-                        )}
-                        <p className="text-xs text-ink-soft">{d.valueType === "percent" ? t.othersHintPercent : fmt(t.othersHint, { store })}</p>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-3 p-5">
-          <div>
-            <h3 className="text-base font-semibold text-ink">{t.funnelsTitle}</h3>
-            <p className="mt-1 text-sm text-ink-soft">{t.funnelsDesc}</p>
+                      </>
+                    )}
+                  </div>
+                </AccordionSection>
+              );
+            })}
           </div>
-          {(funnels.data ?? []).length === 0 ? (
-            <p className="text-sm text-ink-soft">{t.noFunnels}</p>
-          ) : (
-            <ul className="divide-y divide-line">
-              {(funnels.data ?? []).map((funnel) => {
-                const chosen = byFunnel[funnel.id] ?? [];
-                return (
-                  <li key={funnel.id} className="flex flex-wrap items-center gap-x-6 gap-y-1 py-2.5">
-                    <span className="min-w-40 text-sm font-medium text-ink" dir="auto">
-                      {funnel.name}
-                    </span>
-                    {offered.map((m) => (
-                      <label key={m.id} className="flex min-h-9 items-center gap-2 text-sm text-ink">
-                        <input
-                          type="checkbox"
-                          className="size-4 accent-[var(--color-primary)]"
-                          checked={chosen.includes(m.id)}
-                          disabled={!canManage}
-                          onChange={(e) =>
-                            setByFunnel((map) => {
-                              const next = e.target.checked ? [...chosen, m.id] : chosen.filter((id) => id !== m.id);
-                              const copy = { ...map };
-                              if (next.length) copy[funnel.id] = next;
-                              else delete copy[funnel.id];
-                              return copy;
-                            })
-                          }
-                        />
-                        {methodLabel(m)}
-                      </label>
-                    ))}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
 
-      {canManage && (
-        <div className="flex justify-end">
-          <Button onClick={() => void save()} disabled={saving}>
-            {saving ? common.saving : t.save}
-          </Button>
-        </div>
+          <AccordionSection
+            title={t.funnelsTitle}
+            summary={
+              funnelRows.length === 0
+                ? t.noFunnels
+                : customised === 0
+                  ? t.funnelsAll
+                  : pluralOf(t, "funnelsSome", customised)
+            }
+            icon={IconFunnels}
+            keepMounted
+            persistKey="payments:rules:funnels"
+          >
+            <p className="text-[13px] leading-5 text-ink-soft">{t.funnelsDesc}</p>
+            {funnelRows.length === 0 ? (
+              <p className="mt-3 text-sm text-ink-soft">{t.noFunnels}</p>
+            ) : (
+              <ul className="mt-2 divide-y divide-line">
+                {funnelRows.map((funnel) => {
+                  const chosen = byFunnel[funnel.id] ?? [];
+                  return (
+                    <li key={funnel.id} className="flex flex-col gap-1 py-3">
+                      <span className="text-sm font-medium text-ink" dir="auto">
+                        {funnel.name}
+                      </span>
+                      <div className="flex flex-wrap gap-x-5">
+                        {offered.map((m) => (
+                          <label key={m.id} className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
+                            <input
+                              type="checkbox"
+                              className="size-5 accent-[var(--color-primary)]"
+                              checked={chosen.includes(m.id)}
+                              disabled={!canManage}
+                              onChange={(e) =>
+                                setByFunnel((map) => {
+                                  const next = e.target.checked ? [...chosen, m.id] : chosen.filter((id) => id !== m.id);
+                                  const copy = { ...map };
+                                  if (next.length) copy[funnel.id] = next;
+                                  else delete copy[funnel.id];
+                                  return copy;
+                                })
+                              }
+                            />
+                            {methodLabel(m)}
+                          </label>
+                        ))}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </AccordionSection>
+
+          {canManage && <SaveBar dirty={dirty} saving={saving} onSave={() => void save()} onDiscard={discard} saveLabel={t.save} />}
+        </>
       )}
-    </section>
+    </DataState>
   );
 }

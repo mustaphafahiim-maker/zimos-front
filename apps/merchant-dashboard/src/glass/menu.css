@@ -1,0 +1,266 @@
+/* The Finder-style side menu, the toolbar and the phone menu — components/DashboardLayout.tsx,
+   components/SidebarShortcuts.tsx and components/shell/*.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   liquid-glass.css already gives the two panes their material (.zimos-glass.glass-nav,
+   .glass-topbar) and fills the current row with the brand (.glass-nav nav a[aria-current]).
+   This file is what sits on those panes: the rows, the headings, the badges, the pinned
+   group, the store switcher, the toolbar buttons — and the phone menu, which is a sheet
+   mounted on <body>, outside .glass-app, so its rules are written from its own data-slot.
+
+   Text: var(--color-ink) and var(--lg-ink-soft) on the panes, var(--lg-on-brand) on the
+   brand pill; every badge tint is mixed over a near-solid fill, so its digits hold 4.5:1
+   whatever part of the backdrop is behind the pane. */
+:root:not([data-glass="off"]) {
+  /* A row under the pointer: a lighter pane on the pane. */
+  --menu-row-hover: color-mix(in srgb, var(--color-paper-raised) 62%, transparent);
+  --menu-row-press: color-mix(in srgb, var(--color-paper-raised) 84%, transparent);
+  --menu-chip: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 1px 2px rgb(18 44 110 / 0.06);
+  /* The line over the pinned group: a hairline with light caught under it. */
+  --menu-etch: inset 0 1px 0 0 rgb(255 255 255 / 0.55);
+  /* Badges: calls due (urgent), to ship (attention), unread (the brand), and on the brand pill. */
+  --menu-badge-urgent: color-mix(in srgb, var(--color-danger) 15%, var(--lg-control-lit));
+  --menu-badge-attention: color-mix(in srgb, var(--color-accent) 26%, var(--lg-control-lit));
+  --menu-badge-brand: color-mix(in srgb, var(--color-primary) 15%, var(--lg-control-lit));
+  --menu-badge-on-brand: rgb(8 16 48 / 0.24);
+  --menu-badge-on-brand-rim: inset 0 0 0 1px rgb(255 255 255 / 0.24);
+
+  &.dark {
+    --menu-row-hover: rgb(255 255 255 / 0.07);
+    --menu-row-press: rgb(255 255 255 / 0.11);
+    --menu-chip: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+    --menu-etch: inset 0 1px 0 0 rgb(255 255 255 / 0.05);
+    --menu-badge-urgent: color-mix(in srgb, var(--color-danger) 20%, var(--lg-control-lit));
+    --menu-badge-attention: color-mix(in srgb, var(--color-accent) 20%, var(--lg-control-lit));
+    --menu-badge-brand: color-mix(in srgb, var(--color-primary) 20%, var(--lg-control-lit));
+    /* The brand pill is light in the dark theme and its text dark: the badge lifts instead of sinking. */
+    --menu-badge-on-brand: rgb(255 255 255 / 0.34);
+    --menu-badge-on-brand-rim: inset 0 0 0 1px rgb(255 255 255 / 0.3);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The side menu.
+   * ---------------------------------------------------------------- */
+
+  /* The list runs under the store switcher and the pinned group: it fades out
+     at both ends instead of being cut by a line. */
+  .zimos-menu-scroll {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 0.625rem, #000 calc(100% - 1.25rem), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 0.625rem, #000 calc(100% - 1.25rem), transparent 100%);
+  }
+
+  /* A group's heading (and the pinned group's): secondary ink, one step deeper
+     on the tinted pane; full ink while it is pointed at or focused. */
+  .glass-app .zimos-menu-heading {
+    color: var(--lg-ink-soft);
+  }
+  .glass-app .zimos-menu-heading:is(:hover, :focus-visible) {
+    color: var(--color-ink);
+  }
+
+  /* A row under the pointer becomes a small lit pane; pressed, a brighter one. */
+  @media (hover: hover) {
+    .glass-app .glass-nav nav a.zimos-menu-row:not([aria-current="page"]):hover,
+    .glass-app .zimos-menu-pin-slot:hover,
+    .glass-app .zimos-menu-pin:hover:not(:disabled) {
+      background-color: var(--menu-row-hover);
+      box-shadow: var(--menu-chip);
+    }
+  }
+  .glass-app .glass-nav nav a.zimos-menu-row:not([aria-current="page"]):active,
+  .glass-app .zimos-menu-pin-slot:active,
+  .glass-app .zimos-menu-pin:active:not(:disabled) {
+    background-color: var(--menu-row-press);
+    box-shadow: var(--menu-chip);
+  }
+
+  /* Where you are: the brand pill of liquid-glass.css, with the main action's
+     sheen — it crosses the pill once when the row is chosen, and again under
+     the pointer. */
+  .glass-app .glass-nav nav a.zimos-menu-row[aria-current="page"] {
+    background-image: linear-gradient(112deg, transparent 38%, rgb(255 255 255 / 0.34) 50%, transparent 62%), var(--lg-brand-grad);
+    background-size: 260% 100%, auto;
+    background-position: 160% 0, 0 0;
+    background-repeat: no-repeat;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .glass-app .glass-nav nav a.zimos-menu-row {
+      transition:
+        scale 140ms var(--ease-out),
+        background-color var(--dur-fade) var(--ease-out),
+        box-shadow var(--dur-fade) var(--ease-out),
+        color var(--dur-fade) var(--ease-out),
+        background-position 650ms var(--ease-out);
+    }
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .glass-app .glass-nav nav a.zimos-menu-row[aria-current="page"]:hover {
+      background-position: -60% 0, 0 0;
+    }
+  }
+
+  /* "Pin this page", while nothing is pinned yet: an empty slot, drawn dashed. */
+  .zimos-menu-pin-slot {
+    border-color: color-mix(in srgb, var(--lg-ink-soft) 36%, transparent);
+  }
+
+  /* The pinned group (apps, settings, support) under the list. */
+  .zimos-menu-foot {
+    border-top-color: var(--lg-hairline);
+    box-shadow: var(--menu-etch);
+  }
+
+  /* The store switcher: a small pane, lit while it is pointed at or open. */
+  .zimos-store-switch {
+    background-color: var(--lg-control);
+    box-shadow: var(--menu-chip);
+  }
+  .zimos-store-switch:is(:hover, [aria-expanded="true"]) {
+    background-color: var(--lg-control-lit);
+  }
+  /* A store's tile, and the avatar without a photo: the brand, running into violet. */
+  .zimos-store-tile {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.3), 0 4px 10px -5px color-mix(in srgb, var(--brand) 70%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Badges — in the side menu, the pinned group and the phone menu.
+   * ---------------------------------------------------------------- */
+  .zimos-nav-badge[data-tone="toConfirm"] {
+    background-color: var(--menu-badge-urgent);
+    color: var(--lg-text-danger);
+  }
+  .zimos-nav-badge[data-tone="toShip"] {
+    background-color: var(--menu-badge-attention);
+    color: var(--color-accent-dark);
+  }
+  .zimos-nav-badge[data-tone="unread"] {
+    background-color: var(--menu-badge-brand);
+    color: var(--lg-text-primary);
+  }
+  .zimos-nav-badge:not([data-tone="on-brand"]) {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 16%, transparent);
+  }
+  .zimos-nav-badge[data-tone="on-brand"] {
+    background-color: var(--menu-badge-on-brand);
+    color: var(--lg-on-brand);
+    box-shadow: var(--menu-badge-on-brand-rim);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The toolbar: a capsule from md up, with the same corner as the page
+   * pane under it. Its round buttons light up like the menu's rows.
+   * ---------------------------------------------------------------- */
+  @media (min-width: 48rem) {
+    .zimos-glass.glass-topbar.zimos-toolbar {
+      border-radius: 9999px;
+    }
+  }
+  @media (hover: hover) {
+    .zimos-toolbar .zimos-tool:hover {
+      background-color: var(--lg-control-lit);
+      box-shadow: var(--menu-chip);
+    }
+  }
+  .zimos-toolbar .zimos-tool:active,
+  .zimos-toolbar .zimos-tool[data-popup-open] {
+    background-color: var(--lg-control-lit);
+    box-shadow: var(--menu-chip);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The phone menu. It covers the page, which is dimmed and still, so it
+   * is solid: no blur to pay for while it rises or its list scrolls.
+   * ---------------------------------------------------------------- */
+  [data-slot="phone-menu"] {
+    background-color: var(--color-paper-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: var(--lg-rim-line), 0 -24px 56px -28px rgb(18 44 110 / 0.5);
+  }
+  &.dark [data-slot="phone-menu"] {
+    box-shadow: var(--lg-rim-line), 0 -24px 56px -24px rgb(0 0 0 / 0.9);
+  }
+  .zimos-phone-menu-grab {
+    background-color: color-mix(in srgb, var(--color-ink) 20%, transparent);
+  }
+  .zimos-phone-menu-close {
+    background-color: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  }
+  [data-slot="phone-menu"] .zimos-store-switch {
+    background-color: var(--color-paper-sunken);
+    box-shadow: var(--lg-rim-line);
+  }
+  [data-slot="phone-menu"] .zimos-menu-pin-slot:active,
+  [data-slot="phone-menu"] .zimos-menu-pin:active:not(:disabled) {
+    background-color: var(--color-paper-sunken);
+  }
+  /* A tile is a small pane on the sheet; the page you are on is the brand pill. */
+  [data-slot="phone-menu"] .zimos-menu-tile:not([aria-current="page"]) {
+    box-shadow: var(--lg-rim-line);
+  }
+  [data-slot="phone-menu"] .zimos-menu-tile:not([aria-current="page"]):active {
+    background-color: var(--color-line);
+  }
+  [data-slot="phone-menu"] .zimos-menu-tile[aria-current="page"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28), var(--lg-brand-glow);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Motion: the pane settles in from its own edge when it appears (on
+   * load, and when it is shown again from the toolbar), a count pops when
+   * it arrives or changes, and the rows of a group that was just unfolded
+   * settle in. Transform and opacity only.
+   * ---------------------------------------------------------------- */
+  &[dir="rtl"] .glass-app > aside.zimos-menu {
+    --menu-pane-from: 14px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .glass-app > aside.zimos-menu {
+      animation: menu-pane-in var(--dur-move) var(--ease-spring) backwards;
+    }
+    .zimos-nav-badge {
+      animation: menu-badge-pop var(--dur-pop) var(--ease-pop) backwards;
+    }
+    [data-reveal] > [data-slot="menu-row"] {
+      animation: menu-rows-in var(--dur-fade) var(--ease-out) backwards;
+    }
+  }
+
+  /* Reduced transparency: the panes are solid (liquid-glass.css turns the --lg-*
+     fills solid by itself), so a translucent white on them would show nothing.
+     The row under the pointer takes the sunken fill instead. The dark theme's
+     own value — a little white over the pane — still reads on a solid pane. */
+  @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+    &:not(.dark) {
+      --menu-row-hover: var(--color-paper-sunken);
+      --menu-row-press: var(--color-line);
+    }
+  }
+}
+
+@keyframes menu-pane-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--menu-pane-from, -14px));
+  }
+}
+@keyframes menu-badge-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes menu-rows-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

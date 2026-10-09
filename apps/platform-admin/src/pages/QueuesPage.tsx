@@ -12,6 +12,8 @@ import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
 import { apiClient } from "@/lib/apiClient";
 import { formatDateTime, formatNumber, formatRelative } from "@/lib/format";
+import { useAuth } from "@/context/AuthContext";
+import { P } from "@/lib/permissions";
 
 /**
  * Background work at a glance (SPEC §3.5): what each queue holds, when each
@@ -27,6 +29,8 @@ function every(ms: number | null): string {
 
 export function QueuesPage() {
   const toast = useToast();
+  // Retrying needs system.manage; system.view only reads the queues.
+  const canRetry = useAuth().can(P.SYSTEM_MANAGE);
   const overview = useAsync(() => adminQueues(apiClient), []);
   const failed = useAsync(() => adminQueueJobs(apiClient, { status: "failed", limit: 100 }), []);
   const [retrying, setRetrying] = useState<string | null>(null);
@@ -155,7 +159,7 @@ export function QueuesPage() {
               </div>
             </Panel>
 
-            <Panel title="Failed jobs" description="Out of attempts. Retry puts a job back in line with a fresh set." flush>
+            <Panel title="Failed jobs" description={canRetry ? "Out of attempts. Retry puts a job back in line with a fresh set." : "Out of attempts."} flush>
               <DataState loading={failed.loading} error={failed.error} onRetry={() => void failed.refresh()}>
                 {(failed.data ?? []).length === 0 ? (
                   <div className="p-4">
@@ -175,9 +179,11 @@ export function QueuesPage() {
                           </p>
                           {job.lastError && <p className="mt-1 break-words text-xs text-danger">{job.lastError}</p>}
                         </div>
-                        <Button size="sm" variant="outline" disabled={retrying === job.id} onClick={() => retry(job)}>
-                          {retrying === job.id ? "Retrying…" : "Retry"}
-                        </Button>
+                        {canRetry && (
+                          <Button size="sm" variant="outline" disabled={retrying === job.id} onClick={() => retry(job)}>
+                            {retrying === job.id ? "Retrying…" : "Retry"}
+                          </Button>
+                        )}
                       </li>
                     ))}
                   </ul>

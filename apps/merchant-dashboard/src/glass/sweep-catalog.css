@@ -1,0 +1,53 @@
+/* Catalog sweep — Collections, Bulk update from a sheet, Specifications, Size charts,
+   Search synonyms and the Media library. Part of the liquid-glass layer
+   (../liquid-glass.css): everything here is under the same switch, so with
+   data-glass="off" none of it applies and each piece stands on its own solid Tailwind
+   classes (bg-paper-raised, ring-line, shadow-card).
+
+   The lists take their material from the list kit (list.css: .zimos-row-card,
+   .zimos-list-sheet); this file only covers the hooks these pages add. Nothing here is
+   blurred: all of it lies in the page flow or inside a pane that is already frosted. */
+:root:not([data-glass="off"]) {
+  --cat-well: color-mix(in srgb, var(--color-primary-dark) 5%, transparent);
+
+  &.dark {
+    --cat-well: rgb(255 255 255 / 0.05);
+  }
+
+  /* A row of the collections tree, a product in the ordering sheet, a group of synonyms,
+     a tile of the media library: the same small pane as a card of a list. */
+  .zimos-collection-row,
+  .zimos-synonym-group,
+  .zimos-media-tile {
+    background-color: var(--lg-fill);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), var(--shadow-card);
+  }
+  /* The row being dragged: lifted, with the brand ring every selection has. */
+  .zimos-collection-row[data-dragging] {
+    box-shadow: var(--lg-rim-line), 0 0 0 2px var(--lg-brand-solid), var(--shadow-raised);
+  }
+  /* A group that stops the save keeps its danger ring over the pane. */
+  .zimos-synonym-group[data-invalid] {
+    box-shadow: var(--lg-rim-line), 0 0 0 1.5px var(--lg-text-danger), var(--shadow-card);
+  }
+
+  /* Where the sheet is dropped: a well in the card, tinted with the brand while a file is over it. */
+  .zimos-sheet-drop {
+    background-color: var(--cat-well);
+    border-color: var(--lg-edge);
+  }
+  .zimos-sheet-drop[data-dragging] {
+    background-color: color-mix(in srgb, var(--lg-brand-solid) 12%, transparent);
+    border-color: var(--lg-brand-solid);
+  }
+
+  /* Wells inside a frosted sheet: the table of a size chart, the stage of a photo. */
+  .zimos-chart-peek,
+  .zimos-media-stage {
+    background-color: var(--cat-well);
+    box-shadow: inset 0 0 0 1px var(--lg-edge);
+  }
+  .zimos-chart-peek :where(th, tr) {
+    border-color: var(--lg-edge);
+  }
+}

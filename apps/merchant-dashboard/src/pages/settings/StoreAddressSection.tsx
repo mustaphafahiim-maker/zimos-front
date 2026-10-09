@@ -20,7 +20,11 @@ import { useSlugCheck } from "@/lib/useSlugCheck";
 import { formatDateTime } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { StoreAddressField } from "@/components/StoreAddressField";
+import { CopyButton } from "@/components/CopyButton";
+import { SettingsGroup, SettingsRow } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { SettingsCard } from "./sections/SettingsCard";
 import { useWorkspace } from "@/context/WorkspaceContext";
 
 /** System roles holding workspace.manage, which moving the address needs. */
@@ -89,6 +93,8 @@ export function StoreAddressSection() {
   const previous = useAsync(() => (canEdit ? storeAddressPrevious(apiClient, workspaceId) : Promise.resolve([])), [workspaceId, canEdit, current]);
 
   const ready = editing && value !== "" && value !== current && check.status === "available";
+  // A new address typed and not moved to yet: the page asks before it is left behind.
+  useReportDirty(editing && value !== "" && value !== current);
 
   async function move() {
     setMoving(true);
@@ -115,37 +121,40 @@ export function StoreAddressSection() {
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
+    <>
+      {error && <Alert variant="danger">{error}</Alert>}
+      {!canEdit && !error && <Alert>{t.forbidden}</Alert>}
 
-      <div className="mt-4 max-w-2xl space-y-4">
-        {error && <Alert variant="danger">{error}</Alert>}
-        {!editing ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm text-ink">
-              {t.current}{" "}
-              <bdi dir="ltr" className="font-medium">
+      <SettingsGroup footer={t.description}>
+        <SettingsRow
+          label={t.current}
+          control={
+            <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+              <bdi dir="ltr" className="min-w-0 text-sm font-semibold break-all text-ink">
                 {current ? storeHost(current) : "—"}
               </bdi>
-            </p>
-            {canEdit && current && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="min-h-11"
-                onClick={() => {
-                  setValue(current);
-                  setError(null);
-                  setEditing(true);
-                }}
-              >
-                {t.change}
-              </Button>
-            )}
-          </div>
-        ) : (
+              {current && <CopyButton value={`https://${storeHost(current)}`} iconOnly />}
+              {canEdit && current && !editing && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11"
+                  onClick={() => {
+                    setValue(current);
+                    setError(null);
+                    setEditing(true);
+                  }}
+                >
+                  {t.change}
+                </Button>
+              )}
+            </div>
+          }
+        />
+      </SettingsGroup>
+
+      {editing && (
+        <SettingsCard title={t.change}>
           <form
             className="space-y-3"
             onSubmit={(e) => {
@@ -154,30 +163,32 @@ export function StoreAddressSection() {
             }}
           >
             <StoreAddressField id={fieldId} value={value} onChange={setValue} state={value === current ? { status: "empty" } : check} />
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" className="min-h-11" disabled={!ready}>
-                {t.save}
-              </Button>
+            <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="outline" className="min-h-11" onClick={() => setEditing(false)}>
                 {t.cancel}
               </Button>
+              <Button type="submit" className="min-h-11" disabled={!ready}>
+                {t.save}
+              </Button>
             </div>
           </form>
-        )}
+        </SettingsCard>
+      )}
 
-        {(previous.data?.length ?? 0) > 0 && (
-          <div>
-            <h3 className="text-sm font-medium text-ink">{t.previous}</h3>
-            <ul className="mt-1 space-y-1 text-sm text-ink-soft">
-              {previous.data!.map((p) => (
-                <li key={p.slug}>
-                  <bdi dir="ltr">{storeHost(p.slug)}</bdi> · {fmt(t.since, { date: formatDateTime(p.retiredAt) })}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+      {(previous.data?.length ?? 0) > 0 && (
+        <SettingsCard title={t.previous} flush>
+          <ul>
+            {previous.data!.map((p) => (
+              <li key={p.slug} className="flex min-h-13 flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-t border-line px-4 py-2.5 text-sm sm:px-5">
+                <bdi dir="ltr" className="font-medium break-all text-ink">
+                  {storeHost(p.slug)}
+                </bdi>
+                <span className="text-[13px] text-ink-soft">{fmt(t.since, { date: formatDateTime(p.retiredAt) })}</span>
+              </li>
+            ))}
+          </ul>
+        </SettingsCard>
+      )}
 
       <Dialog open={confirming} onOpenChange={(open) => !moving && setConfirming(open)}>
         <DialogContent showCloseButton={false} className="sm:max-w-lg">
@@ -199,6 +210,6 @@ export function StoreAddressSection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </section>
+    </>
   );
 }

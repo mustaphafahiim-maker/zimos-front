@@ -1,5 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@store-builder/ui";
+import { SkeletonBar } from "@/components/DataState";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: { loading: "Loading…" },
+  ar: { loading: "بيحمّل…" },
+} satisfies Messages;
 
 export interface Column<T> {
   /** Stable key; also the React key for the cell. */
@@ -27,6 +34,8 @@ interface DataTableProps<T> {
   className?: string;
   /** Rendered instead of the table body when there are no rows. */
   empty?: ReactNode;
+  /** While true and there are no rows yet, grey placeholder rows stand in for the body. */
+  loading?: boolean;
   footer?: ReactNode;
   /**
    * On a phone each row becomes a card: the first column as its title and
@@ -37,6 +46,10 @@ interface DataTableProps<T> {
 }
 
 const PHONE_QUERY = "(max-width: 47.99rem)";
+
+// Placeholder rows while loading; the cell widths rotate so no two rows match.
+const SKELETON_ROWS = [0, 1, 2, 3, 4] as const;
+const SKELETON_WIDTHS = ["w-3/4", "w-1/2", "w-2/3", "w-2/5", "w-5/6"] as const;
 
 /** A cell with nothing to say: null, empty, or the "—" placeholder. */
 function isBlank(value: ReactNode): boolean {
@@ -70,13 +83,36 @@ export function DataTable<T>({
   minWidth = "48rem",
   className,
   empty,
+  loading = false,
   footer,
   phoneCards = true,
 }: DataTableProps<T>) {
+  const t = useT(STRINGS);
   const isPhone = useIsPhone();
-  if (rows.length === 0 && empty) return <>{empty}</>;
+  // Only the first load gets a skeleton; a refresh keeps the rows it already has.
+  const skeleton = loading && rows.length === 0;
+  if (rows.length === 0 && empty && !skeleton) return <>{empty}</>;
 
   if (phoneCards && isPhone) {
+    if (skeleton) {
+      return (
+        <div role="status" aria-live="polite" aria-busy="true" className={cn("min-w-0", className)}>
+          <span className="sr-only">{t.loading}</span>
+          <ul aria-hidden className="space-y-[var(--bento-gap)]">
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="h-24 rounded-[var(--radius-card)] bg-paper-raised p-4 shadow-[var(--shadow-card)] ring-1 ring-line">
+                <SkeletonBar className="h-4 w-1/2" />
+                <SkeletonBar className="mt-3 w-3/4" />
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <SkeletonBar className="w-1/4" />
+                  <SkeletonBar className="w-1/5" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    }
     const hasText = (col: Column<T>) => typeof col.header === "string" && col.header.trim() !== "";
     const shown = columns.filter((col) => !col.phoneHidden);
     // A leading column without a text header (a tick box) sits beside the title.
@@ -96,6 +132,8 @@ export function DataTable<T>({
               .filter((col) => !col.phoneSkip?.(row))
               .map((col) => ({ col, value: col.cell(row, i) }))
               .filter(({ value }) => !isBlank(value));
+            // Same for the action columns: a row whose actions are all null (the signed-in member's own row) gets no empty strip.
+            const actions = bare.map((col) => ({ col, value: col.cell(row, i) })).filter(({ value }) => !isBlank(value));
             return (
               <li
                 key={rowKey(row, i)}
@@ -134,10 +172,10 @@ export function DataTable<T>({
                     ))}
                   </dl>
                 )}
-                {bare.length > 0 && (
+                {actions.length > 0 && (
                   <div className="relative z-10 mt-2 flex flex-wrap items-center justify-end gap-2">
-                    {bare.map((col) => (
-                      <div key={col.key}>{col.cell(row, i)}</div>
+                    {actions.map(({ col, value }) => (
+                      <div key={col.key}>{value}</div>
                     ))}
                   </div>
                 )}
@@ -151,11 +189,17 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn("min-w-0", className)}>
+    <div
+      className={cn("min-w-0", className)}
+      role={skeleton ? "status" : undefined}
+      aria-live={skeleton ? "polite" : undefined}
+      aria-busy={skeleton || undefined}
+    >
+      {skeleton && <span className="sr-only">{t.loading}</span>}
       {/* relative: a visually hidden header inside the table is positioned against
           this box, so it is clipped with the table instead of widening the page. */}
       <div className="relative overflow-x-auto">
-        <table className="w-full text-sm" style={{ minWidth }}>
+        <table className="w-full text-sm" style={{ minWidth }} aria-hidden={skeleton || undefined}>
           <thead>
             <tr className="border-b border-line bg-paper-sunken/60 text-xs text-ink-soft">
               {columns.map((col) => (
@@ -174,29 +218,42 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
-              <tr
-                key={rowKey(row, i)}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={cn(
-                  "border-b border-line last:border-0",
-                  onRowClick && "cursor-pointer hover:bg-paper-sunken"
-                )}
-              >
-                {columns.map((col) => (
-                  <td
-                    key={col.key}
-                    className={cn("px-3 py-2.5", col.align === "end" && "text-end", col.className)}
+            {skeleton
+              ? SKELETON_ROWS.map((r) => (
+                  <tr key={r} className="border-b border-line last:border-0">
+                    {columns.map((col, c) => (
+                      // py-3.5 around an h-3 bar matches the 40 px of a real row (text-sm + py-2.5).
+                      <td key={col.key} className={cn("px-3 py-3.5", col.className)}>
+                        <SkeletonBar
+                          className={cn(SKELETON_WIDTHS[(r + c) % SKELETON_WIDTHS.length], col.align === "end" && "ms-auto")}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              : rows.map((row, i) => (
+                  <tr
+                    key={rowKey(row, i)}
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    className={cn(
+                      "border-b border-line last:border-0",
+                      onRowClick && "cursor-pointer hover:bg-paper-sunken"
+                    )}
                   >
-                    {col.cell(row, i)}
-                  </td>
+                    {columns.map((col) => (
+                      <td
+                        key={col.key}
+                        className={cn("px-3 py-2.5", col.align === "end" && "text-end", col.className)}
+                      >
+                        {col.cell(row, i)}
+                      </td>
+                    ))}
+                  </tr>
                 ))}
-              </tr>
-            ))}
           </tbody>
         </table>
       </div>
-      {footer}
+      {!skeleton && footer}
     </div>
   );
 }

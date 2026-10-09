@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Coins, Receipt, TrendingUp } from "lucide-react";
+import { IconCoins, IconReceipt, IconTrendUp } from "@/components/icons";
 import { Alert } from "@store-builder/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { Section } from "@/components/Section";
@@ -155,7 +155,7 @@ export function ProfitPage() {
                   profit.grossProfit,
                   previous?.profit.grossProfit
                 )}
-                icon={<TrendingUp />}
+                icon={<IconTrendUp />}
               />
               <KpiCard
                 label={t.margin}
@@ -166,7 +166,7 @@ export function ProfitPage() {
                 label={t.productCost}
                 value={money(profit.productCost)}
                 hint={t.productCostHint}
-                icon={<Coins />}
+                icon={<IconCoins />}
               />
               <KpiCard
                 label={t.itemsRevenue}
@@ -182,7 +182,7 @@ export function ProfitPage() {
                 label={t.shippingCharged}
                 value={money(current.revenue.shippingCharged)}
                 hint={t.shippingHint}
-                icon={<Receipt />}
+                icon={<IconReceipt />}
               />
             </div>
 
@@ -237,7 +237,7 @@ export function ProfitPage() {
               </div>
             ) : (
               <EmptyState
-                icon={<TrendingUp />}
+                icon={<IconTrendUp />}
                 title={t.noDelivered}
                 description={t.noDeliveredDesc}
               />

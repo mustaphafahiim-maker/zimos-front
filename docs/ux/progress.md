@@ -376,13 +376,230 @@ are listed under *Handoff items done*.
 ## Handoff items 201–222 (backend 2026-10-06, fourth batch)
 Three agents at a time (16 GB machine), brief in the scratchpad's BATCH4.md.
 200 (email campaigns) was withdrawn by the backend.
-- [ ] 220 self-service, 221 delivery slots, 222 referral program — agent running
-- [ ] 201 gift cards online, 203 loyalty points, 204 store credit — agent running
-- [ ] 208 free gift, 214 gift wrap, 215 mix-and-match box — agent running
-- [ ] 205 price lists, 218 VIP tiers, 219 B2B quotes — next
-- [ ] 206 stock locations, 207 suppliers / purchase orders / counts — next
-- [ ] 209 customer notes, 210 size charts, 211 search analytics, 212 product Q&A — next
-- [ ] 202 scheduled reports, 213 licence alert, 216 holiday mode, 217 Google sign-in — next
+- [x] 220 + 287 Shopper self-service: Settings → «الأوردرات» (cancel /
+      change address + window), tracking page and account order page buttons
+      with «متاح لحد …». On the tracking page the address form opens empty
+      (the tracking answer has no address; order id decoded from the token).
+- [x] 226 Pick list: /orders/pick-list from the bulk bar and the ready-to-ship
+      tab (per location, tick boxes, print PDF, scan-to-pack per order).
+- [x] 244 + 294 Packing slips: bulk dialog (A5/A4, note remembered) and
+      «اطبع ورقة التجهيز» on the order page; skipped cancelled orders reported.
+- [x] 249 Scan to pack: /orders/:id/pack (focused input, wrong item / over
+      signals with text + beep, undo, confirm anyway with a reason), «اتغلّف»
+      chip on the order and the list. No camera scanning.
+      (220, 226, 244, 249: local, 2026-10-07, not committed)
+- [x] 221 Delivery date and time slots: Shipping → «مواعيد يختار منها
+      العميل» (weekly grid, closed days, note), day + slot chips at checkout
+      (full ones «محجوز»), «ميعاد التوصيل» with change / force on the order
+      page, /orders/delivery-schedule, the sentence on the thank-you page.
+      The tracking page shows the time only on the device that ordered (the
+      tracking answer has no slot). Funnel form: mounted, never opened.
+- [x] 216 Holiday mode: Settings → «الأوردرات» → holiday mode; storefront
+      banner, «الطلبات هتتشحن من …» notes, paused buttons and the 423 refusal
+      at checkout, `holiday` chip on the orders list.
+- [x] 225 Click and collect: Shipping → «الاستلام من الفرع», the delivery /
+      pick-up choice at checkout (no address form, shipping «مجانًا»), pickup
+      code on the thank-you and tracking pages, /orders/pickups (ready, hand
+      over with the code), pickup block on the order page.
+      (216, 221, 225: local, 2026-10-07, not committed; all three left OFF
+      in the demo store)
+- [x] 203 Loyalty points: /loyalty (programme settings + summary), points
+      card on the customer page (history, add / take), storefront «هتكسب N
+      نقطة» on the product, «استخدم نقطك» at checkout, account «نقطي».
+- [x] 204 Store credit: /store-credit (balances, spending switch), credit card
+      on the customer page, refund dialog «الترجيع يروح فين؟» (money / store
+      credit / back to the card, points or credit that paid), checkout «استخدم
+      رصيدك», account «رصيدي».
+- [x] 201 Gift cards with online payments: card field with every method but
+      bank transfer, held lines on the pay page, ledger labels. Online states
+      seen with stubbed answers only (online payments are off on the local API).
+      (201, 203, 204: local, 2026-10-07, not committed)
+- [x] 265–267 Partner apps: /settings/developers (apps, keys, installs),
+      /oauth/authorize approval page, «افتح» frame page for installed apps,
+      webhook «من تطبيق» chip and removed-app note; platform console «Partner
+      apps» (typechecked, not opened in a browser).
+- [x] 263 Dropship supplier shipping rates / minimum order switches, and the
+      storefront's below-minimum notice in cart and checkout.
+- [x] 252 Transfer the store to another owner (Settings → Team; refused
+      attempt checked for real, a completed transfer only with stubs).
+- [x] 262 + 269 Merchant sign-in with a WhatsApp code (third option on the
+      sign-in page; request and wrong code for real, success path stubbed).
+      (252, 262–269: local, 2026-10-07, not committed)
+- [x] 208 Free gift: /offers/free-gifts (card in the Offers hub); cart drawer,
+      cart page and checkout show the earned gift as a free line and an
+      "add X more" nudge with a progress bar.
+- [x] 214 Gift wrap and message: Store settings → «خيارات الهدايا»; checkout
+      «ده هدية؟» block adds the wrap to the summary; order page «الأوردر ده
+      هدية» card; waybill prints it (backend PDF).
+- [x] 215 Mix-and-match box: «اخلط واختار» switch in the bundle editor, badge
+      and «انسخ لينك البوكس» on bundles; storefront /box/:id builder from
+      «كوّن البوكس بتاعك» on the product page, priced by the server.
+      (208/214/215 were built on `ux-redesign` (c83a18f, 183a59f, 99c7bb5) and
+      brought into this working tree on 2026-10-07 as a patch, not a merge.)
+- [x] 205 Wholesale price lists: /offers/price-lists (card in the Offers hub;
+      percent or fixed prices with quantity tiers), hint on the customer page;
+      storefront «سعرك: … بدل …» + tier table, cart and checkout priced with
+      the shopper's token (the product page's own order form too).
+- [x] 218 VIP tiers: /loyalty/vip (tab of «الولاء والمكافآت»), tier card on
+      the customer page; storefront /account/vip, «خصم VIP» line at checkout
+      (the cart and the shipping quote do not know the tier, so the estimated
+      total does not move; the order comes back at the tier price).
+- [x] 222 Refer a friend: /loyalty/referrals (settings + invites table),
+      invites card on the customer page; storefront /account/invite, landing
+      banner on ?ref=, checkout line with «كمّل الطلب من غير الدعوة».
+      (205, 218, 222: local, 2026-10-07, not committed)
+- [x] 219 + 275 Quotes: Orders → «عروض الأسعار» (/quotes inbox + editor),
+      storefront «اطلب عرض سعر» on the product page and the cart, /quotes/:id
+      (prices, validity, accept with an address, decline; accept once).
+      (local, 2026-10-07, not committed)
+- [x] 206 Stock locations: Products → «المخزون» (/inventory, tabs المخازن ·
+      نقل مخزون), location page (stock, receive / write off), Settings → store
+      tab «المخازن», stock per location on the product page, «بيتشحن من» on the
+      order page, upgrade notice for FEATURE_NOT_IN_PLAN. Two-location flows
+      (transfer, make default, ships-from) checked against stubs only: the demo
+      store's plan has no multi_warehouse. (local, 2026-10-07, not committed)
+- [x] 207 Suppliers, purchase orders (draft → ordered → received in parts,
+      update cost, cancel) and stock counts (save as you go, apply, cancel)
+      as tabs of /inventory; exercised end to end against the real API.
+      (local, 2026-10-07, not committed)
+- [x] 210 Size charts: /size-charts (list, grid editor, attach to products /
+      collections), chart note on the product page; storefront «دليل المقاسات»
+      sheet with a cm/inch switch (the first column is never converted).
+- [x] 212 Product Q&A: /questions inbox (waiting / published / hidden, answer,
+      publish, hide, delete), questions section on the product page; storefront
+      list + «اسأل سؤال» form.
+- [x] 211 Store search: /analytics/search (totals, top searches, no-result
+      searches with «أضف مرادف», top clicked) and /search-synonyms; storefront
+      reports result clicks and shows «نتايج عن …».
+- [x] 202 Summary reports: Settings → My account, under «My notifications»
+      (daily / weekly, recipients, sandboxed preview, send to me now).
+- [x] 213 Licence codes alert: «نبّهني لما يفضل» + waiting-codes banner in the
+      product's Codes section (/digital?product=<id>); the banner reads the
+      `stock.low` notification because the codes endpoint has no waitingCodes.
+      (210–213 and 202: local, 2026-10-07, not committed)
+- [ ] 209 customer notes — queued (crm group)
+- [ ] 216 holiday mode, 217 Google sign-in — queued (checkout group)
+
+## Handoff items 223–312 (local desktop chat, 2026-10-07, working tree only, not committed)
+Built by parallel agents in this checkout; plan and per-group notes in the
+session scratchpad's WAVES.md. Items not listed here are still in progress.
+- [x] 238, 242, 245, 246, 247, 239, 240, 256, 293 Store reports: Analytics →
+      «تقارير تانية» (/analytics/reports/<slug>: tax, order-times,
+      sales-by-collection, sales-by-option, returns, inventory-value,
+      slow-stock, cart-offers), each with a date range in the store's time
+      zone and «تنزيل CSV». 240 has no «اعمل تخفيض مجدول» link yet (waits for
+      227); 256 has no link from Cart offers yet (waits for 253).
+- [x] 241 Discount results: four columns + range + CSV on the Discounts list,
+      full numbers at the top of the discount's edit dialog.
+- [x] 251 Six more pixel platforms (X, Taboola, Outbrain, Kwai, Reddit,
+      Microsoft): «إضافة بيكسل» is now a tile grid of all 13 platforms
+      (lettermarks, no brand art), per-platform ID hints, X event-IDs table;
+      the storefront loads each tag only after consent and maps our events.
+- [x] 255 Server-side conversions for Reddit / X / Microsoft (keys, test mode).
+- [x] 257 «تجريبي» chip when server events go to a sandbox.
+- [x] 254 Ad spend and attribution for the new platforms; link builder
+      shortcuts; the four new click ids kept on the order.
+- [x] 261 Ad accounts (/ads/accounts): connect, pick, sync; pause / resume /
+      budget on a campaign with a confirm (sandbox adapter only).
+- [x] 264 Product feed per channel: channel cards on the existing «ملف
+      المنتجات» page (own collection, sold-out rule, Google checklist hold).
+- [x] 209 Customer notes and follow-ups: customer page tab «ملاحظات
+      ومتابعات» (?tab=notes), Customers → «متابعاتي» (?tab=followups), the
+      `customer.followup` notification worded.
+- [x] 250 Customer timeline: customer page tab «كل اللي حصل» (?tab=timeline)
+      with kind chips and load more.
+- [x] 237 RFM groups: Customers → «تقسيم العملاء» (?tab=groups), «المجموعة»
+      filter on the list, RFM card on the customer page.
+- [x] 248 Merge duplicates: «عملاء ممكن يكونوا نفس الشخص» card, side-by-side
+      merge with a destructive confirm and the result.
+- [x] 235 Privacy requests: Customers → «طلبات الخصوصية» (?tab=privacy),
+      export / erase on the customer page, storefront /account/privacy.
+- [x] 232 URL redirects: Store settings → «تحويل الروابط» (table, add / edit,
+      CSV import with numbered problems); the storefront looks a redirect up
+      before every 404 (page, product, collection, blog post).
+- [x] 233 Store locator: Store settings → «فروعنا»; storefront /branches +
+      footer link. «أقرب فرع ليا» is built and hides itself while the
+      storefront's Permissions-Policy forbids geolocation.
+- [x] 236 Post-purchase survey: Store settings → «استبيان بعد الشراء», the
+      questions on the thank-you page (also a funnel's), answers on the order
+      page, /analytics/survey. The answer is saved through a same-origin PUT
+      relay (app/store/[workspaceId]/api-put): the API's CORS has no PUT.
+- [x] 217 + 278 + 279 Sign in with Google for shoppers: setting card in
+      customer accounts, Google's button on the sign-in sheet with the nonce,
+      verified-email block on the profile. A real Google sign-in cannot
+      complete on the local API (no Google client): stubbed.
+- [~] 312 Funnels on a locked store: the funnel's calls carry ?funnelId=
+      (the X-Funnel-Id header is blocked by CORS). A shopper whose step is
+      open can order; a new visitor still gets 423 on the step's product —
+      needs the backend.
+- [x] Sidebar: size charts, search synonyms, store credit balances and ad
+      accounts no longer have their own line (`under` in lib/navigation.ts);
+      they are reached from Products, «الولاء والمكافآت» tabs and Ad spend.
+- [x] 228 Business customers: «بيانات الشركة» card on the customer page
+      (company, tax ID, exemption + note), company lines on the order page;
+      storefront company card on the account profile (saved through the
+      same-origin PUT relay — the API's CORS has no PUT), checkout «الضريبة —
+      معفى» for an exempt signed-in shopper.
+- [x] 229 Pay on account: «الدفع الآجل» card on the customer page (limit,
+      terms, statement, «سجّل دفعة»), Customers → «حسابات الآجل»
+      (?tab=on-account), «دفع آجل» on the manual order screen and a card on
+      the order page; storefront /account/on-account, checkout method «ادفع
+      آجل» with its refusals (exclusive of gift card / points / credit).
+- [x] 227 Scheduled sales: /offers/scheduled-sales (card in the Offers hub;
+      editor with preview, store-clock times, stop / cancel), sale note on the
+      product page; the slow-stock report links to …/new?product=<id>.
+- [x] 234 Price history card on the product page (step chart + changes);
+      storefront «أقل سعر في آخر 30 يوم» on the product page and cards.
+- [x] 231 Specifications: /catalog/specifications (keys), section on the
+      product page; storefront specs table, compare tray and /compare, listing
+      filters (?spec=).
+- [x] 223 Bought together: settings card under Offers → Cross-sell, pins via
+      ?pin=<id>, «Bought with» on the product page; storefront strip.
+- [x] 224 Stock forecast: Inventory → «توقّع المخزون» (/inventory/forecast),
+      settings dialog, tick rows → draft purchase order, card on the product page.
+- [x] 230 Lots & expiry: Inventory → «الدفعات والصلاحية» (/inventory/lots),
+      receive a lot, edit, write off, expiry warning days, lots on the product
+      page and under pick-list lines.
+- [x] 243 + 295 + 297 Bulk update from a sheet: Products → «تحديث جماعي من
+      شيت» (/catalog/bulk-update): template, .csv/.xlsx upload, preview tabs,
+      apply once per upload (Idempotency-Key), result.
+- [x] 253 Cart offers: /offers/cart-offers (card in the Offers hub; rules
+      list + editor); storefront offer cards in the cart drawer and cart page
+      (take the offer, over-max note, locked hint), «شوف النتايج» → report 256.
+- [x] 258 Spin to win: /offers/spin-wheel (slices, live chances, SVG preview,
+      stats); storefront popup dialog after the delay (phone, consent tick,
+      result with copy; reduced motion; never on cart / checkout / funnels).
+- [x] 259 «العرض» column in the order export — already offered by the export
+      picker (nothing to change).
+- [x] 260 Lost orders export as Excel or CSV; «تحديث من ملف» accepts .xlsx.
+- [x] 298 Order email test goes to the signed-in person or a chosen teammate.
+- [x] 304 Webhook custom header value: hint, client check, server 422 mapped.
+- [x] 305 Buy a domain: «مش متاح دلوقتي — اربط دومين عندك» on 503, endings hint.
+- [x] 273–274 `ORDER_TENDER_RETURNED` wording on reopen / bulk / correction
+      (the refund destinations were already in the 204 refund dialog).
+
+## Handoff items 302–408 + go-live AI errors (local desktop chat, 2026-10-08, working tree only, not committed)
+Nine parallel groups; every heading handled. "stubbed" = seen only with stubbed answers (local limits:
+online gateways off, no courier, one stock location, no second active account, no Google client).
+- [x] Sign-in and team: 330, 331, 332, 347, 359, 346, 358 (/invites), 379 (ownership is now an offer).
+      Second-account flows stubbed.
+- [x] Subscription: 333, 334, 335, 336, 394, 397 — Settings → billing tabs; console /payment-methods,
+      /payment-proofs. Transfer proofs, top-ups and the balance stubbed; 336 real on the spare store.
+- [x] Console: 337, 338 (/notifications + bell), 405/408; 339 /site-traffic built, numbers stubbed, the
+      marketing-site beacon never run.
+- [x] Domains: 341, 325, 326, 385 (/domains/purchases/:id/dns), 395, 303. Owner step, prices and Brevo stubbed.
+      Buy stays enabled on a null price only for the sandbox registrar.
+- [x] Payments: 340 (real end to end), 382 (real), 381 (Settings → «ترقيم الطلبات»; the storefront no longer
+      adds "#"), 320 (real), 384 + 377 (/payments/transactions; data stubbed), 364 (stubbed).
+- [x] Shipping and returns: 372, 396, 387, 354 real; 375, 351, 352, 318 stubbed; 370 wording only.
+- [x] Store and funnels: 373 (/trash), 376, 389 (/inventory/movements), 390, 401, 400, 393.
+- [x] Messaging: 378 (real, sandbox), 383 (real), 391 (real submit), 386 (stubbed), 392 (stubbed push).
+- [x] Checkout: 374, 353, 388 real; 348, 362, 363 stubbed; 302/322 partly (no websiteId from the API);
+      355 and the dashboard half of 380 never opened in a browser.
+- [x] Go-live AI errors: one shared wording in lib/errorMessages.ts (provider busy / not available / limits).
+- [x] Small: checkout photo limit 5 MB; names for payment.disputed, return_approved, return_rejected.
+Final check: typecheck dashboard / storefront / admin 0 errors; 23 dashboard routes and 9 storefront pages
+swept with no console errors. Backend findings: docs/ux/backend-requests.md (2026-10-08 section).
 
 ## Round 3 (in progress)
 - [x] W3-1 Wording pass 3: ~250 «جارٍ …» busy labels → Egyptian present
@@ -432,3 +649,225 @@ See `backend-requests.md` (first 6 done by the backend; 4 new from handoffs 175�
 - 2026-10-06 Unsaved-changes guard is beforeunload only: the app uses
   BrowserRouter (no data router), so in-app blocking (useBlocker) is not
   available without a router migration.
+
+## Local UX pass — 2026-10-07 (desktop chat, working tree only, not committed)
+Done in the main checkout on the owner's instruction to leave git to the cloud
+loop. Source of truth for what changed: `git status` there. Audit and fix reports
+live in that session's scratchpad, not in the repo.
+- Liquid glass layer over the calm surfaces: `apps/merchant-dashboard/src/liquid-glass.css`,
+  off switch in Settings → Account (`components/GlassToggle.tsx`). See UI_SYSTEM.md.
+- Session: a refresh that gets no answer (429 rate limit, 5xx, offline) no longer
+  signs the merchant out; only a refused token does (`packages/api-client/src/client.ts`,
+  `context/AuthContext.tsx` retries /auth/me for up to a minute, then shows an
+  «مش قادرين نوصل لزيموس» card with retry instead of the login page).
+- UX audit of 43 routes at 390/1366 px (8 auditors, 76 findings: 2 blocker, 32 major).
+  47 fixed in one batch: sticky `components/SaveBar.tsx` on product, shipping prices,
+  fraud rules and store settings; manual order jumps to the first missing field;
+  order items show price on phones and notes come right after the summary; home
+  to-do no longer double-counts follow-ups; confirmation cards list what was ordered
+  and hide team controls for a solo store; photo controls visible on touch; offers
+  hub cards in a row; contacts get call/WhatsApp; Discounts and Team on DataTable;
+  heatmap hours aligned, charts fixed-height with readable labels; activity rows link
+  to their record; notification keys named; billing says the period ended; 44 px
+  targets for call/WhatsApp, back link, bell, account, search, fields; Arabic digits
+  in period labels and KPI counts.
+- Second batch (same day): content-shaped loading in `DataState` and `DataTable`
+  (`skeleton` / `loading` props); `PageHeader primaryAction` puts «أوردر جديد»,
+  «ضيف منتج», «إضافة جهة اتصال» in a fixed bar above the phone tab bar; a shared
+  leave guard (`lib/useUnsavedGuard.ts`) asks before a Shipping or Store-settings
+  tab switch drops a draft; «الطلبات»→«الأوردرات» and «قمع»→«مسار» across customers,
+  analytics, automations, stores; billing status words and a truthful amount label;
+  confirmation cards cap at 4 lines; KpiCard `trend` sparkline; a warm pool in the
+  glass backdrop and a focus glow on fields.
+- Reviewed twice (adversarial review, 12 reviewers in all); everything confirmed was fixed,
+  including: the session retry no longer races itself and shows a busy state;
+  the field focus glow sits under the error/focus rings instead of replacing them;
+  an assigned task on a solo store can be unassigned; «الافتراضي» is the one word
+  for an option-less variant; the stock hint quotes the storefront's real badge.
+- Not done: in-app route changes (sidebar links) are still not guarded — the app
+  has no data router, so only tab switches and reload/close ask; Latin digits in a
+  few remaining strings; "(SPEC §18.2)" text in the backend's automation templates;
+  «هذه الفترة / هذا الشهر» range labels kept formal where «ده/دي» read oddly.
+- Aurora look (same day, after the owner rejected the result as too timid): the glass layer now
+  draws a real colour ground (brand, violet, pink, peach, sky), the page itself is one frosted
+  pane beside the side menu and the top bar, buttons are pills with a sheen sweep, the current
+  menu item / selected tab / main action share one brand gradient, home figures carry a %
+  chip and an area sparkline, the orders header folds its secondary tools below 1536px.
+  Contrast measured on rendered pixels (1,106 text runs, light and dark, desktop and phone).
+  The brief for the page-by-page re-layout is docs/ux/REDESIGN_PROMPT.md; proof in docs/ui-lab/aurora.
+
+## Full redesign (docs/ux/REDESIGN_PROMPT.md) — local desktop chat, working tree only, not committed
+
+### Phase 1 — the system: shell, icons, motion (2026-10-08)
+Pictures: `docs/ui-lab/redesign/phase-1/` (before / after, phone and desktop).
+- **Icons.** `lucide-react` → Phosphor (`@phosphor-icons/react`) in all 357 dashboard files, through one map,
+  `components/icons.ts` (semantic names; `fill` weight for the current state, `duotone` in empty states).
+  Done by a type-checked codemod; `packages/ui` keeps its own internal glyphs.
+- **Side menu**, Finder-style: seven headings (`lib/navigation.ts`, URLs unchanged, role rules unchanged),
+  36px rows, the current row a filled pill, groups fold and remember, pinned shortcuts on top, apps / settings /
+  support pinned at the bottom, count badges for calls due, orders to ship and unread messages
+  (`lib/workCounts.ts`, one poll for the whole shell). Activity log and Refer & earn moved inside Settings → «كمان».
+- **Phone dock** (`components/MobileTabBar.tsx`): a floating glass dock, five slots, the pressed icon swells,
+  the current one is the filled glyph; «المزيد» opens the full menu as a bottom sheet.
+- **Spotlight** (`components/CommandPalette.tsx`): recents, actions (new order, add product, theme, language…),
+  pages, and orders / products / customers / funnels by number, phone or name — with call and WhatsApp on a
+  customer row; arrows, Home / End, Enter, Esc.
+- **Primitives**: `Sheet`, `QuickLook`, `ContextMenu`, sliding `Segmented`, `Popover`, `EditInPlace`, toasts with
+  Undo; `Modal` and `ConfirmDialog` share the sheet's chrome. Notification Centre opens from the side, grouped by
+  kind, each item with its action. Empty / error / no-permission states and the stat card (`KpiCard`) redrawn.
+- **Motion and speed**: house curves in `index.css` (`--ease-spring`, `--ease-pop`, `--ease-out`), view transitions
+  between pages (`lib/viewTransition.ts`, `components/ViewLink.tsx`), page code fetched on hover / touch-start
+  (`lib/prefetch.ts`, `routes/prefetch.ts`), scroll restored on back (`lib/scrollRestore.ts`), lists kept for the
+  session (`lib/useCachedAsync.ts`). The glass layer's new pieces are one file each in `src/glass/`.
+- **Checks**: `tsc -b` clean; home, orders and settings at 390×844 touch and 1366×800, light and dark: no console
+  errors, no failed requests, no horizontal scroll; contrast measured on rendered pixels for 2,080 text runs —
+  under the floor only the merchant's own brand-colour preview in Settings (their colours) and one side-menu
+  heading while it passes under the list's edge fade; glass off solid; reduced motion: nothing running; English
+  reads left-to-right with no Arabic left in the chrome.
+
+Decisions
+- 2026-10-08 Dock refraction (the SVG displacement filter of the owner's `liquid-glass` reference) is on for fine
+  pointers only: a software displacement filter re-run on every scrolled frame would cost a mid-range Android its
+  60fps. Touch devices get the same dock without it.
+- 2026-10-08 The glass layer's shell pieces live in `src/glass/*.css` (same switch as `liquid-glass.css`), one
+  file per component, so parallel builders never edit one stylesheet.
+- 2026-10-08 Offers, discounts and gift cards stay three rows under المنتجات until the Phase 4 hub; the report
+  pages stay separate rows under الفلوس والتقارير until the Phase 5 hub — nothing is unreachable meanwhile.
+- 2026-10-08 Empty order stages keep full-strength words on a dashed chip instead of 60% opacity (it fell to 2.8:1).
+- 2026-10-08 Phosphor is imported per icon (`@phosphor-icons/react/dist/csr/<Name>`) so the dev server does not
+  bundle the whole family.
+
+### Phase 2 — Home: «اليوم» (2026-10-08)
+Pictures: `docs/ui-lab/redesign/phase-2/`. Design and data map: the session's `phase2-brief.md`; what the API
+does not give yet: `docs/ux/needs-backend.md` (H1–H23).
+- The page (`pages/DashboardHomePage.tsx`) is the merchant's day in order, each section its own file under
+  `pages/home/today/`, loading on its own (cached, skeleton in the shape of what comes, a 403 hides the section,
+  any other failure shows a line with retry): header with the range (opens on **today**) and a live chip →
+  **«مستنيك دلوقتي»** (one gradient card; a row per kind of work with its count, the age of the oldest or the money
+  at stake, and one button; ranked by how late it is; calls, no courier, failed deliveries, returns, transfers,
+  stock, messages, abandoned checkouts) → four stat cards against yesterday at the same hour (7 / 30 days: against
+  the period before) → **«فلوسك»** (net profit with incomplete costs called out and linked, cash with couriers and
+  how old, settled this week) → **«رحلة الأوردر»** (placed → confirmed → shipped → delivered, the rates the API
+  gives, and the weakest step in one sentence with its reason) → ads (cost per delivered order, best / worst
+  campaign; a connect row otherwise) → products (top by delivered profit, running out, coming back) → latest orders
+  with call / WhatsApp, Quick Look and a context menu → the setup guide as one slim row after the first order.
+- Everything the old home showed is on the page or one tap away: visits, the store funnel, offers, sources,
+  governorates, devices and the product / store filters are under «كل الأرقام بالتفصيل» (closed, loads when opened).
+  The old tiles (`HomeAnswers`, `QuickActions`, `Bento`) are removed.
+- Checks: `tsc -b` clean; home at 390×844 touch and 1366×800, light and dark, today and 30 days: no console errors,
+  no failed requests, no horizontal scroll; 910 text runs measured on rendered pixels, none under the floor (the
+  check now leaves out text covered by a floating bar or inside a scroller's edge fade); glass off solid; reduced
+  motion: nothing running; English left-to-right.
+
+Decisions
+- 2026-10-08 "Confirmed today" and "handed to couriers today" do not exist as events in the API: the two cards
+  say how many of the range's orders are confirmed / with a courier so far, in words, with no invented comparison.
+- 2026-10-08 No "next settlement" tile (no payout schedule exists): cash held and its age, and what was settled
+  this week, stand in.
+- 2026-10-08 Between "confirmed" and "shipped" the journey shows an arrow and no rate (the API gives none).
+- 2026-10-08 The range opens on today on every visit; the old per-store memory of the period is gone.
+- Phone length (390 px wide, measured): the first build of the new home was 4,660 px; after putting the two
+  money cards side by side, the journey in one compact row and the three product cards in one snap row it is
+  3,100 px on "today" and 3,580 px on 30 days (the old home was 2,715 px with a third of the content).
+
+### Phase 3 — Orders: the flow that makes the money (2026-10-08)
+Pictures: `docs/ui-lab/redesign/phase-3/`. Feature inventories used so nothing was dropped: the session's
+`inventories/orders.md` and `inventories/confirmation-lost-returns-fraud.md` (each builder ticked its items).
+- **Shared first**: the list kit every list page now uses (`components/list/`: `ListToolbar`, `ChipRow`,
+  `BulkBar`, `FilterSheet`, `ListRowCard`, `ListSkeleton`), `components/Accordion.tsx`, and shared-element view
+  transitions (a row's name, amount and status chip travel into the detail header — `markViewSource`).
+- **Orders list**: four blocks before the first order instead of up to eleven — title with one «أدوات» menu, search
+  + ONE Filters sheet (saved views, date, risk, sort, the 15 filters, columns, page size — now on a phone too),
+  stage chips with counts in one scrolling row (empty stages behind «كمان»), active-filter chips. Rows lead with the
+  customer and the amount; call / WhatsApp on desktop rows as well; a row opens Quick Look; right-click / long-press
+  menu; a floating bulk bar. Phone list 10,890 → 6,566 px, desktop 6,052 → 4,366 px.
+- **Confirmation queue**: a calling station — one order at a time (who, their history with the store, what, how
+  much, where), big buttons (call, WhatsApp, confirmed, no answer, call later, cancelled), the next order slides in,
+  session progress, keyboard shortcuts on desktop. The old list stays one switch away. Phone 14,477 px → one screen.
+- **Order page**: hero (who · how much · where · the next step as one button), then items, money and notes;
+  everything else folds into accordions with a one-line summary; status changes from the chip with Undo when the
+  server allows going back. Phone 5,665 → 3,182 px.
+- **Create order**: a sheet over the list in three steps (customer → products → delivery and payment), a searchable
+  product picker, the running total from the server in the footer, the draft kept per store.
+- **Lost orders, returns, protection**: the same list pattern, each row with its one action; protection rules fold
+  into six sections with a summary each.
+- Checks: `tsc -b` clean; orders, an order page, the queue, lost orders, returns and protection at 390×844 touch and
+  1366×800, light and dark: no console errors, no failed requests, no horizontal scroll; 1,938 text runs measured,
+  one under the floor (lost-orders secondary text on a dark row, 4.28:1) fixed and re-measured; glass off solid;
+  reduced motion: nothing running; English left-to-right with no Arabic left in the chrome.
+
+Decisions
+- 2026-10-08 Bulk "ship" now preselects the first connected courier (it used to open on "other, type a name"); the
+  batch preview still has to be confirmed.
+- 2026-10-08 The orders table's customer, amount, status and place are fixed columns; the default optional set is
+  products only, so the table fits 1366 px without scrolling.
+- 2026-10-08 On a narrow station card the amount and the place come before the items, so they never sit under a
+  scrolling list.
+- 2026-10-08 Sheets use `overflow: clip` on their viewport: a hidden box was being scrolled by focus while the sheet
+  rose, leaving it shifted up with a gap under it.
+Open
+- The orders table still scrolls sideways between 768 and about 1,000 px wide.
+- A confirmation task carries no line image, so the station shows the package tile for every item.
+- `pages/orders/packing/packingStrings.ts` still says «للطلب» in the bulk menu (Phase 10 word sweep).
+
+### Phase 5 — Reports: one hub that answers questions (2026-10-08)
+Pictures: `docs/ui-lab/redesign/phase-5/`. Feature inventory used so nothing was dropped: the session's
+`inventories/reports.md` (each tab builder ticked its items).
+- **One page, seven tabs**, each named after the question it answers: المبيعات والربح «كسبت كام فعلاً؟» · رحلة
+  الأوردر «الأوردرات بتضيع مني فين؟» · الإعلانات «أنهي حملة بتكسّب؟» · المنتجات · العملاء · المتجر · دلوقتي. One range
+  and one comparison for the whole hub, kept in the address and carried from tab to tab.
+- **Every tab has the same anatomy** (the report kit, `components/report/`): a KPI strip, ONE chart, ONE sortable
+  table with CSV, ONE sentence that says what the numbers mean and what to do, then «تفاصيل أكتر» (closed, loads
+  when opened) and links to the side reports. Six separate report screens became one.
+- **Old addresses still work**: `/analytics/summary`, `/analytics/web`, `/analytics/attribution`,
+  `/analytics/realtime` and `/analytics/search` open the tab that took them over, with their query string. The
+  side menu has one «التقارير» row; the old rows are still found by search.
+- Checks: `tsc -b` clean; the seven tabs at 390×844 touch and 1366×800, light and dark: no console errors, no
+  failed requests, no horizontal scroll; 4,056 text runs measured on rendered pixels, none under the floor once
+  the check learned that chart text is painted with `fill`; glass off solid; reduced motion: nothing running;
+  English left-to-right with no Arabic left in the chrome.
+
+Decisions
+- 2026-10-08 A conversion rate over 100% (more orders than counted visits: orders typed in by the merchant) is
+  shown as «—» with the reason, not as a figure like 1,114%.
+- 2026-10-08 «الأرباح» keeps its own menu row; the sales tab shows the headline profit and links to it.
+- 2026-10-08 The order-journey tab shows no comparison chips: the API has no previous period for delivery.
+Open
+- The old report screens' files are still in the repo, unrouted, because the tabs import helpers from them.
+- Backend lines R13–R31 in `docs/ux/needs-backend.md` (profit comparison, per-edge counts, ad platform connect…).
+
+### Phases 4, 6, 7, 8, 9, 10 — built and checked together (2026-10-08)
+Pictures: `docs/ui-lab/redesign/phase-4/` … `phase-10/`. A network failure cut off the first run of phases 4, 6
+and 9; the cut-off builders were restarted from the files already on disk.
+- **Phase 4 — products and selling**: catalog on the list pattern (price and stock edited in place, Quick Look,
+  grid / list), the product page in sections with a photo grid and a variants grid, one «العروض والخصومات» hub
+  (discounts and gift cards under it in the menu), customers list and a customer page with a call bar.
+- **Phase 6 — store editor**: one toolbar, sections list on one side, the store in the middle, the look on the
+  other; on a phone the store fills the screen with three buttons under it. Draft autosaves; publish goes through a
+  sheet that lists what changed; version history with roll back.
+- **Phase 7 — funnel builder**: `FunnelEditorPage.tsx` split by zone (1,772 → 494 lines); the map with cards,
+  labelled arrows and "+" on arrows, pan and pinch; steps and inspector as panes (sheets on a phone); settings,
+  emails, tests and countries in a side sheet; the list and a three-question wizard.
+- **Phase 8 — settings**: Settings (25 sections, account split in five), store settings (17 sections), shipping
+  (default price first, governorates as one table), payments and apps on the System Settings layout
+  (`components/settings/`). Account → devices on a phone 35,274 → 1,399 px; shipping 4,634 → 1,050 px.
+- **Phase 9 — storefront**: swipe gallery, option chips, sticky order bar, trust lines; cart that answers on tap;
+  one-page checkout; tracking as a timeline.
+- **Phase 10 — sweep**: 107 rows in `docs/ux/sweep-table.md` (97 done, 10 partial with what is left).
+- Checks run: `tsc -b` (dashboard) and `tsc --noEmit` (storefront) clean. 22 dashboard pages from phases 4, 6, 7
+  and 10 at both sizes, light and dark: no horizontal scroll; 5,591 text runs measured, 9 under the floor — 8 on
+  the offers hub (fixed and re-measured) and one chip on the orders board (open); glass off solid on all 22.
+  Settings, shipping and payments measured clean; the apps page was fixed for a phone overflow and re-measured on
+  desktop only.
+
+Open (not done or not verified)
+- Storefront: contrast was not measured (the check script signs in to the dashboard only); one 404 in the console
+  is not traced; the order-confirmation page was not captured.
+- Editor: a loading spinner was still turning under reduced motion at capture time; a hydration warning comes
+  from the store inside the preview and is not traced.
+- English: template category names on `/website` and the font samples in the editor still show Arabic.
+- Orders board: the «عميل جديد» chip measures 3.59:1 on a light column.
+- A product image request to `/uploads/…` is blocked cross-origin on the dev server.
+- The demo funnel's cards overlap on the map with their saved positions; «رتّب الخريطة» was not tried.
+- Only a sample of the swept pages was opened in a browser; the rest are typechecked only.
+- `lucide-react` is still in the dashboard's package.json; old unrouted report screens are still in the repo.

@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { Table2 } from "lucide-react";
-import { Alert, Button, Input } from "@store-builder/ui";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { IconTable } from "@/components/icons";
+import { Alert, Button, Input, cn } from "@store-builder/ui";
 import {
   catalogBulkUpdateVariants,
   isApiErrorCode,
@@ -12,15 +12,20 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { majorToMinor, minorToMajorInput } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
-import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { useBulkTableOffered } from "../variants/bulkEntry";
+import { FormSheet } from "../variants/FormSheet";
 
 /**
  * "Variant control" (SPEC §7.2): every variant of the product in one table —
  * price, compare-at, cost, stock, SKU, active/hidden — with multi-select and
  * "apply a value to the selected rows". Saved in one request; only the cells
  * that changed are sent.
+ *
+ * It opens in a sheet (`VariantBulkSheet`), from «عدّل الكل في جدول» in the
+ * head of the variants section. `VariantBulkEditor` is the same sheet behind
+ * its own button, for a page that has no variants section.
  */
 
 const STRINGS = {
@@ -37,6 +42,7 @@ const STRINGS = {
     active: "Active",
     selectAll: "Select all variants",
     selectRow: "Select {name}",
+    cellOf: "{column} — {name}",
     defaultVariant: "Default",
     applyTo: "Apply to {count} selected",
     column: "Column",
@@ -53,32 +59,33 @@ const STRINGS = {
     saved: "{count} variants updated.",
   },
   ar: {
-    open: "تعديل كل المتغيرات في جدول",
+    open: "عدّل كل المتغيرات في جدول",
     title: "التحكم في المتغيرات",
-    description: "عدّل كل المتغيرات مرة واحدة. حدّد صفوفًا لملء عمود لها كلها.",
+    description: "عدّل كل المتغيرات مرة واحدة. علّم على الصفوف عشان تملى عمود ليهم كلهم.",
     variant: "المتغير",
     price: "السعر",
     compareAt: "قبل الخصم",
     cost: "التكلفة",
     stock: "المخزون",
     sku: "SKU",
-    active: "نشط",
-    selectAll: "تحديد كل المتغيرات",
-    selectRow: "تحديد {name}",
+    active: "شغّال",
+    selectAll: "اختار كل المتغيرات",
+    selectRow: "اختار {name}",
+    cellOf: "{column} — {name}",
     defaultVariant: "الافتراضي",
-    applyTo: "تطبيق على {count} محدد",
+    applyTo: "طبّق على {count} متحدد",
     column: "العمود",
     value: "القيمة",
-    apply: "تطبيق",
-    status_active: "نشط",
+    apply: "طبّق",
+    status_active: "شغّال",
     status_archived: "مخفي",
-    invalid: "بعض الخانات ليست أرقامًا صحيحة. صحّح الخانات المظللة.",
-    skuTaken: "أحد رموز SKU مستخدم لمتغير آخر.",
+    invalid: "فيه خانات مش أرقام صحيحة. صحّح الخانات المتعلّم عليها.",
+    skuTaken: "فيه SKU من دول مستخدم لمتغير تاني.",
     cancel: "إلغاء",
-    save: "حفظ {count} تغيير",
+    save: "احفظ {count} تغيير",
     noChanges: "مفيش تغييرات",
     saving: "بنحفظ…",
-    saved: "تم تحديث {count} متغير.",
+    saved: "{count} متغير اتحدّث.",
   },
 } satisfies Messages;
 
@@ -163,40 +170,59 @@ export function VariantBulkEditor({
 }) {
   const t = useT(STRINGS);
   const [open, setOpen] = useState(false);
-  if (variants.length === 0) return null;
+  // The variants section opens this table from its own head. Beside such a section the button would be a second
+  // door to the same room, so it waits one beat to hear from the section, and stays out if there is one.
+  const offered = useBulkTableOffered(productId);
+  const [settled, setSettled] = useState(false);
+  useEffect(() => setSettled(true), []);
+
+  if (variants.length === 0 || offered || !settled) return null;
   return (
-    <div className="-mt-3 flex justify-end">
-      <Button type="button" variant="outline" className="min-h-10" onClick={() => setOpen(true)}>
-        <Table2 className="size-4" aria-hidden />
+    <div className="flex justify-end">
+      <Button type="button" variant="outline" className="min-h-11 rounded-full px-4 md:min-h-10" onClick={() => setOpen(true)}>
+        <IconTable className="size-4" aria-hidden />
         {t.open}
       </Button>
-      {open && (
-        <EditorDialog
-          productId={productId}
-          variants={variants}
-          skuNote={skuNote}
-          onClose={() => setOpen(false)}
-          onSaved={() => {
-            setOpen(false);
-            onChanged();
-          }}
-        />
-      )}
+      <VariantBulkSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        productId={productId}
+        variants={variants}
+        skuNote={skuNote}
+        onSaved={() => {
+          setOpen(false);
+          onChanged();
+        }}
+      />
     </div>
   );
 }
 
-function EditorDialog({
+/** The 44px target of a tick box on a touch screen; under a mouse the box keeps a table's tight rhythm. */
+const TICK = "flex size-9 cursor-pointer items-center justify-center pointer-coarse:size-11";
+const HEAD = "px-2 py-2.5 text-start font-medium whitespace-nowrap";
+
+/**
+ * The table itself, in a sheet: a bottom sheet on the phone, a wide centred
+ * pane on a desktop. Once a cell was typed in, closing it by a stray tap,
+ * Escape or a pull down first asks whether to leave the edits (FormSheet).
+ * Every open starts from the variants as they are saved.
+ */
+export function VariantBulkSheet({
+  open,
+  onClose,
   productId,
   variants,
   skuNote,
-  onClose,
   onSaved,
 }: {
+  open: boolean;
+  /** The sheet asks to close without saving. */
+  onClose: () => void;
   productId: string;
   variants: Variant[];
   skuNote?: ReactNode;
-  onClose: () => void;
+  /** The changes are saved: close the sheet and reload the product. */
   onSaved: () => void;
 }) {
   const t = useT(STRINGS);
@@ -204,6 +230,7 @@ function EditorDialog({
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const original = useMemo(() => variants.map((v) => rowOf(v, t.defaultVariant)), [variants, t.defaultVariant]);
+  const originalById = useMemo(() => new Map(original.map((row) => [row.id, row])), [original]);
   const [rows, setRows] = useState(original);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [fillColumn, setFillColumn] = useState<FillColumn>("price");
@@ -211,7 +238,24 @@ function EditorDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const patches = rows.map((row, i) => diff(row, original[i]));
+  // The sheet stays mounted while closed (so it can slide away): each opening starts over from what is saved.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setRows(original);
+      setSelected(new Set());
+      setFillColumn("price");
+      setFillValue("");
+      setBusy(false);
+      setError(null);
+    }
+  }
+
+  const patches = rows.map((row) => {
+    const was = originalById.get(row.id);
+    return was ? diff(row, was) : null;
+  });
   const invalid = new Set(rows.filter((_, i) => patches[i] === "invalid").map((r) => r.id));
   const changes = patches.filter((p): p is CatalogVariantRowPatch => p !== null && p !== "invalid");
 
@@ -224,7 +268,7 @@ function EditorDialog({
       else next.add(id);
       return next;
     });
-  const allSelected = selected.size === rows.length;
+  const allSelected = rows.length > 0 && selected.size === rows.length;
 
   function fill() {
     setRows((current) =>
@@ -256,33 +300,35 @@ function EditorDialog({
   const cell = (row: Row, key: MoneyColumn | "stock", label: string) => (
     <td className="px-2 py-1.5">
       <Input
-        aria-label={`${label} — ${row.name}`}
+        aria-label={fmt(t.cellOf, { column: label, name: row.name })}
         type="number"
-        inputMode="decimal"
+        inputMode={key === "stock" ? "numeric" : "decimal"}
         min={0}
         step={key === "stock" ? 1 : "0.01"}
         dir="ltr"
         value={row[key]}
         disabled={busy}
         onChange={(e) => set(row.id, { [key]: e.target.value })}
-        className="h-9 w-24"
+        className="h-9 w-24 tabular-nums pointer-coarse:h-11"
       />
     </td>
   );
 
   return (
-    <Modal
-      open
-      onClose={busy ? () => {} : onClose}
+    <FormSheet
+      open={open}
+      onClose={onClose}
       title={t.title}
       description={t.description}
-      className="max-w-5xl"
+      size="lg"
+      locked={busy}
+      className="lg:max-w-[58rem]"
       footer={
         <>
-          <Button type="button" variant="outline" disabled={busy} onClick={onClose}>
+          <Button type="button" variant="outline" className="rounded-full px-5" disabled={busy} onClick={onClose}>
             {t.cancel}
           </Button>
-          <Button type="button" disabled={busy || changes.length === 0} onClick={() => void save()}>
+          <Button type="button" className="rounded-full px-5" disabled={busy || changes.length === 0} onClick={() => void save()}>
             {busy ? t.saving : changes.length === 0 ? t.noChanges : fmt(t.save, { count: changes.length })}
           </Button>
         </>
@@ -291,12 +337,12 @@ function EditorDialog({
       <div className="space-y-3">
         {skuNote}
         {selected.size > 0 && (
-          <div className="flex flex-wrap items-end gap-2 rounded-[0.5rem] bg-primary-soft px-3 py-2">
+          <div className="zimos-variant-fill flex flex-wrap items-end gap-2 rounded-[0.875rem] bg-primary-soft px-3 py-2">
             <span className="self-center text-sm font-medium text-ink">{fmt(t.applyTo, { count: selected.size })}</span>
             <Select
               aria-label={t.column}
               value={fillColumn}
-              className="h-9 w-36"
+              className="h-9 w-36 pointer-coarse:h-11"
               onChange={(e) => {
                 setFillColumn(e.target.value as FillColumn);
                 setFillValue(e.target.value === "active" ? "active" : "");
@@ -309,7 +355,7 @@ function EditorDialog({
               <option value="active">{t.active}</option>
             </Select>
             {fillColumn === "active" ? (
-              <Select aria-label={t.value} value={fillValue} className="h-9 w-32" onChange={(e) => setFillValue(e.target.value)}>
+              <Select aria-label={t.value} value={fillValue} className="h-9 w-32 pointer-coarse:h-11" onChange={(e) => setFillValue(e.target.value)}>
                 <option value="active">{t.status_active}</option>
                 <option value="archived">{t.status_archived}</option>
               </Select>
@@ -322,77 +368,102 @@ function EditorDialog({
                 dir="ltr"
                 value={fillValue}
                 onChange={(e) => setFillValue(e.target.value)}
-                className="h-9 w-28 bg-paper-raised"
+                className="h-9 w-28 bg-paper-raised tabular-nums pointer-coarse:h-11"
               />
             )}
-            <Button type="button" className="min-h-9" onClick={fill}>
+            <Button type="button" className="min-h-9 rounded-full px-4 pointer-coarse:min-h-11" onClick={fill}>
               {t.apply}
             </Button>
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-[0.5rem] border border-line">
+        <div data-slot="variant-bulk" className="zimos-variant-bulk overflow-x-auto rounded-[1.25rem] bg-paper-raised ring-1 ring-line">
           <table className="w-full min-w-[760px] text-sm">
+            <caption className="sr-only">{t.title}</caption>
             <thead>
-              <tr className="border-b border-line bg-paper text-xs uppercase tracking-wide text-ink-soft">
-                <th className="w-10 px-3 py-2">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-primary"
-                    aria-label={t.selectAll}
-                    checked={allSelected}
-                    onChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))}
-                  />
+              <tr className="border-b border-line bg-paper-sunken/60 text-xs text-ink-soft">
+                <th scope="col" className="w-10 py-1 ps-2 pe-0">
+                  <label className={TICK}>
+                    <input
+                      type="checkbox"
+                      className="size-4 cursor-pointer accent-primary"
+                      aria-label={t.selectAll}
+                      checked={allSelected}
+                      onChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))}
+                    />
+                  </label>
                 </th>
-                <th className="px-2 py-2 text-start font-medium">{t.variant}</th>
-                <th className="px-2 py-2 text-start font-medium">{t.price}</th>
-                <th className="px-2 py-2 text-start font-medium">{t.compareAt}</th>
-                <th className="px-2 py-2 text-start font-medium">{t.cost}</th>
-                <th className="px-2 py-2 text-start font-medium">{t.stock}</th>
-                <th className="px-2 py-2 text-start font-medium">{t.sku}</th>
-                <th className="px-2 py-2 text-start font-medium">{t.active}</th>
+                <th scope="col" className={HEAD}>
+                  {t.variant}
+                </th>
+                <th scope="col" className={HEAD}>
+                  {t.price}
+                </th>
+                <th scope="col" className={HEAD}>
+                  {t.compareAt}
+                </th>
+                <th scope="col" className={HEAD}>
+                  {t.cost}
+                </th>
+                <th scope="col" className={HEAD}>
+                  {t.stock}
+                </th>
+                <th scope="col" className={HEAD}>
+                  {t.sku}
+                </th>
+                <th scope="col" className={HEAD}>
+                  {t.active}
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr
                   key={row.id}
-                  className={`border-b border-line last:border-0 ${invalid.has(row.id) ? "bg-danger-soft" : selected.has(row.id) ? "bg-primary-soft/50" : ""}`}
+                  data-invalid={invalid.has(row.id) ? "" : undefined}
+                  data-selected={selected.has(row.id) ? "" : undefined}
+                  className={cn("border-b border-line last:border-0", invalid.has(row.id) ? "bg-danger-soft" : selected.has(row.id) ? "bg-primary-soft/50" : "")}
                 >
-                  <td className="px-3 py-1.5">
-                    <input
-                      type="checkbox"
-                      className="size-4 accent-primary"
-                      aria-label={fmt(t.selectRow, { name: row.name })}
-                      checked={selected.has(row.id)}
-                      onChange={() => toggle(row.id)}
-                    />
+                  <td className="py-1 ps-2 pe-0">
+                    <label className={TICK}>
+                      <input
+                        type="checkbox"
+                        className="size-4 cursor-pointer accent-primary"
+                        aria-label={fmt(t.selectRow, { name: row.name })}
+                        checked={selected.has(row.id)}
+                        onChange={() => toggle(row.id)}
+                      />
+                    </label>
                   </td>
-                  <td className={`px-2 py-1.5 font-medium ${row.active ? "text-ink" : "text-ink-soft line-through"}`}>{row.name}</td>
+                  <th scope="row" className={cn("max-w-[14rem] px-2 py-1.5 text-start font-medium", row.active ? "text-ink" : "text-ink-soft line-through")}>
+                    <bdi className="break-words">{row.name}</bdi>
+                  </th>
                   {cell(row, "price", t.price)}
                   {cell(row, "compareAt", t.compareAt)}
                   {cell(row, "cost", t.cost)}
                   {cell(row, "stock", t.stock)}
                   <td className="px-2 py-1.5">
                     <Input
-                      aria-label={`${t.sku} — ${row.name}`}
+                      aria-label={fmt(t.cellOf, { column: t.sku, name: row.name })}
                       dir="ltr"
                       maxLength={100}
                       value={row.sku}
                       disabled={busy}
                       onChange={(e) => set(row.id, { sku: e.target.value })}
-                      className="h-9 w-32"
+                      className="h-9 w-32 pointer-coarse:h-11"
                     />
                   </td>
-                  <td className="px-2 py-1.5">
-                    <input
-                      type="checkbox"
-                      className="size-4 accent-primary"
-                      aria-label={`${t.active} — ${row.name}`}
-                      checked={row.active}
-                      disabled={busy}
-                      onChange={(e) => set(row.id, { active: e.target.checked })}
-                    />
+                  <td className="py-1 ps-1 pe-2">
+                    <label className={TICK}>
+                      <input
+                        type="checkbox"
+                        className="size-4 cursor-pointer accent-primary"
+                        aria-label={fmt(t.cellOf, { column: t.active, name: row.name })}
+                        checked={row.active}
+                        disabled={busy}
+                        onChange={(e) => set(row.id, { active: e.target.checked })}
+                      />
+                    </label>
                   </td>
                 </tr>
               ))}
@@ -402,6 +473,6 @@ function EditorDialog({
 
         {error && <Alert variant="danger">{error}</Alert>}
       </div>
-    </Modal>
+    </FormSheet>
   );
 }

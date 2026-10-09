@@ -1,5 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { MessageCircle } from "lucide-react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { Alert, Button } from "@store-builder/ui";
 import {
   ApiError,
@@ -9,17 +8,21 @@ import {
   type Affiliate,
   type AffiliateCommissionType,
 } from "@store-builder/api-client";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CopyButton } from "@/components/CopyButton";
+import { Field, TextField } from "@/components/Field";
+import { IconCoins, IconPercent, IconWhatsApp } from "@/components/icons";
+import { Modal } from "@/components/Modal";
+import { Segmented } from "@/components/Segmented";
+import { Select } from "@/components/Select";
+import { useToast } from "@/components/Toast";
+import { fmt, useT } from "@/i18n/LocaleContext";
 import { apiClient } from "@/lib/apiClient";
-import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
-import { useT, fmt, useCommon } from "@/i18n/LocaleContext";
-import { Field, TextField } from "@/components/Field";
-import { Modal } from "@/components/Modal";
-import { Select } from "@/components/Select";
-import { CopyButton } from "@/components/CopyButton";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { useToast } from "@/components/Toast";
+import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { toAsciiDigits } from "@/pages/loyalty/loyaltyStrings";
+import { InlineSwitch, focusFirstInvalid } from "@/pages/loyalty/programmeKit";
 import { AFFILIATE_STRINGS, PAYOUT_METHODS, type PayoutMethod } from "./strings";
 
 /** A code the merchant can keep or change: the name in Latin letters, else the phone's last digits. */
@@ -39,7 +42,18 @@ const EMPTY_FORM = { name: "", phone: "", code: "", type: "percent" as Affiliate
 /** 1,000.00 in minor units: the order the commission example is worked out on. */
 const EXAMPLE_BASE = 100000;
 
-/** Add or edit an affiliate. A new one is handed back so the page can open "send link" next. */
+/** A field of the sheet: 44px tall, 16px text under a finger (the input's own default). */
+const FIELD = "[&_input]:h-11";
+const PILL = "rounded-full px-5";
+
+type FieldKey = "name" | "phone" | "value" | "code";
+
+/**
+ * Add or edit an affiliate, in a sheet over the list (bottom on a phone,
+ * centred from 640px). A new one is handed back so the page can open "send
+ * link" next. Save is always there: what is missing is said under its field,
+ * and the first of them takes the focus.
+ */
 export function AffiliateFormModal({
   affiliate,
   currency,
@@ -54,20 +68,25 @@ export function AffiliateFormModal({
   onSaved: (saved: Affiliate, created: boolean) => void;
 }) {
   const t = useT(AFFILIATE_STRINGS);
-  const common = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
+  const formId = useId();
   const existing = affiliate && affiliate !== "new" ? affiliate : null;
   const [form, setForm] = useState(EMPTY_FORM);
   // Until the merchant types a code of their own, it follows the name and phone.
   const [codeTouched, setCodeTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [problems, setProblems] = useState<Partial<Record<FieldKey, string>>>({});
+  // The sheet keeps its last wording while it closes.
+  const [editingShown, setEditingShown] = useState(false);
 
   useEffect(() => {
     if (affiliate === null) return;
     setError(null);
+    setProblems({});
+    setEditingShown(existing !== null);
     setCodeTouched(existing !== null);
     setForm(
       existing
@@ -85,14 +104,34 @@ export function AffiliateFormModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [affiliate === null, existing?.id]);
 
+  function patch(change: Partial<typeof EMPTY_FORM>, field?: FieldKey) {
+    setForm((prev) => ({ ...prev, ...change }));
+    setError(null);
+    if (field) setProblems((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+  }
+
   const code = codeTouched ? form.code : suggestCode(form.name, form.phone);
-  const commissionValue = form.type === "percent" ? Math.round(Number(form.value) * 100) : majorToMinor(form.value);
-  const rateValid = Number.isFinite(commissionValue) && commissionValue > 0 && (form.type !== "percent" || commissionValue <= 10000);
-  const valid = form.name.trim().length >= 2 && form.phone.trim().length > 0 && code.length >= 2 && rateValid;
+  // An Arabic keyboard types ٠–٩: the rate is read in either set of digits.
+  const typedValue = toAsciiDigits(form.value);
+  const commissionValue = form.type === "percent" ? Math.round(Number(typedValue) * 100) : majorToMinor(typedValue);
+  const rateValid = typedValue !== "" && Number.isFinite(commissionValue) && commissionValue > 0 && (form.type !== "percent" || commissionValue <= 10000);
   const exampleAmount = form.type === "percent" ? Math.round((EXAMPLE_BASE * commissionValue) / 10000) : commissionValue;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (busy) return;
+    const found: Partial<Record<FieldKey, string>> = {};
+    if (form.name.trim().length < 2) found.name = t.nameError;
+    if (form.phone.trim().length === 0) found.phone = t.phoneError;
+    if (!rateValid) found.value = form.type === "percent" ? t.percentError : t.fixedError;
+    if (code.length < 2) found.code = t.codeError;
+    setProblems(found);
+    if (Object.keys(found).length > 0) {
+      setError(t.fixFields);
+      window.requestAnimationFrame(() => focusFirstInvalid(document.getElementById(formId)));
+      return;
+    }
+
     setBusy(true);
     setError(null);
     const payload = {
@@ -110,30 +149,61 @@ export function AffiliateFormModal({
       onSaved(saved, existing === null);
     } catch (err) {
       const errorCode = err instanceof ApiError ? err.code : undefined;
-      setError(
+      // What the server refuses about one field is said under that field.
+      const onField: Partial<Record<FieldKey, string>> | null =
         errorCode === "AFFILIATE_CODE_TAKEN"
-          ? t.codeTaken
+          ? { code: t.codeTaken }
           : errorCode === "AFFILIATE_PHONE_TAKEN"
-            ? t.phoneTaken
+            ? { phone: t.phoneTaken }
             : errorCode === "INVALID_PHONE"
-              ? t.invalidPhone
-              : errorMessage(err)
-      );
+              ? { phone: t.invalidPhone }
+              : null;
+      if (onField) {
+        setProblems(onField);
+        setError(t.fixFields);
+        window.requestAnimationFrame(() => focusFirstInvalid(document.getElementById(formId)));
+      } else {
+        setError(errorMessage(err));
+      }
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Modal open={affiliate !== null} onClose={onClose} title={existing ? t.editTitle : t.createTitle}>
-      <form onSubmit={submit} className="space-y-5">
+    <Modal
+      open={affiliate !== null}
+      onClose={onClose}
+      title={editingShown ? t.editTitle : t.createTitle}
+      footer={
+        <>
+          <Button type="button" variant="outline" className={PILL} disabled={busy} onClick={onClose}>
+            {t.cancel}
+          </Button>
+          <Button type="submit" form={formId} className={PILL} disabled={busy}>
+            {busy ? t.saving : editingShown ? t.save : t.saveNew}
+          </Button>
+        </>
+      }
+    >
+      <form id={formId} onSubmit={submit} noValidate className="space-y-5">
         {error && <Alert variant="danger">{error}</Alert>}
 
-        <div role="group" aria-labelledby="affiliate-who" className="space-y-3">
-          <h3 id="affiliate-who" className="text-xs font-semibold text-ink-soft">
+        <div role="group" aria-labelledby={`${formId}-who`} className="space-y-3">
+          <h3 id={`${formId}-who`} className="text-[13px] leading-5 font-semibold text-ink-soft">
             {t.sectionWho}
           </h3>
-          <TextField label={t.name} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={200} />
+          <TextField
+            label={t.name}
+            required
+            autoComplete="off"
+            value={form.name}
+            disabled={busy}
+            onChange={(e) => patch({ name: e.target.value }, "name")}
+            maxLength={200}
+            error={problems.name}
+            className={FIELD}
+          />
           <TextField
             label={t.phone}
             hint={t.phoneHint}
@@ -141,37 +211,49 @@ export function AffiliateFormModal({
             type="tel"
             inputMode="tel"
             dir="ltr"
+            autoComplete="off"
             value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            disabled={busy}
+            onChange={(e) => patch({ phone: e.target.value }, "phone")}
             maxLength={32}
+            error={problems.phone}
+            className={FIELD}
           />
         </div>
 
-        <div role="group" aria-labelledby="affiliate-rate" className="space-y-3 border-t border-line pt-4">
-          <h3 id="affiliate-rate" className="text-xs font-semibold text-ink-soft">
+        <div role="group" aria-labelledby={`${formId}-rate`} className="space-y-3 border-t border-line pt-4">
+          <h3 id={`${formId}-rate`} className="text-[13px] leading-5 font-semibold text-ink-soft">
             {t.sectionRate}
           </h3>
-          <Field label={t.type}>
-            {(props) => (
-              <Select {...props} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as AffiliateCommissionType })}>
-                <option value="percent">{t.type_percent}</option>
-                <option value="fixed">{t.type_fixed}</option>
-              </Select>
-            )}
-          </Field>
+          <div className="space-y-1.5">
+            <Segmented
+              label={t.type}
+              value={form.type}
+              onChange={(next) => patch({ type: next }, "value")}
+              options={[
+                { value: "percent", label: t.type_percent, icon: IconPercent },
+                { value: "fixed", label: t.type_fixed, icon: IconCoins },
+              ]}
+            />
+            <p className="text-xs text-ink-soft">{t[`typeHint_${form.type}`]}</p>
+          </div>
           <TextField
             label={form.type === "percent" ? t.percentValue : fmt(t.fixedValue, { currency })}
             hint={rateValid ? fmt(t.example, { base: formatMoney(EXAMPLE_BASE, currency), amount: formatMoney(exampleAmount, currency) }) : undefined}
             required
             inputMode="decimal"
             dir="ltr"
+            autoComplete="off"
             value={form.value}
-            onChange={(e) => setForm({ ...form, value: e.target.value })}
+            disabled={busy}
+            onChange={(e) => patch({ value: e.target.value }, "value")}
+            error={problems.value}
+            className={FIELD}
           />
         </div>
 
-        <div role="group" aria-labelledby="affiliate-link" className="space-y-3 border-t border-line pt-4">
-          <h3 id="affiliate-link" className="text-xs font-semibold text-ink-soft">
+        <div role="group" aria-labelledby={`${formId}-link`} className="space-y-3 border-t border-line pt-4">
+          <h3 id={`${formId}-link`} className="text-[13px] leading-5 font-semibold text-ink-soft">
             {t.sectionLink}
           </h3>
           <TextField
@@ -179,17 +261,23 @@ export function AffiliateFormModal({
             hint={t.codeHint}
             required
             dir="ltr"
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
             value={code}
+            disabled={busy}
             onChange={(e) => {
               setCodeTouched(true);
-              setForm({ ...form, code: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") });
+              patch({ code: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") }, "code");
             }}
             maxLength={40}
+            error={problems.code}
+            className={FIELD}
           />
           {code.length >= 2 && (
-            <p className="text-xs text-ink-soft">
-              {t.linkPreview}:{" "}
-              <bdi dir="ltr" className="break-all font-medium text-ink">
+            <p data-slot="affiliate-link-preview" className="rounded-2xl bg-paper-sunken px-4 py-3 text-xs leading-5 text-ink-soft">
+              {t.linkPreview}
+              <bdi dir="ltr" className="mt-0.5 block text-start text-[13px] font-medium break-all text-ink">
                 {storeBase}?ref={code}
               </bdi>
             </p>
@@ -197,25 +285,23 @@ export function AffiliateFormModal({
         </div>
 
         <div className="space-y-3 border-t border-line pt-4">
-          <TextField label={t.notes} hint={t.notesHint} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={500} />
-          {existing && (
-            <label className="flex items-start gap-2 text-sm text-ink">
-              <input type="checkbox" className="mt-1" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} />
-              <span>
-                {t.active}
-                <span className="block text-xs text-ink-soft">{t.activeHint}</span>
-              </span>
-            </label>
+          <TextField
+            label={t.notes}
+            hint={t.notesHint}
+            dir="auto"
+            autoComplete="off"
+            value={form.notes}
+            disabled={busy}
+            onChange={(e) => patch({ notes: e.target.value })}
+            maxLength={500}
+            className={FIELD}
+          />
+          {editingShown && (
+            <div>
+              <InlineSwitch checked={form.active} onChange={(next) => patch({ active: next })} label={t.activeLabel} disabled={busy} />
+              <p className="text-xs text-ink-soft">{t.activeHint}</p>
+            </div>
           )}
-        </div>
-
-        <div className="flex justify-end gap-3 pt-1">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy || !valid}>
-            {busy ? common.saving : common.save}
-          </Button>
         </div>
       </form>
     </Modal>
@@ -235,39 +321,51 @@ export function AffiliateShareDialog({ affiliate, storeBase, onClose }: { affili
   const message = shown ? fmt(t.whatsappMessage, { name: shown.name, link, portal }) : "";
 
   return (
-    <Modal open={affiliate !== null} onClose={onClose} title={shown ? fmt(t.shareTitle, { name: shown.name }) : ""} description={t.shareDescription}>
-      {shown && (
-        <div className="space-y-4">
-          <ShareRow label={t.theirLink} hint={t.theirLinkHint} value={link} copyLabel={t.copyLink} />
-          <ShareRow label={t.portalLink} hint={fmt(t.portalLinkHint, { phone: `+${shown.phone}` })} value={portal} copyLabel={t.copyLink} />
-          <div className="flex flex-wrap justify-end gap-3 border-t border-line pt-4">
-            <Button variant="outline" onClick={onClose}>
+    <Modal
+      open={affiliate !== null}
+      onClose={onClose}
+      title={shown ? fmt(t.shareTitle, { name: shown.name }) : ""}
+      description={t.shareDescription}
+      footer={
+        shown ? (
+          <>
+            <Button type="button" variant="outline" className={PILL} onClick={onClose}>
               {t.done}
             </Button>
-            <Button asChild>
+            <Button asChild className={`${PILL} gap-2`}>
               <a href={`https://wa.me/${shown.phone}?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer">
-                <MessageCircle className="size-4" aria-hidden />
+                <IconWhatsApp className="size-4" weight="fill" aria-hidden />
                 {t.whatsapp}
               </a>
             </Button>
-          </div>
+          </>
+        ) : undefined
+      }
+    >
+      {shown && (
+        <div className="space-y-3">
+          <ShareRow label={t.theirLink} hint={t.theirLinkHint} value={link} copyLabel={t.copyLink} />
+          <ShareRow label={t.portalLink} hint={fmt(t.portalLinkHint, { phone: `+${shown.phone}` })} value={portal} copyLabel={t.copyLink} />
         </div>
       )}
     </Modal>
   );
 }
 
-function ShareRow({ label, hint, value, copyLabel }: { label: string; hint: string; value: string; copyLabel: string }) {
+/** A link with what it is for and a button that copies it. Also used by the affiliate's preview. */
+export function ShareRow({ label, hint, value, copyLabel }: { label: string; hint: string; value: string; copyLabel: string }) {
   return (
-    <div className="rounded-lg border border-line p-3">
+    <div data-slot="affiliate-share" className="rounded-2xl bg-paper-sunken px-4 py-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-[1_1_10rem]">
           <p className="text-sm font-semibold text-ink">{label}</p>
-          <p className="text-xs text-ink-soft">{hint}</p>
+          <p className="text-xs leading-5 text-ink-soft">
+            <bdi>{hint}</bdi>
+          </p>
         </div>
-        <CopyButton value={value} label={copyLabel} />
+        <CopyButton value={value} label={copyLabel} className="min-h-11 pointer-fine:min-h-9" />
       </div>
-      <p dir="ltr" className="mt-2 break-all text-start text-xs text-ink-soft">
+      <p dir="ltr" className="mt-2 text-start text-[13px] leading-5 break-all text-ink">
         {value}
       </p>
     </div>
@@ -292,9 +390,12 @@ export function AffiliatePayDialog({
   const errorMessage = useErrorMessage();
   const [method, setMethod] = useState<PayoutMethod | "">("");
   const [note, setNote] = useState("");
+  // Keep the last affiliate in the title while the dialog closes.
+  const [shown, setShown] = useState<Affiliate | null>(affiliate);
 
   useEffect(() => {
     if (affiliate) {
+      setShown(affiliate);
       setMethod("");
       setNote("");
     }
@@ -317,17 +418,18 @@ export function AffiliatePayDialog({
   return (
     <ConfirmDialog
       open={affiliate !== null}
-      title={affiliate ? fmt(t.payTitle, { name: affiliate.name, amount: formatMoney(affiliate.totals?.approved ?? 0, currency) }) : ""}
+      title={shown ? fmt(t.payTitle, { name: shown.name, amount: formatMoney(shown.totals?.approved ?? 0, currency) }) : ""}
       description={t.payDescription}
       confirmLabel={t.payConfirm}
       busyLabel={t.paying}
+      cancelLabel={t.cancel}
       onCancel={onClose}
       onConfirm={confirm}
     >
       <div className="space-y-3">
         <Field label={t.payMethod}>
           {(props) => (
-            <Select {...props} value={method} onChange={(e) => setMethod(e.target.value as PayoutMethod | "")}>
+            <Select {...props} value={method} onChange={(e) => setMethod(e.target.value as PayoutMethod | "")} className="h-11 text-base md:text-sm">
               <option value="">{t.method_none}</option>
               {PAYOUT_METHODS.map((key) => (
                 <option key={key} value={key}>
@@ -337,7 +439,7 @@ export function AffiliatePayDialog({
             </Select>
           )}
         </Field>
-        <TextField label={t.payNote} hint={t.payNoteHint} value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} />
+        <TextField label={t.payNote} hint={t.payNoteHint} dir="auto" autoComplete="off" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} className={FIELD} />
       </div>
     </ConfirmDialog>
   );

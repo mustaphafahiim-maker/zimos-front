@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, apiErrorCode } from "@store-builder/api-client";
+import { PHOTO_MAX_BYTES } from "@/lib/photoLimit";
 import { compressImageIfNeeded } from "@store-builder/image-tools";
 import { ConvertedPrice } from "@/components/ConvertedPrice";
 import { useStoreBasePath } from "@/components/StoreRoute";
@@ -186,7 +187,8 @@ export function StarsInput({ label, value, onChange, id }: { label: string; valu
 
 const ACCEPT = "image/jpeg,image/png,image/webp";
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
-const RAW_LIMIT = 15 * 1024 * 1024;
+// Shoppers' photos are refused above 5 MB (handoff 400).
+const RAW_LIMIT = PHOTO_MAX_BYTES;
 const COMPRESS = { maxBytes: 4 * 1024 * 1024, maxEdgeSteps: [2400, 2000, 1600, 1200], qualitySteps: [0.85, 0.75, 0.65] };
 
 type PhotoState = { status: "idle" } | { status: "uploading"; preview: string } | { status: "done"; preview: string; uploadId: string } | { status: "error"; message: string };

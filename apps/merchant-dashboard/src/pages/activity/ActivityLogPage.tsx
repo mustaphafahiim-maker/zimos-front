@@ -1,21 +1,33 @@
-import { useState } from "react";
-import { History } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Button, cn } from "@store-builder/ui";
+import { IconActivity, IconArrowLeft, IconCaretDown, IconFilter, IconRobot } from "@/components/icons";
 import { activityLogList, type ActivityLogEntry } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { formatDateTime } from "@/lib/format";
+import { pluralOf } from "@/lib/plural";
+import { fmt, getIntlLocale, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { PageHeader } from "@/components/PageHeader";
-import { DataState } from "@/components/DataState";
+import { DataState, SkeletonBar } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadMore } from "@/components/LoadMore";
-import { Select } from "@/components/Select";
+import { ViewLink } from "@/components/ViewLink";
+import { ChipRow, FilterChoice, FilterGroup, FilterSheet, ListToolbar, type ChipItem } from "@/components/list";
+import { ActiveFilters, type ActiveFilterChip } from "@/pages/orders/list/ActiveFilters";
 
 /**
  * Activity log (SPEC §17.2): who did what in the store and when, newest
  * first, from the audit trail every change already writes.
+ *
+ * A timeline: the changes of a day lie on one sheet under the day's name
+ * («النهارده», «امبارح», then the date), each as one sentence — who, what
+ * they did — with its time at the end. The period is a row of chips; the
+ * area and the person are in the one Filters sheet with it. A row that
+ * touched an order, a product or a customer links to it, and a row that
+ * recorded values folds them under «التفاصيل».
  */
 
 const STRINGS = {
@@ -29,14 +41,31 @@ const STRINGS = {
     everyone: "Everyone",
     anytime: "Any time",
     today: "Today",
+    yesterday: "Yesterday",
     week: "Last 7 days",
     month: "Last 30 days",
-    emptyTitle: "Nothing recorded",
-    emptyBody: "No change matches these filters.",
+    areaChip: "Area: {name}",
+    personChip: "By: {name}",
+    emptyTitle: "Nothing recorded yet",
+    emptyBody: "Every change in the store shows here — an order confirmed, a price edited, a teammate invited — with who made it and when.",
+    noMatchTitle: "No change matches these filters",
+    noMatchBody: "Try a longer period, another area or another person.",
+    clearFilters: "Clear the filters",
     system: "System",
+    sentence: "{who} — {what}",
     details: "Details",
+    hideDetails: "Hide details",
+    detailsOf: "Details of: {what}",
+    openOrder: "Open the order",
+    openProduct: "Open the product",
+    openCustomer: "Open the customer",
     before: "Before",
     after: "After",
+    from: "From",
+    apply_one: "Show 1 change",
+    apply_other: "Show {n} changes",
+    applyMore: "Show the changes",
+    loading: "Loading the log…",
     "area.order": "Orders",
     "area.shipment": "Shipments",
     "area.product": "Products",
@@ -63,15 +92,34 @@ const STRINGS = {
     everyone: "الكل",
     anytime: "أي وقت",
     today: "النهارده",
+    yesterday: "امبارح",
     week: "آخر ٧ أيام",
     month: "آخر ٣٠ يوم",
-    emptyTitle: "مفيش حاجة مسجّلة",
-    emptyBody: "مفيش تغيير مطابق للفلاتر دي.",
+    areaChip: "القسم: {name}",
+    personChip: "اللي عمله: {name}",
+    emptyTitle: "لسه مفيش حاجة مسجّلة",
+    emptyBody: "أي تغيير في المتجر بيظهر هنا — أوردر اتأكد، سعر اتعدّل، حد اتضاف للفريق — ومعاه مين عمله وإمتى.",
+    noMatchTitle: "مفيش تغيير مطابق للفلاتر دي",
+    noMatchBody: "جرّب فترة أطول، أو قسم تاني، أو شخص تاني.",
+    clearFilters: "امسح الفلاتر",
     system: "النظام",
+    sentence: "{who} — {what}",
     details: "التفاصيل",
+    hideDetails: "اخفي التفاصيل",
+    detailsOf: "تفاصيل: {what}",
+    openOrder: "افتح الأوردر",
+    openProduct: "افتح المنتج",
+    openCustomer: "افتح صفحة العميل",
     before: "قبل",
     after: "بعد",
-    "area.order": "الطلبات",
+    from: "من",
+    apply_one: "اعرض تغيير واحد",
+    apply_two: "اعرض تغييرين",
+    apply_few: "اعرض {n} تغييرات",
+    apply_other: "اعرض {n} تغيير",
+    applyMore: "اعرض التغييرات",
+    loading: "بنحمّل السجل…",
+    "area.order": "الأوردرات",
     "area.shipment": "الشحنات",
     "area.product": "المنتجات",
     "area.customer": "العملاء",
@@ -92,6 +140,19 @@ const STRINGS = {
 const AREAS = ["order", "shipment", "product", "customer", "discount", "membership", "role", "workspace", "funnel", "website", "webhook", "api_key", "app", "support", "automation"];
 const PAGE = 40;
 type Period = "any" | "today" | "week" | "month";
+
+/**
+ * The records a row can open. The audit trail names the model it touched
+ * (`entityType`, "Order") and that record's id; the other models have no page
+ * of their own to go to.
+ */
+const RECORDS = new Map<string, { path: string; label: "openOrder" | "openProduct" | "openCustomer" }>([
+  ["Order", { path: "/orders", label: "openOrder" }],
+  ["Product", { path: "/catalog", label: "openProduct" }],
+  ["Customer", { path: "/customers", label: "openCustomer" }],
+]);
+// A deleted record has no page left to open.
+const REMOVED = /\.(delete|deleted|delete_permanent|bulk_deleted)$/;
 
 function fromOf(period: Period): string | undefined {
   if (period === "any") return undefined;
@@ -117,11 +178,11 @@ const ENTITIES_AR: Record<string, string> = {
   // Done by the Zimos team on this store
   admin: "إدارة المنصة",
   // Orders
-  order: "الطلب",
-  order_email: "إيميلات الطلبات",
-  order_rules: "قواعد الطلبات",
-  confirmation_task: "تأكيد الطلب",
-  checkout_session: "الطلب المفقود",
+  order: "الأوردر",
+  order_email: "إيميلات الأوردرات",
+  order_rules: "قواعد الأوردرات",
+  confirmation_task: "تأكيد الأوردر",
+  checkout_session: "الأوردر المفقود",
   shipment: "الشحنة",
   return: "المرتجع",
   settlement: "التسوية",
@@ -317,21 +378,21 @@ const VERBS_AR: Record<string, string> = {
   refund_requested: "طلب استرداد",
   refund_failed: "فشل الاسترداد",
   upsell_accepted: "قبول عرض بعد الشراء",
-  funnel_offer_merged: "دمج عرض مسار البيع في الطلب",
-  funnel_offer_separate: "عرض مسار البيع كطلب مستقل",
+  funnel_offer_merged: "دمج عرض مسار البيع في الأوردر",
+  funnel_offer_separate: "عرض مسار البيع كأوردر مستقل",
   claim: "استلام",
   release: "إرجاع للقائمة",
   correct: "تصحيح النتيجة",
   lock_expired: "انتهاء مهلة الاستلام",
   recovery_update: "تعديل حالة الاسترجاع",
-  converted: "تحوّل إلى طلب",
+  converted: "اتحوّل لأوردر",
   restock: "إعادة إلى المخزون",
   booking_not_saved: "حجز لم يُحفظ",
   carrier_cancel_unconfirmed: "إلغاء لم تؤكده شركة الشحن",
   statement_import: "استيراد كشف",
   entry_added: "إضافة للقائمة",
   entry_removed: "إزالة من القائمة",
-  push_order: "إرسال طلب",
+  push_order: "إرسال أوردر",
   // Customers and messages
   reveal_sensitive: "عرض البيانات الحساسة",
   blacklist_change: "تغيير الحظر",
@@ -381,7 +442,7 @@ const VERBS_AR: Record<string, string> = {
   shortcuts_set: "تعديل الاختصارات",
   rotate_secret: "تغيير مفتاح التوقيع",
   auto_disable: "إيقاف تلقائي",
-  resend_orders: "إعادة إرسال الطلبات",
+  resend_orders: "إعادة إرسال الأوردرات",
   access_grant: "منح",
   access_revoke: "إنهاء",
   access_used: "استخدام",
@@ -466,7 +527,7 @@ const VERBS_AR: Record<string, string> = {
   whatsapp_sent: "إرسال واتساب",
 };
 
-/** "order.status_change" → "الطلب · تغيير الحالة" */
+/** "order.status_change" → "الأوردر · تغيير الحالة" */
 const readableAr = (action: string) => {
   const [head, ...rest] = action.split(".");
   if (!rest.length) return ENTITIES_AR[head] ?? readable(action);
@@ -474,9 +535,170 @@ const readableAr = (action: string) => {
   return `${ENTITIES_AR[head] ?? entity} · ${VERBS_AR[rest.join(".")] ?? verb}`;
 };
 
+type T = Record<keyof (typeof STRINGS)["en"], string>;
+
+const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+/** «النهارده», «امبارح», then the day in words — with its year only when it is not this one. */
+function dayLabel(iso: string, t: T): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  const now = new Date();
+  const daysAgo = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
+  if (daysAgo === 0) return t.today;
+  if (daysAgo === 1) return t.yesterday;
+  return date.toLocaleDateString(getIntlLocale(), {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    ...(date.getFullYear() !== now.getFullYear() ? { year: "numeric" as const } : {}),
+  });
+}
+
+function timeOf(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleTimeString(getIntlLocale(), { hour: "2-digit", minute: "2-digit" });
+}
+
+interface DayGroup {
+  key: number;
+  label: string;
+  rows: ActivityLogEntry[];
+}
+
+/** The rows as they came (newest first), cut where the day changes. */
+function byDay(rows: ActivityLogEntry[], t: T): DayGroup[] {
+  const groups: DayGroup[] = [];
+  for (const row of rows) {
+    const key = startOfDay(new Date(row.createdAt));
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) last.rows.push(row);
+    else groups.push({ key, label: dayLabel(row.createdAt, t), rows: [row] });
+  }
+  return groups;
+}
+
+/** A link or a button of a row: a quiet pill, 44px under a finger. */
+const ROW_ACTION =
+  "inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full px-2.5 text-[13px] font-medium text-primary transition-[background-color,scale] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-primary active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-fine:min-h-8";
+
+/** A day of the timeline while the first page loads: its name, then rows in the rows' own shape. */
+function TimelineSkeleton() {
+  return (
+    <div aria-hidden>
+      <SkeletonBar className="mx-1 mb-3 h-3 w-20" />
+      <ul data-slot="activity-day" className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised shadow-[var(--shadow-card)]">
+        {["w-3/5", "w-2/5", "w-1/2", "w-2/3", "w-2/5", "w-1/2"].map((width, index) => (
+          <li key={index} className="flex min-h-[4.25rem] items-center gap-3 px-3.5 py-3 sm:px-4">
+            <SkeletonBar className="size-9 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <SkeletonBar className={cn("h-3.5", width)} />
+              <SkeletonBar className="mt-2.5 h-2.5 w-16" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ActivityRow({ row, what, open, onToggle, t }: { row: ActivityLogEntry; what: string; open: boolean; onToggle: () => void; t: T }) {
+  const hasDetails = row.before !== null || row.after !== null;
+  const record = row.entityId && !REMOVED.test(row.action) ? RECORDS.get(row.entityType) : undefined;
+  const who = row.actor ? row.actor.fullName || row.actor.email : t.system;
+  const panelId = `activity-${row.id}`;
+  // The sentence is one string for a screen reader; on screen the two halves are weighted differently.
+  const [beforeWho, betweenWhoAndWhat = "", afterWhat = ""] = t.sentence.split(/\{who\}|\{what\}/);
+
+  return (
+    <li className="px-3.5 py-3 sm:px-4">
+      <div className="flex items-start gap-3">
+        <span
+          data-slot="activity-avatar"
+          aria-hidden
+          className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-paper-sunken text-sm font-semibold text-ink-soft"
+        >
+          {row.actor ? who.trim().charAt(0).toUpperCase() : <IconRobot className="size-[1.125rem]" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm leading-6 break-words text-ink">
+            {beforeWho}
+            <bdi className="font-semibold">{who}</bdi>
+            <span className="text-ink-soft">{betweenWhoAndWhat}</span>
+            {what}
+            {afterWhat}
+          </p>
+          <div className="flex flex-wrap items-center gap-x-1 text-xs leading-5 text-ink-soft">
+            <time dateTime={row.createdAt} title={formatDateTime(row.createdAt)} className="me-1.5 tabular-nums">
+              <bdi>{timeOf(row.createdAt)}</bdi>
+            </time>
+            {/* The address is for an audit at a desk; on a phone it only crowds the line. */}
+            {row.ipAddress && (
+              <span className="me-1.5 hidden sm:inline">
+                <span aria-hidden>· </span>
+                {t.from} <bdi dir="ltr" className="tabular-nums">{row.ipAddress}</bdi>
+              </span>
+            )}
+            {record && (
+              <ViewLink to={`${record.path}/${row.entityId}`} className={ROW_ACTION}>
+                {t[record.label]}
+                <IconArrowLeft className="size-3.5 shrink-0 rotate-180 rtl:rotate-0" aria-hidden />
+              </ViewLink>
+            )}
+            {hasDetails && (
+              <button
+                type="button"
+                className={ROW_ACTION}
+                aria-expanded={open}
+                aria-controls={panelId}
+                aria-label={fmt(t.detailsOf, { what })}
+                onClick={onToggle}
+              >
+                {open ? t.hideDetails : t.details}
+                <IconCaretDown
+                  className={cn(
+                    "size-3.5 shrink-0 transition-[rotate] duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none",
+                    open && "rotate-180"
+                  )}
+                  aria-hidden
+                />
+              </button>
+            )}
+          </div>
+          {open && (
+            <div id={panelId} className="mt-2 grid gap-2 sm:grid-cols-2">
+              {(
+                [
+                  [t.before, row.before],
+                  [t.after, row.after],
+                ] as const
+              ).map(([label, value]) =>
+                value === null || value === undefined ? null : (
+                  <div key={label} className="min-w-0">
+                    <p className="text-xs font-medium text-ink-soft">{label}</p>
+                    <pre
+                      dir="ltr"
+                      tabIndex={0}
+                      data-slot="activity-diff"
+                      className="mt-1 max-h-56 overflow-auto rounded-[0.875rem] bg-paper-sunken p-3 text-start font-mono text-xs leading-5 text-ink focus-visible:outline-2 focus-visible:outline-primary"
+                    >
+                      {JSON.stringify(value, null, 2)}
+                    </pre>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
+
 export function ActivityLogPage() {
   const t = useT(STRINGS);
-  const { locale, intlLocale } = useLocale();
+  const { locale } = useLocale();
   const labels = t as Record<string, string>;
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -484,6 +706,7 @@ export function ActivityLogPage() {
   const [area, setArea] = useState("");
   const [person, setPerson] = useState("");
   const [period, setPeriod] = useState<Period>("any");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [rows, setRows] = useState<ActivityLogEntry[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [more, setMore] = useState(false);
@@ -514,101 +737,122 @@ export function ActivityLogPage() {
   }
 
   const people = (members.data ?? []).filter((m) => m.user);
+  const personName = (id: string) => {
+    const user = people.find((member) => member.user?.id === id)?.user;
+    return user ? user.fullName || user.email : id;
+  };
+  const days = useMemo(() => byDay(rows, t), [rows, t]);
+
+  const periodChips: ChipItem<Period>[] = [
+    { value: "any", label: t.anytime },
+    { value: "today", label: t.today },
+    { value: "week", label: t.week },
+    { value: "month", label: t.month },
+  ];
+  const areaOptions = AREAS.map((key) => ({ value: key, label: labels[`area.${key}`] ?? key }));
+  const personOptions = people.map((member) => ({ value: member.user?.id ?? "", label: member.user?.fullName || member.user?.email || "" }));
+
+  // The period shows on its row of chips; the badge on Filters counts what only the sheet shows.
+  const sheetOnly = (area ? 1 : 0) + (person ? 1 : 0);
+  const filterCount = sheetOnly + (period !== "any" ? 1 : 0);
+  const resetFilters = () => {
+    setArea("");
+    setPerson("");
+    setPeriod("any");
+  };
+  const activeChips: ActiveFilterChip[] = [
+    ...(area ? [{ id: "area", label: fmt(t.areaChip, { name: labels[`area.${area}`] ?? area }), onRemove: () => setArea("") }] : []),
+    ...(person ? [{ id: "person", label: fmt(t.personChip, { name: personName(person) }), onRemove: () => setPerson("") }] : []),
+  ];
 
   return (
-    <div>
-      <PageHeader title={t.title} description={t.description} />
+    <div className="max-w-4xl">
+      <PageHeader
+        title={t.title}
+        description={t.description}
+        actions={<ListToolbar filters={{ count: sheetOnly, onOpen: () => setFiltersOpen(true) }} />}
+      />
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        <Select aria-label={t.area} className="h-9 w-auto" value={area} onChange={(e) => setArea(e.target.value)}>
-          <option value="">
-            {t.area}: {t.all}
-          </option>
-          {AREAS.map((key) => (
-            <option key={key} value={key}>
-              {labels[`area.${key}`]}
-            </option>
-          ))}
-        </Select>
-        <Select aria-label={t.person} className="h-9 w-auto" value={person} onChange={(e) => setPerson(e.target.value)}>
-          <option value="">
-            {t.person}: {t.everyone}
-          </option>
-          {people.map((member) => (
-            <option key={member.id} value={member.user?.id ?? ""}>
-              {member.user?.fullName || member.user?.email}
-            </option>
-          ))}
-        </Select>
-        <Select aria-label={t.period} className="h-9 w-auto" value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
-          <option value="any">
-            {t.period}: {t.anytime}
-          </option>
-          <option value="today">{t.today}</option>
-          <option value="week">{t.week}</option>
-          <option value="month">{t.month}</option>
-        </Select>
+      <div className="flex flex-col gap-3">
+        <ChipRow items={periodChips} value={period} onChange={setPeriod} label={t.period} collapseEmpty={false} />
+        <ActiveFilters
+          chips={activeChips}
+          onClearAll={() => {
+            setArea("");
+            setPerson("");
+          }}
+        />
+
+        <DataState
+          loading={first.loading}
+          error={first.error}
+          onRetry={() => void first.refresh()}
+          skeleton={<TimelineSkeleton />}
+        >
+          {rows.length === 0 ? (
+            filterCount > 0 ? (
+              <EmptyState
+                icon={<IconFilter aria-hidden />}
+                title={t.noMatchTitle}
+                description={t.noMatchBody}
+                action={
+                  <Button variant="outline" className="rounded-full px-5" onClick={resetFilters}>
+                    {t.clearFilters}
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyState icon={<IconActivity aria-hidden />} title={t.emptyTitle} description={t.emptyBody} />
+            )
+          ) : (
+            <>
+              <div className="flex flex-col gap-5">
+                {days.map((day) => (
+                  <section key={day.key} aria-label={day.label}>
+                    <h2 className="mb-2 px-1 text-[13px] leading-5 font-semibold text-ink-soft">{day.label}</h2>
+                    <ul
+                      data-slot="activity-day"
+                      className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised shadow-[var(--shadow-card)]"
+                    >
+                      {day.rows.map((row) => (
+                        <ActivityRow
+                          key={row.id}
+                          row={row}
+                          what={locale === "ar" ? readableAr(row.action) : readable(row.action)}
+                          open={open === row.id}
+                          onToggle={() => setOpen(open === row.id ? null : row.id)}
+                          t={t}
+                        />
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+              <LoadMore hasMore={Boolean(cursor)} loading={more} onClick={loadMore} />
+            </>
+          )}
+        </DataState>
       </div>
 
-      <DataState loading={first.loading} error={first.error} onRetry={() => void first.refresh()}>
-        {rows.length === 0 ? (
-          <EmptyState icon={<History />} title={t.emptyTitle} description={t.emptyBody} />
-        ) : (
-          <>
-            <ul className="divide-y divide-line rounded-md border border-line bg-paper-raised">
-              {rows.map((row) => {
-                const hasDetails = row.before !== null || row.after !== null;
-                return (
-                  <li key={row.id} className="p-3">
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <span className="text-sm font-medium text-ink">{locale === "ar" ? readableAr(row.action) : readable(row.action)}</span>
-                      <span className="text-xs text-ink-soft">
-                        {row.actor ? row.actor.fullName || row.actor.email : t.system} · {new Date(row.createdAt).toLocaleString(locale === "ar" ? intlLocale : undefined)}
-                        {row.ipAddress ? (
-                          <>
-                            {" · "}
-                            <span dir="ltr">{row.ipAddress}</span>
-                          </>
-                        ) : null}
-                      </span>
-                      {hasDetails && (
-                        <button
-                          type="button"
-                          className="ms-auto text-xs font-medium text-primary hover:underline"
-                          aria-expanded={open === row.id}
-                          onClick={() => setOpen(open === row.id ? null : row.id)}
-                        >
-                          {t.details}
-                        </button>
-                      )}
-                    </div>
-                    {open === row.id && (
-                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                        {(
-                          [
-                            [t.before, row.before],
-                            [t.after, row.after],
-                          ] as const
-                        ).map(([label, value]) =>
-                          value === null || value === undefined ? null : (
-                            <div key={label} className="min-w-0">
-                              <p className="text-xs font-medium text-ink-soft">{label}</p>
-                              <pre dir="ltr" className="mt-1 max-h-56 overflow-auto rounded-md bg-paper p-2 text-start font-mono text-xs text-ink">
-                                {JSON.stringify(value, null, 2)}
-                              </pre>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            <LoadMore hasMore={Boolean(cursor)} loading={more} onClick={loadMore} />
-          </>
+      <FilterSheet
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        activeCount={filterCount}
+        onReset={resetFilters}
+        applyLabel={first.loading || cursor ? t.applyMore : pluralOf(t, "apply", rows.length)}
+      >
+        <FilterGroup label={t.period}>
+          <FilterChoice label={t.period} options={periodChips} value={period} onChange={(value) => setPeriod(value ?? "any")} />
+        </FilterGroup>
+        <FilterGroup label={t.area}>
+          <FilterChoice label={t.area} options={areaOptions} value={area || null} onChange={(value) => setArea(value ?? "")} allowClear />
+        </FilterGroup>
+        {personOptions.length > 0 && (
+          <FilterGroup label={t.person}>
+            <FilterChoice label={t.person} options={personOptions} value={person || null} onChange={(value) => setPerson(value ?? "")} allowClear />
+          </FilterGroup>
         )}
-      </DataState>
+      </FilterSheet>
     </div>
   );
 }

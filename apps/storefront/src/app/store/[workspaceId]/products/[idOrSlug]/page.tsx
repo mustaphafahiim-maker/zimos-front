@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { PixelScope } from "@/components/PixelScope";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -26,18 +27,37 @@ import { faqFromCards, shippingRows, storeCards } from "@/lib/storePromises";
 import { container } from "@/components/ui";
 import { getDictionary } from "@/lib/i18n";
 import { orderBumpOf } from "@/lib/commerce";
-import { firstImage } from "@/lib/product";
+import { findVariant, firstImage, optionGroups } from "@/lib/product";
+import { buyPromises } from "@/components/product/buyPromises";
+import { QuestionsSkeleton, RelatedSkeleton } from "@/components/product/ProductSkeletons";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { PageRenderer } from "@/components/page-renderer";
 import { RelatedProducts } from "@/components/product/RelatedProducts";
+import { ProductQuestions } from "@/components/product/ProductQuestions";
+import { ProductSpecs } from "@/components/specs/ProductSpecs";
+import { BoughtTogetherStrip } from "@/components/offers/BoughtTogether";
 import { richTextToPlain } from "@store-builder/api-client";
 import { RichText } from "@/components/RichText";
+import { decodeSegment, type RedirectQuery } from "@/lib/urlRedirects";
+import { redirectIfMoved } from "@/lib/urlRedirectsServer";
 
 export const revalidate = 60;
 
 type Params = Promise<{ workspaceId: string; idOrSlug: string }>;
+
+/** A variant's own picture, read as lib/variantImage reads it (that module is the browser's). */
+function ownPicture(variant: unknown): string | null {
+  const url = (variant as { imageUrl?: unknown } | null | undefined)?.imageUrl;
+  return typeof url === "string" && /^https?:\/\//i.test(url) ? url : null;
+}
+
+/** Whether an offer's deadline is still ahead as the page is rendered. */
+function stillRunning(endsAt: string): boolean {
+  const end = new Date(endsAt).getTime();
+  return Number.isFinite(end) && end > Date.now();
+}
 
 function seoString(seo: Record<string, unknown> | null, key: string): string | null {
   const v = seo?.[key];
@@ -86,7 +106,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-export default async function ProductPage({ params }: { params: Params }) {
+export default async function ProductPage({ params, searchParams }: { params: Params; searchParams?: Promise<RedirectQuery> }) {
   const { workspaceId, idOrSlug } = await params;
 
   // Both calls are React-cached, shared with the layout and generateMetadata.
@@ -94,6 +114,8 @@ export default async function ProductPage({ params }: { params: Params }) {
     getStoreMeta(workspaceId),
     getStorefrontProduct(workspaceId, idOrSlug),
   ]);
+  // A product whose address changed goes on to its new one (Store settings → URL redirects, handoff 232).
+  if (store && !product) await redirectIfMoved(workspaceId, `/products/${decodeSegment(idOrSlug)}`, await searchParams);
   if (!store || !product) notFound();
 
   const locale = await getStoreLocale(store);
@@ -130,9 +152,26 @@ export default async function ProductPage({ params }: { params: Params }) {
   const ps = page.pageSettings;
   // With "form above the description" off, the buy box shows the description itself.
   const descriptionInBuyBox = ps.inline_checkout && !ps.checkout_before_description;
+  const checkoutForm = resolveCheckoutFormWithBilling(store.checkout);
+  // The photo the page opens on: the picture of the variant the buy box starts
+  // with (ProductLanding picks the same one — the variant an ad or feed link
+  // names, else the first in stock when variants are pre-selected), so the
+  // first photo sent is the one that stays.
+  const linkedId = (await searchParams)?.variant;
+  const linkedVariant = typeof linkedId === "string" ? product.variants.find((v) => v.id === linkedId) : undefined;
+  const firstVariant = product.variants.find((v) => v.inStock) ?? product.variants[0];
+  const hasOptions = optionGroups(product.variants).length > 0;
+  const preselects = ps.auto_select_variant !== false && checkoutForm.auto_select_variant !== false;
+  const openingVariant =
+    linkedVariant ??
+    (!hasOptions ? firstVariant : preselects && firstVariant ? findVariant(product.variants, { ...(firstVariant.optionValues ?? {}) }) : undefined);
+  const leadImage = ownPicture(openingVariant);
   // The store's own shipping / returns / COD cards (lib/storePromises.ts): the
   // only promises this page makes about them.
   const cards = storeCards(store);
+  const showTrust = resolveCheckoutForm(store.checkout).show_trust_badges;
+  // The theme's phone toolbar (components/shell/ThemeChrome reads the same switch): the buy bar sits above it.
+  const phoneToolbar = (store.themeSettings as { mobileToolbar?: unknown } | null | undefined)?.mobileToolbar === true;
   // The product's own questions; else the store-wide ones, answered from the cards.
   const [payQ, arriveQ, returnsQ] = t.product.faqItems.map((item) => item.q);
   const faqItems =
@@ -191,7 +230,8 @@ export default async function ProductPage({ params }: { params: Params }) {
   ];
 
   return (
-    <main className="flex-1 pb-24 md:pb-0">
+    // Room under the last line for the phone's buy bar, when the product has it.
+    <main className={ps.sticky_buy_button ? "flex-1 pb-24 md:pb-0" : "flex-1"}>
       {/* Lets a pixel scoped to this product receive this visit (Marketing → Tracking tools). */}
       <PixelScope productIds={[product.id]} />
       {/* schema.org Product for search engines and Google Merchant. */}
@@ -221,7 +261,7 @@ export default async function ProductPage({ params }: { params: Params }) {
         <div className="zt-pdp mt-2 grid gap-8 md:grid-cols-2 lg:gap-12">
           <div className="md:sticky md:top-24 md:self-start">
             <CodeSlot name="above_gallery" />
-            <TestedProductGallery workspaceId={workspaceId} product={product} />
+            <TestedProductGallery workspaceId={workspaceId} product={product} leadImage={leadImage} />
             <ProductVideos product={product} label={product.name} />
             <CodeSlot name="below_gallery" />
           </div>
@@ -230,28 +270,56 @@ export default async function ProductPage({ params }: { params: Params }) {
             product={product}
             bump={bump}
             description={descriptionInBuyBox ? product.description : null}
-            checkoutSettings={{ ...resolveCheckoutSettings(store.checkout), form: resolveCheckoutFormWithBilling(store.checkout) } as ReturnType<typeof resolveCheckoutSettings>}
+            checkoutSettings={{ ...resolveCheckoutSettings(store.checkout), form: checkoutForm } as ReturnType<typeof resolveCheckoutSettings>}
+            // The store's own cards as the short lines under the buy buttons; none when its trust badges are off.
+            promises={showTrust ? buyPromises(cards, locale) : null}
+            phoneToolbar={phoneToolbar}
+            countdownRunning={ps.countdown ? stillRunning(ps.countdown.ends_at) : false}
           />
         </div>
 
         <ProductContent cms={page.cms} locale={locale} />
 
+        {/* «المواصفات» and «قارن»: only for a product that has specifications (handoff 231). */}
+        {/* Read on its own and streamed in: the photo and the buy box do not wait for it. Most products have
+            no specifications, so nothing holds its place. */}
+        <Suspense fallback={null}>
+          <ProductSpecs workspaceId={workspaceId} product={product} locale={locale} />
+        </Suspense>
+
         {ps.reviews_enabled && (
-          <ProductReviews workspaceId={workspaceId} productId={product.id} {...storefrontProductReviews(product)} />
+          <ProductReviews
+            workspaceId={workspaceId}
+            productId={product.id}
+            {...storefrontProductReviews(product)}
+            formOpen={(product as { reviewFormOpen?: boolean }).reviewFormOpen !== false}
+          />
         )}
 
         <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
           <ProductTabs tabs={tabs} />
           <aside className="lg:pt-1">
             {/* The merchant's own shipping / returns / COD cards, when written; nothing invented otherwise. */}
-            {resolveCheckoutForm(store.checkout).show_trust_badges && cards.length > 0 && (
+            {showTrust && cards.length > 0 && (
               <StoreInfoCards info={storefrontDesignMeta(store).storeInfo!} />
             )}
           </aside>
         </div>
 
+        {/* «بيتشروا مع بعض»: the merchant's pins, else what real orders show it is bought with (handoff 223). */}
+        <BoughtTogetherStrip workspaceId={workspaceId} productId={product.id} />
+
+        {/* «أسئلة وأجوبة»: the questions the store answered, and the form to ask one (handoff 212). */}
+        <Suspense fallback={<QuestionsSkeleton />}>
+          <ProductQuestions workspaceId={workspaceId} productId={product.id} />
+        </Suspense>
+
         {/* Similar products, unless the page settings hide them. */}
-        {!ps.hide_related_products && <RelatedProducts workspaceId={workspaceId} product={product} currency={store.currency} locale={locale} />}
+        {!ps.hide_related_products && (
+          <Suspense fallback={<RelatedSkeleton />}>
+            <RelatedProducts workspaceId={workspaceId} product={product} currency={store.currency} locale={locale} />
+          </Suspense>
+        )}
       </div>
     </main>
   );

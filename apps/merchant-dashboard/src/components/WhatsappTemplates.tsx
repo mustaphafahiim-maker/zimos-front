@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { IconRefresh } from "@/components/icons";
 import { Alert, Button, Spinner } from "@store-builder/ui";
 import { whatsappTemplatesList, whatsappTemplatesSync, type WhatsappTemplateRow } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -165,7 +165,7 @@ export function WhatsappTemplatesPanel() {
           <p className="mt-1 text-xs text-ink-soft">{syncedAt ? fmt(t.synced, { at: formatDateTime(syncedAt) }) : t.neverSynced}</p>
         </div>
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void sync()}>
-          {busy ? <Spinner className="size-4" /> : <RefreshCw className="size-4" aria-hidden />}
+          {busy ? <Spinner className="size-4" /> : <IconRefresh className="size-4" aria-hidden />}
           {busy ? t.syncing : t.sync}
         </Button>
       </div>

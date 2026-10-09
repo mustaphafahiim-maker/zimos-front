@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
-import { Trash2, Upload } from "lucide-react";
-import { Alert, Button, Input, Label } from "@store-builder/ui";
+import { IconDelete, IconUpload } from "@/components/icons";
+import { Alert, Button, Input } from "@store-builder/ui";
 import { storeFontsDelete, storeFontsUpload } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -12,8 +12,9 @@ import type { StoreLook } from "./storeLook";
 
 /**
  * The store's body and heading fonts over the look's own (Google fonts or
- * uploaded ones), and the uploaded fonts themselves — in the store look
- * panel. The fonts are saved with the look; an upload is stored at once.
+ * uploaded ones), and the uploaded fonts themselves — the full controls under
+ * the theme panel's font pairs (theme/FontPairList.tsx). The fonts are saved
+ * with the look; an upload is stored at once.
  */
 
 const STRINGS = {
@@ -49,11 +50,38 @@ const STRINGS = {
   },
 } as const;
 
-export function StoreFontsSection({ look, onChange }: { look: StoreLook; onChange: (next: StoreLook) => void }) {
+/** The store's uploaded fonts as `useStoreFonts` loads them — passed in by a parent that already has them. */
+type StoreFontsState = ReturnType<typeof useStoreFonts>;
+
+interface StoreFontsProps {
+  look: StoreLook;
+  onChange: (next: StoreLook) => void;
+}
+
+export function StoreFontsSection({
+  look,
+  onChange,
+  fonts,
+}: StoreFontsProps & {
+  /** The uploaded fonts, when the caller has already loaded them; otherwise the section loads its own. */
+  fonts?: StoreFontsState;
+}) {
+  return fonts ? (
+    <StoreFontsFields look={look} onChange={onChange} fonts={fonts} />
+  ) : (
+    <SelfLoadedFonts look={look} onChange={onChange} />
+  );
+}
+
+function SelfLoadedFonts({ look, onChange }: StoreFontsProps) {
+  const fonts = useStoreFonts();
+  return <StoreFontsFields look={look} onChange={onChange} fonts={fonts} />;
+}
+
+function StoreFontsFields({ look, onChange, fonts }: StoreFontsProps & { fonts: StoreFontsState }) {
   const t = STRINGS[useEditorLocale()];
   const workspaceId = useWorkspaceId();
   const errorMessage = useErrorMessage();
-  const fonts = useStoreFonts();
   const uploaded = fonts.data ?? [];
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
@@ -86,7 +114,11 @@ export function StoreFontsSection({ look, onChange }: { look: StoreLook; onChang
       await fonts.refresh({ silent: true });
       const ref = `c:${id}`;
       if (look.bodyFont === ref || look.headingFont === ref) {
-        onChange({ ...look, bodyFont: look.bodyFont === ref ? "" : look.bodyFont, headingFont: look.headingFont === ref ? "" : look.headingFont });
+        onChange({
+          ...look,
+          bodyFont: look.bodyFont === ref ? "" : look.bodyFont,
+          headingFont: look.headingFont === ref ? "" : look.headingFont,
+        });
       }
     } catch (err) {
       setError(errorMessage(err));
@@ -94,43 +126,83 @@ export function StoreFontsSection({ look, onChange }: { look: StoreLook; onChang
   }
 
   return (
-    <section className="space-y-3">
+    <section data-slot="store-fonts" className="space-y-3">
       <div>
-        <Label>{t.title}</Label>
-        <p className="mt-0.5 text-xs text-ink-soft">{t.hint}</p>
+        <h4 className="text-sm font-medium text-ink">{t.title}</h4>
+        <p className="mt-1 text-xs text-ink-soft">{t.hint}</p>
       </div>
-      <Field label={t.body}>
-        {({ id }) => <FontSelect id={id} value={look.bodyFont ?? ""} emptyLabel={t.lookFont} uploaded={uploaded} onChange={(ref) => onChange({ ...look, bodyFont: ref })} />}
-      </Field>
       <Field label={t.heading}>
-        {({ id }) => <FontSelect id={id} value={look.headingFont ?? ""} emptyLabel={t.lookFont} uploaded={uploaded} onChange={(ref) => onChange({ ...look, headingFont: ref })} />}
+        {({ id }) => (
+          <FontSelect
+            id={id}
+            value={look.headingFont ?? ""}
+            emptyLabel={t.lookFont}
+            uploaded={uploaded}
+            onChange={(ref) => onChange({ ...look, headingFont: ref })}
+          />
+        )}
+      </Field>
+      <Field label={t.body}>
+        {({ id }) => (
+          <FontSelect
+            id={id}
+            value={look.bodyFont ?? ""}
+            emptyLabel={t.lookFont}
+            uploaded={uploaded}
+            onChange={(ref) => onChange({ ...look, bodyFont: ref })}
+          />
+        )}
       </Field>
 
-      <div className="space-y-2 rounded-[0.5rem] border border-line p-2.5">
-        <p className="text-xs font-semibold text-ink">{t.uploadTitle}</p>
-        <p className="text-xs text-ink-soft">{t.uploadHint}</p>
-        <Input aria-label={t.name} placeholder={t.namePlaceholder} maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf"
-          className="sr-only"
-          aria-label={t.choose}
-          onChange={(e) => void upload(e.target.files?.[0])}
-        />
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => (name.trim() ? fileRef.current?.click() : setError(t.needName))}>
-          <Upload className="size-4" aria-hidden />
-          {busy ? t.uploading : t.choose}
-        </Button>
+      <div className="zimos-look-row space-y-2.5 rounded-[0.875rem] bg-paper-raised p-3 ring-1 ring-line">
+        <div>
+          <p className="text-sm font-medium text-ink">{t.uploadTitle}</p>
+          <p className="mt-1 text-xs text-ink-soft">{t.uploadHint}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            aria-label={t.name}
+            placeholder={t.namePlaceholder}
+            maxLength={40}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="min-w-[8rem] flex-1"
+          />
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf"
+            className="sr-only"
+            aria-label={t.choose}
+            tabIndex={-1}
+            onChange={(e) => void upload(e.target.files?.[0])}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => (name.trim() ? fileRef.current?.click() : setError(t.needName))}
+          >
+            <IconUpload className="size-4" aria-hidden />
+            {busy ? t.uploading : t.choose}
+          </Button>
+        </div>
         {uploaded.length > 0 && (
           <ul className="divide-y divide-line">
             {uploaded.map((font) => (
-              <li key={font.id} className="flex items-center justify-between gap-2 py-1.5 text-sm text-ink">
+              <li key={font.id} className="flex min-h-11 items-center justify-between gap-2 text-sm text-ink">
                 <span className="min-w-0 truncate" dir="auto">
                   {font.name} <span className="text-xs text-ink-soft">({font.format})</span>
                 </span>
-                <Button type="button" size="icon-sm" variant="ghost" aria-label={t.remove.replace("{name}", font.name)} onClick={() => void remove(font.id)}>
-                  <Trash2 className="size-4 text-danger" aria-hidden />
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label={t.remove.replace("{name}", font.name)}
+                  onClick={() => void remove(font.id)}
+                >
+                  <IconDelete className="size-4 text-danger" aria-hidden />
                 </Button>
               </li>
             ))}

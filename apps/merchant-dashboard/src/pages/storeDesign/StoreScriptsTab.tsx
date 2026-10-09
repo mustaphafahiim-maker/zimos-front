@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Code2, Pencil, Plus, Trash2 } from "lucide-react";
+import { IconArrowDown, IconArrowUp, IconCode, IconDelete, IconEdit, IconPlus } from "@/components/icons";
 import { Alert, Button } from "@store-builder/ui";
 import {
   STORE_SCRIPTS_DEFAULT_OPTIONS,
@@ -22,6 +22,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { StoreScriptDialog } from "./StoreScriptDialog";
 import { SCRIPT_STRINGS } from "./storeScriptsStrings";
+import { STACK, SettingsSkeleton } from "./sections/parts";
 
 /** The store's own order: sortOrder, then the order the server sent. */
 function ordered(list: StoreScript[]): StoreScript[] {
@@ -74,12 +75,16 @@ export function StoreScriptsTab() {
     setDialogOpen(true);
   }
 
-  async function toggle(script: StoreScript, isActive: boolean) {
+  /** Saves at once, as before, and offers to take it back (the same call with the other value). */
+  async function toggle(script: StoreScript, isActive: boolean, undoable = true) {
     setBusyId(script.id);
     replace({ ...script, isActive });
     try {
-      replace(await storeScriptsUpdate(apiClient, workspaceId, script.id, { isActive }));
-      toast.success(isActive ? t.turnedOn : t.turnedOff);
+      const saved = await storeScriptsUpdate(apiClient, workspaceId, script.id, { isActive });
+      replace(saved);
+      const message = isActive ? t.turnedOn : t.turnedOff;
+      if (undoable) toast.undo(message, () => toggle(saved, !isActive, false));
+      else toast.success(message);
     } catch (err) {
       replace(script);
       toast.error(errorMessage(err));
@@ -153,31 +158,33 @@ export function StoreScriptsTab() {
         type="button"
         size="icon-sm"
         variant="ghost"
+        className="size-11 md:size-8"
         aria-label={fmt(t.moveUp, { name: script.name })}
         title={fmt(t.moveUp, { name: script.name })}
         disabled={index === 0 || busyId !== null}
         onClick={() => void move(index, -1)}
       >
-        <ArrowUp className="size-4" aria-hidden />
+        <IconArrowUp className="size-4" aria-hidden />
       </Button>
       <Button
         type="button"
         size="icon-sm"
         variant="ghost"
+        className="size-11 md:size-8"
         aria-label={fmt(t.moveDown, { name: script.name })}
         title={fmt(t.moveDown, { name: script.name })}
         disabled={index === scripts.length - 1 || busyId !== null}
         onClick={() => void move(index, 1)}
       >
-        <ArrowDown className="size-4" aria-hidden />
+        <IconArrowDown className="size-4" aria-hidden />
       </Button>
     </span>
   );
 
   const rowActions = (script: StoreScript) => (
     <span className="flex justify-end gap-0.5">
-      <Button type="button" size="icon-sm" variant="ghost" aria-label={fmt(t.edit, { name: script.name })} title={fmt(t.edit, { name: script.name })} onClick={() => openEdit(script)}>
-        <Pencil className="size-4" aria-hidden />
+      <Button type="button" size="icon-sm" variant="ghost" className="size-11 md:size-8" aria-label={fmt(t.edit, { name: script.name })} title={fmt(t.edit, { name: script.name })} onClick={() => openEdit(script)}>
+        <IconEdit className="size-4" aria-hidden />
       </Button>
       <Button
         type="button"
@@ -185,10 +192,10 @@ export function StoreScriptsTab() {
         variant="ghost"
         aria-label={fmt(t.remove, { name: script.name })}
         title={fmt(t.remove, { name: script.name })}
-        className="text-danger hover:bg-danger-soft hover:text-danger"
+        className="size-11 text-danger hover:bg-danger-soft hover:text-danger md:size-8"
         onClick={() => setPendingDelete(script)}
       >
-        <Trash2 className="size-4" aria-hidden />
+        <IconDelete className="size-4" aria-hidden />
       </Button>
     </span>
   );
@@ -204,15 +211,15 @@ export function StoreScriptsTab() {
   ];
 
   const addButton = (
-    <Button type="button" disabled={full} onClick={openNew}>
-      <Plus className="size-4" aria-hidden />
+    <Button type="button" className="min-h-11 rounded-full px-4 md:min-h-9" disabled={full} onClick={openNew}>
+      <IconPlus className="size-4" aria-hidden />
       {t.add}
     </Button>
   );
 
   return (
-    <DataState loading={state.loading} error={state.error} onRetry={() => void state.refresh()}>
-      <div className="space-y-5">
+    <DataState loading={state.loading} error={state.error} onRetry={() => void state.refresh()} skeleton={<SettingsSkeleton groups={1} rows={4} />}>
+      <div className={STACK}>
         <Alert>
           <p className="font-medium">{t.liveOnly}</p>
           <p className="text-ink-soft">{t.trust}</p>
@@ -233,7 +240,7 @@ export function StoreScriptsTab() {
         >
           {scripts.length === 0 ? (
             <div className="px-4 pb-4">
-              <EmptyState icon={<Code2 aria-hidden />} title={t.empty} description={t.emptyHint} action={addButton} />
+              <EmptyState icon={<IconCode aria-hidden />} title={t.empty} description={t.emptyHint} action={addButton} />
             </div>
           ) : (
             <>

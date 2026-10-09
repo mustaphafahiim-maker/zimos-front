@@ -16,6 +16,7 @@
  * only moves a card never rewrites a page. New steps start from their step
  * type's starting page (funnelPages.ts), which always passes the publish check.
  */
+import { funnelEdgeWhenEqual, funnelEdgeWhenOf, funnelEdgeWhenPayload, type FunnelEdgeWhen } from "@store-builder/api-client";
 import {
   ApiError,
   funnelsCreate,
@@ -81,6 +82,8 @@ export interface UiEdge {
   condition: UiEdgeCondition;
   /** clicked_through only: the button the path follows (funnelRouting.js); null = any. */
   sourceElementId?: string | null;
+  /** What the visitor's order in this funnel must hold for the path to be taken (handoff 376); null = nothing. */
+  when?: FunnelEdgeWhen | null;
   priority: number;
 }
 
@@ -186,6 +189,7 @@ export function toUiFunnel(dto: FunnelDetailDto): UiFunnel {
       // The runtime treats a null condition as "always".
       condition: e.condition?.type ?? "always",
       sourceElementId: typeof e.condition?.sourceElementId === "string" ? e.condition.sourceElementId : null,
+      when: funnelEdgeWhenOf(e.condition),
       priority: e.priority,
     })),
   };
@@ -314,7 +318,7 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
         funnelsCreateEdge(apiClient, workspaceId, fid, {
           fromStepKey: e.fromStepKey,
           toStepKey: e.toStepKey,
-          condition: { type: e.condition, ...(e.sourceElementId ? { sourceElementId: e.sourceElementId } : {}) },
+          condition: { type: e.condition, ...(e.sourceElementId ? { sourceElementId: e.sourceElementId } : {}), ...funnelEdgeWhenPayload(e.when) },
           priority: e.priority,
         })
       );
@@ -325,8 +329,8 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
     const patch: FunnelEdgeUpdatePayload = {};
     if (e.fromStepKey !== before.fromStepKey) patch.fromStepKey = e.fromStepKey;
     if (e.toStepKey !== before.toStepKey) patch.toStepKey = e.toStepKey;
-    if (e.condition !== before.condition || (e.sourceElementId ?? null) !== (before.sourceElementId ?? null)) {
-      patch.condition = { type: e.condition, ...(e.sourceElementId ? { sourceElementId: e.sourceElementId } : {}) };
+    if (e.condition !== before.condition || (e.sourceElementId ?? null) !== (before.sourceElementId ?? null) || !funnelEdgeWhenEqual(e.when, before.when)) {
+      patch.condition = { type: e.condition, ...(e.sourceElementId ? { sourceElementId: e.sourceElementId } : {}), ...funnelEdgeWhenPayload(e.when) };
     }
     if (e.priority !== before.priority) patch.priority = e.priority;
     if (Object.keys(patch).length > 0) {

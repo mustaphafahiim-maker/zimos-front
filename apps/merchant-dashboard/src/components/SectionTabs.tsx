@@ -16,7 +16,8 @@ interface SectionTabsProps<T extends string> {
  * `role="tablist"`, one tab in the Tab order, ← → Home End to move between
  * them. On a phone they stay on one row that scrolls sideways, with the
  * current one scrolled into view, instead of wrapping into 2–4 rows before
- * any content (re-audit N-17). Every tab is 44 px tall.
+ * any content (re-audit N-17). From lg up they wrap: a mouse cannot swipe the
+ * row, and it has no scrollbar to drag. Every tab is 44 px tall.
  *
  * FilterTabs stays for filters that re-query a list (toggle buttons).
  */
@@ -52,7 +53,7 @@ export function SectionTabs<T extends string>({ tabs, value, onChange, label, cl
       aria-label={label}
       onKeyDown={onKeyDown}
       className={cn(
-        "-mx-4 mb-5 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden",
+        "-mx-4 mb-5 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 lg:flex-wrap lg:gap-y-2 lg:overflow-x-visible [&::-webkit-scrollbar]:hidden",
         className
       )}
     >

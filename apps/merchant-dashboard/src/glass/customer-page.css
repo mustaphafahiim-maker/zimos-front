@@ -1,0 +1,315 @@
+/* The customer page — pages/customers/CustomerDetailPage.tsx and its panels.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   One thing here is blurred: the call bar above the dock on a phone, because the page
+   scrolls beneath it. The hero, its chips, the order rows and the header's round tool
+   all lie in the page flow, with only the still backdrop behind them. What else floats
+   on this page — the «…» menu, the order's Quick Look, the dialogs, the toasts — is
+   drawn by the shared components and takes its frost from controls.css, sheet.css and
+   liquid-glass.css.
+
+   Hooks: .zimos-customer-hero (the pane), [data-slot="customer-avatar"],
+   [data-slot="customer-stat"][data-tone] (the four facts) with .zimos-customer-caption,
+   [data-slot="customer-stat-icon"] and [data-slot="customer-meter"],
+   .zimos-customer-blocked (the strip of a blocked customer), .zimos-customer-tool («…»),
+   .zimos-customer-callbar and [data-slot="customer-call"] (the phone bar),
+   [data-slot="customer-order-row"], [data-slot="customer-count"] (open follow-ups),
+   [data-slot="customer-tag"], [data-slot="customer-event"] and [data-slot="customer-thread"]
+   (the timeline). */
+:root:not([data-glass="off"]) {
+  /* How much of a tinted chip is the tint; the rest lets the pane beneath through.
+     One number, so the block at the end of this file can turn every chip solid. */
+  --cp-alpha: 88%;
+  /* How much of its tone goes into a chip, over the raised paper. */
+  --cp-mix: 12%;
+  /* The line of light along the top of a chip, a strip, a bead. */
+  --cp-lit: inset 0 1px 0 0 rgb(255 255 255 / 0.7);
+
+  &.dark {
+    --cp-alpha: 80%;
+    --cp-mix: 18%;
+    --cp-lit: inset 0 1px 0 0 rgb(255 255 255 / 0.1);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The hero: one large pane, the same sheet of glass as the order
+   * page's. The radius of the page pane (1.75rem, set in the
+   * component) and its rim — the bright top line and the inner glows
+   * of --lg-rim. The hairline outside is a shadow, not a border: the
+   * pane keeps the exact size it has without this layer. The skeleton
+   * of the page wears the same class, so the pane that loads is the
+   * pane that arrives.
+   * ---------------------------------------------------------------- */
+  .zimos-customer-hero {
+    background-color: var(--lg-fill);
+    background-image: var(--lg-sheen);
+    box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-edge), var(--shadow-card);
+  }
+
+  /* The number under the name, the captions of the facts and the line under
+     each figure: secondary ink one step deeper than on a white card, so each
+     holds 4.5:1 on the pane and on every tint of the chips, in both themes. */
+  .zimos-customer-hero :where(.zimos-customer-caption, .text-ink-soft) {
+    color: var(--lg-ink-soft);
+  }
+
+  /* The disc with the customer's initial: a drop of the store's colour, lit
+     from the top the way the glass is, the letter in the deeper brand shade
+     (the recipe of the call pill in states.css: more than 4.5:1 on the tint). */
+  [data-slot="customer-avatar"] {
+    color: var(--lg-text-primary);
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--color-primary) 18%, var(--color-paper-raised)) var(--cp-alpha), transparent);
+    background-image: linear-gradient(150deg, rgb(255 255 255 / 0.55), transparent 62%);
+    box-shadow:
+      var(--cp-lit),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
+  &.dark [data-slot="customer-avatar"] {
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--color-primary) 26%, var(--color-paper-raised)) var(--cp-alpha), transparent);
+    background-image: linear-gradient(150deg, rgb(255 255 255 / 0.1), transparent 62%);
+    box-shadow:
+      var(--cp-lit),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 32%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The four facts. Each chip is a drop of its tone over the pane —
+   * the store's colour for the orders, green / amber / red for how
+   * many parcels were received, red once an order was refused, green
+   * for what was paid — lit along its top edge, a hairline of the
+   * tone inside. The figure is full ink and the two quiet lines the
+   * deeper secondary ink: both above 4.5:1 on every tint, light and
+   * dark. Only the glyph carries the tone (the deeper shade of it,
+   * above 3:1 as an icon has to be, and above 4.5:1 in fact).
+   * ---------------------------------------------------------------- */
+  [data-slot="customer-stat"] {
+    --cp-tone: var(--color-primary);
+    --cp-ink: var(--lg-text-primary);
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--cp-tone) var(--cp-mix), var(--color-paper-raised)) var(--cp-alpha), transparent);
+    box-shadow:
+      var(--cp-lit),
+      inset 0 0 0 1px color-mix(in srgb, var(--cp-tone) 14%, transparent);
+  }
+  [data-slot="customer-stat"][data-tone="success"] {
+    --cp-tone: var(--color-success);
+    --cp-ink: var(--lg-text-success);
+  }
+  [data-slot="customer-stat"][data-tone="warning"] {
+    --cp-tone: var(--color-accent);
+    --cp-ink: var(--color-accent-dark);
+  }
+  [data-slot="customer-stat"][data-tone="danger"] {
+    --cp-tone: var(--color-danger);
+    --cp-ink: var(--lg-text-danger);
+  }
+  [data-slot="customer-stat"][data-tone="neutral"] {
+    --cp-tone: var(--color-ink-soft);
+    --cp-ink: var(--lg-ink-soft);
+  }
+  &.dark [data-slot="customer-stat"] {
+    box-shadow:
+      var(--cp-lit),
+      inset 0 0 0 1px color-mix(in srgb, var(--cp-tone) 26%, transparent);
+  }
+  [data-slot="customer-stat"] [data-slot="customer-stat-icon"] {
+    color: var(--cp-ink);
+  }
+  /* The track of the received meter: the chip's own tone, thin; the fill keeps the solid token. */
+  [data-slot="customer-stat"] [data-slot="customer-meter"] {
+    background-color: color-mix(in srgb, var(--cp-tone) 20%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * A blocked customer: the strip at the foot of the hero. A red tint
+   * over the pane, lit along its top edge; the sentence on it is full
+   * ink, the glyph the deeper red.
+   * ---------------------------------------------------------------- */
+  .zimos-customer-blocked {
+    border-color: var(--lg-hairline);
+    background-color: color-mix(in srgb, var(--color-danger-soft) var(--cp-alpha), transparent);
+    box-shadow: var(--cp-lit);
+  }
+  .zimos-customer-blocked :where(.text-danger) {
+    color: var(--lg-text-danger);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * «…» in the header: a small round pane in the page flow, translucent,
+   * lit along the rim, a hairline outside — the order page's tools.
+   * ---------------------------------------------------------------- */
+  .zimos-customer-tool {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  @media (hover: hover) {
+    button.zimos-customer-tool:hover {
+      background-color: var(--lg-control-lit);
+    }
+  }
+  .zimos-customer-tool:is([aria-expanded="true"], [data-popup-open]) {
+    background-color: var(--lg-control-lit);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The bar above the dock, on a phone. The page scrolls beneath it,
+   * so it is frosted like the dock it floats over: one pill of glass
+   * holding the two buttons. Calling is the main action and wears its
+   * fill — the brand gradient, the gloss, a glow of the brand under it —
+   * and the sheen crosses it once when the page arrives (on a phone
+   * there is no pointer to bring it). WhatsApp beside it is the green
+   * pill of states.css ([data-slot="contact-whatsapp"]).
+   * ---------------------------------------------------------------- */
+  .zimos-customer-callbar {
+    background-color: var(--lg-frost);
+    -webkit-backdrop-filter: var(--lg-blur);
+    backdrop-filter: var(--lg-blur);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), var(--shadow-raised);
+  }
+  [data-slot="customer-call"] {
+    background-color: var(--lg-brand-solid);
+    background-image: linear-gradient(112deg, transparent 38%, rgb(255 255 255 / 0.34) 50%, transparent 62%), var(--lg-gloss), var(--lg-brand-grad);
+    background-size: 260% 100%, auto, auto;
+    background-position: 160% 0, 0 0, 0 0;
+    background-repeat: no-repeat;
+    color: var(--lg-on-brand);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.28),
+      0 10px 22px -12px color-mix(in srgb, var(--lg-brand-solid) 76%, transparent);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    [data-slot="customer-call"] {
+      animation: customer-page-sheen 1100ms cubic-bezier(0.2, 0.7, 0.2, 1) 400ms 1 backwards;
+    }
+  }
+  /* Forced colours while this layer is still on: system colours, no gradient. */
+  @media (forced-colors: active) {
+    [data-slot="customer-call"] {
+      background-color: Highlight;
+      background-image: none;
+      color: HighlightText;
+      animation: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The customer's orders. A row has no fill of its own: the card is
+   * the pane. Under the pointer, the keyboard or a finger it lights up
+   * as a pill of brighter glass with a lit rim, the tint a table row
+   * takes. Ink on it is the ink of the card, on a whiter ground:
+   * nothing loses contrast by being pointed at.
+   * ---------------------------------------------------------------- */
+  [data-slot="customer-order-row"] {
+    transition:
+      background-color var(--dur-fade) var(--ease-out),
+      box-shadow var(--dur-fade) var(--ease-out);
+  }
+  @media (hover: hover) {
+    [data-slot="customer-order-row"]:hover {
+      background-color: var(--lg-row-lit);
+      box-shadow: var(--lg-rim-line);
+    }
+  }
+  [data-slot="customer-order-row"]:has([role="button"]:is(:focus-visible, :active)) {
+    background-color: var(--lg-row-lit);
+    box-shadow: var(--lg-rim-line);
+  }
+  [data-slot="customer-order-row"] :where(.text-ink-soft) {
+    color: var(--lg-ink-soft);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-slot="customer-order-row"] {
+      transition: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Folded sections. The one line under a section's title says what
+   * is inside: secondary ink at the deeper shade, 4.5:1 on the card
+   * pane. The bead that counts the follow-ups still open is a drop of
+   * the store's colour (red once one is late) with the deeper shade
+   * for its figure.
+   * ---------------------------------------------------------------- */
+  .zimos-customer-page .zimos-accordion [aria-expanded] > span > span + span {
+    color: var(--lg-ink-soft);
+  }
+  [data-slot="customer-count"] {
+    --cp-tone: var(--color-primary);
+    color: var(--lg-text-primary);
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--cp-tone) var(--cp-mix), var(--color-paper-raised)) var(--cp-alpha), transparent);
+    box-shadow:
+      var(--cp-lit),
+      inset 0 0 0 1px color-mix(in srgb, var(--cp-tone) 16%, transparent);
+  }
+  [data-slot="customer-count"][data-tone="danger"] {
+    --cp-tone: var(--color-danger);
+    color: var(--lg-text-danger);
+  }
+
+  /* A tag: a small pane of the control glass, a hairline round it. Its text is full ink. */
+  [data-slot="customer-tag"] {
+    border-color: var(--lg-hairline);
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The timeline. Each event's disc is a drop of its tone (the same
+   * recipe as the chips above; it holds a glyph, never words), and
+   * the thread that joins one event to the next is the pane's own
+   * hairline.
+   * ---------------------------------------------------------------- */
+  [data-slot="customer-event"] {
+    --cp-tone: var(--color-ink-soft);
+    --cp-ink: var(--lg-ink-soft);
+    color: var(--cp-ink);
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--cp-tone) var(--cp-mix), var(--color-paper-raised)) var(--cp-alpha), transparent);
+    box-shadow:
+      var(--cp-lit),
+      inset 0 0 0 1px color-mix(in srgb, var(--cp-tone) 14%, transparent);
+  }
+  [data-slot="customer-event"][data-tone="info"] {
+    --cp-tone: var(--color-primary);
+    --cp-ink: var(--lg-text-primary);
+  }
+  [data-slot="customer-event"][data-tone="success"] {
+    --cp-tone: var(--color-success);
+    --cp-ink: var(--lg-text-success);
+  }
+  [data-slot="customer-event"][data-tone="warning"] {
+    --cp-tone: var(--color-accent);
+    --cp-ink: var(--color-accent-dark);
+  }
+  [data-slot="customer-event"][data-tone="danger"] {
+    --cp-tone: var(--color-danger);
+    --cp-ink: var(--lg-text-danger);
+  }
+  &.dark [data-slot="customer-event"] {
+    box-shadow:
+      var(--cp-lit),
+      inset 0 0 0 1px color-mix(in srgb, var(--cp-tone) 26%, transparent);
+  }
+  [data-slot="customer-thread"] {
+    background-color: var(--lg-hairline);
+  }
+}
+
+/* The sheen of the call button: the white band of the main action crosses it once. */
+@keyframes customer-page-sheen {
+  from {
+    background-position: 160% 0, 0 0, 0 0;
+  }
+  to {
+    background-position: -60% 0, 0 0, 0 0;
+  }
+}
+
+/* The same preferences the off switch follows (liquid-glass.css turns its fills solid
+   under them): the tints of the chips, the strip and the beads go solid with them. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root:not([data-glass="off"]),
+  :root:not([data-glass="off"]).dark {
+    --cp-alpha: 100%;
+  }
+}

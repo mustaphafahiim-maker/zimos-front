@@ -22,6 +22,7 @@ import { useOrderErrorMessage } from "../orderErrors";
 import { SelectionDocuments } from "./OrderDocuments";
 import { BulkShipDialog } from "./BulkShipDialog";
 import { SelectionExtras } from "./SelectionExtras";
+import { SelectionPacking } from "../packing/PackingEntryPoints";
 import { NotifyCustomerToggle } from "./NotifyCustomerToggle";
 
 const STRINGS = {
@@ -208,6 +209,7 @@ export function OrderBulkBar({
             ))}
           </Select>
           <SelectionDocuments orderIds={selectedIds} />
+          <SelectionPacking orderIds={selectedIds} />
           <SelectionExtras orderIds={selectedIds} />
           <Button variant="ghost" size="sm" className="ms-auto min-h-11" onClick={onClear}>
             {t.clear}

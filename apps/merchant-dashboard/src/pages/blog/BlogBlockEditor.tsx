@@ -1,20 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import {
-  ArrowDown,
-  ArrowUp,
-  ChevronDown,
-  Heading,
-  Image as ImageIcon,
-  List,
-  MousePointerClick,
-  Package,
-  Pilcrow,
-  Plus,
-  Quote,
-  Search,
-  SeparatorHorizontal,
-  Trash2,
-} from "lucide-react";
+import { IconArrowDown, IconArrowUp, IconCaretDown, IconClick, IconDelete, IconDivider, IconHeading, IconImage, IconListView, IconPackage, IconParagraph, IconPlus, IconQuote, IconSearch } from "@/components/icons";
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Input, cn } from "@store-builder/ui";
 import { ApiError, BLOG_BLOCKS_MAX, BLOG_BLOCK_TYPES, type BlogBlockType, type ProductListParams } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -151,15 +136,15 @@ const STRINGS = {
 
 type T = Record<keyof (typeof STRINGS)["en"], string>;
 
-const BLOCK_ICON: Record<BlogBlockType, typeof Heading> = {
-  heading: Heading,
-  paragraph: Pilcrow,
-  image: ImageIcon,
-  list: List,
-  quote: Quote,
-  product: Package,
-  button: MousePointerClick,
-  divider: SeparatorHorizontal,
+const BLOCK_ICON: Record<BlogBlockType, typeof IconHeading> = {
+  heading: IconHeading,
+  paragraph: IconParagraph,
+  image: IconImage,
+  list: IconListView,
+  quote: IconQuote,
+  product: IconPackage,
+  button: IconClick,
+  divider: IconDivider,
 };
 
 const problemText = (t: T, p: BlockProblem | undefined) => (p ? t[`p_${p}`] : undefined);
@@ -299,7 +284,7 @@ export function BlogBlockEditor({
           disabled={full || disabled}
           render={<Button type="button" variant="outline" className="min-h-11 w-full border-dashed sm:min-h-10" />}
         >
-          <Plus className="size-4" aria-hidden />
+          <IconPlus className="size-4" aria-hidden />
           {t.addBlock}
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" className="min-w-56">
@@ -389,17 +374,17 @@ function BlockCard({
             </span>
           </span>
           {hasForm && (
-            <ChevronDown className={cn("size-4 shrink-0 text-ink-soft transition-transform motion-reduce:transition-none", open && "rotate-180")} aria-hidden />
+            <IconCaretDown className={cn("size-4 shrink-0 text-ink-soft transition-transform motion-reduce:transition-none", open && "rotate-180")} aria-hidden />
           )}
         </button>
         <IconAction label={fmt(t.moveUp, { name })} disabled={disabled || index === 0} onClick={() => onMove(-1)}>
-          <ArrowUp className="size-4" aria-hidden />
+          <IconArrowUp className="size-4" aria-hidden />
         </IconAction>
         <IconAction label={fmt(t.moveDown, { name })} disabled={disabled || index === count - 1} onClick={() => onMove(1)}>
-          <ArrowDown className="size-4" aria-hidden />
+          <IconArrowDown className="size-4" aria-hidden />
         </IconAction>
         <IconAction label={fmt(t.remove, { name })} danger disabled={disabled} onClick={onRemove}>
-          <Trash2 className="size-4" aria-hidden />
+          <IconDelete className="size-4" aria-hidden />
         </IconAction>
       </div>
 
@@ -578,7 +563,7 @@ function ProductField({
   return (
     <div className="space-y-2">
       <div className="relative">
-        <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
+        <IconSearch className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
         <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.productSearch} aria-label={t.productSearch} className="ps-9" />
       </div>
       <Field label={t.productPick} hint={t.productNote} error={error}>

@@ -1,7 +1,9 @@
 import {
   ApiError,
   apiFieldProblems,
+  checkoutWithTenders,
   isApiErrorCode,
+  type TenderCheckoutResult,
   type ApiClient,
   type CheckoutPayload,
   type CustomizationInput,
@@ -14,9 +16,14 @@ import { clearPageTags, pageTagFields } from "./pageTags";
 import { withCheckoutOtp } from "./checkoutOtp";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
 import { purchaseLimitMessage, saveOrderBuyNotes } from "./buyInfo";
+import { supplierMinimumRefusal } from "./supplierMinimum";
 import type { Dictionary, Locale } from "./i18n";
 import type { OrderFormErrors, OrderFormField } from "./orderForm";
 import { storeHref } from "./storeHref";
+import { saveTrackingToken } from "./trackingTokens";
+import { saveOrderFulfilment } from "./orderFulfilment";
+import { fulfilmentRefusal } from "./fulfilmentErrors";
+import { checkoutRefusal } from "./checkoutRefusals";
 
 export interface OrderLine {
   variantId: string;
@@ -42,6 +49,7 @@ export async function placeCodOrder({
   payload,
   cartToken,
   visitorId,
+  tenders,
 }: {
   client: ApiClient;
   workspaceId: string;
@@ -49,14 +57,27 @@ export async function placeCodOrder({
   cartToken?: string;
   /** The shopper's visitor id — it owns any photo answering a custom field. */
   visitorId?: string;
+  /**
+   * The checkout page's gift card, points and store credit (handoff 201, 203, 204): the signed-in
+   * shopper's token rides along (X-Shopper-Token), and the whole answer — what each paid — is
+   * handed to `onResult`.
+   */
+  tenders?: { shopperToken?: string | null; onResult?: (result: TenderCheckoutResult) => void };
 }): Promise<Order> {
   // The bot guard's token and honeypot ride along with every order (lib/botGuard).
   // The website page buttons / forms this shopper used tag them once the order is in (lib/pageTags).
   const guarded = { ...payload, ...(await botGuardFields(client, workspaceId)), ...adMatchFields(workspaceId), ...pageTagFields(workspaceId) };
   // A store that verifies phones answers OTP_REQUIRED first; the code is asked for and the order sent again.
-  const order = await withCheckoutOtp(workspaceId, payload.contact.phone, (otp) =>
-    client.checkout(workspaceId, { ...guarded, ...otp }, cartToken, { visitorId })
-  );
+  const order = await withCheckoutOtp(workspaceId, payload.contact.phone, async (otp) => {
+    // The full answer either way — the same request as `client.checkout`, with the shopper's token when there is one.
+    const result = await checkoutWithTenders(client, workspaceId, { ...guarded, ...otp }, { cartToken, visitorId, shopperToken: tenders?.shopperToken });
+    // The order's tracking token: the thank-you page's proof for the survey (lib/trackingTokens, handoff 236).
+    saveTrackingToken(workspaceId, result.order.id, result.trackingToken);
+    // The chosen delivery time, and a pickup's code and place (shown once): kept for the thank-you and tracking pages (handoff 221, 225).
+    saveOrderFulfilment(workspaceId, result);
+    tenders?.onResult?.(result);
+    return result.order;
+  });
   clearPageTags(workspaceId);
   return order;
 }
@@ -181,6 +202,9 @@ export function isDiscountRefused(err: unknown): boolean {
  */
 export function orderErrorMessage(err: unknown, copy: OrderErrorCopy, locale?: Locale): string {
   if (isApiErrorCode(err, "ORDER_REJECTED")) return copy.rejected;
+  // The code budget, a buy-X-get-Y code short of units, a funnel that is gone, a deposit, the terms box (handoff 348, 353, 355, 362, 374).
+  const hardened = checkoutRefusal(err, locale);
+  if (hardened) return hardened;
   // A custom-field answer that no longer holds (a photo past its 48 hours, a field the merchant changed).
   if (isApiErrorCode(err, "CUSTOM_FIELDS_INVALID")) return copy.customFields;
   if (isOrderBumpRefused(err)) return copy.bumpUnavailable;
@@ -188,6 +212,12 @@ export function orderErrorMessage(err: unknown, copy: OrderErrorCopy, locale?: L
   // A product's purchase limits (handoff 198), named in the shopper's words.
   const limited = purchaseLimitMessage(err, locale);
   if (limited) return limited;
+  // Below a dropshipping supplier's minimum (handoff 263); the checkout page adds the missing amount itself.
+  const belowSupplier = supplierMinimumRefusal(err, locale);
+  if (belowSupplier) return belowSupplier;
+  // The store's holiday, a delivery time or a pickup refused (handoff 216, 221, 225): the API words these in English only.
+  const fulfilment = fulfilmentRefusal(err, locale);
+  if (fulfilment) return fulfilment;
   const code = err instanceof ApiError ? err.code : undefined;
   const known = code ? ORDER_ERROR_COPY.find(([, codes]) => codes.includes(code)) : undefined;
   if (known) return copy[known[0]] as string;

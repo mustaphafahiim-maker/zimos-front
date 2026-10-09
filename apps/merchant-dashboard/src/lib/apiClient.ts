@@ -1,5 +1,6 @@
 import { ApiClient } from "@store-builder/api-client";
 import { draftRefusal, holdForGoLive } from "@/lib/goLive";
+import { emailNotVerified, holdForEmailConfirm } from "@/lib/emailConfirm";
 import { getLocale } from "@/i18n/LocaleContext";
 
 /** Base URL every API call is built on. Exported so non-ApiClient flows (e.g.
@@ -38,6 +39,9 @@ apiClient.request = async function request<T>(path: string, opts?: Parameters<ty
   try {
     return await send<T>(path, opts);
   } catch (err) {
+    // An account that has not confirmed its email (403 EMAIL_NOT_VERIFIED) gets the code dialog, and the same request again after it (lib/emailConfirm).
+    const unverified = emailNotVerified(err);
+    if (unverified) return holdForEmailConfirm(err, unverified.email, () => apiClient.request<T>(path, opts));
     const refusal = draftRefusal(err);
     if (!refusal) throw err;
     return holdForGoLive(err, refusal, () => send<T>(path, opts));

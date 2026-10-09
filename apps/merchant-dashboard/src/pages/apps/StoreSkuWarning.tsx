@@ -1,4 +1,4 @@
-import { TriangleAlert } from "lucide-react";
+import { IconWarning } from "@/components/icons";
 import { cn } from "@store-builder/ui";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 
@@ -28,7 +28,7 @@ export function StoreSkuWarning({ className }: { className?: string }) {
         className
       )}
     >
-      <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <IconWarning className="mt-0.5 size-4 shrink-0" aria-hidden />
       <span>{text}</span>
     </p>
   );

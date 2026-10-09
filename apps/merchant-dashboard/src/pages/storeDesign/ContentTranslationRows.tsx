@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useReportDirty, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { Button } from "@store-builder/ui";
 import {
   contentTranslationsList,
@@ -64,6 +65,12 @@ export function ContentTranslationRows({ locale, kind, onSaved }: { locale: Stor
   const workspaceId = useWorkspaceId();
   const items = useAsync(() => contentTranslationsList(apiClient, workspaceId, kind, locale), [workspaceId, kind, locale]);
   const [open, setOpen] = useState<string | null>(null);
+  // Opening another card (or closing this one) drops the open card: with a translation typed and not saved, ask first.
+  const { confirmLeave } = useUnsavedGuard();
+  async function toggleOpen(id: string) {
+    if (open !== null && !(await confirmLeave())) return;
+    setOpen(open === id ? null : id);
+  }
   // A store_text item is one section of the store's own texts, named here.
   const sectionName = (section: string) =>
     ({ menus: t.section_menus, policies: t.section_policies, store_info: t.section_store_info, thank_you: t.section_thank_you })[section as StoreTextSection] ?? section;
@@ -94,7 +101,7 @@ export function ContentTranslationRows({ locale, kind, onSaved }: { locale: Stor
                   </p>
                   <p className="text-xs text-ink-soft">{fmt(t.progress, { done, total: item.texts.length })}</p>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => setOpen(isOpen ? null : item.entityId)} aria-expanded={isOpen}>
+                <Button variant="outline" className="min-h-11 rounded-full px-4 sm:min-h-9" onClick={() => void toggleOpen(item.entityId)} aria-expanded={isOpen}>
                   {isOpen ? t.hide : t.show}
                 </Button>
               </div>
@@ -124,6 +131,7 @@ function ItemEditor({ item, locale, onSaved }: { item: ContentTranslationItem; l
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const dirty = Object.keys(draft).length > 0;
+  useReportDirty(dirty);
 
   async function save() {
     setBusy(true);
@@ -150,15 +158,24 @@ function ItemEditor({ item, locale, onSaved }: { item: ContentTranslationItem; l
           <Textarea
             aria-label={text.source.slice(0, 80)}
             dir="auto"
+            className="text-base sm:text-sm"
             rows={text.source.length > 80 ? 3 : 1}
             maxLength={8000}
             value={draft[text.key] ?? text.translation}
-            onChange={(e) => setDraft((prev) => ({ ...prev, [text.key]: e.target.value }))}
+            onChange={(e) =>
+              setDraft((prev) => {
+                // Typing the saved text back is not a change: the key leaves the draft, so nothing asks before a tab switch.
+                const next = { ...prev };
+                if (e.target.value === text.translation) delete next[text.key];
+                else next[text.key] = e.target.value;
+                return next;
+              })
+            }
           />
         </div>
       ))}
       <div className="flex justify-end">
-        <Button size="sm" disabled={!dirty || busy} onClick={() => void save()}>
+        <Button className="min-h-11 rounded-full px-5 sm:min-h-9" disabled={!dirty || busy} onClick={() => void save()}>
           {t.save}
         </Button>
       </div>

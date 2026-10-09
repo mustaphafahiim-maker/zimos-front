@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Plus, X } from "lucide-react";
+import { IconClose, IconPlus } from "@/components/icons";
 import { Alert, Button, Input, cn } from "@store-builder/ui";
 import {
   ApiError,
   WEBHOOK_HEADER_NAME_PATTERN,
   WEBHOOK_HEADER_VALUE_MAX,
+  WEBHOOK_HEADER_VALUE_PATTERN,
   WEBHOOK_MAX_CUSTOM_HEADERS,
   WEBHOOK_RESERVED_HEADER,
   webhooksUpdateEndpoint,
@@ -91,6 +92,7 @@ const STRINGS = {
     headerValue: "Value",
     headerNamePlaceholder: "Authorization",
     headerValuePlaceholder: "Bearer …",
+    headerValueHint: "Latin letters, digits and symbols only — like an API key",
     savedValue: "Saved value",
     addHeader: "Add header",
     removeHeader: "Remove {name}",
@@ -106,6 +108,7 @@ const STRINGS = {
     errValueMissing: "Type the value.",
     errValueLong: "The value is longer than {max} characters.",
     errValueLines: "The value must be on one line.",
+    errValueLatin: "Use Latin letters, digits and symbols only — Arabic and emoji can't be sent in a header.",
     errValueGone: "No saved value for this header any more. Type it again.",
     errHeader: "Check this header.",
     // Edit dialog
@@ -170,6 +173,7 @@ const STRINGS = {
     headerValue: "القيمة",
     headerNamePlaceholder: "Authorization",
     headerValuePlaceholder: "Bearer …",
+    headerValueHint: "إنجليزي وأرقام ورموز بس — زي مفتاح API",
     savedValue: "القيمة المحفوظة",
     addHeader: "إضافة header",
     removeHeader: "شيل {name}",
@@ -185,6 +189,7 @@ const STRINGS = {
     errValueMissing: "اكتب القيمة.",
     errValueLong: "القيمة أطول من {max} حرف.",
     errValueLines: "القيمة لازم تبقى في سطر واحد.",
+    errValueLatin: "اكتب إنجليزي وأرقام ورموز بس — العربي والإيموجي مينفعش يتبعتوا في header.",
     errValueGone: "مفيش قيمة محفوظة للـ header ده دلوقتي. اكتبها تاني.",
     errHeader: "راجع الـ header ده.",
     editTitle: "تعديل الرابط",
@@ -398,6 +403,8 @@ function buildHeaders(t: T, rows: HeaderRow[]): { payload: WebhookCustomHeaderIn
       if (row.value === "") problem.value = t.errValueMissing;
       else if (row.value.length > WEBHOOK_HEADER_VALUE_MAX) problem.value = fmt(t.errValueLong, { max });
       else if (/[\r\n]/.test(row.value)) problem.value = t.errValueLines;
+      // Handoff 304: only what an HTTP header can carry.
+      else if (!WEBHOOK_HEADER_VALUE_PATTERN.test(row.value)) problem.value = t.errValueLatin;
     }
     if (problem.name || problem.value) errors[row.key] = problem;
     payload.push(sendsValue ? { name, value: row.value } : { name, keep: true });
@@ -421,7 +428,7 @@ function serverHeaderErrors(t: T, err: unknown, keys: string[]): HeaderErrors {
     if (/set by Zimos/i.test(message)) row.name = t.errNameReserved;
     else if (/No stored value/i.test(message)) row.value = t.errValueGone;
     else if (/duplicate|unique/i.test(message)) row.name = t.errNameDuplicate;
-    else if (match[2] === "value") row.value = /length|long|1000/i.test(message) ? fmt(t.errValueLong, { max: String(WEBHOOK_HEADER_VALUE_MAX) }) : /pattern/i.test(message) ? t.errValueLines : t.errHeader;
+    else if (match[2] === "value") row.value = /length|long|1000/i.test(message) ? fmt(t.errValueLong, { max: String(WEBHOOK_HEADER_VALUE_MAX) }) : /Latin/i.test(message) ? t.errValueLatin : /pattern/i.test(message) ? t.errValueLines : t.errHeader;
     else row.name = /pattern/i.test(message) ? t.errNameInvalid : t.errHeader;
   }
   return out;
@@ -569,10 +576,15 @@ export function WebhookHeadersField({
                             placeholder={t.headerValuePlaceholder}
                             value={row.value}
                             aria-invalid={error?.value ? true : undefined}
-                            aria-describedby={error?.value ? `${valueId}-error` : undefined}
+                            aria-describedby={error?.value ? `${valueId}-error` : `${valueId}-hint`}
                             className={cn("font-mono", error?.value && "border-danger")}
                             onChange={(e) => update(row.key, { value: e.target.value })}
                           />
+                          {!error?.value && (
+                            <p id={`${valueId}-hint`} className="text-xs text-ink-soft">
+                              {t.headerValueHint}
+                            </p>
+                          )}
                           {row.stored && (
                             <button
                               type="button"
@@ -607,7 +619,7 @@ export function WebhookHeadersField({
                       }
                     }}
                   >
-                    <X className="size-4" aria-hidden />
+                    <IconClose className="size-4" aria-hidden />
                   </Button>
                 </div>
               </li>
@@ -617,7 +629,7 @@ export function WebhookHeadersField({
       )}
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" variant="outline" className="min-h-11 sm:min-h-9" disabled={full} onClick={() => onChange([...rows, newRow()])}>
-          <Plus className="size-4" aria-hidden />
+          <IconPlus className="size-4" aria-hidden />
           {t.addHeader}
         </Button>
         {rows.length > 0 && (

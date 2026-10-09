@@ -1,4 +1,4 @@
-import { CalendarClock } from "lucide-react";
+import { IconSchedule } from "@/components/icons";
 import { preorderShipsAtOf } from "@store-builder/api-client";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { formatDay } from "@/lib/wholeNumber";
@@ -18,7 +18,7 @@ export function PreorderLineNote({ item }: { item: unknown }) {
   if (!day) return null;
   return (
     <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-dark">
-      <CalendarClock className="size-3.5 shrink-0" aria-hidden />
+      <IconSchedule className="size-3.5 shrink-0" aria-hidden />
       {fmt(t.line, { date: formatDay(day) })}
     </span>
   );

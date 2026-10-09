@@ -1,19 +1,22 @@
-import { useState } from "react";
-import { Input } from "@store-builder/ui";
+import type { ReactNode } from "react";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
-import { normalizeHex } from "@/lib/brandColors";
 import { useEditorLocale } from "./editorLocale";
 import { ImageField } from "./ImageField";
 import { FontSelect, useStoreFonts } from "./FontSelect";
+import { ColourControl, NumberField, SwitchRow } from "./inspector/controls";
 
 /**
- * The rest of an element's Style and Layout tabs (SPEC §9.3, Lightfunnels'
- * element styles): gradient and image backgrounds, a custom shadow,
- * overflow, cursor, hiding on a phone held upright or sideways, and the
- * height / min / max sizes. Rendered inside ElementStylePanel, which owns
- * the device and the stored style; the contract is the backend's
+ * The rest of an element's look (SPEC §9.3, Lightfunnels' element styles):
+ * its font, gradient and image backgrounds, a custom shadow, overflow,
+ * cursor, hiding on a phone held upright or sideways, and the height / min /
+ * max sizes. Rendered inside ElementStylePanel, which owns the device and
+ * the stored style; the contract is the backend's
  * modules/pages/styleExtras.js and the storefront's elementStyleExtras.ts.
+ *
+ * With `part` it draws one piece only, bare, for the group that asks (the
+ * inspector's Style page sorts the pieces under Text, Background, Shadow…);
+ * without it, everything the old Style or Layout tab held, as before.
  */
 
 const STRINGS = {
@@ -21,8 +24,8 @@ const STRINGS = {
     fontFamily: "Font",
     storeFont: "The store's font",
     backgroundTitle: "Gradient and image",
-    gradientFrom: "Gradient start colour",
-    gradientTo: "Gradient end colour",
+    gradientFrom: "Gradient: first colour",
+    gradientTo: "Gradient: second colour",
     gradientAngle: "Gradient angle (°)",
     backgroundImage: "Background image",
     backgroundImageHint: "The gradient, when set, lies over the image.",
@@ -38,7 +41,7 @@ const STRINGS = {
     end: "End",
     shadowTitle: "Custom shadow",
     shadowHint: "Set a colour to use it; it replaces the shadow chosen above.",
-    shadowColor: "Shadow colour",
+    shadowColor: "Custom shadow colour",
     shadowX: "Across (px)",
     shadowY: "Down (px)",
     shadowBlur: "Blur (px)",
@@ -57,17 +60,17 @@ const STRINGS = {
     hiddenPortrait: "Hide when the phone is upright",
     hiddenLandscape: "Hide when the phone is sideways",
     height: "Height (px)",
-    minHeight: "Minimum height (px)",
-    maxHeight: "Maximum height (px)",
-    minWidth: "Minimum width (px)",
+    minHeight: "Shortest (px)",
+    maxHeight: "Tallest (px)",
+    minWidth: "Narrowest (px)",
     unset: "Default",
   },
   ar: {
     fontFamily: "الخط",
     storeFont: "خط المتجر",
     backgroundTitle: "التدرّج والصورة",
-    gradientFrom: "لون بداية التدرّج",
-    gradientTo: "لون نهاية التدرّج",
+    gradientFrom: "التدرّج: اللون الأول",
+    gradientTo: "التدرّج: اللون التاني",
     gradientAngle: "زاوية التدرّج (°)",
     backgroundImage: "صورة الخلفية",
     backgroundImageHint: "التدرّج، لو موجود، بيكون فوق الصورة.",
@@ -83,7 +86,7 @@ const STRINGS = {
     end: "النهاية",
     shadowTitle: "ظل مخصص",
     shadowHint: "اختار لون علشان يشتغل؛ بيحل محل الظل اللي فوق.",
-    shadowColor: "لون الظل",
+    shadowColor: "لون الظل المخصص",
     shadowX: "أفقي (px)",
     shadowY: "رأسي (px)",
     shadowBlur: "التمويه (px)",
@@ -111,85 +114,69 @@ const STRINGS = {
 type T = (typeof STRINGS)["en"];
 type Style = Record<string, unknown>;
 
+/** The pieces the extras fall into; each is one block of controls. */
+export type StyleExtrasPart = "font" | "background" | "shadow" | "advanced" | "sizes" | "orientation";
+
+/** The style keys each piece writes — what a group counts to say how much of it is set. */
+export const STYLE_EXTRAS_KEYS: Record<StyleExtrasPart, readonly string[]> = {
+  font: ["fontFamily"],
+  background: ["gradientFrom", "gradientTo", "gradientAngle", "backgroundImage", "backgroundSize", "backgroundPosition"],
+  shadow: ["shadowColor", "shadowX", "shadowY", "shadowBlur", "shadowSpread", "shadowInset"],
+  advanced: ["overflow", "cursor"],
+  sizes: ["height", "minHeight", "maxHeight", "minWidth"],
+  orientation: ["hiddenPortrait", "hiddenLandscape"],
+};
+
 export function StyleExtrasFields({
   tab,
   device,
   own,
   inherited,
   setValue,
+  part,
 }: {
   tab: "style" | "layout";
   device: "base" | "tablet" | "mobile";
   own: Style;
   inherited: (key: string) => unknown;
   setValue: (key: string, value: unknown) => void;
+  /** One piece only, without its heading. Left out: every piece of `tab`, as before. */
+  part?: StyleExtrasPart;
 }) {
   const t: T = STRINGS[useEditorLocale()] as unknown as T;
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const fonts = useStoreFonts();
 
-  const number = (key: keyof T & string, min: number, max: number) => {
+  const number = (key: keyof T & string, min: number, max: number, step = 1) => {
     const value = own[key];
     const fallback = inherited(key);
     return (
-      <Field key={key} label={t[key]}>
-        {({ id }) => (
-          <Input
-            id={id}
-            type="number"
-            inputMode="numeric"
-            min={min}
-            max={max}
-            placeholder={typeof fallback === "number" ? String(fallback) : undefined}
-            value={typeof value === "number" ? value : ""}
-            onChange={(e) => {
-              if (e.target.value === "") return setValue(key, undefined);
-              const n = Math.round(Number(e.target.value));
-              if (Number.isFinite(n)) setValue(key, Math.min(max, Math.max(min, n)));
-            }}
-          />
-        )}
-      </Field>
+      <NumberField
+        key={`${device}:${key}`}
+        label={t[key]}
+        strict
+        integer
+        min={min}
+        max={max}
+        step={step}
+        placeholder={typeof fallback === "number" ? String(fallback) : undefined}
+        startAt={typeof fallback === "number" ? fallback : undefined}
+        value={typeof value === "number" ? value : ""}
+        onChange={(next) => setValue(key, next === "" ? undefined : next)}
+      />
     );
   };
 
   const colour = (key: keyof T & string) => {
-    const draftKey = `${device}:${key}`;
     const value = own[key];
     const fallback = inherited(key);
-    const shown = drafts[draftKey] ?? (typeof value === "string" ? value : "");
-    const valid = normalizeHex(shown);
     return (
-      <Field key={key} label={t[key]}>
-        {({ id }) => (
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              aria-label={t[key]}
-              value={valid ?? (typeof fallback === "string" ? (normalizeHex(fallback) ?? "#000000") : "#000000")}
-              onChange={(e) => {
-                setDrafts((prev) => ({ ...prev, [draftKey]: e.target.value }));
-                setValue(key, e.target.value.toLowerCase());
-              }}
-              className="size-10 shrink-0 cursor-pointer rounded-[0.5rem] border border-line-strong bg-paper-raised p-1"
-            />
-            <Input
-              id={id}
-              dir="ltr"
-              spellCheck={false}
-              placeholder={typeof fallback === "string" ? fallback : "#"}
-              value={shown}
-              onChange={(e) => {
-                const text = e.target.value;
-                setDrafts((prev) => ({ ...prev, [draftKey]: text }));
-                const hex = normalizeHex(text);
-                if (text.trim() === "") setValue(key, undefined);
-                else if (hex) setValue(key, hex.toLowerCase());
-              }}
-            />
-          </div>
-        )}
-      </Field>
+      <ColourControl
+        key={`${device}:${key}`}
+        label={t[key]}
+        value={typeof value === "string" ? value : undefined}
+        fallback={typeof fallback === "string" ? fallback : undefined}
+        onChange={(hex) => setValue(key, hex)}
+      />
     );
   };
 
@@ -216,28 +203,15 @@ export function StyleExtrasFields({
   };
 
   const check = (key: keyof T & string) => (
-    <label key={key} className="flex cursor-pointer items-center gap-2 text-sm text-ink">
-      <input type="checkbox" className="size-4 accent-primary" checked={own[key] === true} onChange={(e) => setValue(key, e.target.checked ? true : undefined)} />
-      {t[key]}
-    </label>
+    <SwitchRow key={key} label={t[key]} checked={own[key] === true} onChange={(checked) => setValue(key, checked ? true : undefined)} />
   );
-
-  if (tab === "layout") {
-    return (
-      <>
-        {number("height", 0, 2000)}
-        {number("minHeight", 0, 2000)}
-        {number("maxHeight", 0, 4000)}
-        {number("minWidth", 0, 2000)}
-      </>
-    );
-  }
 
   const image = typeof own.backgroundImage === "string" ? own.backgroundImage : "";
   const font = typeof own.fontFamily === "string" ? own.fontFamily : "";
   const inheritedFont = inherited("fontFamily");
-  return (
-    <>
+
+  const pieces: Record<StyleExtrasPart, () => ReactNode> = {
+    font: () => (
       <Field label={t.fontFamily}>
         {({ id }) => (
           <FontSelect
@@ -249,41 +223,69 @@ export function StyleExtrasFields({
           />
         )}
       </Field>
-
-      {device === "mobile" && (
-        <div className="space-y-2">
-          {check("hiddenPortrait")}
-          {check("hiddenLandscape")}
-        </div>
-      )}
-
-      <fieldset className="space-y-3 border-t border-line pt-3">
-        <legend className="pt-3 text-xs font-semibold text-ink">{t.backgroundTitle}</legend>
+    ),
+    orientation: () => (
+      <div>
+        {check("hiddenPortrait")}
+        {check("hiddenLandscape")}
+      </div>
+    ),
+    background: () => (
+      <>
         {colour("gradientFrom")}
         {colour("gradientTo")}
-        {number("gradientAngle", 0, 360)}
+        {number("gradientAngle", 0, 360, 15)}
         <ImageField label={t.backgroundImage} hint={t.backgroundImageHint} value={image} onChange={(url) => setValue("backgroundImage", url || undefined)} />
         {image && select("backgroundSize", [["cover", "cover"], ["contain", "contain"], ["auto", "auto"]])}
         {image && select("backgroundPosition", [["center", "center"], ["top", "top"], ["bottom", "bottom"], ["start", "start"], ["end", "end"]])}
-      </fieldset>
-
-      <fieldset className="space-y-3 border-t border-line pt-3">
-        <legend className="pt-3 text-xs font-semibold text-ink">{t.shadowTitle}</legend>
-        <p className="text-xs text-ink-soft">{t.shadowHint}</p>
+      </>
+    ),
+    shadow: () => (
+      <>
         {colour("shadowColor")}
-        <div className="grid grid-cols-2 gap-2">
+        <p className="text-xs leading-5 text-ink-soft">{t.shadowHint}</p>
+        <div className="grid grid-cols-2 items-end gap-x-2 gap-y-3">
           {number("shadowX", -100, 100)}
           {number("shadowY", -100, 100)}
-          {number("shadowBlur", 0, 200)}
+          {number("shadowBlur", 0, 200, 2)}
           {number("shadowSpread", -100, 100)}
         </div>
         {check("shadowInset")}
-      </fieldset>
-
-      <div className="space-y-3 border-t border-line pt-3">
+      </>
+    ),
+    advanced: () => (
+      <>
         {select("overflow", [["visible", "visible"], ["hidden", "hidden"], ["auto", "scroll"]])}
         {select("cursor", [["auto", "cursorAuto"], ["default", "cursorDefault"], ["pointer", "cursorPointer"], ["text", "cursorText"], ["not-allowed", "cursorNotAllowed"]])}
+      </>
+    ),
+    sizes: () => (
+      <div className="grid grid-cols-2 items-end gap-x-2 gap-y-3">
+        {number("height", 0, 2000, 10)}
+        {number("minHeight", 0, 2000, 10)}
+        {number("maxHeight", 0, 4000, 10)}
+        {number("minWidth", 0, 2000, 10)}
       </div>
+    ),
+  };
+
+  if (part) return <>{pieces[part]()}</>;
+
+  if (tab === "layout") return <>{pieces.sizes()}</>;
+
+  return (
+    <>
+      {pieces.font()}
+      {device === "mobile" && pieces.orientation()}
+      <fieldset className="min-w-0 space-y-3 border-t border-line pt-3">
+        <legend className="pt-3 text-[13px] font-semibold text-ink">{t.backgroundTitle}</legend>
+        {pieces.background()}
+      </fieldset>
+      <fieldset className="min-w-0 space-y-3 border-t border-line pt-3">
+        <legend className="pt-3 text-[13px] font-semibold text-ink">{t.shadowTitle}</legend>
+        {pieces.shadow()}
+      </fieldset>
+      <div className="space-y-3 border-t border-line pt-3">{pieces.advanced()}</div>
     </>
   );
 }

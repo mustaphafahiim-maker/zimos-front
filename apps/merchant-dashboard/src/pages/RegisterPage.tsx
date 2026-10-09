@@ -1,8 +1,10 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
-import { Button, Input, Label, Alert, Spinner } from "@store-builder/ui";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Button, Alert } from "@store-builder/ui";
 import {
+  accountSignupEmailCode,
+  accountSignupSwitches,
+  apiFieldProblems,
   isApiErrorCode,
   type BillingCycle,
   type PublicPlan,
@@ -11,50 +13,65 @@ import {
 } from "@store-builder/api-client";
 import { useAuth, ApiError } from "@/context/AuthContext";
 import { apiBaseUrl, apiClient } from "@/lib/apiClient";
-import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { unmetPasswordRules } from "@/lib/passwordRules";
 import { UsernameField } from "@/components/UsernameField";
 import { normalizeUsername, usernameSubmittable, type UsernameStatus } from "@/lib/username";
 import { useLocale, useT, fmt, type Messages } from "@/i18n/LocaleContext";
-import { PlanPicker, PlanSummary, type PlanChoice } from "@/components/plans/PlanPicker";
+import { PlanSummary, type PlanChoice } from "@/components/plans/PlanPicker";
 import { TermsConsent } from "@/components/plans/TermsConsent";
 import { VerifyCodePanel } from "@/components/VerifyCodePanel";
 import { rememberPlanChoice } from "@/lib/planChoice";
 import { rememberReferralCode } from "@/lib/referralCode";
 import { errorMessageNow } from "@/lib/errorMessages";
+import { rememberSignupEmailCode, takeAfterAuth } from "@/lib/emailConfirm";
+import { siteVisitForSignup } from "@/lib/siteVisit";
+import {
+  AUTH_SUBMIT,
+  AuthBusy,
+  AuthDivider,
+  AuthField,
+  AuthFooter,
+  AuthHeading,
+  AuthLink,
+  AuthLinkButton,
+  AuthPasswordField,
+  AuthRules,
+  AuthShell,
+  GoogleMark,
+} from "./AuthShell";
+import { PlanCards } from "./PlanCards";
 
 const STRINGS = {
   en: {
     title: "Create your account",
-    subtitle: "Start building your store in a few minutes.",
+    subtitle: "Your store is ready to build in a few minutes.",
     google: "Continue with Google",
     or: "or",
     fullName: "Full name",
     fullNamePlaceholder: "Your name",
     email: "Email",
     phone: "Phone (optional)",
+    phoneRequired: "Mobile number",
+    phoneInvalid: "Enter a valid mobile number",
     password: "Password",
-    passwordPlaceholder: "At least 8 characters",
-    confirm: "Confirm password",
-    show: "Show password",
-    hide: "Hide password",
-    passwordRules: "The password still misses some of the rules listed below it.",
-    mismatch: "The password and its confirmation don't match.",
-    chooseUsername: "Choose an available username first.",
+    confirm: "Password again",
+    passwordRules: "The password still misses the rules listed under it.",
+    mismatch: "The two passwords are not the same. Type them again.",
+    chooseUsername: "Choose a username that is free first.",
     usernameTaken: "Someone just took this username. Choose another one.",
     emailTaken: "An account with this email already exists. Sign in instead.",
     planGone: "That plan is no longer available. Choose another one.",
     planRequired: "Choose a plan to continue.",
     termsRequired: "Agree to the terms to continue.",
     unavailable: "Sign-up isn't available right now. Try again later.",
-    tooMany: "Too many attempts. Try again later.",
+    tooMany: "Too many attempts from this network — wait 15 minutes and try again",
     generic: "Something went wrong. Please try again.",
     create: "Create account",
     creating: "Creating account…",
     haveAccount: "Already have an account?",
     signIn: "Sign in",
     planStepTitle: "Choose your plan",
-    planStepSubtitle: "You can change it later. Subscribe when you're ready to publish.",
+    planStepSubtitle: "You can change it later. You subscribe when you're ready to publish your store.",
     continue: "Continue",
     yourPlan: "Your plan",
     change: "Change",
@@ -62,66 +79,61 @@ const STRINGS = {
     loading: "Loading plans…",
   },
   ar: {
-    title: "أنشئ حسابك",
-    subtitle: "ابدأ بناء متجرك في دقائق.",
-    google: "المتابعة بحساب جوجل",
+    title: "اعمل حسابك",
+    subtitle: "متجرك هيبقى جاهز تبنيه في دقايق.",
+    google: "كمّل بحساب جوجل",
     or: "أو",
-    fullName: "الاسم الكامل",
+    fullName: "الاسم بالكامل",
     fullNamePlaceholder: "اسمك",
-    email: "البريد الإلكتروني",
+    email: "الإيميل",
     phone: "رقم الهاتف (اختياري)",
-    password: "كلمة المرور",
-    passwordPlaceholder: "8 أحرف على الأقل",
-    confirm: "تأكيد كلمة المرور",
-    show: "إظهار كلمة المرور",
-    hide: "إخفاء كلمة المرور",
-    passwordRules: "كلمة المرور لا تستوفي بعض الشروط المذكورة أسفلها.",
-    mismatch: "كلمة المرور وتأكيدها غير متطابقين.",
-    chooseUsername: "اختار اسم مستخدم متاحًا أولًا.",
-    usernameTaken: "استخدم شخص آخر هذا الاسم للتو. اختار اسمًا آخر.",
-    emailTaken: "يوجد حساب بهذا البريد الإلكتروني. سجّل الدخول بدلًا من ذلك.",
-    planGone: "هذه الخطة لم تعد متاحة. اختار خطة أخرى.",
-    planRequired: "اختار خطة للمتابعة.",
-    termsRequired: "وافق على الشروط للمتابعة.",
-    unavailable: "التسجيل غير متاح حاليًا. حاول مرة أخرى لاحقًا.",
-    tooMany: "محاولات كثيرة. حاول مرة أخرى لاحقًا.",
-    generic: "حدث خطأ ما. حاول مرة أخرى.",
-    create: "إنشاء الحساب",
+    phoneRequired: "رقم الموبايل",
+    phoneInvalid: "اكتب رقم موبايل صحيح",
+    password: "كلمة السر",
+    confirm: "كلمة السر تاني",
+    passwordRules: "كلمة السر لسه ناقصها الشروط اللي مكتوبة تحتها.",
+    mismatch: "كلمتين السر مش زي بعض. اكتبهم تاني.",
+    chooseUsername: "اختار اسم مستخدم متاح الأول.",
+    usernameTaken: "حد لسه واخد الاسم ده. اختار اسم تاني.",
+    emailTaken: "في حساب بالإيميل ده. ادخل بيه بدل ما تعمل حساب جديد.",
+    planGone: "الباقة دي مبقتش متاحة. اختار باقة تانية.",
+    planRequired: "اختار باقة عشان تكمّل.",
+    termsRequired: "وافق على الشروط عشان تكمّل.",
+    unavailable: "التسجيل مش متاح دلوقتي. جرّب بعدين.",
+    tooMany: "محاولات كتير من الشبكة دي — استنى ربع ساعة وجرّب تاني",
+    generic: "حصلت مشكلة. جرّب تاني.",
+    create: "اعمل الحساب",
     creating: "بنعمل الحساب…",
-    haveAccount: "لديك حساب بالفعل؟",
-    signIn: "تسجيل الدخول",
-    planStepTitle: "اختار خطتك",
-    planStepSubtitle: "يمكنك تغييرها لاحقًا. اشترك عندما تكون جاهزًا لنشر متجرك.",
-    continue: "متابعة",
-    yourPlan: "خطتك",
-    change: "تغيير",
+    haveAccount: "عندك حساب؟",
+    signIn: "ادخل",
+    planStepTitle: "اختار باقتك",
+    planStepSubtitle: "تقدر تغيّرها بعدين. هتشترك لما تبقى جاهز تنشر متجرك.",
+    continue: "كمّل",
+    yourPlan: "باقتك",
+    change: "غيّرها",
     stepOf: "الخطوة {n} من {total}",
-    loading: "بنحمّل الخطط…",
+    loading: "بنحمّل الباقات…",
   },
 } satisfies Messages;
 
-/** Brand-coloured Google "G" — an inline SVG so we don't pull in an icon set. */
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 48 48" width="18" height="18" className="shrink-0" aria-hidden="true">
-      <path
-        fill="#EA4335"
-        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-      />
-      <path
-        fill="#4285F4"
-        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
-      />
-      <path
-        fill="#34A853"
-        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-      />
-    </svg>
-  );
+/** The fields an error can sit under. */
+type FieldName = "username" | "email" | "phone" | "password" | "confirm";
+const FIELD_ID: Record<FieldName, string> = {
+  phone: "phone",
+  username: "register-username",
+  email: "email",
+  password: "password",
+  confirm: "confirm",
+};
+
+/** The first invalid field: on screen and under the cursor. The username field keeps its input inside a wrapper. */
+function focusField(field: FieldName) {
+  window.setTimeout(() => {
+    const node = document.getElementById(FIELD_ID[field]);
+    const input = node instanceof HTMLInputElement ? node : (node?.querySelector("input") ?? null);
+    input?.scrollIntoView({ block: "center" });
+    input?.focus({ preventScroll: true });
+  }, 0);
 }
 
 type Step = "plan" | "account" | "code";
@@ -135,7 +147,7 @@ type Step = "plan" | "account" | "code";
  * as it always has.
  */
 export function RegisterPage() {
-  const { register, login, refreshUser } = useAuth();
+  const { login, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   // A ZIMOS referral link (/register?ref=CODE): offered again in Billing once the store exists.
@@ -159,10 +171,10 @@ export function RegisterPage() {
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  // The server's switches (handoff 330): a mobile number is a must, and the email is confirmed by code after going in.
+  const switches = accountSignupSwitches(options);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [termsError, setTermsError] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -211,24 +223,43 @@ export function RegisterPage() {
     return t.generic;
   }
 
+  // What is wrong with a field, said under that field.
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldName, string>>>({});
+
+  function failField(field: FieldName, message: string) {
+    const next: Partial<Record<FieldName, string>> = {};
+    next[field] = message;
+    setFieldErrors(next);
+    focusField(field);
+  }
+
+  function clearField(field: FieldName) {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
 
     // Client-side gate before the API call — the backend enforces the same
     // password rule, so blocking here just spares a round-trip and a raw
     // server error. Typing is never blocked, only submitting.
     if (unmetRules.length > 0) {
-      setError(t.passwordRules);
+      failField("password", t.passwordRules);
       return;
     }
     if (password !== confirm) {
-      setError(t.mismatch);
+      failField("confirm", t.mismatch);
       return;
     }
     if (!usernameSubmittable(usernameStatus)) {
-      setError(t.chooseUsername);
-      document.getElementById("register-username")?.querySelector("input")?.focus();
+      failField("username", t.chooseUsername);
       return;
     }
     if (!acceptTerms) {
@@ -242,7 +273,8 @@ export function RegisterPage() {
 
     setSubmitting(true);
     try {
-      const next = await register({
+      // Straight to the API (what AuthContext.register does), to keep the answer's `emailCode`.
+      const created = await apiClient.register({
         fullName,
         username: normalizeUsername(username),
         email,
@@ -251,7 +283,12 @@ export function RegisterPage() {
         acceptTerms: true,
         locale,
         ...(planStep && selectedPlan ? { planId: selectedPlan.id, billingCycle: choice.billingCycle } : {}),
+        // The marketing-site visit this sign-up came from (`?sv=`), when there is one.
+        ...siteVisitForSignup(),
       });
+      const next = "verificationRequired" in created ? created : null;
+      // Confirm-by-code: the account goes straight in, and the code dialog opens on the code already sent.
+      rememberSignupEmailCode(accountSignupEmailCode(created));
       if (next) {
         setChallenge(next);
         setStep("code");
@@ -261,10 +298,14 @@ export function RegisterPage() {
       // credentials, straight into the store setup (or told to confirm the
       // emailed link, as before).
       await login({ email, password });
-      navigate("/workspaces", { replace: true });
+      navigate(takeAfterAuth() ?? "/workspaces", { replace: true });
     } catch (err) {
       if (isApiErrorCode(err, "PLAN_NOT_AVAILABLE") || isApiErrorCode(err, "PLAN_REQUIRED")) setStep(planStep ? "plan" : "account");
-      setError(describe(err));
+      // A name or an email someone else has is said under its own field; the rest over the form.
+      if (isApiErrorCode(err, "USERNAME_TAKEN")) failField("username", describe(err));
+      else if (isApiErrorCode(err, "EMAIL_TAKEN")) failField("email", describe(err));
+      else if (apiFieldProblems(err).some((problem) => problem.field === "phone")) failField("phone", t.phoneInvalid);
+      else setError(describe(err));
     } finally {
       setSubmitting(false);
     }
@@ -272,68 +313,56 @@ export function RegisterPage() {
 
   const totalSteps = (planStep ? 1 : 0) + 1 + (options?.verificationRequired ? 1 : 0);
   const stepNumber = step === "plan" ? 1 : step === "account" ? (planStep ? 2 : 1) : totalSteps;
+  const stepLine = totalSteps > 1 ? fmt(t.stepOf, { n: stepNumber, total: totalSteps }) : undefined;
 
   return (
-    <div className="auth-glass">
-      <AuthBackdrop />
-      <div className="auth-glass-stage">
-        <div className={step === "plan" ? "w-full max-w-xl" : "w-full max-w-sm"}>
-          {totalSteps > 1 && (
-            <p className="mb-3 text-xs font-medium text-ink-soft">
-              {fmt(t.stepOf, { n: stepNumber, total: totalSteps })}
-            </p>
+    <AuthShell size={!loadingOptions && step === "plan" ? "md" : "sm"}>
+      {loadingOptions ? (
+        <AuthBusy>{t.loading}</AuthBusy>
+      ) : step === "code" && challenge ? (
+        <>
+          {stepLine && <p className="mb-2 text-xs font-medium text-ink-soft tabular-nums">{stepLine}</p>}
+          <VerifyCodePanel
+            challenge={challenge}
+            onVerified={async () => {
+              await refreshUser();
+              navigate(takeAfterAuth() ?? "/workspaces", { replace: true });
+            }}
+          />
+        </>
+      ) : step === "plan" ? (
+        <div>
+          <AuthHeading id={planHeadingId} title={t.planStepTitle} step={stepLine}>
+            {t.planStepSubtitle}
+          </AuthHeading>
+          {error && (
+            <Alert variant="danger" className="mt-4">
+              {error}
+            </Alert>
           )}
-
-          {loadingOptions ? (
-            <div className="flex items-center gap-2 text-sm text-ink-soft" role="status">
-              <Spinner className="size-4" /> {t.loading}
-            </div>
-          ) : step === "code" && challenge ? (
-            <VerifyCodePanel
-              challenge={challenge}
-              onVerified={async () => {
-                await refreshUser();
-                navigate("/workspaces", { replace: true });
-              }}
-            />
-          ) : step === "plan" ? (
-            <div>
-              <h2 id={planHeadingId} className="font-display text-3xl font-medium text-ink">
-                {t.planStepTitle}
-              </h2>
-              <p className="mt-2 text-sm text-ink-soft">{t.planStepSubtitle}</p>
-              {error && (
-                <Alert variant="danger" className="mt-4">
-                  {error}
-                </Alert>
-              )}
-              <div className="mt-6">
-                <PlanPicker plans={plans} value={choice} onChange={setChoice} labelledBy={planHeadingId} />
-              </div>
-              <Button
-                type="button"
-                className="mt-6 min-h-11 w-full"
-                disabled={!selectedPlan}
-                onClick={() => {
-                  setError(null);
-                  setStep("account");
-                }}
-              >
-                {t.continue}
-              </Button>
-              <p className="mt-6 text-center text-sm text-ink-soft">
-                {t.haveAccount}{" "}
-                <Link to="/login" className="font-medium text-primary hover:underline">
-                  {t.signIn}
-                </Link>
-              </p>
-            </div>
-          ) : (
-            accountForm()
-          )}
+          <div className="mt-5">
+            <PlanCards plans={plans} value={choice} onChange={setChoice} labelledBy={planHeadingId} />
+          </div>
+          <Button
+            type="button"
+            className={`mt-5 ${AUTH_SUBMIT}`}
+            disabled={!selectedPlan}
+            onClick={() => {
+              setError(null);
+              setStep("account");
+            }}
+          >
+            {t.continue}
+          </Button>
+          <AuthFooter>
+            {t.haveAccount}
+            <AuthLink to="/login">{t.signIn}</AuthLink>
+          </AuthFooter>
         </div>
-      </div>
-    </div>
+      ) : (
+        accountForm()
+      )}
+    </AuthShell>
   );
 
   // A plain function, not a component: rendered as <AccountForm /> it would be
@@ -341,147 +370,139 @@ export function RegisterPage() {
   function accountForm() {
     return (
       <>
-        <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
-        <p className="mt-2 text-sm text-ink-soft">{t.subtitle}</p>
+        <AuthHeading title={t.title} step={stepLine}>
+          {t.subtitle}
+        </AuthHeading>
 
         {planStep && selectedPlan && (
-          <div className="mt-6 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
+          <div data-slot="auth-well" className="mt-5 rounded-[1.25rem] border border-line bg-paper-raised px-4 pt-1.5 pb-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-ink-soft">
+              <p className="min-w-0 truncate text-sm text-ink-soft">
                 {t.yourPlan}: <span className="font-medium text-ink">{selectedPlan.name}</span>
               </p>
-              <Button type="button" variant="link" className="min-h-11 px-0" onClick={() => setStep("plan")}>
+              <AuthLinkButton className="shrink-0" onClick={() => setStep("plan")}>
                 {t.change}
-              </Button>
+              </AuthLinkButton>
             </div>
             <PlanSummary plan={selectedPlan} billingCycle={choice.billingCycle as BillingCycle} compact />
           </div>
         )}
 
-        <div className="mt-8">
-          <Button type="button" variant="outline" className="min-h-11 w-full" onClick={handleGoogleLogin}>
-            <GoogleIcon />
+        <div className="mt-6">
+          <Button type="button" variant="outline" className="min-h-12 w-full text-base" onClick={handleGoogleLogin}>
+            <GoogleMark />
             {t.google}
           </Button>
-
-          <div className="my-5 flex items-center gap-3 text-xs text-ink-soft">
-            <span className="h-px flex-1 bg-line" />
-            {t.or}
-            <span className="h-px flex-1 bg-line" />
-          </div>
+          <AuthDivider>{t.or}</AuthDivider>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {error && <Alert variant="danger">{error}</Alert>}
 
-          <div className="space-y-1.5">
-            <Label htmlFor="fullName">{t.fullName}</Label>
-            <Input
-              id="fullName"
-              required
-              autoComplete="name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder={t.fullNamePlaceholder}
-              className="min-h-11"
+          <AuthField
+            label={t.fullName}
+            fieldId="fullName"
+            name="name"
+            required
+            autoComplete="name"
+            autoCapitalize="words"
+            enterKeyHint="next"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder={t.fullNamePlaceholder}
+          />
+
+          <div id={FIELD_ID.username} className="space-y-1.5">
+            <UsernameField
+              value={username}
+              onChange={(value) => {
+                setUsername(value);
+                clearField("username");
+              }}
+              onStatus={setUsernameStatus}
             />
-          </div>
-
-          <div id="register-username">
-            <UsernameField value={username} onChange={setUsername} onStatus={setUsernameStatus} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="email">{t.email}</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              dir="ltr"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="min-h-11"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="phone">{t.phone}</Label>
-            <Input
-              id="phone"
-              type="tel"
-              autoComplete="tel"
-              dir="ltr"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="01XXXXXXXXX"
-              className="min-h-11"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="password">{t.password}</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t.passwordPlaceholder}
-                className="min-h-11 pe-11"
-                aria-describedby="password-rules"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? t.hide : t.show}
-                aria-pressed={showPassword}
-                className="absolute inset-y-0 end-0 flex w-11 cursor-pointer items-center justify-center text-ink-soft transition-colors hover:text-ink"
-              >
-                {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-              </button>
-            </div>
-            {password.length > 0 && unmetRules.length > 0 && (
-              <ul id="password-rules" className="mt-1 space-y-1 text-xs text-ink-soft">
-                {unmetRules.map((rule) => (
-                  <li key={rule.id} className="flex items-center gap-1.5">
-                    <span aria-hidden>•</span>
-                    {locale === "ar" ? rule.label : rule.labelEn}
-                  </li>
-                ))}
-              </ul>
+            {fieldErrors.username && (
+              <p role="alert" className="text-[13px] leading-5 font-medium text-danger">
+                {fieldErrors.username}
+              </p>
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm">{t.confirm}</Label>
-            <div className="relative">
-              <Input
-                id="confirm"
-                type={showConfirm ? "text" : "password"}
-                autoComplete="new-password"
-                required
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                placeholder="••••••••"
-                className="min-h-11 pe-11"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm((v) => !v)}
-                aria-label={showConfirm ? t.hide : t.show}
-                aria-pressed={showConfirm}
-                className="absolute inset-y-0 end-0 flex w-11 cursor-pointer items-center justify-center text-ink-soft transition-colors hover:text-ink"
-              >
-                {showConfirm ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-              </button>
-            </div>
-            {confirm.length > 0 && password !== confirm && <p className="mt-1 text-xs text-danger">{t.mismatch}</p>}
-          </div>
+          <AuthField
+            label={t.email}
+            fieldId={FIELD_ID.email}
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="next"
+            required
+            dir="ltr"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              clearField("email");
+            }}
+            placeholder="you@example.com"
+            error={fieldErrors.email}
+          />
+
+          <AuthField
+            label={switches.phoneRequired ? t.phoneRequired : t.phone}
+            required={switches.phoneRequired}
+            error={fieldErrors.phone}
+            fieldId={FIELD_ID.phone}
+            name="tel"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            enterKeyHint="next"
+            dir="ltr"
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              clearField("phone");
+            }}
+            placeholder="01XXXXXXXXX"
+          />
+
+          <AuthPasswordField
+            label={t.password}
+            fieldId={FIELD_ID.password}
+            name="new-password"
+            autoComplete="new-password"
+            enterKeyHint="next"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              clearField("password");
+            }}
+            aria-describedby={unmetRules.length > 0 ? "password-rules" : undefined}
+            error={fieldErrors.password}
+          >
+            {/* What is still missing, from the first look at the field: nobody should learn the rules by failing them. */}
+            <AuthRules id="password-rules" rules={unmetRules.map((rule) => (locale === "ar" ? rule.label : rule.labelEn))} />
+          </AuthPasswordField>
+
+          <AuthPasswordField
+            label={t.confirm}
+            fieldId={FIELD_ID.confirm}
+            name="confirm-password"
+            autoComplete="new-password"
+            enterKeyHint="done"
+            required
+            value={confirm}
+            onChange={(e) => {
+              setConfirm(e.target.value);
+              clearField("confirm");
+            }}
+            error={fieldErrors.confirm ?? (confirm.length > 0 && password !== confirm ? t.mismatch : undefined)}
+          />
 
           <TermsConsent
             checked={acceptTerms}
@@ -493,17 +514,15 @@ export function RegisterPage() {
             disabled={submitting}
           />
 
-          <Button type="submit" className="min-h-11 w-full" disabled={submitting}>
+          <Button type="submit" className={AUTH_SUBMIT} disabled={submitting}>
             {submitting ? t.creating : t.create}
           </Button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-ink-soft">
-          {t.haveAccount}{" "}
-          <Link to="/login" className="font-medium text-primary hover:underline">
-            {t.signIn}
-          </Link>
-        </p>
+        <AuthFooter>
+          {t.haveAccount}
+          <AuthLink to="/login">{t.signIn}</AuthLink>
+        </AuthFooter>
       </>
     );
   }

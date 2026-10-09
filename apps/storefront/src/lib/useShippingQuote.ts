@@ -7,6 +7,8 @@ import {
   storefrontShippingQuoteFor,
   type ShippingQuotePlacePayload,
   type StorefrontQuoteExtras,
+  supplierMinimumOf,
+  type SupplierMinimumGap,
 } from "@store-builder/api-client";
 import { useEffect, useState } from "react";
 import type { ApiClient, FreeShippingProgress, ShippingQuote } from "@store-builder/api-client";
@@ -38,6 +40,8 @@ export interface ShippingQuoteState {
   options?: ShippingOptionChoice[];
   /** When the order should arrive at this address (handoff 199); null while unknown or off. */
   deliveryEstimate?: DeliveryEstimate | null;
+  /** A dropshipping supplier's minimum this cart does not reach yet (handoff 263); null or absent otherwise. */
+  supplierMinimum?: SupplierMinimumGap | null;
 }
 
 /**
@@ -121,5 +125,7 @@ export function useShippingQuote({
   const options = line.kind === "amount" || line.kind === "free" ? quoteOptionsOf(state.quote) : [];
   // Only the answer for this very address and basket: an older one is about another place.
   const deliveryEstimate = state.key === requestKey ? deliveryEstimateOf(state.quote) : null;
-  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras, options, deliveryEstimate };
+  // It hangs on the basket, not the address: the last answer stands until the next one, so it does not blink while a governorate is picked.
+  const supplierMinimum = supplierMinimumOf(state.quote);
+  return { line, amount: line.kind === "amount" ? line.amount : 0, freeShipping, extras, options, deliveryEstimate, supplierMinimum };
 }

@@ -1,4 +1,4 @@
-import { Package } from "lucide-react";
+import { IconPackage } from "@/components/icons";
 import { cn } from "@store-builder/ui";
 import { orderLineImageOf, type OrderItem } from "@store-builder/api-client";
 
@@ -19,7 +19,7 @@ export function OrderLineThumb({ item, label, className }: { item: OrderItem; la
       {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": true })}
       className={cn(box, "flex items-center justify-center bg-paper text-ink-soft")}
     >
-      <Package className="size-4" aria-hidden />
+      <IconPackage className="size-4" aria-hidden />
     </span>
   );
 }

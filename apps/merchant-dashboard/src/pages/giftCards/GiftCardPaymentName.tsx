@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Gift } from "lucide-react";
+import { IconGift } from "@/components/icons";
 import type { Payment } from "@store-builder/api-client";
 import { useT } from "@/i18n/LocaleContext";
 
@@ -49,7 +49,7 @@ export function GiftCardPaymentIcon() {
       aria-hidden
       className="inline-flex h-7 w-14 shrink-0 items-center justify-center rounded-[0.5rem] border border-line bg-paper text-ink-soft"
     >
-      <Gift className="size-4" />
+      <IconGift className="size-4" />
     </span>
   );
 }

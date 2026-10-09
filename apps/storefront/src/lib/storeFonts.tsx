@@ -16,8 +16,33 @@ import { fontFamilyName, googleFontsHref, parseFontRef, type FontRef, type PageT
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1").replace(/\/$/, "");
 const SAFE_STORE = /^[A-Za-z0-9_-]{1,80}$/;
-// Arabic text in a Latin-only face falls through to Tajawal, which the root layout loads.
+// Arabic text in a Latin-only face falls through to Tajawal, which every page declares (app/themeFonts.ts).
 const FALLBACK = '"Tajawal", ui-sans-serif, system-ui, sans-serif';
+
+/**
+ * Google families this app already serves from its own origin, with every
+ * weight the editor offers for them (api-client GOOGLE_FONTS): the faces
+ * app/themeFonts.ts declares for the store themes, under their real names. A
+ * store or an element that picks one of these needs no stylesheet from Google
+ * — the page has the faces already. Keep in step with app/themeFonts.ts: a
+ * family that leaves it, or loses a weight there, must leave this list.
+ * Tajawal and Plus Jakarta Sans are declared there too, but with fewer weights
+ * than the editor offers, so a store that picks them still gets Google's.
+ */
+const SELF_HOSTED = new Set([
+  "Alexandria",
+  "Almarai",
+  "Baloo Bhaijaan 2",
+  "Cairo",
+  "IBM Plex Sans Arabic",
+  "Jost",
+  "Lora",
+  "Markazi Text",
+  "Noto Naskh Arabic",
+  "Nunito",
+  "Readex Pro",
+  "Rubik",
+]);
 
 export function fontStack(ref: FontRef): string {
   return `"${fontFamilyName(ref)}", ${FALLBACK}`;
@@ -58,7 +83,10 @@ export function treeFontRefs(tree: PageTree | null): FontRef[] {
 
 /** The Google stylesheet URL and the @font-face rules for some references. */
 export function fontAssets(refs: Array<FontRef | null>, store: string): { href: string | null; faces: string } {
-  const google = refs.filter((r): r is Extract<FontRef, { kind: "google" }> => r?.kind === "google").map((r) => r.name);
+  const google = refs
+    .filter((r): r is Extract<FontRef, { kind: "google" }> => r?.kind === "google")
+    .map((r) => r.name)
+    .filter((name) => !SELF_HOSTED.has(name));
   const custom = [...new Set(refs.filter((r): r is Extract<FontRef, { kind: "custom" }> => r?.kind === "custom").map((r) => r.id))];
   const faces = SAFE_STORE.test(store)
     ? custom.map((id) => `@font-face{font-family:"zf-${id}";src:url("${API_BASE}/store/${store}/fonts/${id}");font-display:swap}`).join("")
@@ -66,12 +94,19 @@ export function fontAssets(refs: Array<FontRef | null>, store: string): { href: 
   return { href: googleFontsHref(google), faces };
 }
 
-/** Loads the given fonts on the page. Renders nothing when there are none. */
+/**
+ * Loads the given fonts on the page. Renders nothing when there are none —
+ * which is every store that kept its look's own fonts, or picked a family
+ * this app serves itself: only a store that really uses a font of Google's
+ * opens a connection to Google.
+ */
 export function FontAssets({ refs, store }: { refs: Array<FontRef | null>; store: string }) {
   const { href, faces } = fontAssets(refs, store);
   if (!href && !faces) return null;
   return (
     <>
+      {/* The font files come from a second host; opening that connection now saves a round trip later. */}
+      {href && <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />}
       {href && <link rel="stylesheet" href={href} />}
       {/* Built from hex ids and the API base only — see parseFontRef. */}
       {faces && <style dangerouslySetInnerHTML={{ __html: faces }} />}

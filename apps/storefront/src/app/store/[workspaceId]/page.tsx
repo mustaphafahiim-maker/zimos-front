@@ -186,12 +186,14 @@ export default async function StoreHomePage({
           </p>
         ) : (
           <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
-            {productList.products.map((product) => (
+            {productList.products.map((product, index) => (
               <ProductCard
                 key={product.id}
                 product={product}
                 currency={store.currency}
                 locale={locale}
+                // The first row is the first thing with a photo on this page: fetched with it, not lazily.
+                priority={index < 2}
               />
             ))}
           </div>

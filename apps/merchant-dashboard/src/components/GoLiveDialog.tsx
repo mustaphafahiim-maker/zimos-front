@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
-import { ExternalLink, Rocket, X } from "lucide-react";
+import { IconClose, IconExternal, IconLaunch } from "@/components/icons";
 import { Alert, Button, Spinner } from "@store-builder/ui";
 import { ApiError, apiErrorDetails, type WorkspaceBilling } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -195,7 +195,7 @@ function GoLivePanel({ holding }: { holding: boolean }) {
       >
         <div className="flex items-start gap-3 border-b border-line px-5 py-4">
           <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
-            <Rocket className="size-4" aria-hidden />
+            <IconLaunch className="size-4" aria-hidden />
           </span>
           <div className="flex-1">
             <h2 id={titleId} className="font-display text-lg font-medium text-ink">
@@ -210,7 +210,7 @@ function GoLivePanel({ holding }: { holding: boolean }) {
             aria-label={t.close}
             className="-me-2 -mt-1 flex size-11 cursor-pointer items-center justify-center rounded-md text-ink-soft hover:text-ink"
           >
-            <X className="size-4" aria-hidden />
+            <IconClose className="size-4" aria-hidden />
           </button>
         </div>
 
@@ -276,7 +276,7 @@ function GoLivePanel({ holding }: { holding: boolean }) {
                       className="mt-3 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary underline underline-offset-2"
                     >
                       {t.refundLink}
-                      <ExternalLink className="size-3.5" aria-hidden />
+                      <IconExternal className="size-3.5" aria-hidden />
                     </a>
                     {ticketId ? (
                       <Alert variant="success" className="mt-2">

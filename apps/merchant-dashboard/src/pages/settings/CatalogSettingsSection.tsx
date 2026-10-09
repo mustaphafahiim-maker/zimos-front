@@ -1,6 +1,6 @@
 import { useId, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp } from "lucide-react";
-import { Alert, Button, cn } from "@store-builder/ui";
+import { IconArrowDown, IconArrowUp } from "@/components/icons";
+import { Alert, cn } from "@store-builder/ui";
 import {
   ApiError,
   DEFAULT_CATALOG_SETTINGS,
@@ -15,7 +15,13 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Select } from "@/components/Select";
+import { SaveBar } from "@/components/SaveBar";
+import { SettingsGroup, SettingsRow, SettingsSwitch } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+// What the lists do with sold-out products (handoff 390).
+import { soldOutModeOf, type SoldOutMode } from "@store-builder/api-client";
+import { SoldOutSetting } from "./SoldOutSetting";
 
 /**
  * Role keys that can change it: the PATCH needs website.edit — the same
@@ -59,30 +65,30 @@ const STRINGS = {
     title: "عرض المنتجات في المتجر",
     description:
       "طريقة تصفّح العملاء لمنتجاتك في صفحات المنتجات والمجموعات بالمتجر: الشريط الجانبي للتصفية، والمرشحات التي يعرضها وترتيبها، وترتيب المنتجات عند الفتح.",
-    sidebar: "إظهار الشريط الجانبي للتصفية",
-    sidebarHint: "على الهاتف يُفتح كلوحة من زر «تصفية».",
-    defaultSort: "ترتيب المنتجات افتراضيًا حسب",
-    sort_newest: "الأحدث أولًا",
-    sort_price_asc: "السعر: من الأقل إلى الأعلى",
-    sort_price_desc: "السعر: من الأعلى إلى الأقل",
+    sidebar: "اعرض فلاتر جنب المنتجات",
+    sidebarHint: "على الموبايل بتفتح من زرار «تصفية».",
+    defaultSort: "رتّب المنتجات في الأول حسب",
+    sort_newest: "الأحدث الأول",
+    sort_price_asc: "السعر: من الأقل للأعلى",
+    sort_price_desc: "السعر: من الأعلى للأقل",
     sort_name: "الاسم",
     sort_position: "المميزة (ترتيبك داخل المجموعة)",
-    filters: "المرشحات في الشريط الجانبي",
-    filtersHint: "حدّد المرشحات التي تظهر، واستخدم الأسهم لترتيبها.",
+    filters: "الفلاتر اللي بتظهر",
+    filtersHint: "علّم على الفلاتر اللي تظهر، ورتّبها بالأسهم.",
     filter_collections: "المجموعات",
     filter_price: "السعر",
-    filter_tags: "الوسوم",
+    filter_tags: "التاجات",
     filter_options: "كل خيارات المنتجات",
-    filter_optionsHint: "كل خيار تستخدمه منتجاتك، مثل المقاس واللون.",
+    filter_optionsHint: "كل اختيار في منتجاتك، زي المقاس واللون.",
     filter_option: "الخيار: {name}",
-    moveUp: "تحريك {name} لأعلى",
-    moveDown: "تحريك {name} لأسفل",
-    noOptions: "تظهر الخيارات هنا بعد إضافة متغيرات لمنتجاتك بخيارات مثل المقاس أو اللون.",
-    readOnly: "يمكن لمالك المتجر أو مدير مساحة العمل أو المحرر فقط تغيير طريقة عرض المنتجات.",
-    save: "حفظ إعدادات العرض",
+    moveUp: "طلّع {name} لفوق",
+    moveDown: "نزّل {name} لتحت",
+    noOptions: "الاختيارات هتظهر هنا لما منتجاتك يبقى ليها مقاسات أو ألوان.",
+    readOnly: "صاحب المتجر أو المدير أو المحرر بس اللي يقدروا يغيّروا عرض المنتجات.",
+    save: "احفظ إعدادات العرض",
     saving: "بنحفظ…",
-    reset: "تجاهل التغييرات",
-    saved: "تم حفظ إعدادات العرض.",
+    reset: "تجاهل",
+    saved: "إعدادات العرض اتحفظت.",
   },
 } satisfies Messages;
 
@@ -102,6 +108,8 @@ function readSettings(raw: unknown): StorefrontCatalogSettings {
       ? (value.default_sort as CatalogDefaultSort)
       : DEFAULT_CATALOG_SETTINGS.default_sort,
     filters: Array.isArray(value.filters) ? value.filters : DEFAULT_CATALOG_SETTINGS.filters,
+    // Kept beside the typed keys so the card's "changed?" check and its save carry it.
+    ...{ sold_out: soldOutModeOf(raw) },
   };
 }
 
@@ -129,7 +137,6 @@ export function CatalogSettingsSection() {
   const errorMessage = useErrorMessage();
   const { currentWorkspace, applySavedWorkspace } = useWorkspace();
   const sortId = useId();
-  const sidebarId = useId();
   const optionNames = useAsync(() => apiClient.listCatalogOptionNames(workspaceId), [workspaceId]);
 
   const stored = useMemo(
@@ -140,6 +147,7 @@ export function CatalogSettingsSection() {
   const [saved, setSaved] = useState(stored);
   const [sidebar, setSidebar] = useState(stored.sidebar_enabled);
   const [sort, setSort] = useState<CatalogDefaultSort>(stored.default_sort);
+  const [soldOut, setSoldOut] = useState<SoldOutMode>(soldOutModeOf(stored));
   const [rows, setRows] = useState<Row[]>(() => toRows(stored, []));
   const [forbidden, setForbidden] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -162,8 +170,10 @@ export function CatalogSettingsSection() {
     sidebar_enabled: sidebar,
     default_sort: sort,
     filters: rows.filter((r) => r.enabled).map((r) => r.filter),
+    ...{ sold_out: soldOut },
   };
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  useReportDirty(dirty && editable);
 
   const label = (f: CatalogFilter) => (f.key === "option" ? fmt(t.filter_option, { name: f.name }) : t[`filter_${f.key}`]);
 
@@ -180,6 +190,7 @@ export function CatalogSettingsSection() {
   function reset() {
     setSidebar(saved.sidebar_enabled);
     setSort(saved.default_sort);
+    setSoldOut(soldOutModeOf(saved));
     setRows(toRows(saved, names));
     setError(null);
   }
@@ -207,59 +218,51 @@ export function CatalogSettingsSection() {
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
+    <>
+      {!editable && <Alert>{t.readOnly}</Alert>}
 
-      <div className="mt-4 space-y-5">
-        {!editable && <Alert>{t.readOnly}</Alert>}
+      <SettingsGroup>
+        <SettingsSwitch
+          label={t.sidebar}
+          hint={t.sidebarHint}
+          checked={sidebar}
+          disabled={!editable || saving}
+          onChange={setSidebar}
+        />
+        <SettingsRow
+          label={t.defaultSort}
+          htmlFor={sortId}
+          control={
+            <Select
+              id={sortId}
+              value={sort}
+              disabled={!editable || saving}
+              onChange={(e) => setSort(e.target.value as CatalogDefaultSort)}
+              className="h-11 text-base sm:text-sm"
+            >
+              {SORTS.map((key) => (
+                <option key={key} value={key}>
+                  {t[`sort_${key}`]}
+                </option>
+              ))}
+            </Select>
+          }
+        />
+        <SoldOutSetting value={soldOut} onChange={setSoldOut} disabled={!editable || saving} />
+      </SettingsGroup>
 
-        <label htmlFor={sidebarId} className="flex min-h-11 cursor-pointer items-start gap-3">
-          <input
-            id={sidebarId}
-            type="checkbox"
-            className="mt-1 size-4 shrink-0 accent-primary"
-            checked={sidebar}
-            disabled={!editable || saving}
-            onChange={(e) => setSidebar(e.target.checked)}
-          />
-          <span>
-            <span className="block text-sm font-medium text-ink">{t.sidebar}</span>
-            <span className="block text-sm text-ink-soft">{t.sidebarHint}</span>
-          </span>
-        </label>
-
-        <div className="space-y-1.5">
-          <label htmlFor={sortId} className="text-sm font-medium text-ink">
-            {t.defaultSort}
-          </label>
-          <Select
-            id={sortId}
-            value={sort}
-            disabled={!editable || saving}
-            onChange={(e) => setSort(e.target.value as CatalogDefaultSort)}
-            className="h-11 w-full sm:w-auto sm:min-w-64"
-          >
-            {SORTS.map((key) => (
-              <option key={key} value={key}>
-                {t[`sort_${key}`]}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <fieldset className={cn("space-y-2", !sidebar && "opacity-70")} disabled={!editable || saving}>
-          <legend className="text-sm font-medium text-ink">{t.filters}</legend>
-          <p className="text-sm text-ink-soft">{t.filtersHint}</p>
-          <ul className="divide-y divide-line rounded-[0.5rem] border border-line">
+      <SettingsGroup title={t.filters} description={t.filtersHint} className={cn(!sidebar && "opacity-70")}>
+        <fieldset disabled={!editable || saving} className="min-w-0">
+          <legend className="sr-only">{t.filters}</legend>
+          <ul className="divide-y divide-line">
             {rows.map((row, index) => {
               const name = label(row.filter);
               return (
-                <li key={keyOf(row.filter)} className="flex items-center gap-2 ps-3 pe-1">
-                  <label className="flex min-h-11 flex-1 cursor-pointer items-center gap-3 text-sm text-ink">
+                <li key={keyOf(row.filter)} className="flex items-center gap-1 ps-4 pe-1.5">
+                  <label className="flex min-h-13 flex-1 cursor-pointer items-center gap-3 py-1.5 text-sm font-medium text-ink">
                     <input
                       type="checkbox"
-                      className="size-4 shrink-0 accent-primary"
+                      className="size-5 shrink-0 cursor-pointer accent-primary"
                       checked={row.enabled}
                       onChange={(e) =>
                         setRows((current) => current.map((r, i) => (i === index ? { ...r, enabled: e.target.checked } : r)))
@@ -268,50 +271,51 @@ export function CatalogSettingsSection() {
                     <span>
                       {name}
                       {row.filter.key === "options" && (
-                        <span className="block text-xs text-ink-soft">{t.filter_optionsHint}</span>
+                        <span className="block text-[13px] leading-5 font-normal text-ink-soft">{t.filter_optionsHint}</span>
                       )}
                     </span>
                   </label>
                   <button
                     type="button"
-                    className="inline-flex size-11 cursor-pointer items-center justify-center rounded-[0.5rem] text-ink-soft hover:bg-paper hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-[background-color,scale] duration-[var(--dur-fade)] hover:bg-ink/5 hover:text-ink focus-visible:outline-2 focus-visible:outline-primary active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label={fmt(t.moveUp, { name })}
                     disabled={index === 0}
                     onClick={() => move(index, index - 1)}
                   >
-                    <ArrowUp className="size-4" aria-hidden />
+                    <IconArrowUp className="size-4" aria-hidden />
                   </button>
                   <button
                     type="button"
-                    className="inline-flex size-11 cursor-pointer items-center justify-center rounded-[0.5rem] text-ink-soft hover:bg-paper hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex size-11 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-[background-color,scale] duration-[var(--dur-fade)] hover:bg-ink/5 hover:text-ink focus-visible:outline-2 focus-visible:outline-primary active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label={fmt(t.moveDown, { name })}
                     disabled={index === rows.length - 1}
                     onClick={() => move(index, index + 1)}
                   >
-                    <ArrowDown className="size-4" aria-hidden />
+                    <IconArrowDown className="size-4" aria-hidden />
                   </button>
                 </li>
               );
             })}
           </ul>
-          {optionNames.data && optionNames.data.length === 0 && <p className="text-xs text-ink-soft">{t.noOptions}</p>}
+          {optionNames.data && optionNames.data.length === 0 && (
+            <p className="border-t border-line px-4 py-3 text-[13px] leading-5 text-ink-soft">{t.noOptions}</p>
+          )}
         </fieldset>
+      </SettingsGroup>
 
-        {error && <Alert variant="danger">{error}</Alert>}
+      {error && <Alert variant="danger">{error}</Alert>}
 
-        {editable && (
-          <div className="flex flex-wrap justify-end gap-2">
-            {dirty && (
-              <Button variant="outline" className="min-h-11" disabled={saving} onClick={reset}>
-                {t.reset}
-              </Button>
-            )}
-            <Button className="min-h-11" disabled={saving || !dirty} onClick={() => void save()}>
-              {saving ? t.saving : t.save}
-            </Button>
-          </div>
-        )}
-      </div>
-    </section>
+      {editable && (
+        <SaveBar
+          dirty={dirty}
+          saving={saving}
+          saveLabel={t.save}
+          savingLabel={t.saving}
+          discardLabel={t.reset}
+          onSave={() => void save()}
+          onDiscard={reset}
+        />
+      )}
+    </>
   );
 }

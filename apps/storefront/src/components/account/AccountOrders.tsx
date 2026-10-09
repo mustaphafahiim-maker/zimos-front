@@ -138,7 +138,7 @@ export function AccountOrders() {
                   <span className="text-sm font-semibold text-ink">
                     {a.order}{" "}
                     <bdi dir="ltr" className="tabular-nums">
-                      #{order.orderNumber}
+                      {order.orderNumber}
                     </bdi>
                   </span>
                   <StageBadge stage={order.stage} />

@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type ElementType, type FormEvent } from "react";
 import { Alert, Button, Card, CardContent, Spinner } from "@store-builder/ui";
 import type { Order, ReturnReasonCode, ReturnRequest, ReturnStatus } from "@store-builder/api-client";
-import { returnPhotosOf, returnSourceOf } from "@store-builder/api-client";
+import { returnDecide, returnPhotosOf, returnSourceOf } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -15,6 +15,8 @@ import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { ReturnPhotos, ReturnSourceBadge } from "@/pages/returns/ReturnExtras";
+import { ReturnDecisionSheet } from "@/pages/returns/ReturnDecisionSheet";
+import { ReturnExchangeBadge, ReturnHandling } from "@/pages/returns/ReturnHandling";
 
 const REASON_CODES: ReturnReasonCode[] = [
   "damaged",
@@ -62,6 +64,7 @@ const STRINGS = {
     status_rejected: "Rejected",
     status_received: "Received",
     status_refunded: "Refunded",
+    status_cancelled: "Cancelled",
     listSep: ", ",
   },
   ar: {
@@ -100,6 +103,7 @@ const STRINGS = {
     status_rejected: "مرفوض",
     status_received: "مستلم",
     status_refunded: "مسترد",
+    status_cancelled: "ملغي",
     listSep: "، ",
   },
 } satisfies Messages;
@@ -124,15 +128,26 @@ function statusLabel(status: ReturnStatus, t: Strings): string {
 interface Props {
   order: Order;
   onOrderMaybeChanged: () => void;
+  /** Inside a folding section of the order page: no card and no title of its own. */
+  frameless?: boolean;
+  /** Hands the loaded list to the caller, so a folded section can still say that a return waits for an answer. */
+  onLoaded?: (returns: ReturnRequest[]) => void;
 }
 
-export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
+export function ReturnsSection({ order, onOrderMaybeChanged, frameless, onLoaded }: Props) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const t = useT(STRINGS);
   const errorMessage = useErrorMessage();
   const returns = useAsync(() => apiClient.listOrderReturns(workspaceId, order.id), [workspaceId, order.id]);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Approve and reject ask first (handoff 372): a message for the customer, whether to tell them, the shipping of an exchange.
+  const [deciding, setDeciding] = useState<{ ret: ReturnRequest; action: "approve" | "reject"; open: boolean } | null>(null);
+  useEffect(() => {
+    if (returns.data) onLoaded?.(returns.data);
+    // The list is the trigger; the callback is not.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returns.data]);
 
   const delivered =
     order.fulfillmentState === "fulfilled" || (order.shipments ?? []).some((s) => s.status === "delivered");
@@ -142,17 +157,8 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
     return oi ? oi.productNameSnapshot : orderItemId.slice(0, 8);
   };
 
-  async function moderate(ret: ReturnRequest, action: "approve" | "reject") {
-    setBusyId(ret.id);
-    try {
-      await apiClient.moderateReturn(workspaceId, ret.id, action);
-      toast.success(action === "approve" ? t.approvedToast : t.rejectedToast);
-      returns.refresh({ silent: true });
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setBusyId(null);
-    }
+  function moderate(ret: ReturnRequest, action: "approve" | "reject") {
+    setDeciding({ ret, action, open: true });
   }
 
   async function restock(ret: ReturnRequest) {
@@ -171,10 +177,12 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
 
   const list = returns.data ?? [];
 
+  const Frame: ElementType = frameless ? "div" : Card;
+  const Body: ElementType = frameless ? "div" : CardContent;
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <h2 className="mb-3 font-display text-lg font-medium text-ink">{t.title}</h2>
+    <Frame>
+      <Body className={frameless ? undefined : "pt-6"}>
+        {!frameless && <h2 className="mb-3 font-display text-lg font-medium text-ink">{t.title}</h2>}
 
         {returns.loading ? (
           <div role="status" className="flex items-center gap-2 text-sm text-ink-soft">
@@ -197,6 +205,7 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
                     {returnSourceOf(ret) === "shopper" && <ReturnSourceBadge />}
+                    <ReturnExchangeBadge ret={ret} />
                     <StatusBadge value={ret.status} text={statusLabel(ret.status, t)} />
                   </div>
                 </div>
@@ -236,12 +245,20 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
                       </Button>
                     </>
                   )}
-                  {ret.status === "approved" && !ret.restockedAt && (
+                  {(ret.status === "approved" || ret.status === "received") && !ret.restockedAt && (
                     <Button size="sm" className="min-h-11" onClick={() => restock(ret)} disabled={busyId === ret.id}>
                       {t.restock}
                     </Button>
                   )}
                 </div>
+                <ReturnHandling
+                  ret={ret}
+                  order={order}
+                  onUpdated={() => {
+                    void returns.refresh({ silent: true });
+                    onOrderMaybeChanged();
+                  }}
+                />
               </li>
             ))}
           </ul>
@@ -258,8 +275,26 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
         ) : (
           <p className="mt-4 border-t border-line pt-4 text-sm text-ink-soft">{t.notDelivered}</p>
         )}
-      </CardContent>
-    </Card>
+
+        <ReturnDecisionSheet
+          ret={deciding?.ret ?? null}
+          action={deciding?.action ?? "approve"}
+          open={Boolean(deciding?.open)}
+          who={order.orderNumber}
+          currency={order.currency}
+          onClose={() => setDeciding((current) => (current ? { ...current, open: false } : current))}
+          onConfirm={async (payload) => {
+            if (!deciding) return;
+            await returnDecide(apiClient, workspaceId, deciding.ret.id, payload);
+            toast.success(payload.action === "approve" ? t.approvedToast : t.rejectedToast);
+            setDeciding((current) => (current ? { ...current, open: false } : current));
+            void returns.refresh({ silent: true });
+            // Approving an exchange makes a replacement order; the summaries of the page may move.
+            onOrderMaybeChanged();
+          }}
+        />
+      </Body>
+    </Frame>
   );
 }
 

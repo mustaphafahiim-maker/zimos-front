@@ -30,6 +30,8 @@ const TEXT = {
     verified: "Verified buyer",
     anonymous: "Customer",
     write: "Write a review",
+    closed: "Reviews are closed right now",
+    noneClosed: "No reviews yet.",
     formTitle: "Your review",
     formHint: "Use the order number and mobile number from your order confirmation. Only customers who received this product can review it.",
     orderNumber: "Order number",
@@ -60,6 +62,8 @@ const TEXT = {
     verified: "مشترٍ موثّق",
     anonymous: "عميل",
     write: "اكتب تقييمًا",
+    closed: "التقييمات مقفولة دلوقتي",
+    noneClosed: "لا توجد تقييمات بعد.",
     formTitle: "تقييمك",
     formHint: "اكتب رقم الطلب ورقم الموبايل اللي في تأكيد طلبك. التقييم متاح فقط لمن استلم هذا المنتج.",
     orderNumber: "رقم الطلب",
@@ -101,6 +105,7 @@ export function ProductReviews({
   rating,
   reviews,
   formOnly = false,
+  formOpen = true,
 }: {
   workspaceId: string;
   productId: string;
@@ -108,6 +113,8 @@ export function ProductReviews({
   reviews: StorefrontReview[];
   /** The builder's review_form element: only the button and the form, no summary or list. */
   formOnly?: boolean;
+  /** The product's `reviewFormOpen` (handoff 331): false hides the button and the form; the rating and the reviews stay. */
+  formOpen?: boolean;
 }) {
   const { locale, intlLocale } = useStore();
   const text = pickText(TEXT, locale);
@@ -120,6 +127,8 @@ export function ProductReviews({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  // The store closed its review form after this page was drawn (the submission answered 404).
+  const [closedNow, setClosedNow] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -157,6 +166,11 @@ export function ProductReviews({
       photos.reset();
     } catch (err) {
       const code = err instanceof ApiError ? err.code : null;
+      if (err instanceof ApiError && err.status === 404) {
+        setOpen(false);
+        setClosedNow(true);
+        return;
+      }
       setError(
         code === "REVIEW_NOT_VERIFIED"
           ? text.notBuyer
@@ -184,12 +198,18 @@ export function ProductReviews({
             {text.title}
           </h2>
         )}
-        {!open && !sent && (
+        {!open && !sent && formOpen && !closedNow && (
           <button type="button" className={btnSecondary} onClick={() => setOpen(true)}>
             {text.write}
           </button>
         )}
       </div>
+
+      {closedNow && (
+        <p role="status" className="mt-3 text-sm text-ink-soft">
+          {text.closed}
+        </p>
+      )}
 
       {formOnly ? null : rating.count > 0 && rating.average !== null ? (
         <div className={`${card} mt-4 grid gap-5 p-5 sm:grid-cols-[12rem_1fr] sm:items-center`}>
@@ -219,7 +239,7 @@ export function ProductReviews({
           </ul>
         </div>
       ) : (
-        <p className="mt-4 text-sm text-ink-soft">{text.none}</p>
+        <p className="mt-4 text-sm text-ink-soft">{formOpen && !closedNow ? text.none : text.noneClosed}</p>
       )}
 
       <p role="status" className="mt-4 rounded-xl bg-primary-soft px-4 py-3 text-sm font-medium text-primary empty:hidden">
@@ -339,7 +359,10 @@ export function ProductReviews({
                       <img
                         src={url}
                         alt={text.photoAlt}
+                        width={80}
+                        height={80}
                         loading="lazy"
+                        decoding="async"
                         className="h-20 w-20 rounded-xl border border-line object-cover"
                       />
                     </a>

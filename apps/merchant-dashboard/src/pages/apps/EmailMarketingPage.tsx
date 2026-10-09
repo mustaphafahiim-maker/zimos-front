@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
-import { Mail, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { IconClose, IconEmail, IconRefresh, IconShield } from "@/components/icons";
 import { Button, Card, Input, Spinner, cn } from "@store-builder/ui";
 import {
   apiErrorCode,
@@ -32,6 +32,8 @@ import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { SaveBar } from "@/components/SaveBar";
+import { UnsavedGuardProvider, useReportDirty } from "@/lib/useUnsavedGuard";
 import { ProviderLogo } from "@/components/ProviderLogo";
 import { TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
@@ -239,12 +241,13 @@ export function EmailMarketingPage() {
     list.setData((prev) => ({ providers: (prev?.providers ?? []).map((p) => (p.code === next.code ? next : p)) }));
 
   return (
-    <div>
+    <UnsavedGuardProvider>
+      <div>
       <PageHeader title={t.title} description={t.description} back={{ to: "/apps", label: t.back }} />
       <DataState loading={list.loading} error={list.error} onRetry={() => void list.refresh()}>
         {providers.length === 0 ? (
           <EmptyState
-            icon={<Mail />}
+            icon={<IconEmail />}
             title={t.emptyTitle}
             description={t.emptyBody}
             action={
@@ -270,7 +273,8 @@ export function EmailMarketingPage() {
           </div>
         )}
       </DataState>
-    </div>
+      </div>
+    </UnsavedGuardProvider>
   );
 }
 
@@ -439,7 +443,7 @@ function ProviderCard({ t, provider, appsLoading, app, onChange, onRefresh, onAp
         </div>
       </Card>
       <p className="mt-2 flex items-center gap-1.5 px-1 text-xs text-ink-soft">
-        <ShieldCheck className="size-3.5 shrink-0 text-success" aria-hidden />
+        <IconShield className="size-3.5 shrink-0 text-success" aria-hidden />
         {t.consent}
       </p>
 
@@ -641,6 +645,15 @@ function SettingsForm({
   const sourcesChanged = [...sources].sort().join() !== [...provider.sources].sort().join();
   const dirty = listChanged || tagsChanged || sourcesChanged;
   const noSource = sources.length === 0;
+  // Told to the page's guard: closing or reloading the tab with an unsaved list or tag asks first.
+  useReportDirty(dirty);
+
+  function discard() {
+    setChosenList(provider.listId ?? "");
+    setTags(provider.tags);
+    setSources(provider.sources);
+    setError(null);
+  }
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -682,7 +695,7 @@ function SettingsForm({
                 {t.listsFailed} {messageOf(lists.error)}
               </span>
               <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={() => void lists.refresh()}>
-                <RefreshCw className="size-4" aria-hidden />
+                <IconRefresh className="size-4" aria-hidden />
                 {t.retry}
               </Button>
             </div>
@@ -690,7 +703,7 @@ function SettingsForm({
             <div className="flex flex-wrap items-center gap-2 text-sm text-ink-soft">
               <span>{fmt(t.noLists, { name })}</span>
               <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={() => void lists.refresh()}>
-                <RefreshCw className="size-4" aria-hidden />
+                <IconRefresh className="size-4" aria-hidden />
                 {t.retry}
               </Button>
             </div>
@@ -757,9 +770,8 @@ function SettingsForm({
             {error}
           </p>
         )}
-        <Button type="submit" className="min-h-11" disabled={busy || !dirty || noSource}>
-          {busy ? t.saving : t.save}
-        </Button>
+        {/* Shows only while something is unsaved, and stays in reach above the dock. */}
+        <SaveBar dirty={dirty} saving={busy} disabled={noSource} onDiscard={discard} saveLabel={t.save} savingLabel={t.saving} />
       </form>
       <SyncRow t={t} provider={provider} unsavedList={listChanged} describe={describe} onStarted={onSaved} onRefresh={onRefresh} />
     </>
@@ -828,7 +840,7 @@ function TagsField({
                 aria-label={fmt(t.removeTag, { tag })}
                 className="inline-flex size-7 cursor-pointer items-center justify-center rounded-full hover:bg-paper-raised focus-visible:outline-2 focus-visible:outline-primary"
               >
-                <X className="size-3.5" aria-hidden />
+                <IconClose className="size-3.5" aria-hidden />
               </button>
             </li>
           ))}
@@ -910,7 +922,7 @@ function SyncRow({
     <div className="space-y-2 rounded-[var(--radius)] bg-paper-sunken/60 p-3">
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" variant="outline" className="min-h-11 bg-paper-raised" disabled={busy || provider.syncing || noList} onClick={() => void sync()}>
-          <RefreshCw className={cn("size-4", provider.syncing && "animate-spin motion-reduce:animate-none")} aria-hidden />
+          <IconRefresh className={cn("size-4", provider.syncing && "animate-spin motion-reduce:animate-none")} aria-hidden />
           {busy ? t.syncStarting : t.syncNow}
         </Button>
         <p className="min-w-[13rem] flex-1 text-sm text-ink-soft" aria-live="polite">

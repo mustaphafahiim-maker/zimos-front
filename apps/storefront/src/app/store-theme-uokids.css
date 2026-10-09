@@ -136,6 +136,12 @@ html:not(.dark) [data-store-theme="uokids"] .zs {
 [data-store-theme="uokids"] header[data-scrolled] .zt-header-bar {
   height: 84px;
 }
+/* The bar gives up 26px once the page has scrolled under it. The header hands
+   them back as a margin (components/StickyHeader), so the page below it stays
+   where it was instead of jumping up by the difference. */
+[data-store-theme="uokids"] header[data-scrolled]:has(> .zt-header-bar) {
+  margin-bottom: 26px;
+}
 [data-store-theme="uokids"] .zt-logo-name {
   position: absolute;
   width: 1px;
@@ -239,6 +245,10 @@ html:not(.dark) [data-store-theme="uokids"] .zs-toolbar__icon b {
 @media (max-width: 767px) {
   [data-store-theme="uokids"] header[data-scrolled] .zt-header-bar {
     height: 62px;
+  }
+  /* The phone bar keeps its height, so there is nothing to hand back. */
+  [data-store-theme="uokids"] header[data-scrolled]:has(> .zt-header-bar) {
+    margin-bottom: 0;
   }
 }
 

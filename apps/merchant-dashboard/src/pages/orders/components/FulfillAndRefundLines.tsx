@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useImperativeHandle, useState, type FormEvent, type Ref } from "react";
 import { Alert, Button, Input } from "@store-builder/ui";
 import { ordersFulfill, ordersRefundQuote, type Order } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -55,8 +55,21 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-/** "Shipped" by hand, with a tracking number and link (POST /orders/:id/fulfill). */
-export function FulfillButton({ order, onChanged }: { order: Order; onChanged: () => void }) {
+/**
+ * "Shipped" by hand, with a tracking number and link (POST /orders/:id/fulfill).
+ * `hideTrigger` leaves only the dialog, opened through `actionRef` (the order page's «…» menu).
+ */
+export function FulfillButton({
+  order,
+  onChanged,
+  actionRef,
+  hideTrigger,
+}: {
+  order: Order;
+  onChanged: () => void;
+  actionRef?: Ref<{ open: () => void }>;
+  hideTrigger?: boolean;
+}) {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const toast = useToast();
@@ -67,6 +80,12 @@ export function FulfillButton({ order, onChanged }: { order: Order; onChanged: (
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useImperativeHandle(actionRef, () => ({
+    open: () => {
+      if (order.stage === "ready_to_ship") setOpen(true);
+    },
+  }));
 
   if (order.stage !== "ready_to_ship") return null;
   const waiting = (order.shipments ?? []).find((s) => s.status === "created");
@@ -93,9 +112,11 @@ export function FulfillButton({ order, onChanged }: { order: Order; onChanged: (
 
   return (
     <>
-      <Button variant="outline" size="sm" className="min-h-11" onClick={() => setOpen(true)}>
-        {t.shipped}
-      </Button>
+      {!hideTrigger && (
+        <Button variant="outline" size="sm" className="min-h-11" onClick={() => setOpen(true)}>
+          {t.shipped}
+        </Button>
+      )}
       <Modal
         open={open}
         onClose={() => (busy ? undefined : setOpen(false))}

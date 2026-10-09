@@ -1,8 +1,9 @@
 import type { Product, ProductMedia } from "@store-builder/api-client";
 import { compressImageIfNeeded as compressImage, humanSize } from "@store-builder/image-tools";
+import { MEDIA_IMAGE_MAX_BYTES, MEDIA_IMAGE_MAX_MB } from "@store-builder/api-client";
 
-/** Matches the backend's multer limit (5 MB) in modules/media/mediaService.js. */
-export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+/** The media library takes images up to 10 MB (handoff 400; backend modules/media/mediaService.js). */
+export const MAX_IMAGE_BYTES = MEDIA_IMAGE_MAX_BYTES;
 
 /** The backend sniffs the real bytes, but we pre-filter on these to fail fast. */
 export const ACCEPTED_IMAGE_MIMES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
@@ -22,7 +23,7 @@ export function validateImageFile(file: File): string | null {
   if (file.size > MAX_IMAGE_BYTES) {
     // Oversized files run through compressImageIfNeeded() first, so reaching
     // here means shrinking was either unsafe (animated GIF) or not enough.
-    return `"${file.name}" is ${humanSize(file.size)} — the limit is 5 MB. Try a smaller or lower-resolution image.`;
+    return `"${file.name}" is ${humanSize(file.size)} — the limit is ${MEDIA_IMAGE_MAX_MB} MB. Try a smaller or lower-resolution image.`;
   }
   if (file.size === 0) {
     return `"${file.name}" is empty.`;

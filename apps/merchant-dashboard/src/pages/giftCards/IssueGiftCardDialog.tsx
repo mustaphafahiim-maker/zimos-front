@@ -1,19 +1,44 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { KeyRound } from "lucide-react";
+import { IconKey } from "@/components/icons";
 import { Alert, Button } from "@store-builder/ui";
 import { giftCardIssue, type GiftCardIssued } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { formatMoney, majorToMinor } from "@/lib/format";
-import { fmt, useT } from "@/i18n/LocaleContext";
+import { formatDate, formatMoney, majorToMinor } from "@/lib/format";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { GiftCardArt } from "@/pages/offers/hub/GiftCardArt";
 import { Modal } from "@/components/Modal";
 import { Field, TextField } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Textarea } from "@/components/Textarea";
 import { CopyButton } from "@/components/CopyButton";
 import { EMAIL_RE, GIFT_CARD_STRINGS, dateFieldToIso, tomorrowDateField } from "./giftCardStrings";
+
+// What the preview says; the form keeps the shared gift-card strings.
+const PREVIEW_STRINGS = {
+  en: {
+    title: "How the recipient gets it",
+    hint: "The real code appears once, after you make the card.",
+    yourStore: "Your store",
+    messageLabel: "Your message",
+    emailTo: "Emailed to {email}",
+    notEmailed: "Not emailed: you hand over the code yourself.",
+  },
+  ar: {
+    title: "المستلم هيستلمه كده",
+    hint: "الكود الحقيقي بيظهر مرة واحدة، بعد ما تعمل الكارت.",
+    yourStore: "متجرك",
+    messageLabel: "رسالتك",
+    emailTo: "هيتبعت على {email}",
+    notEmailed: "مش هيتبعت بالإيميل: إنت اللي هتدّي الكود للعميل.",
+  },
+} satisfies Messages;
+
+/** Arabic digits typed into the value, as the Latin ones the parser reads. */
+const latinDigits = (text: string) => text.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
 
 interface Draft {
   amount: string;
@@ -47,7 +72,9 @@ export function IssueGiftCardDialog({
   onIssued: (issued: GiftCardIssued, emailedTo: string | null) => void;
 }) {
   const t = useT(GIFT_CARD_STRINGS);
+  const p = useT(PREVIEW_STRINGS);
   const workspaceId = useWorkspaceId();
+  const { currentWorkspace } = useWorkspace();
   const errorMessage = useErrorMessage();
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [errors, setErrors] = useState<Errors>({});
@@ -74,7 +101,7 @@ export function IssueGiftCardDialog({
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (saving) return;
-    const amount = majorToMinor(draft.amount.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))));
+    const amount = majorToMinor(latinDigits(draft.amount));
     const expiresAt = dateFieldToIso(draft.expires);
     const found: Errors = {};
     if (!Number.isFinite(amount) || amount < 1) found.amount = t.amountError;
@@ -107,24 +134,63 @@ export function IssueGiftCardDialog({
     }
   }
 
+  // The preview: what is typed so far, as the card. Nothing is sent until the form is.
+  const previewAmount = majorToMinor(latinDigits(draft.amount));
+  const previewExpiry = dateFieldToIso(draft.expires);
+  const message = draft.message.trim();
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={t.issueTitle}
       description={t.issueDescription}
+      className="sm:max-w-[46rem] md:max-w-[52rem]"
       footer={
         <>
-          <Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={onClose}>
+          <Button type="button" variant="outline" className="rounded-full px-5" disabled={saving} onClick={onClose}>
             {t.cancel}
           </Button>
-          <Button type="submit" form={formId} className="min-h-11" disabled={saving}>
+          <Button type="submit" form={formId} className="rounded-full px-5" disabled={saving}>
             {saving ? t.issuing : t.issueSubmit}
           </Button>
         </>
       }
     >
-      <form id={formId} onSubmit={submit} noValidate className="space-y-4">
+     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_17.5rem] md:gap-6">
+      {/* First on a phone, at the end side from md up. */}
+      <aside aria-label={p.title} className="md:order-2">
+        <div className="mx-auto max-w-[17.5rem] md:sticky md:top-0">
+          <p className="mb-2 text-[13px] leading-5 font-semibold text-ink">{p.title}</p>
+          <GiftCardArt
+            store={currentWorkspace?.name ?? p.yourStore}
+            amount={Number.isFinite(previewAmount) && previewAmount > 0 ? formatMoney(previewAmount, currency) : ""}
+            expiry={previewExpiry ? fmt(t.validUntil, { date: formatDate(previewExpiry) }) : t.noExpiry}
+            recipient={draft.recipientName.trim() || undefined}
+          />
+          {message && (
+            <div className="zimos-offer-paper mt-3 rounded-[1rem] bg-paper-raised px-3.5 py-3 ring-1 ring-line">
+              <p className="text-xs text-ink-soft">{p.messageLabel}</p>
+              <p dir="auto" className="mt-0.5 text-sm leading-6 break-words whitespace-pre-line text-ink">
+                {message}
+              </p>
+            </div>
+          )}
+          <p className="mt-3 text-xs leading-5 text-ink-soft">
+            {email && draft.sendEmail ? (
+              <>
+                {fmt(p.emailTo, { email: "" })}
+                <bdi dir="ltr">{email}</bdi>
+                {". "}
+              </>
+            ) : (
+              <>{p.notEmailed} </>
+            )}
+            {p.hint}
+          </p>
+        </div>
+      </aside>
+      <form id={formId} onSubmit={submit} noValidate className="min-w-0 space-y-4 md:order-1">
         <div data-field="amount">
           <MoneyInput
             label={t.amount}
@@ -198,6 +264,7 @@ export function IssueGiftCardDialog({
         </Field>
         {failure && <Alert variant="danger">{failure}</Alert>}
       </form>
+     </div>
     </Modal>
   );
 }
@@ -232,7 +299,7 @@ export function IssuedCodeDialog({
             >
               {t.openIssued}
             </Link>
-            <Button type="button" className="min-h-11" onClick={onClose}>
+            <Button type="button" className="rounded-full px-5" onClick={onClose}>
               {t.done}
             </Button>
           </>
@@ -251,7 +318,7 @@ export function CodeBox({ code, note, warn }: { code: string; note?: string | nu
     <div className="space-y-3">
       {warn && (
         <p className="flex items-start gap-2 rounded-[var(--radius)] bg-accent-soft px-3 py-2 text-sm font-medium text-accent-dark">
-          <KeyRound className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <IconKey className="mt-0.5 size-4 shrink-0" aria-hidden />
           {t.saveCodeNow}
         </p>
       )}

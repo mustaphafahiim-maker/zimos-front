@@ -13,6 +13,8 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDate } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { TextField } from "@/components/Field";
+import { Modal } from "@/components/Modal";
+import { SettingsRow } from "@/components/settings";
 import { useToast } from "@/components/Toast";
 
 const STRINGS = {
@@ -25,7 +27,7 @@ const STRINGS = {
     sending: "Sending…",
     cancel: "Cancel",
     pending: "We sent a link to {email}. Your email changes when you open it (valid until {until}). Until then you sign in with your current email.",
-    cancelChange: "Cancel this change",
+    cancelChange: "Cancel the change",
     cancelled: "The email change was cancelled.",
     sent: "Check {email} for the confirmation link.",
     unchanged: "That is already your email.",
@@ -33,20 +35,20 @@ const STRINGS = {
     wrongPassword: "The password is not right.",
   },
   ar: {
-    change: "تغيير البريد",
-    newEmail: "البريد الجديد",
-    password: "كلمة المرور",
-    passwordHint: "للتأكد أنك صاحب الحساب.",
-    send: "إرسال رابط التأكيد",
+    change: "غيّر الإيميل",
+    newEmail: "الإيميل الجديد",
+    password: "كلمة السر",
+    passwordHint: "عشان نتأكد إنه إنت.",
+    send: "ابعت لينك التأكيد",
     sending: "بنبعت…",
     cancel: "إلغاء",
-    pending: "أرسلنا رابطًا إلى {email}. يتغيّر بريدك عند فتحه (صالح حتى {until}). حتى ذلك الحين تسجّل الدخول ببريدك الحالي.",
-    cancelChange: "إلغاء هذا التغيير",
-    cancelled: "تم إلغاء تغيير البريد.",
-    sent: "افتح {email} لتجد رابط التأكيد.",
-    unchanged: "هذا بريدك الحالي بالفعل.",
-    taken: "هذا البريد مستخدم في حساب آخر.",
-    wrongPassword: "كلمة المرور غير صحيحة.",
+    pending: "بعتنا لينك على {email}. إيميلك هيتغيّر لما تفتحه (شغّال لحد {until}). لحد ساعتها بتدخل بإيميلك الحالي.",
+    cancelChange: "الغي التغيير",
+    cancelled: "تغيير الإيميل اتلغى.",
+    sent: "افتح {email} هتلاقي لينك التأكيد.",
+    unchanged: "ده إيميلك الحالي أصلًا.",
+    taken: "الإيميل ده مستخدم في حساب تاني.",
+    wrongPassword: "كلمة السر مش صح.",
   },
 } satisfies Messages;
 
@@ -119,44 +121,48 @@ export function EmailChange({ label }: { label: string }) {
     }
   }
 
+  function close() {
+    setOpen(false);
+    setError(null);
+    setPassword("");
+  }
+
   return (
-    <div className="sm:col-span-2">
-      <dt className="text-ink-soft">{label}</dt>
-      <dd className="mt-0.5 space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <bdi dir="ltr" className="break-all font-medium text-ink">
-            {user.email}
-          </bdi>
-          {!open && (
-            <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>
+    <>
+      <SettingsRow
+        label={label}
+        hint={pending ? fmt(t.pending, { email: pending.newEmail, until: formatDate(pending.expiresAt) }) : undefined}
+        control={
+          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+            <bdi dir="ltr" className="min-w-0 text-sm font-medium break-all text-ink">
+              {user.email}
+            </bdi>
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => setOpen(true)}>
               {t.change}
             </Button>
-          )}
-        </div>
-        {pending && (
-          <Alert variant="info">
-            <p>{fmt(t.pending, { email: pending.newEmail, until: formatDate(pending.expiresAt) })}</p>
-            <button type="button" disabled={busy} onClick={() => void cancelPending()} className="mt-1 cursor-pointer text-sm font-medium text-primary hover:underline">
-              {t.cancelChange}
-            </button>
-          </Alert>
-        )}
-        {open && (
-          <form onSubmit={submit} className="max-w-md space-y-3">
-            {error && <Alert variant="danger">{error}</Alert>}
-            <TextField label={t.newEmail} type="email" dir="ltr" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} />
-            <TextField label={t.password} hint={t.passwordHint} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} maxLength={200} />
-            <div className="flex flex-wrap gap-3">
-              <Button type="submit" disabled={busy || !email.trim()}>
-                {busy ? t.sending : t.send}
+            {pending && (
+              <Button type="button" variant="ghost" className="min-h-11" disabled={busy} onClick={() => void cancelPending()}>
+                {t.cancelChange}
               </Button>
-              <Button type="button" variant="outline" disabled={busy} onClick={() => setOpen(false)}>
-                {t.cancel}
-              </Button>
-            </div>
-          </form>
-        )}
-      </dd>
-    </div>
+            )}
+          </div>
+        }
+      />
+      <Modal open={open} onClose={busy ? () => undefined : close} title={t.change}>
+        <form onSubmit={submit} className="space-y-4">
+          {error && <Alert variant="danger">{error}</Alert>}
+          <TextField label={t.newEmail} type="email" dir="ltr" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} />
+          <TextField label={t.password} hint={t.passwordHint} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} maxLength={200} />
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={close}>
+              {t.cancel}
+            </Button>
+            <Button type="submit" className="min-h-11" disabled={busy || !email.trim()}>
+              {busy ? t.sending : t.send}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
   );
 }

@@ -9,6 +9,7 @@
  * with `feeds` / `Feed` or `offersSummary`.
  */
 import type { ApiClient } from "../client";
+import type { FeedChannelStatus, FeedChannelsSettings } from "./feedChannels";
 
 export type FeedChannel = "meta" | "google" | "tiktok" | "snapchat";
 export const FEED_CHANNELS: FeedChannel[] = ["meta", "google", "tiktok", "snapchat"];
@@ -21,6 +22,8 @@ export interface FeedSettings {
   /** Defaults to the store's name when blank. */
   brand: string;
   googleProductCategory: string;
+  /** Each channel's own switch, collections and stock rule (handoff 264, feedChannels.ts); absent from an older API. */
+  channels?: FeedChannelsSettings;
 }
 
 export interface FeedState {
@@ -30,6 +33,8 @@ export interface FeedState {
   productCount: number;
   /** Paths under the API base, per channel. */
   links: Record<FeedChannel, { xml: string; csv: string }>;
+  /** Whether each channel's link answers, and what it holds (handoff 264); absent from an older API. */
+  channels?: Record<FeedChannel, FeedChannelStatus>;
 }
 
 export type FeedCheckKey =

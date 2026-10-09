@@ -1,6 +1,7 @@
 "use client";
 
-import type { StorefrontPaymentMethod } from "@store-builder/api-client";
+import { manualPaymentStoreMethod, type StorefrontPaymentMethod } from "@store-builder/api-client";
+import { StoreMethodDetails, useStoreMethodText } from "@/components/payment/StoreMethodPay";
 import { CardIcon, CashIcon, WalletIcon } from "@/components/Icons";
 import { useStore } from "@/lib/StoreContext";
 import { track } from "@/lib/track";
@@ -9,6 +10,8 @@ import { PaymentAdjustmentNote } from "./PaymentAdjustmentNote";
 import { useSaveCard } from "@/lib/saveCard";
 import { usePaymentMethodText } from "@/lib/paymentMethodText";
 import { PlanPaymentNote } from "@/components/product/BillingPlan";
+// «ادفع آجل» for a signed-in shopper the store approved (handoff 229): its own row, with what is left of their limit.
+import { OnAccountMethodRow, isOnAccountMethod } from "@/components/business/BusinessCheckout";
 
 /**
  * The checkout's payment section. With cash on delivery as the only method
@@ -32,13 +35,17 @@ export function PaymentMethodPicker({
   const { t, store } = useStore();
   const workspaceId = store?.workspaceId ?? "";
   const transferCopy = useTransferCopy();
+  const storeMethodText = useStoreMethodText();
+  const chosenStoreMethod = manualPaymentStoreMethod(methods.find((m) => m.id === value));
   const more = usePaymentMethodText();
   const [saveCard, setSaveCard] = useSaveCard(workspaceId);
   const cardChosen = !plan && methods.some((m) => m.id === value && m.method === "card");
   const planNote = plan ? <PlanPaymentNote blocked={plan.blocked} trialDays={plan.trialDays} /> : null;
 
   const copy = (m: StorefrontPaymentMethod) =>
-    asTransferMethod(m)
+    manualPaymentStoreMethod(m)
+      ? { title: manualPaymentStoreMethod(m)!.name, hint: <bdi>{storeMethodText.payTo(manualPaymentStoreMethod(m)!.accountNumber)}</bdi>, Icon: WalletIcon }
+      : asTransferMethod(m)
       ? { title: asTransferMethod(m)!.name, hint: transferCopy.hint, Icon: WalletIcon }
       : m.method === "card"
       ? { title: t.payment.card, hint: t.payment.cardHint, Icon: CardIcon }
@@ -71,6 +78,7 @@ export function PaymentMethodPicker({
   return (
     <div role="radiogroup" aria-label={t.checkout.payment} className="mt-4 space-y-2">
       {methods.map((m) => {
+        if (isOnAccountMethod(m)) return <OnAccountMethodRow key={m.id} method={m} checked={value === m.id} onChange={onChange} idPrefix={idPrefix} />;
         const { title, hint, Icon } = copy(m);
         const checked = value === m.id;
         return (
@@ -110,6 +118,8 @@ export function PaymentMethodPicker({
           </label>
         );
       })}
+      {/* The store's InstaPay or wallet number (handoff 340): where to pay, before the order is placed; the screenshot is asked for after. */}
+      {chosenStoreMethod && <StoreMethodDetails key={chosenStoreMethod.id} method={chosenStoreMethod} />}
       {cardChosen && (
         <label className="flex min-h-11 cursor-pointer items-start gap-2 px-1 pt-1 text-sm text-ink">
           <input

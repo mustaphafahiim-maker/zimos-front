@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
-import { TrackOrder } from "@/components/TrackOrder";
+import { TrackOrder, TrackOrderSkeleton } from "@/components/TrackOrder";
 import { getDictionary } from "@/lib/i18n";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreMeta } from "@/lib/storeMeta";
@@ -16,5 +17,10 @@ export async function generateMetadata({
 }
 
 export default function TrackOrderPage() {
-  return <TrackOrder />;
+  return (
+    // The lookup reads the link's query (…?t=, …?number=): a boundary of its own, with the page's outline behind it.
+    <Suspense fallback={<TrackOrderSkeleton />}>
+      <TrackOrder />
+    </Suspense>
+  );
 }

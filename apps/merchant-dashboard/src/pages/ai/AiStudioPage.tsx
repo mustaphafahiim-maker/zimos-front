@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Link } from "react-router-dom";
-import { FileText, Languages, LayoutTemplate, Megaphone, PackagePlus, ScanSearch, Sparkles, Store } from "lucide-react";
-import { Alert, Button, Card, Spinner } from "@store-builder/ui";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
+import { IconAnnounce, IconArrowRight, IconDocument, IconLanguage, IconLayout, IconProductAdd, IconScan, IconSparkle, IconSpinner, IconStore } from "@/components/icons";
+import { Alert, Button, Card, cn } from "@store-builder/ui";
 import {
   AI_DIALECTS,
   ApiError,
@@ -9,6 +9,8 @@ import {
   aiStart,
   aiUsage,
   aiWaitForJob,
+  apiErrorDetails,
+  isApiErrorCode,
   type AiDialect,
   type AiFeature,
   type AiInputs,
@@ -24,11 +26,14 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
+import { useAiJobFailure } from "@/lib/aiRun";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
-import { DataState } from "@/components/DataState";
+import { CardSkeleton, DataState, SkeletonBar } from "@/components/DataState";
+import { ChipRow } from "@/components/list";
+import { ViewLink } from "@/components/ViewLink";
+import { useIsPhone } from "@/pages/returns/rowkit/useScreen";
 import { Field, TextField } from "@/components/Field";
-import { FilterTabs } from "@/components/FilterTabs";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -50,9 +55,21 @@ const STRINGS = {
     tab_page_review: "Page review",
     tab_ad_creatives: "Ad creatives",
     tab_store_builder: "Build a store",
+    about_product: "A name, a description, features and questions for a product — saved as a draft product.",
+    about_page: "A landing page for one of your products, added to your website as a draft.",
+    about_translate: "Any text, into the language or dialect you pick.",
+    about_policies: "Shipping, returns and privacy policies to start from.",
+    about_page_review: "A score for a page or a funnel step, and what to fix first.",
+    about_ad_creatives: "Headlines, ad texts and banners for one product.",
+    about_store_builder: "A theme, a home page, collections and policies from one sentence.",
+    resultEmpty: "Your draft shows up here",
+    resultEmptyHint: "Fill in the form and press Generate. Nothing is published until you say so.",
+    needName: "Type the product name first.",
+    needProduct: "Choose a product first.",
+    needSource: "Paste the text to translate first.",
     testProvider: "Test provider",
     testProviderHint: "The test provider returns sample text so you can try the flow. Real generation starts when an AI provider is connected.",
-    unavailable: "AI is not available on this store yet.",
+    unavailable: "AI isn't available right now",
     usage: "{used} requests this month",
     usageOf: "{used} of {limit} requests this month",
     dialect: "Language",
@@ -117,7 +134,7 @@ const STRINGS = {
   },
   ar: {
     title: "استوديو الذكاء الاصطناعي",
-    description: "جهّز مسودات للمنتجات وصفحات الهبوط والترجمة والسياسات والإعلانات ومتجر كامل، وقيّم صفحاتك. كل ما يكتبه يبقى مسودة حتى تنشره أنت.",
+    description: "جهّز مسودات للمنتجات وصفحات الهبوط والترجمة والسياسات والإعلانات ومتجر كامل، وقيّم صفحاتك. كل اللي بيكتبه بيفضل مسودة لحد ما تنشره إنت.",
     tabs: "أداة الذكاء الاصطناعي",
     tab_product: "منتج",
     tab_page: "صفحة هبوط",
@@ -125,12 +142,24 @@ const STRINGS = {
     tab_policies: "السياسات",
     tab_page_review: "تقييم صفحة",
     tab_ad_creatives: "إعلانات",
-    tab_store_builder: "بناء متجر",
+    tab_store_builder: "ابني متجر",
+    about_product: "اسم ووصف ومميزات وأسئلة لمنتج — بيتحفظ كمنتج مسودة.",
+    about_page: "صفحة هبوط لمنتج من منتجاتك، بتتضاف لموقعك كمسودة.",
+    about_translate: "أي نص، للغة أو اللهجة اللي تختارها.",
+    about_policies: "سياسات شحن وإرجاع وخصوصية تبدأ منها.",
+    about_page_review: "تقييم لصفحة أو خطوة في مسار بيع، وإيه اللي يتصلّح الأول.",
+    about_ad_creatives: "عناوين ونصوص وبانرات إعلان لمنتج واحد.",
+    about_store_builder: "ثيم وصفحة رئيسية وأقسام وسياسات من جملة واحدة.",
+    resultEmpty: "المسودة هتظهر هنا",
+    resultEmptyHint: "املا الفورم ودوس ولّد. مفيش حاجة بتتنشر غير لما تقول.",
+    needName: "اكتب اسم المنتج الأول.",
+    needProduct: "اختار منتج الأول.",
+    needSource: "الصق النص اللي عايز تترجمه الأول.",
     testProvider: "مزوّد تجريبي",
-    testProviderHint: "المزوّد التجريبي يرجّع نصًا نموذجيًا لتجربة الخطوات. التوليد الحقيقي يبدأ عند ربط مزوّد ذكاء اصطناعي.",
-    unavailable: "الذكاء الاصطناعي غير متاح على هذا المتجر بعد.",
-    usage: "{used} طلب هذا الشهر",
-    usageOf: "{used} من {limit} طلب هذا الشهر",
+    testProviderHint: "المزوّد التجريبي بيرجّع نص نموذجي عشان تجرّب الخطوات. التوليد الحقيقي بيبدأ لما يتربط مزوّد ذكاء اصطناعي.",
+    unavailable: "الذكاء الاصطناعي مش متاح دلوقتي",
+    usage: "{used} مرة الشهر ده",
+    usageOf: "{used} من {limit} مرة الشهر ده",
     dialect: "اللغة",
     dialect_egyptian: "العامية المصرية",
     dialect_gulf: "الخليجية",
@@ -139,53 +168,53 @@ const STRINGS = {
     dialect_french: "الفرنسية",
     generate: "ولّد",
     generating: "بنولّد…",
-    again: "ولّد مرة أخرى",
-    failed: "فشل التوليد: {error}",
-    limitMonth: "استُنفدت طلبات الذكاء الاصطناعي لهذا الشهر.",
-    limitHour: "طلبات كثيرة في الساعة الأخيرة. حاول لاحقًا.",
+    again: "ولّد تاني",
+    failed: "التوليد فشل: {error}",
+    limitMonth: "مرات الذكاء الاصطناعي بتاعة الشهر ده خلصت.",
+    limitHour: "ولّدت كتير في آخر ساعة. جرّب تاني بعد شوية.",
     result: "المسودة",
-    copy: "نسخ",
+    copy: "انسخ",
     productName: "اسم المنتج أو فكرته",
     price: "السعر (اختياري)",
-    link: "رابط المصدر (اختياري)",
-    notes: "ما الذي يجب أن يعرفه؟ (اختياري)",
-    notesHint: "الخامة، المقاسات، لمن المنتج، محتويات العبوة.",
+    link: "لينك المصدر (اختياري)",
+    notes: "إيه اللي لازم يعرفه؟ (اختياري)",
+    notesHint: "الخامة، المقاسات، المنتج لمين، إيه اللي في العلبة.",
     photos: "صور المنتج (اختياري)",
-    photosHint: "حتى 6 صور. يصف الذكاء الاصطناعي ما يظهر فيها، وتصبح صور مسودة المنتج.",
+    photosHint: "لحد 6 صور. الذكاء الاصطناعي بيوصف اللي فيها، وبتبقى صور المنتج المسودة.",
     fName: "الاسم",
     fDescription: "الوصف",
     fFeatures: "المميزات",
     fFaqs: "الأسئلة",
     fMeta: "وصف محركات البحث",
     fOffer: "سطر العرض",
-    createDraft: "إنشاء منتج كمسودة",
+    createDraft: "اعمله منتج مسودة",
     creating: "بنعمله…",
-    draftCreated: "تم إنشاء المنتج كمسودة.",
+    draftCreated: "المنتج اتعمل كمسودة.",
     openDraft: "افتح المنتج المسودة",
     product: "المنتج",
-    chooseProduct: "اختار منتجًا",
-    audience: "لمن الصفحة؟ (اختياري)",
+    chooseProduct: "اختار منتج",
+    audience: "الصفحة لمين؟ (اختياري)",
     template: "التخطيط",
     template_classic: "كلاسيك: واجهة، مميزات، ضمان، أسئلة",
     template_problem_solution: "المشكلة والحل",
-    template_short: "قصير: واجهة، مميزات، طلب",
+    template_short: "قصير: واجهة، مميزات، أوردر",
     sections: "{count} أقسام",
     pagePath: "عنوان الصفحة",
-    pagePathHint: "حروف إنجليزية وأرقام وشرطات — مثل summer-offer.",
-    createPage: "أضفها كصفحة مسودة",
-    pageCreated: "أُضيفت الصفحة كمسودة إلى موقعك.",
+    pagePathHint: "حروف إنجليزي وأرقام وشرطات — زي summer-offer.",
+    createPage: "ضيفها كصفحة مسودة",
+    pageCreated: "الصفحة اتضافت لموقعك كمسودة.",
     openEditor: "افتحها في محرر الموقع",
-    websiteRequired: "أنشئ موقع متجرك أولًا ثم أضف الصفحة إليه.",
-    pathTaken: "توجد صفحة بهذا العنوان. اختار عنوانًا آخر.",
-    source: "النص المراد ترجمته",
+    websiteRequired: "اعمل موقع متجرك الأول وبعدين ضيف الصفحة ليه.",
+    pathTaken: "فيه صفحة بالعنوان ده. اختار عنوان تاني.",
+    source: "النص اللي عايز تترجمه",
     target: "الترجمة إلى",
     policiesStore: "اسم المتجر",
-    policiesSells: "ماذا تبيع",
+    policiesSells: "بتبيع إيه",
     policiesCountry: "الدولة",
     policiesDelivery: "مدة التوصيل (أيام)",
     policiesReturn: "مدة الإرجاع (أيام)",
-    policiesContact: "وسيلة التواصل (هاتف أو بريد)",
-    policiesNote: "مسودة للبدء وليست استشارة قانونية. راجعها ثم استخدمها كسياسات متجرك.",
+    policiesContact: "التواصل (تليفون أو إيميل)",
+    policiesNote: "مسودة تبدأ منها، مش استشارة قانونية. راجعها وبعدين استخدمها كسياسات متجرك.",
     policy_shipping: "سياسة الشحن",
     policy_returns: "سياسة الإرجاع",
     policy_privacy: "سياسة الخصوصية",
@@ -196,15 +225,15 @@ const STRINGS = {
 type T = Record<keyof (typeof STRINGS)["en"], string>;
 /** The studio's tools; the suggested WhatsApp reply lives in the inbox. */
 type StudioTab = Exclude<AiFeature, "wa_reply">;
-const TABS: { value: StudioTab; icon: typeof Sparkles }[] = [
-  { value: "product", icon: PackagePlus },
-  { value: "page", icon: LayoutTemplate },
-  { value: "translate", icon: Languages },
-  { value: "policies", icon: FileText },
+const TABS: { value: StudioTab; icon: typeof IconSparkle }[] = [
+  { value: "product", icon: IconProductAdd },
+  { value: "page", icon: IconLayout },
+  { value: "translate", icon: IconLanguage },
+  { value: "policies", icon: IconDocument },
   // P2 (AiStudioP2.tsx).
-  { value: "page_review", icon: ScanSearch },
-  { value: "ad_creatives", icon: Megaphone },
-  { value: "store_builder", icon: Store },
+  { value: "page_review", icon: IconScan },
+  { value: "ad_creatives", icon: IconAnnounce },
+  { value: "store_builder", icon: IconStore },
 ];
 
 /** Runs one generation and keeps its job: start → poll → result or error. */
@@ -212,6 +241,7 @@ export function useGeneration<F extends AiFeature>(feature: F, onDone: () => voi
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const errorMessage = useErrorMessage();
+  const jobFailure = useAiJobFailure();
   const [job, setJob] = useState<AiJob<F> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -223,12 +253,13 @@ export function useGeneration<F extends AiFeature>(feature: F, onDone: () => voi
     try {
       const started = await aiStart(apiClient, workspaceId, feature, input);
       const finished = await aiWaitForJob<F>(apiClient, workspaceId, started.id);
-      if (finished.status === "failed") setError(fmt(t.failed, { error: finished.error ?? "" }));
+      if (finished.status === "failed") setError(jobFailure(finished.error) ?? fmt(t.failed, { error: finished.error ?? "" }));
       else setJob(finished);
     } catch (err) {
-      if (err instanceof ApiError && err.code === "AI_LIMIT_REACHED") {
-        setError((err.details as { scope?: string } | undefined)?.scope === "hour" ? t.limitHour : t.limitMonth);
-      } else setError(errorMessage(err));
+      // The plan's own limits keep the studio's wording; scope "provider" (the AI service's rate limit),
+      // AI_PROVIDER_UNAVAILABLE and AI_NOT_CONFIGURED are worded in lib/errorMessages.
+      const scope = isApiErrorCode(err, "AI_LIMIT_REACHED") ? apiErrorDetails<{ scope?: string }>(err)?.scope : undefined;
+      setError(scope === "hour" ? t.limitHour : scope === "month" ? t.limitMonth : errorMessage(err));
     } finally {
       setBusy(false);
       onDone();
@@ -254,19 +285,50 @@ export function DialectField({ value, onChange, label }: { value: AiDialect; onC
   );
 }
 
+/**
+ * A tool's two panes: the form, and the draft it makes. Side by side from lg;
+ * on a narrower screen the form comes first and the draft's pane appears only
+ * once there is something in it — and is brought into view when it does, so a
+ * press on «ولّد» on a phone is answered where the eye is.
+ */
 export function ToolLayout({ form, result, busy, error }: { form: ReactNode; result: ReactNode; busy: boolean; error: string | null }) {
   const t = useT(STRINGS);
+  const pane = useRef<HTMLDivElement>(null);
+  const hasResult = result !== null && result !== undefined && result !== false;
+  const idle = !busy && !error && !hasResult;
+
+  useEffect(() => {
+    if (!busy) return;
+    const element = pane.current;
+    // Side by side there is nothing to bring into view.
+    if (!element || window.matchMedia?.("(min-width: 64rem)").matches) return;
+    const calm = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+    element.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
+  }, [busy]);
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+    <div className="grid gap-[var(--bento-gap)] lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
       <Card className="gap-0 self-start p-4">{form}</Card>
-      <Card className="min-h-64 gap-0 p-4">
-        <h2 className="text-sm font-semibold text-ink">{t.result}</h2>
+      <Card ref={pane} className={cn("min-h-64 scroll-mt-24 gap-0 p-4", idle && "max-lg:hidden")}>
+        <h2 className="text-[15px] leading-6 font-semibold text-ink">{t.result}</h2>
         <div className="mt-3">
           {error && <Alert variant="danger">{error}</Alert>}
           {busy && (
-            <div role="status" className="flex min-h-40 items-center justify-center gap-2 text-sm text-ink-soft">
-              <Spinner className="size-5" aria-hidden="true" />
-              {t.generating}
+            <div role="status" aria-live="polite" aria-busy="true">
+              <span className="sr-only">{t.generating}</span>
+              {/* The draft's own shape while it is being written: a title, a paragraph, a few lines. */}
+              <div aria-hidden className="space-y-4">
+                <SkeletonBar className="h-5 w-1/2" />
+                <CardSkeleton lines={4} className="p-0 shadow-none ring-0" />
+                <SkeletonBar className="w-2/3" />
+              </div>
+            </div>
+          )}
+          {idle && (
+            <div className="flex min-h-40 flex-col items-center justify-center text-center">
+              <IconSparkle className="size-10 text-primary" weight="duotone" aria-hidden />
+              <p className="mt-3 text-sm font-semibold text-ink">{t.resultEmpty}</p>
+              <p className="mt-1 max-w-sm text-[13px] leading-5 text-ink-soft">{t.resultEmptyHint}</p>
             </div>
           )}
           {!busy && result}
@@ -276,12 +338,32 @@ export function ToolLayout({ form, result, busy, error }: { form: ReactNode; res
   );
 }
 
-export function SubmitRow({ busy, hasResult, disabled }: { busy: boolean; hasResult: boolean; disabled?: boolean }) {
+/** The one button of a tool's form. While something it needs is missing it says what, instead of only greying out. */
+export function SubmitRow({ busy, hasResult, disabled, missing }: { busy: boolean; hasResult: boolean; disabled?: boolean; missing?: string }) {
   const t = useT(STRINGS);
   return (
-    <Button type="submit" className="w-full" disabled={busy || disabled}>
-      <Sparkles className="size-4" aria-hidden />
-      {busy ? t.generating : hasResult ? t.again : t.generate}
+    <div>
+      <Button type="submit" className="min-h-11 w-full rounded-full" disabled={busy || disabled} aria-busy={busy || undefined}>
+        {busy ? (
+          <IconSpinner className="size-4 animate-spin motion-reduce:animate-none" weight="bold" aria-hidden />
+        ) : (
+          <IconSparkle className="size-4" weight="bold" aria-hidden />
+        )}
+        {busy ? t.generating : hasResult ? t.again : t.generate}
+      </Button>
+      {disabled && !busy && missing && <p className="mt-1.5 text-center text-xs text-ink-soft">{missing}</p>}
+    </div>
+  );
+}
+
+/** A way out of a draft, to where it now lives: a pill with an arrow that follows the reading direction. */
+export function GoLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Button asChild variant="outline" className="max-w-full rounded-full px-5">
+      <ViewLink to={to}>
+        <span className="min-w-0 truncate">{children}</span>
+        <IconArrowRight className="size-4 shrink-0 rtl:rotate-180" weight="bold" aria-hidden />
+      </ViewLink>
     </Button>
   );
 }
@@ -345,7 +427,7 @@ function ProductTool({ onDone }: { onDone: () => void }) {
           {/* §19.2: the photos go to the model and become the draft's media. */}
           <ImageListField label={t.photos} hint={t.photosHint} value={form.imageUrls} onChange={(imageUrls) => setForm({ ...form, imageUrls: imageUrls.slice(0, 6) })} />
           <DialectField value={form.dialect} onChange={(dialect) => setForm({ ...form, dialect })} />
-          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={form.name.trim().length < 2} />
+          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={form.name.trim().length < 2} missing={t.needName} />
         </form>
       }
       result={
@@ -382,11 +464,9 @@ function ProductTool({ onDone }: { onDone: () => void }) {
             <TextField label={t.fMeta} value={draft.metaDescription} onChange={(e) => setDraft({ ...draft, metaDescription: e.target.value })} maxLength={300} disabled={Boolean(applied)} />
             <TextField label={t.fOffer} value={draft.specialOfferText} onChange={(e) => setDraft({ ...draft, specialOfferText: e.target.value })} maxLength={200} disabled={Boolean(applied)} />
             {applied ? (
-              <Link to={`/catalog/${applied.id}`} className="inline-block text-sm font-medium text-primary hover:underline">
-                {t.openDraft} →
-              </Link>
+              <GoLink to={`/catalog/${applied.id}`}>{t.openDraft}</GoLink>
             ) : (
-              <Button onClick={() => void apply()} disabled={applying || !draft.name.trim()}>
+              <Button type="button" className="rounded-full px-5" onClick={() => void apply()} disabled={applying || !draft.name.trim()}>
                 {applying ? t.creating : t.createDraft}
               </Button>
             )}
@@ -469,7 +549,7 @@ function PageTool({ onDone }: { onDone: () => void }) {
             )}
           </Field>
           <DialectField value={dialect} onChange={setDialect} />
-          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={!productId} />
+          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={!productId} missing={t.needProduct} />
         </form>
       }
       result={
@@ -483,10 +563,10 @@ function PageTool({ onDone }: { onDone: () => void }) {
             </div>
             <ol className="space-y-2">
               {outline.map((types, index) => (
-                <li key={index} className="flex flex-wrap items-center gap-1.5 rounded-[0.5rem] border border-line bg-paper px-3 py-2">
-                  <span className="tabular-nums me-1 text-xs font-semibold text-ink-soft">{index + 1}</span>
+                <li key={index} data-slot="sweep-well" className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-paper-sunken px-3.5 py-2.5">
+                  <span className="me-1 text-xs font-semibold tabular-nums text-ink-soft">{fmt("{n}", { n: index + 1 })}</span>
                   {types.map((type, i) => (
-                    <span key={i} dir="ltr" className="rounded-full border border-line bg-paper-raised px-2 py-0.5 text-xs text-ink">
+                    <span key={i} dir="ltr" className="rounded-full bg-paper-raised px-2.5 py-0.5 text-xs text-ink ring-1 ring-line">
                       {type}
                     </span>
                   ))}
@@ -494,9 +574,9 @@ function PageTool({ onDone }: { onDone: () => void }) {
               ))}
             </ol>
             {applied ? (
-              <Link to={`/website/${applied.websiteId}/edit`} className="inline-block text-sm font-medium text-primary hover:underline">
-                {t.openEditor} (<bdi dir="ltr">{applied.path}</bdi>) →
-              </Link>
+              <GoLink to={`/website/${applied.websiteId}/edit`}>
+                {t.openEditor} (<bdi dir="ltr">{applied.path}</bdi>)
+              </GoLink>
             ) : (
               <div className="flex flex-wrap items-end gap-3">
                 <TextField
@@ -508,7 +588,7 @@ function PageTool({ onDone }: { onDone: () => void }) {
                   onChange={(e) => setPath(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
                   maxLength={80}
                 />
-                <Button onClick={() => void apply()} disabled={applying}>
+                <Button type="button" className="rounded-full px-5" onClick={() => void apply()} disabled={applying}>
                   {applying ? t.creating : t.createPage}
                 </Button>
               </div>
@@ -542,7 +622,7 @@ function TranslateTool({ onDone }: { onDone: () => void }) {
             {(props) => <Textarea {...props} rows={8} maxLength={5000} value={source} onChange={(e) => setSource(e.target.value)} />}
           </Field>
           <DialectField value={target} onChange={setTarget} label={t.target} />
-          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={!source.trim()} />
+          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={!source.trim()} missing={t.needSource} />
         </form>
       }
       result={
@@ -626,30 +706,66 @@ function usageText(t: T, used: number, limit: number | null) {
   return limit === null ? fmt(t.usage, { used }) : fmt(t.usageOf, { used, limit });
 }
 
-/** AI studio (SPEC §19): seven tools over one job flow; every result is a draft. */
+const isStudioTab = (value: string | null): value is StudioTab => TABS.some((tab) => tab.value === value);
+
+/**
+ * AI studio (SPEC §19): seven tools over one job flow; every result is a draft.
+ * The tools are one row of chips (`?tool=` keeps the choice); under it, what
+ * the chosen tool makes in one line, then its form and the draft.
+ */
 export function AiStudioPage() {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
+  const phone = useIsPhone();
   const usage = useAsync(() => aiUsage(apiClient, workspaceId), [workspaceId]);
-  const [tab, setTab] = useState<StudioTab>("product");
+  const [params, setParams] = useSearchParams();
+  const rawTool = params.get("tool");
+  const tab: StudioTab = isStudioTab(rawTool) ? rawTool : "product";
+  function selectTab(next: StudioTab) {
+    setParams(
+      (prev) => {
+        const out = new URLSearchParams(prev);
+        if (next === "product") out.delete("tool");
+        else out.set("tool", next);
+        return out;
+      },
+      { replace: true }
+    );
+  }
   const refreshUsage = () => void usage.refresh({ silent: true });
   const provider = usage.data?.provider;
+  const ToolIcon = TABS.find((entry) => entry.value === tab)?.icon ?? IconSparkle;
 
   return (
-    <div className="max-w-6xl">
+    <div className="min-w-0 max-w-6xl">
       <PageHeader
         title={t.title}
-        description={t.description}
+        // A phone keeps the first screen for the tools: the sentence is for wider screens.
+        description={phone ? undefined : t.description}
         titleBadge={provider?.sandbox ? <StatusBadge value="sandbox" tone="warning" text={t.testProvider} /> : undefined}
-        actions={usage.data ? <span className="text-sm text-ink-soft">{usageText(t, usage.data.used, usage.data.limit)}</span> : undefined}
+        actions={
+          usage.data ? (
+            <span className="inline-flex min-h-9 items-center rounded-full bg-paper-sunken px-3 text-[13px] font-medium tabular-nums text-ink-soft">
+              {usageText(t, usage.data.used, usage.data.limit)}
+            </span>
+          ) : undefined
+        }
       />
       <DataState loading={usage.loading} error={usage.error} onRetry={() => void usage.refresh()}>
         {provider && !provider.available ? (
           <Alert variant="danger">{t.unavailable}</Alert>
         ) : (
-          <>
-            {provider?.sandbox && <p className="mb-4 max-w-3xl text-sm text-ink-soft">{t.testProviderHint}</p>}
-            <FilterTabs className="mb-4" label={t.tabs} value={tab} onChange={setTab} tabs={TABS.map(({ value }) => ({ value, label: t[`tab_${value}`] }))} />
+          <div className="flex flex-col gap-3">
+            <ChipRow label={t.tabs} value={tab} onChange={selectTab} collapseEmpty={false} items={TABS.map(({ value }) => ({ value, label: t[`tab_${value}`] }))} />
+            <div className="flex items-start gap-3 px-1">
+              <span className="zimos-accordion-chip flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                <ToolIcon className="size-[18px]" weight="duotone" aria-hidden />
+              </span>
+              <p className="min-w-0 self-center text-sm leading-6 text-ink">
+                {t[`about_${tab}`]}
+                {provider?.sandbox && <span className="block text-[13px] leading-5 text-ink-soft">{t.testProviderHint}</span>}
+              </p>
+            </div>
             {tab === "product" && <ProductTool onDone={refreshUsage} />}
             {tab === "page" && <PageTool onDone={refreshUsage} />}
             {tab === "translate" && <TranslateTool onDone={refreshUsage} />}
@@ -657,7 +773,7 @@ export function AiStudioPage() {
             {tab === "page_review" && <PageReviewTool onDone={refreshUsage} />}
             {tab === "ad_creatives" && <AdCreativesTool onDone={refreshUsage} />}
             {tab === "store_builder" && <StoreBuilderTool onDone={refreshUsage} />}
-          </>
+          </div>
         )}
       </DataState>
     </div>

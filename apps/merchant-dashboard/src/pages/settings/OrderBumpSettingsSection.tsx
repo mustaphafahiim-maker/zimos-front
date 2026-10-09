@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from "react";
-import { Alert, Button } from "@store-builder/ui";
+import { Alert } from "@store-builder/ui";
 import { ApiError, apiErrorCode, type OrderBumpSettings } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -7,7 +7,11 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { OfferPicker } from "@/components/OfferPicker";
+import { SaveBar } from "@/components/SaveBar";
+import { SettingsGroup, SettingsSwitch } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { SettingsCard } from "./sections/SettingsCard";
 
 /** Same roles as the other storefront cards: the PATCH needs website.edit. */
 const EDITOR_ROLES: ReadonlySet<string> = new Set(["owner", "workspace_manager", "editor"]);
@@ -40,23 +44,23 @@ const STRINGS = {
   ar: {
     title: "العرض الإضافي عند الدفع",
     description:
-      "أحد عروضك يظهر كخانة «أضف لطلبك» فوق زر الطلب في صفحات المنتجات وصفحة إتمام الطلب. عند اختياره يُضاف إلى الطلب نفسه: تأكيد واحد وشحنة واحدة، ويُحسب سعره ووزنه وشحنه مع باقي الطلب.",
-    enabled: "عرض إضافة عند الدفع",
-    enabledHint: "يُخفى إذا نفد مخزون العرض، ولا يظهر في صفحة منتجه نفسه أو إذا كان المنتج في السلة بالفعل.",
+      "عرض من عروضك بيظهر كخانة «أضف لطلبك» فوق زرار الطلب في صفحات المنتجات وصفحة إتمام الطلب. لو العميل علّم عليه بيتضاف لنفس الأوردر: تأكيد واحد وشحنة واحدة، وسعره ووزنه وشحنه بيتحسبوا مع الباقي.",
+    enabled: "اعرض إضافة مع الأوردر",
+    enabledHint: "بيختفي لو مخزون العرض خلص، ومش بيظهر في صفحة منتجه ولا لو المنتج في السلة أصلًا.",
     offer: "العرض",
-    offerHint: "يمكن استخدام العروض ذات السعر المحدد فقط، والتي لا يطلب منتجها بيانات من العميل.",
+    offerHint: "ينفع بس عرض ليه سعر محدد ومنتجه مش بيطلب بيانات من العميل.",
     heading: "العنوان (اختياري)",
-    headingHint: "يحل محل «أضف لطلبك».",
+    headingHint: "بيتكتب بدل «أضف لطلبك».",
     text: "وصف قصير (اختياري)",
     counter: "{count} / {max}",
-    funnelsNote: "لمسارات البيع عرض إضافي خاص بها يُختار من كل خطوة دفع.",
-    readOnly: "يمكن لمالك المتجر أو مدير مساحة العمل أو المحرر فقط تغيير العرض الإضافي.",
-    chooseOffer: "اختار العرض الذي سيظهر.",
-    rejected: "لا يمكن استخدام هذا العرض كعرض إضافي. اختار عرضًا آخر.",
-    save: "حفظ العرض الإضافي",
+    funnelsNote: "مسارات البيع ليها عرض إضافي لوحدها، بيتختار من كل خطوة دفع.",
+    readOnly: "صاحب المتجر أو المدير أو المحرر بس اللي يقدروا يغيّروا العرض الإضافي.",
+    chooseOffer: "اختار العرض اللي هيظهر.",
+    rejected: "العرض ده ما ينفعش يبقى عرض إضافي. اختار عرض تاني.",
+    save: "احفظ العرض الإضافي",
     saving: "بنحفظ…",
-    reset: "تجاهل التغييرات",
-    saved: "تم حفظ العرض الإضافي.",
+    reset: "تجاهل",
+    saved: "العرض الإضافي اتحفظ.",
   },
 } satisfies Messages;
 
@@ -76,7 +80,6 @@ export function OrderBumpSettingsSection() {
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const { currentWorkspace, applySavedWorkspace } = useWorkspace();
-  const enabledId = useId();
   const headingId = useId();
   const textId = useId();
 
@@ -89,6 +92,7 @@ export function OrderBumpSettingsSection() {
 
   const editable = EDITOR_ROLES.has(currentWorkspace?.role ?? "") && !forbidden;
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  useReportDirty(dirty && editable);
   const set = (patch: Partial<Required<OrderBumpSettings>>) => {
     setDraft((current) => ({ ...current, ...patch }));
     setError(null);
@@ -140,28 +144,20 @@ export function OrderBumpSettingsSection() {
     t.counter.replace("{count}", String((value ?? "").length)).replace("{max}", String(max));
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
+    <>
+      {!editable && <Alert>{t.readOnly}</Alert>}
 
-      <div className="mt-4 space-y-5">
-        {!editable && <Alert>{t.readOnly}</Alert>}
+      <SettingsGroup footer={t.description}>
+        <SettingsSwitch
+          label={t.enabled}
+          hint={t.enabledHint}
+          checked={draft.enabled}
+          disabled={!editable || saving}
+          onChange={(enabled) => set({ enabled })}
+        />
+      </SettingsGroup>
 
-        <label htmlFor={enabledId} className="flex min-h-11 cursor-pointer items-start gap-3">
-          <input
-            id={enabledId}
-            type="checkbox"
-            className="mt-1 size-4 shrink-0 accent-primary"
-            checked={draft.enabled}
-            disabled={!editable || saving}
-            onChange={(e) => set({ enabled: e.target.checked })}
-          />
-          <span>
-            <span className="block text-sm font-medium text-ink">{t.enabled}</span>
-            <span className="block text-sm text-ink-soft">{t.enabledHint}</span>
-          </span>
-        </label>
-
+      <SettingsCard>
         <fieldset className="space-y-4" disabled={!editable || saving}>
           <OfferPicker
             workspaceId={workspaceId}
@@ -183,11 +179,11 @@ export function OrderBumpSettingsSection() {
               dir="auto"
               onChange={(e) => set({ title: e.target.value })}
               aria-describedby={`${headingId}-hint`}
-              className="flex h-11 w-full rounded-[0.5rem] border border-line-strong bg-paper-raised px-3 text-sm text-ink focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
+              className="flex w-full rounded-[0.875rem] border border-line-strong bg-paper-raised px-3 text-base text-ink focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 sm:text-sm h-11"
             />
             <p id={`${headingId}-hint`} className="flex justify-between gap-3 text-xs text-ink-soft">
               <span>{t.headingHint}</span>
-              <span>{counter(draft.title, TITLE_MAX)}</span>
+              <span className="tabular-nums">{counter(draft.title, TITLE_MAX)}</span>
             </p>
           </div>
 
@@ -203,31 +199,30 @@ export function OrderBumpSettingsSection() {
               dir="auto"
               onChange={(e) => set({ description: e.target.value })}
               aria-describedby={`${textId}-hint`}
-              className="flex w-full rounded-[0.5rem] border border-line-strong bg-paper-raised px-3 py-2 text-sm text-ink focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
+              className="flex w-full rounded-[0.875rem] border border-line-strong bg-paper-raised px-3 text-base text-ink focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 sm:text-sm py-2"
             />
-            <p id={`${textId}-hint`} className="text-end text-xs text-ink-soft">
+            <p id={`${textId}-hint`} className="text-end text-xs text-ink-soft tabular-nums">
               {counter(draft.description, DESCRIPTION_MAX)}
             </p>
           </div>
         </fieldset>
 
-        <p className="text-xs text-ink-soft">{t.funnelsNote}</p>
+        <p className="mt-4 text-[13px] leading-5 text-ink-soft">{t.funnelsNote}</p>
+      </SettingsCard>
 
-        {error && <Alert variant="danger">{error}</Alert>}
+      {error && <Alert variant="danger">{error}</Alert>}
 
-        {editable && (
-          <div className="flex flex-wrap justify-end gap-2">
-            {dirty && (
-              <Button variant="outline" className="min-h-11" disabled={saving} onClick={reset}>
-                {t.reset}
-              </Button>
-            )}
-            <Button className="min-h-11" disabled={saving || !dirty} onClick={() => void save()}>
-              {saving ? t.saving : t.save}
-            </Button>
-          </div>
-        )}
-      </div>
-    </section>
+      {editable && (
+        <SaveBar
+          dirty={dirty}
+          saving={saving}
+          saveLabel={t.save}
+          savingLabel={t.saving}
+          discardLabel={t.reset}
+          onSave={() => void save()}
+          onDiscard={reset}
+        />
+      )}
+    </>
   );
 }

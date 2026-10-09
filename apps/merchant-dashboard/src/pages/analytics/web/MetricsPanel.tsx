@@ -10,7 +10,7 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
   en: { more: "More", empty: "No data for this period", loadFailed: "Couldn't load", of: "{n} of visitors" },
-  ar: { more: "المزيد", empty: "مفيش بيانات في هذه الفترة", loadFailed: "تعذّر التحميل", of: "{n} من الزوار" },
+  ar: { more: "المزيد", empty: "مفيش بيانات في الفترة دي", loadFailed: "تعذّر التحميل", of: "{n} من الزوار" },
 } satisfies Messages;
 
 export interface MetricTab {

@@ -10,6 +10,9 @@ import { container } from "./ui";
 /** How long each message sits before the next one fades in. */
 const ROTATE_MS = 4500;
 
+/** One message's type: two lines at most, centred. */
+const MESSAGE = "line-clamp-2 text-center text-xs font-medium leading-snug sm:text-sm";
+
 /**
  * One line above the masthead, in the merchant's words: a delivery note, a
  * promotion, a holiday closure. Drawn only when the public store payload
@@ -23,6 +26,12 @@ const ROTATE_MS = 4500;
  * entirely and just shows the first message, the same as a plain one-line
  * bar. The common case — one message, which is all the website editor writes
  * today — never mounts the timer at all.
+ *
+ * A rotating bar is as tall as its tallest message, always. Every message is
+ * laid out in the same grid cell and only the current one is visible, so a
+ * two-line message following a one-line one changes nothing but the words:
+ * the bar sits in the sticky header, and a bar that grew by a line would push
+ * the whole page down every few seconds.
  *
  * The merchant's own bar colours apply when they set them; otherwise it is
  * the brand primary, which already carries a contrast-picked foreground.
@@ -52,11 +61,23 @@ export function AnnouncementBar({ announcement, label }: { announcement: StoreAn
         }
       : undefined;
 
-  const shown = messages[index] ?? messages[0];
-  const text = (
-    <span key={index} className="zimos-announce-msg line-clamp-2 text-center text-xs font-medium leading-snug sm:text-sm">
-      {shown}
+  const current = messages[index] === undefined ? 0 : index;
+  const text = rotating ? (
+    // All of them, stacked in one cell: the cell is as tall as the tallest.
+    <span className="grid min-w-0">
+      {messages.map((message, i) => (
+        <span
+          key={i}
+          aria-hidden={i === current ? undefined : true}
+          // The class that fades a message in is given only to the current one, so it plays each time one comes up.
+          className={`col-start-1 row-start-1 flex items-center justify-center ${i === current ? "zimos-announce-msg" : "invisible"}`}
+        >
+          <span className={MESSAGE}>{message}</span>
+        </span>
+      ))}
     </span>
+  ) : (
+    <span className={`zimos-announce-msg ${MESSAGE}`}>{messages[0]}</span>
   );
 
   if (announcement.marquee) return <PromoMarquee messages={messages} label={label} style={style} />;
@@ -79,7 +100,8 @@ export function AnnouncementBar({ announcement, label }: { announcement: StoreAn
           <StoreLink
             href={announcement.href}
             // The ring takes the bar's own text colour: the brand outline would vanish on a brand background.
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+            // The link looks as slim as the bar; the layer behind it gives a thumb the full 44px.
+            className="relative inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 underline-offset-4 before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
             style={{ color: "inherit" }}
           >
             {text}

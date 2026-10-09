@@ -6,6 +6,9 @@ import { btnGhost, btnPrimary, btnSecondary, card, input, label } from "@/compon
 import { shopperErrorMessage } from "@/lib/shopperSession";
 import { useStore } from "@/lib/StoreContext";
 import { btnDanger, btnGhostDanger, useAccount } from "./AccountShell";
+import { EmailVerification } from "./EmailVerification";
+// «بيانات الشركة» (handoff 228): the company name and tax ID a business shopper buys under.
+import { AccountCompanyCard } from "@/components/business/AccountCompanyCard";
 
 /**
  * «البيانات»: the shopper's name, email and marketing consent (PATCH /me),
@@ -122,6 +125,8 @@ export function AccountProfile() {
               {emailError}
             </p>
           )}
+          {/* «مش متأكد» / «متأكد ✓», «أكّد الإيميل» and «اربط حساب جوجل» (handoff 278). */}
+          <EmailVerification typed={email} />
         </div>
         <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium text-ink">
           <input
@@ -147,6 +152,8 @@ export function AccountProfile() {
           {busy ? a.saving : a.saveProfile}
         </button>
       </form>
+
+      <AccountCompanyCard />
 
       <div className={`${card} space-y-3 self-start p-5 sm:p-6`}>
         <button type="button" onClick={api.signOut} className={`${btnSecondary} w-full`}>

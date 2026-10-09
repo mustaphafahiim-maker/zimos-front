@@ -8,13 +8,12 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { IconSuccess } from "@/components/icons";
 import { DataState } from "@/components/DataState";
-import { Section } from "@/components/Section";
-import { Field } from "@/components/Field";
-import { Select } from "@/components/Select";
-import { Textarea } from "@/components/Textarea";
-import { ReadOnlyNotice, SettingsFormFooter, ToggleRow } from "./SettingsFormFooter";
+import { SettingsGroup, SettingsSwitch } from "@/components/settings";
+import { ReadOnlyNotice, SettingsFormFooter } from "./SettingsFormFooter";
 import { useSettingsEditor } from "./useSettingsEditor";
+import { GroupBlock, STACK, SelectRow, SettingsSkeleton, TextareaRow } from "./sections/parts";
 
 const STRINGS = {
   en: {
@@ -32,6 +31,8 @@ const STRINGS = {
     preview: "Preview",
     previewEmpty: "Write a message to see it here.",
     sampleName: "Ahmed",
+    previewHint: "A sample order, so you can see the message filled in.",
+    previewBackHome: "Back to the store",
     saved: "Thank-you page saved.",
   },
   ar: {
@@ -49,6 +50,8 @@ const STRINGS = {
     preview: "معاينة",
     previewEmpty: "اكتب رسالة لتظهر هنا.",
     sampleName: "أحمد",
+    previewHint: "أوردر تجريبي، عشان تشوف الرسالة وهي متملية.",
+    previewBackHome: "ارجع للمتجر",
     saved: "تم حفظ صفحة الشكر.",
   },
 } satisfies Messages;
@@ -70,75 +73,73 @@ export function ThankYouTab() {
     .filter(Boolean);
 
   return (
-    <DataState loading={!editor.ready} error={null}>
-      <div className="space-y-5">
+    <DataState loading={!editor.ready} error={null} skeleton={<SettingsSkeleton />}>
+      <div className={STACK}>
         <ReadOnlyNotice editable={editable} />
 
-        <Section title={t.title} description={t.description}>
-          <div className="space-y-4">
-            <ToggleRow
-              label={t.enabled}
-              hint={t.enabledHint}
-              checked={draft.enabled}
-              disabled={locked}
-              onChange={(enabled) => setDraft((prev) => ({ ...prev, enabled }))}
-            />
-
-            <Field label={t.content} hint={t.contentHint}>
-              {({ id }) => (
-                <Textarea
-                  id={id}
-                  rows={6}
-                  maxLength={5000}
-                  disabled={locked || !draft.enabled}
-                  value={draft.content}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, content: e.target.value }))}
-                />
-              )}
-            </Field>
-
-            <ToggleRow
-              label={t.backHome}
-              hint={t.backHomeHint}
-              checked={draft.show_back_home_button}
-              disabled={locked || !draft.enabled}
-              onChange={(v) => setDraft((prev) => ({ ...prev, show_back_home_button: v }))}
-            />
-
-            <Field label={t.collection} hint={t.collectionHint}>
-              {({ id }) => (
-                <Select
-                  id={id}
-                  disabled={locked || !draft.enabled || collections.loading}
-                  value={draft.show_products_from_collection_id ?? ""}
-                  onChange={(e) =>
-                    setDraft((prev) => ({ ...prev, show_products_from_collection_id: e.target.value || null }))
-                  }
-                >
-                  <option value="">{t.none}</option>
-                  {(collections.data ?? []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
-          </div>
-        </Section>
+        <SettingsGroup>
+          <SettingsSwitch
+            label={t.enabled}
+            hint={t.enabledHint}
+            checked={draft.enabled}
+            disabled={locked}
+            onChange={(enabled) => setDraft((prev) => ({ ...prev, enabled }))}
+          />
+          <TextareaRow
+            label={t.content}
+            hint={t.contentHint}
+            rows={6}
+            dir="auto"
+            maxLength={5000}
+            disabled={locked || !draft.enabled}
+            value={draft.content}
+            onChange={(e) => setDraft((prev) => ({ ...prev, content: e.target.value }))}
+          />
+          <SettingsSwitch
+            label={t.backHome}
+            hint={t.backHomeHint}
+            checked={draft.show_back_home_button}
+            disabled={locked || !draft.enabled}
+            onChange={(v) => setDraft((prev) => ({ ...prev, show_back_home_button: v }))}
+          />
+          <SelectRow
+            label={t.collection}
+            hint={t.collectionHint}
+            disabled={locked || !draft.enabled || collections.loading}
+            value={draft.show_products_from_collection_id ?? ""}
+            onChange={(e) => setDraft((prev) => ({ ...prev, show_products_from_collection_id: e.target.value || null }))}
+          >
+            <option value="">{t.none}</option>
+            {(collections.data ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </SelectRow>
+        </SettingsGroup>
 
         {draft.enabled && (
-          <Section title={t.preview}>
-            {preview.length === 0 ? (
-              <p className="text-sm text-ink-soft">{t.previewEmpty}</p>
-            ) : (
-              <div className="space-y-2 rounded-[0.5rem] bg-paper p-4 text-sm leading-relaxed text-ink">
-                {preview.map((line, i) => (
-                  <p key={i}>{line}</p>
-                ))}
-              </div>
-            )}
-          </Section>
+          <SettingsGroup title={t.preview} description={t.previewHint}>
+            <GroupBlock className="py-5">
+              {preview.length === 0 ? (
+                <p className="text-sm text-ink-soft">{t.previewEmpty}</p>
+              ) : (
+                <div className="mx-auto flex max-w-sm flex-col items-center gap-3 text-center">
+                  <IconSuccess className="size-10 text-success" weight="duotone" aria-hidden />
+                  <div className="space-y-2 text-sm leading-relaxed text-ink" dir="auto">
+                    {preview.map((line, i) => (
+                      <p key={i}>{line}</p>
+                    ))}
+                  </div>
+                  {draft.show_back_home_button && (
+                    <span aria-hidden className="inline-flex min-h-10 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground">
+                      {t.previewBackHome}
+                    </span>
+                  )}
+                </div>
+              )}
+            </GroupBlock>
+          </SettingsGroup>
         )}
 
         <SettingsFormFooter

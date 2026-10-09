@@ -1,4 +1,3 @@
-import { useId } from "react";
 import {
   expressWalletsOf,
   type ExpressWallet,
@@ -8,6 +7,7 @@ import {
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { StatusBadge } from "@/components/StatusBadge";
+import { SettingsSwitch } from "@/components/settings";
 import { humanize } from "@/lib/format";
 import { getFieldErrors } from "@/lib/errors";
 
@@ -126,37 +126,28 @@ export function SettingSwitch({
   field,
   checked,
   disabled,
+  busy = false,
   onChange,
 }: {
   field: GatewayFieldDescriptor;
   checked: boolean;
   disabled: boolean;
+  /** The change is being saved: the thumb shows a spinner. */
+  busy?: boolean;
   onChange: (on: boolean) => void;
 }) {
   const t = useT(STRINGS);
   const { locale } = useLocale();
-  const hintId = useId();
-  const hint = field.key === "expressWallets" ? t.expressWalletsHint : null;
+  // A row of a SettingsGroup: the whole row is the switch.
   return (
-    <div className="space-y-1">
-      <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink">
-        <input
-          type="checkbox"
-          role="switch"
-          className="size-5 shrink-0 cursor-pointer accent-primary disabled:cursor-default"
-          checked={checked}
-          disabled={disabled}
-          aria-describedby={hint ? hintId : undefined}
-          onChange={(e) => onChange(e.target.checked)}
-        />
-        {field.label[locale]}
-      </label>
-      {hint && (
-        <p id={hintId} className="text-xs text-ink-soft">
-          {hint}
-        </p>
-      )}
-    </div>
+    <SettingsSwitch
+      label={field.label[locale]}
+      hint={field.key === "expressWallets" ? t.expressWalletsHint : undefined}
+      checked={checked}
+      disabled={disabled}
+      busy={busy}
+      onChange={onChange}
+    />
   );
 }
 
@@ -202,7 +193,7 @@ export function GatewayCurrencyNote({ gateway }: { gateway: PaymentGatewayInfo }
   // The codes stay in reading order inside an Arabic sentence.
   const [before, after = ""] = t.currencyHint.split("{list}");
   return (
-    <div className="mt-3 rounded-[0.5rem] bg-paper-sunken px-4 py-3 text-sm">
+    <div className="rounded-[0.875rem] bg-paper-sunken px-4 py-3 text-sm">
       <p className="font-medium text-ink">{fmt(t.currencyTitle, { name: gateway.name, currency })}</p>
       <p className="mt-1 text-ink-soft">
         {before}

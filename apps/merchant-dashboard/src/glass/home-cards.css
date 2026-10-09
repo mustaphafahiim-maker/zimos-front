@@ -1,0 +1,290 @@
+/* «النهارده», «فلوسك», «الإعلانات», «المنتجات», «آخر الأوردرات» — the cards of the home — pages/home/today/*.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   «النهارده» is four stat cards (components/KpiCard.tsx): their material is glass/stats.css;
+   the one thing added here is the share meter of the two cards that have no line to draw.
+   The rest is «فلوسك» (MoneyRow.tsx): the pieces drawn ON its three panes — the icon
+   chip, the «تقديري» / «خسارة» chips, the amber "costs are incomplete" strip, the row of
+   small labelled amounts, the waiting pill and the action pill. The pane itself is the
+   shared Card, drawn by liquid-glass.css. Nothing is blurred: a card lies in the page.
+   On a phone the two cards after the profit share a row in a short form (data-compact):
+   what changes for them is in the block before the motion, under the same 48rem that
+   Tailwind's `md` starts at.
+
+   Contrast, worked out from the tokens over every pool of the backdrop at full strength
+   (aurora, then the page pane, then the card pane, then the tint), not yet measured on
+   rendered pixels:
+     amber ink (--color-accent-dark) on the strip      5.7:1 light, 6.0:1 or more dark
+     amber ink on the «تقديري» chip and the late pill   5.7:1 light, 5.4:1 or more dark
+     amber ink on a product pill inside the strip      6.0:1 light, 6.0:1 dark (4.9:1 under the pointer)
+     the label of «كمّل التكاليف» on its fill            6.3:1 light, 9.5:1 dark
+     red ink on the «خسارة» chip                        5.8:1 light, 5.3:1 or more dark
+   Change a tint here only together with that sum. */
+:root:not([data-glass="off"]) {
+  /* How much of a light tint is the tint; the rest lets the pane beneath through.
+     One number per kind, so the block at the end of this file can turn them solid. */
+  --hc-strip-alpha: 90%;
+  --hc-chip-alpha: 92%;
+
+  /* ---------------------------------------------------------------- *
+   * «اتأكد» and «مع المندوب» (TodayStats.tsx). The API has no series
+   * for them, so there is no line to draw; the share their sentence
+   * states is drawn instead as a thin meter along the bottom of the
+   * card, where the two cards beside them have their line. The card
+   * hands over the share as --stat-share (0 to 1, in tenths) and
+   * keeps the room under its sentence. It fills from the start edge,
+   * so from the right in Arabic. Decorative: the sentence above it
+   * carries the numbers.
+   * ---------------------------------------------------------------- */
+  .zimos-stat-share[data-kpi]::before,
+  .zimos-stat-share[data-kpi]::after {
+    content: "";
+    position: absolute;
+    inset-block-end: 1rem;
+    inset-inline-start: 1rem;
+    block-size: 0.375rem;
+    border-radius: 9999px;
+    pointer-events: none;
+  }
+  .zimos-stat-share[data-kpi]::before {
+    inset-inline-end: 1rem;
+    background-color: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  }
+  .zimos-stat-share[data-kpi]::after {
+    inline-size: calc((100% - 2rem) * var(--stat-share, 0));
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28);
+  }
+  &.dark .zimos-stat-share[data-kpi]::before {
+    background-color: color-mix(in srgb, var(--color-ink) 12%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The lead icon: a drop of colour with a lit top edge, the same
+   * recipe as the icon chip of a stat card (glass/stats.css), in the
+   * tone of what the card has to say: brand, amber (something is
+   * missing or late), red (a loss).
+   * ---------------------------------------------------------------- */
+  [data-slot="money-icon"] {
+    background-color: color-mix(in srgb, var(--color-primary) 11%, transparent);
+    color: var(--lg-text-primary);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 9%, transparent);
+  }
+  [data-slot="money-icon"][data-tone="warn"] {
+    background-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+    color: var(--color-accent-dark);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 22%, transparent);
+  }
+  [data-slot="money-icon"][data-tone="bad"] {
+    background-color: color-mix(in srgb, var(--color-danger) 11%, transparent);
+    color: var(--lg-text-danger);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 12%, transparent);
+  }
+  &.dark [data-slot="money-icon"] {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+      inset 0 0 0 1px rgb(255 255 255 / 0.05);
+  }
+  &.dark [data-slot="money-icon"][data-tone="warn"] {
+    background-color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+  &.dark [data-slot="money-icon"][data-tone="bad"] {
+    background-color: color-mix(in srgb, var(--color-danger) 20%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Chips after the label. «تقديري» and «ناقص» are amber ink on an
+   * amber tint; «خسارة» is the red of a falling chip on a stat card.
+   * A hairline of the same colour keeps the pill a pill on any part
+   * of the pane. On dark glass the soft tokens are nearly black and
+   * would read as holes, so the tint is mixed from the colour itself.
+   * ---------------------------------------------------------------- */
+  [data-slot="money-chip"] {
+    background-color: color-mix(in srgb, var(--color-accent-soft) var(--hc-chip-alpha), transparent);
+    color: var(--color-accent-dark);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 26%, transparent);
+  }
+  [data-slot="money-chip"][data-tone="loss"] {
+    background-color: color-mix(in srgb, var(--color-danger-soft) 88%, transparent);
+    color: var(--lg-text-danger);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 16%, transparent);
+  }
+  &.dark [data-slot="money-chip"] {
+    background-color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 24%, transparent);
+  }
+  &.dark [data-slot="money-chip"][data-tone="loss"] {
+    background-color: color-mix(in srgb, var(--color-danger) 18%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 22%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The amber strip inside the profit card: costs are incomplete.
+   * A tinted pane on the pane, lit along its top edge. The product
+   * names are small pills on it; the way to fix it is the one filled
+   * pill, in the amber ink itself.
+   * ---------------------------------------------------------------- */
+  [data-slot="money-warn"] {
+    background-color: color-mix(in srgb, var(--color-accent-soft) var(--hc-strip-alpha), transparent);
+    color: var(--color-accent-dark);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.8),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  }
+  &.dark [data-slot="money-warn"] {
+    background-color: color-mix(in srgb, var(--color-accent) 16%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 26%, transparent);
+  }
+  [data-slot="money-warn-link"] {
+    background-color: rgb(255 255 255 / 0.55);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent-dark) 22%, transparent);
+  }
+  [data-slot="money-warn-link"]:hover {
+    background-color: rgb(255 255 255 / 0.85);
+  }
+  &.dark [data-slot="money-warn-link"] {
+    background-color: transparent;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 34%, transparent);
+  }
+  &.dark [data-slot="money-warn-link"]:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  }
+  [data-slot="money-warn-action"] {
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.22),
+      0 6px 14px -8px color-mix(in srgb, var(--color-accent-dark) 70%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * What was taken off, as small labelled amounts: only a hairline
+   * above them, in the colour of the pane.
+   * ---------------------------------------------------------------- */
+  [data-slot="money-parts"] {
+    border-color: var(--lg-hairline);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The cost of waiting on the card of the couriers: a quiet pill,
+   * amber once the oldest cash has been held for more than two weeks.
+   * ---------------------------------------------------------------- */
+  [data-slot="money-wait"] {
+    background-color: color-mix(in srgb, var(--color-ink) 6%, transparent);
+    color: var(--lg-ink-soft);
+  }
+  [data-slot="money-wait"][data-late] {
+    background-color: color-mix(in srgb, var(--color-accent-soft) var(--hc-chip-alpha), transparent);
+    color: var(--color-accent-dark);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 26%, transparent);
+  }
+  &.dark [data-slot="money-wait"] {
+    background-color: color-mix(in srgb, var(--color-ink) 9%, transparent);
+  }
+  &.dark [data-slot="money-wait"][data-late] {
+    background-color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 24%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The action at the end of the card: a small pane, like a secondary
+   * button, lit when the card is pointed at (its hit area is the
+   * whole card). The dot before a waiting draft carries a soft halo.
+   * ---------------------------------------------------------------- */
+  [data-slot="money-action"] {
+    background-color: var(--lg-control);
+    box-shadow:
+      var(--lg-rim-line),
+      0 0 0 1px var(--lg-edge),
+      0 1px 2px rgb(18 44 110 / 0.06);
+  }
+  [data-slot="money-action"]:hover {
+    background-color: var(--lg-control-lit);
+  }
+  &.dark [data-slot="money-action"] {
+    box-shadow:
+      var(--lg-rim-line),
+      0 0 0 1px var(--lg-edge);
+  }
+  [data-slot="money-dot"] {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 24%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * A phone (below 48rem). The two cards after the profit sit side by
+   * side there, each half the row (MoneyRow.tsx, `compact`). Half a
+   * row is too narrow for a pill around the cost of waiting, so it is
+   * a plain line of the same ink — quiet, amber once late — with no
+   * tint and no rim behind it. The ink then lies on the card pane
+   * itself, as the line «تسوية مسودة مستنية تأكيدك» of the other card
+   * does. By the same sums as at the top of this file (from the tokens,
+   * over every pool of the backdrop, not measured on rendered pixels):
+   *   amber ink on the card pane   5.6:1 or more light, 8.3:1 or more dark
+   *   quiet ink on the card pane   6.5:1 or more light, 7.2:1 or more dark
+   * ---------------------------------------------------------------- */
+  @media (width < 48rem) {
+    [data-money-card][data-compact] [data-slot="money-wait"],
+    &.dark [data-money-card][data-compact] [data-slot="money-wait"] {
+      background-color: transparent;
+      box-shadow: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Motion. The three cards settle in one after another like the stat
+   * cards above them (lg-settle and --lg-i come from liquid-glass.css),
+   * a card that opens lifts 2px under the pointer and gives a little
+   * under the thumb. Transform and shadow only; nothing at all for
+   * anyone who asked for less motion. In the phone's pair the link is
+   * laid over the whole card (money-cover) instead of being a pill at
+   * its end: the card answers it the same way.
+   * ---------------------------------------------------------------- */
+  @media (prefers-reduced-motion: no-preference) {
+    .glass-app main [data-money-card] {
+      transition:
+        transform var(--dur-move) var(--ease-spring),
+        box-shadow var(--dur-fade) var(--ease-out);
+    }
+    .glass-app main .grid > [data-money-card] {
+      animation: lg-settle 340ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+      animation-delay: calc(var(--lg-i, 0) * 40ms);
+    }
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .glass-app main [data-money-card]:has(:is([data-slot="money-action"], [data-slot="money-cover"]):hover) {
+      transform: translateY(-2px);
+      --tw-shadow: var(--shadow-raised);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .glass-app main [data-money-card]:has(:is([data-slot="money-action"], [data-slot="money-cover"]):active) {
+      transform: scale(0.97);
+    }
+  }
+}
+
+/* The same preferences the off switch follows (see the end of liquid-glass.css):
+   if the attribute was not set, the light tints of this file turn solid too. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root:not([data-glass="off"]),
+  :root:not([data-glass="off"]).dark {
+    --hc-strip-alpha: 100%;
+    --hc-chip-alpha: 100%;
+  }
+}

@@ -5,9 +5,11 @@ import { botGuardFields } from "./botGuard";
 import { adMatchFields } from "./adMatch";
 import { withCheckoutOtp } from "./checkoutOtp";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { storefrontPaymentMethodsFor, type ApiClient, type CheckoutPayload, type CheckoutResult, type StorefrontPaymentMethod } from "@store-builder/api-client";
+import { checkoutWithTenders, manualPaymentStoreMethod, storefrontPaymentMethodsFor, type ApiClient, type CheckoutPayload, type StorefrontPaymentMethod, type TenderCheckoutResult } from "@store-builder/api-client";
 import { saveOrderSnapshot, snapshotFromOrder } from "./commerce";
 import { storeHref } from "./storeHref";
+import { saveTrackingToken } from "./trackingTokens";
+import { saveOrderFulfilment } from "./orderFulfilment";
 
 /**
  * Online payments on the storefront: which methods the store offers, the
@@ -161,6 +163,7 @@ export async function placeOnlineOrder({
   cartToken,
   visitorId,
   returnTo,
+  shopperToken,
 }: {
   client: ApiClient;
   workspaceId: string;
@@ -172,13 +175,18 @@ export async function placeOnlineOrder({
   visitorId?: string;
   /** A store-relative path the payment page sends the shopper on to once paid (a funnel's next step). */
   returnTo?: string;
-}): Promise<{ result: CheckoutResult; next: string; external: boolean }> {
+  /** The signed-in shopper (X-Shopper-Token): points and store credit are theirs (handoff 203, 204). */
+  shopperToken?: string | null;
+}): Promise<{ result: TenderCheckoutResult; next: string; external: boolean }> {
   const previewToken = getPreviewToken(workspaceId);
   const token = cartToken;
+  // The store's own InstaPay or wallet number (handoff 340): no gateway — the order is placed unpaid
+  // and the payment page asks for the screenshot. It names the method, never a provider.
+  const storeMethod = manualPaymentStoreMethod(method);
   const body: CheckoutPayload = {
     ...payload,
     paymentMethod: method.method,
-    ...(method.provider ? { paymentProvider: method.provider } : {}),
+    ...(storeMethod ? { manualPaymentMethodId: storeMethod.manualPaymentMethodId } : method.provider ? { paymentProvider: method.provider } : {}),
     // The shopper ticked "save my card" (lib/saveCard): kept by the gateway once paid.
     ...(method.method === "card" && wantsSaveCard(workspaceId) ? { saveCard: true } : {}),
     // The bot guard's token and honeypot (lib/botGuard).
@@ -188,18 +196,31 @@ export async function placeOnlineOrder({
   };
   // The return URL names the order, which only exists once the checkout
   // answers: the server fills in the {orderId} placeholder.
+  // The same request as `client.placeCheckout`, with the shopper's token when signed in (endpoints/checkoutTenders).
   const result = await withCheckoutOtp(workspaceId, body.contact.phone, (otp) =>
-    client.placeCheckout(
+    checkoutWithTenders(
+      client,
       workspaceId,
       { ...body, ...otp, returnUrl: paymentPageUrl(basePath, "{orderId}") },
-      { cartToken: token, previewToken, visitorId }
+      { cartToken: token, previewToken, visitorId, shopperToken }
     )
   );
 
   const order = result.order;
   saveOrderSnapshot(workspaceId, snapshotFromOrder(order, body.contact.phone));
   if (result.paymentToken) savePaymentToken(workspaceId, order.id, result.paymentToken);
+  // The order's tracking token, for the thank-you page's survey (lib/trackingTokens, handoff 236).
+  saveTrackingToken(workspaceId, order.id, result.trackingToken);
+  // The chosen delivery time, and a pickup's code and place (shown once): kept for the thank-you and tracking pages (handoff 221, 225).
+  saveOrderFulfilment(workspaceId, result);
   if (returnTo) savePaymentReturn(workspaceId, order.id, returnTo);
+
+  // A gift card, points and store credit covered the whole order (handoff 201): no gateway,
+  // no payment token — the order went on as cash on delivery with nothing to collect.
+  if (!result.payment && (result.paidInStore || result.paidByGiftCard)) {
+    const q = new URLSearchParams({ number: order.orderNumber });
+    return { result, next: storeHref(basePath, returnTo ?? `/orders/${order.id}?${q.toString()}`), external: false };
+  }
 
   const redirect = result.payment?.redirectUrl;
   if (redirect) return { result, next: redirect, external: true };

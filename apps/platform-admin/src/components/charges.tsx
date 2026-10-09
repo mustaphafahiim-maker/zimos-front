@@ -1,3 +1,5 @@
+import { apiErrorCode } from "@store-builder/api-client";
+import { MANUAL_PRICING_HINT, ManualPricingChargeHint } from "./billingExtras";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Banknote, Gift, Receipt, Undo2 } from "lucide-react";
@@ -60,7 +62,7 @@ export function SubscriptionCharges({ workspaceId }: { workspaceId: string }) {
       toast.success(created ? "Next charge created. Record the payment once it arrives." : "A charge is already open.");
       await refresh({ silent: true });
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      toast.error(apiErrorCode(err) === "MANUAL_PRICING" ? MANUAL_PRICING_HINT : getErrorMessage(err));
     } finally {
       setPricing(false);
     }
@@ -75,6 +77,7 @@ export function SubscriptionCharges({ workspaceId }: { workspaceId: string }) {
             <Receipt /> {pricing ? "Creating…" : "Create next charge"}
           </Button>
         )}
+        {canRecord && data && !data.nextCharge && <ManualPricingChargeHint workspaceId={workspaceId} />}
       </div>
 
       <DataState loading={loading && !data} error={error} onRetry={() => void refresh()}>

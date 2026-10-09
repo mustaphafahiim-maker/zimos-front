@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * The masthead's shell. It is sticky either way; what changes once the page
@@ -22,6 +22,15 @@ import { useEffect, useState, type ReactNode } from "react";
  * and the change is a transition on colour/shadow/height only — cheap, and
  * off under reduced motion.
  *
+ * The page under the header never moves for it. The bar is in the page's
+ * flow, so a bar that lost 8px would pull everything below it up by 8px the
+ * moment the shopper starts to scroll. Instead the header hands those 8px
+ * back as a bottom margin while it floats (`data-[scrolled]:mb-2`), on the
+ * same clock as the bar's height: the two always add up to the tall bar, the
+ * space the header takes in the page stays what it was at the first paint, and
+ * only the header's own edge moves. A theme whose bar shrinks by a different
+ * amount sets that margin itself, next to its heights (store-theme-uokids.css).
+ *
  * `sticky={false}` is the merchant's choice (the editor's Header panel) to
  * let the bar scroll away with the page; it then never floats, so it never
  * needs the scrolled shadow either. `data-zimos-shell` names the header for
@@ -37,12 +46,17 @@ export function StickyHeader({
   sticky?: boolean;
 }) {
   const [scrolled, setScrolled] = useState(false);
+  const header = useRef<HTMLElement>(null);
 
   useEffect(() => {
     let frame = 0;
     const decide = () => {
       frame = 0;
-      setScrolled(window.scrollY > 8);
+      // Floating means pinned to the top of the screen with the page under it. While something
+      // still sits above the header — a holiday or invite banner — it has not reached the top,
+      // and the margin that keeps the page still would show as a gap under a bar that is not floating.
+      const top = header.current?.getBoundingClientRect().top ?? 0;
+      setScrolled(window.scrollY > 8 && top < 1);
     };
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(decide);
@@ -60,10 +74,11 @@ export function StickyHeader({
 
   return (
     <header
+      ref={header}
       data-zimos-shell="header"
       data-scrolled={floating ? "" : undefined}
       data-overlay={overlay ? "" : undefined}
-      className={`group/header ${sticky ? "sticky top-0" : "relative"} z-30 border-b transition-[background-color,box-shadow,border-color] duration-200 motion-reduce:transition-none ${
+      className={`group/header ${sticky ? "sticky top-0" : "relative"} z-30 border-b transition-[background-color,box-shadow,border-color,margin] duration-200 data-[scrolled]:mb-2 motion-reduce:transition-none ${
         overlay
           ? "border-transparent bg-transparent"
           : `border-line bg-paper-raised/95 backdrop-blur supports-[backdrop-filter]:bg-paper-raised/85 ${

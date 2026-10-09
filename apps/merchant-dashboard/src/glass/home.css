@@ -1,0 +1,123 @@
+/* «اليوم» — the page frame, the header and its live chip, the slim setup row, the details drawer —
+   pages/DashboardHomePage.tsx, pages/home/today/TodayHeader.tsx, LiveChip.tsx, SetupRow.tsx, HomeDetails.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   Nothing here is blurred: every piece lies in the page flow, on the page pane, with only
+   the still backdrop behind it. */
+:root:not([data-glass="off"]) {
+  /* ---------------------------------------------------------------- *
+   * The live chip. A small pane, the same glass as the period control
+   * it sits near: a translucent fill, the bright rim, and a hairline
+   * drawn as a shadow so the pill keeps its exact size. The words are
+   * full ink while someone is on the store and secondary ink when
+   * nobody is (the shell deepens that shade on glass by itself), so
+   * both hold 4.5:1 over any pool of the backdrop.
+   * ---------------------------------------------------------------- */
+  .zimos-home-live {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  @media (hover: hover) {
+    .zimos-home-live:hover {
+      background-color: var(--lg-control-lit);
+    }
+  }
+  /* The dot: the success green with a soft halo of itself, which breathes with it
+     (the pulse is opacity only, set on the component; still for reduced motion). */
+  .zimos-home-live[data-state="live"] .zimos-home-live-dot {
+    background-color: var(--color-success);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 22%, transparent);
+  }
+  /* Nobody on the store, or no answer: a quiet dot, no halo. */
+  .zimos-home-live:not([data-state="live"]) .zimos-home-live-dot {
+    background-color: color-mix(in srgb, var(--color-ink) 30%, transparent);
+  }
+  /* Its room while the first answer loads: a frosted bar, not a grey block. */
+  .zimos-home-live-skeleton {
+    background-color: color-mix(in srgb, var(--color-ink) 9%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The slim setup row. The row itself is a card-shaped pane, so its
+   * fill, sheen and rim already come from liquid-glass.css. Here: the
+   * ring takes the brand colour over a faint track of the same colour,
+   * and from 640px the next step is a small tinted pane of its own
+   * (the recipe of the toast's «تراجع»: the deeper brand text shade on
+   * a wash of the brand, lit along its top edge).
+   * ---------------------------------------------------------------- */
+  .zimos-home-setup-track {
+    stroke: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  }
+  .zimos-home-setup-bar {
+    stroke: var(--lg-brand-solid);
+  }
+  @media (min-width: 40rem) {
+    .zimos-home-setup-next {
+      color: var(--lg-text-primary);
+      background-color: color-mix(in srgb, var(--color-primary) 12%, transparent);
+      box-shadow:
+        inset 0 1px 0 0 rgb(255 255 255 / 0.6),
+        inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
+    }
+    &.dark .zimos-home-setup-next {
+      background-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+      box-shadow:
+        inset 0 1px 0 0 rgb(255 255 255 / 0.12),
+        inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 26%, transparent);
+    }
+  }
+  @media (min-width: 40rem) and (hover: hover) {
+    .zimos-home-setup-next:hover {
+      background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    }
+    &.dark .zimos-home-setup-next:hover {
+      background-color: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * «كل الأرقام بالتفصيل». The heading row is a card-shaped pane too
+   * (fill, sheen and rim from liquid-glass.css); it lights up under the
+   * pointer and keeps a hairline of the brand while it is open. The
+   * icon chips — on the heading and on the lines inside — are a drop
+   * of the brand colour with a lit top edge, as on the stat cards.
+   * ---------------------------------------------------------------- */
+  @media (hover: hover) {
+    .glass-app main .zimos-home-details-toggle:hover {
+      background-color: var(--lg-control-lit);
+    }
+  }
+  .zimos-home-details[data-open] .zimos-home-details-toggle {
+    --tw-ring-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+  }
+  .zimos-home-details-chip {
+    background-color: color-mix(in srgb, var(--color-primary) 11%, transparent);
+    color: var(--lg-text-primary);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 9%, transparent);
+  }
+  &.dark .zimos-home-details-chip {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+      inset 0 0 0 1px rgb(255 255 255 / 0.05);
+  }
+  /* What the drawer opens settles in under its heading: opacity and a short
+     slide, once, and nothing is left on the panel afterwards (a transform that
+     stayed would trap any fixed child inside it). */
+  @media (prefers-reduced-motion: no-preference) {
+    .zimos-home-details-panel {
+      animation: home-details-in var(--dur-move) var(--ease-out) backwards;
+    }
+  }
+}
+
+@keyframes home-details-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}

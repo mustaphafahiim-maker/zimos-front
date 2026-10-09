@@ -36,6 +36,17 @@ export const NOTIFICATION_STRINGS = {
     type_announcement: "Announcements from Zimos",
     type_automation: "Alerts from your automations",
     type_plan_limit_reached: "Plan limits reached",
+    type_customer_followup: "Customer follow-ups due",
+    type_quote_request: "Quote requests",
+    type_product_question: "Shopper questions on products",
+    type_stock_lot_expiring: "Stock lots about to expire",
+    type_message_undelivered: "Customer emails and SMS that didn't arrive",
+    type_whatsapp_template: "WhatsApp templates",
+    type_subscription_renewal_paused: "Subscription renewals on hold",
+    type_payment_disputed: "Disputed card payments",
+    undeliveredEmailTitle: "Order {n} email bounced",
+    undeliveredSmsTitle: "Order {n} SMS not delivered",
+    undeliveredSpamTitle: "The customer marked the order {n} email as spam",
     limitLeadsTitle: "Your plan's new leads for this month are used up ({allowed})",
     limitLeadsBody: "Forms and the newsletter won't add new contacts until next month or a plan change. People you already know can still sign up.",
     limitStorageTitle: "Your plan's file storage is full",
@@ -47,6 +58,10 @@ export const NOTIFICATION_STRINGS = {
     orderSuspiciousBody: "The protection rules flagged this order for review before it is confirmed.",
     stockLowTitle: "Running low: {label}",
     stockLowBody: "{available} left in stock.",
+    codesWaitingTitle: "Orders waiting for codes: {label}",
+    codesWaitingBody: "{count} codes missing — add codes and they go out at once.",
+    codesLowTitle: "Codes running low: {label}",
+    codesLowBody: "{available} codes left.",
     integrationFailedTitle: "Could not reach {integration}",
     reasonAuth: "The key or login was refused. Connect it again in settings.",
     reasonPermission: "The account lacks a permission this needs. Check the key's permissions with the provider.",
@@ -59,40 +74,59 @@ export const NOTIFICATION_STRINGS = {
     autoBookingFailedBody: "{reason} Book it from the order page.",
     batchDoneTitle: "Booked {booked} of {total} orders with {carrier}",
     batchFailedBody: "{failed} weren't booked. Open the report to see why and send them again.",
+    followupTitle: "Follow-up: {title}",
+    followupBody: "with {name}",
   },
   ar: {
-    type_order_new: "الطلبات الجديدة",
-    type_order_suspicious: "الطلبات المشتبه بها",
-    type_stock_low: "قرب نفاد المخزون",
-    type_integration_failed: "تعطّل خدمة مربوطة",
-    type_export_ready: "جاهزية ملفات التصدير",
-    type_shipping_batch_done: "انتهاء الشحن المجمّع",
+    type_order_new: "الأوردرات الجديدة",
+    type_order_suspicious: "أوردرات محتاجة مراجعة",
+    type_stock_low: "المخزون قرب يخلص",
+    type_integration_failed: "خدمة مربوطة وقفت",
+    type_export_ready: "ملفات التصدير الجاهزة",
+    type_shipping_batch_done: "الشحن المجمّع خلص",
     type_announcement: "إعلانات زيموس",
     type_automation: "تنبيهات الأتمتة",
     type_plan_limit_reached: "الوصول لحدود الباقة",
+    type_customer_followup: "مواعيد متابعة العملاء",
+    type_quote_request: "طلبات عروض الأسعار",
+    type_product_question: "أسئلة العملاء على المنتجات",
+    type_stock_lot_expiring: "دفعات قربت تنتهي صلاحيتها",
+    type_message_undelivered: "إيميلات ورسايل العملاء اللي ما وصلتش",
+    type_whatsapp_template: "قوالب واتساب",
+    type_subscription_renewal_paused: "تجديدات الاشتراكات المتوقفة",
+    type_payment_disputed: "اعتراضات العملاء على الدفع بالبطاقة",
+    undeliveredEmailTitle: "بريد الطلب {n} لم يصل للعميل",
+    undeliveredSmsTitle: "رسالة الطلب {n} لم تصل للعميل",
+    undeliveredSpamTitle: "العميل علّم بريد الطلب {n} كرسالة مزعجة",
     limitLeadsTitle: "خلص عدد العملاء المحتملين الجدد في باقتك للشهر ده ({allowed})",
     limitLeadsBody: "النماذج والنشرة البريدية مش هتضيف عملاء جدد لحد الشهر الجاي أو تغيير الباقة. اللي تعرفهم قبل كده يقدروا يشتركوا عادي.",
     limitStorageTitle: "مساحة الملفات في باقتك اتملت",
     limitStorageBody: "امسح ملفات مش محتاجها أو غيّر الباقة علشان ترفع ملفات جديدة.",
     lang: "ar",
-    orderNewTitle: "طلب جديد {orderNumber}",
+    orderNewTitle: "أوردر جديد {orderNumber}",
     orderNewMore: "{product} و{n} غيره",
-    orderSuspiciousTitle: "طلب مشتبه به {orderNumber}",
-    orderSuspiciousBody: "قواعد الحماية علّمت هذا الطلب للمراجعة قبل تأكيده.",
-    stockLowTitle: "المخزون قارب على النفاد: {label}",
-    stockLowBody: "المتاح {available} قطعة.",
-    integrationFailedTitle: "تعذّر الاتصال بـ {integration}",
-    reasonAuth: "المفتاح أو بيانات الدخول لم تعد مقبولة. أعد الربط من الإعدادات.",
-    reasonPermission: "الحساب لا يملك صلاحية لهذا الإجراء. راجع صلاحيات المفتاح لدى مزوّد الخدمة.",
-    reasonUnavailable: "الخدمة لم ترد. يُعاد المحاولة تلقائيًا، وإن استمر ذلك تواصل مع مزوّد الخدمة.",
-    reasonSignature: "وصلت إشعارات لم يتطابق توقيعها مع المفتاح المحفوظ. تأكد من مفتاح الـ webhook في الإعدادات.",
+    orderSuspiciousTitle: "أوردر محتاج مراجعة {orderNumber}",
+    orderSuspiciousBody: "قواعد الحماية علّمت على الأوردر ده. راجعه قبل ما تأكّده.",
+    stockLowTitle: "المخزون قرب يخلص: {label}",
+    stockLowBody: "فاضل {available} قطعة.",
+    codesWaitingTitle: "أوردرات مستنية أكواد: {label}",
+    codesWaitingBody: "{count} كود ناقص — ضيف أكواد وهتتبعت للأوردرات على طول.",
+    codesLowTitle: "الأكواد قربت تخلص: {label}",
+    codesLowBody: "فاضل {available} كود.",
+    integrationFailedTitle: "معرفناش نوصل لـ {integration}",
+    reasonAuth: "المفتاح أو بيانات الدخول مابقتش مقبولة. اربطها تاني من الإعدادات.",
+    reasonPermission: "الحساب مالوش صلاحية للحاجة دي. راجع صلاحيات المفتاح عند مزوّد الخدمة.",
+    reasonUnavailable: "الخدمة ما ردّتش. هنجرّب تاني لوحدنا، ولو فضلت كده كلّم مزوّد الخدمة.",
+    reasonSignature: "وصلت إشعارات توقيعها مش مطابق للمفتاح المحفوظ. اتأكد من مفتاح الـ webhook في الإعدادات.",
     exportReadyTitle: "الملف جاهز: {name}",
-    exportFailedTitle: "تعذّر تجهيز الملف: {name}",
-    exportFailedBody: "جرّب التصدير مرة أخرى، أو ضيّق الفلاتر.",
-    autoBookingFailedTitle: "لم يُحجز الطلب {orderNumber} تلقائيًا مع {integration}",
-    autoBookingFailedBody: "{reason} احجزه من صفحة الطلب.",
+    exportFailedTitle: "الملف ما اتجهّزش: {name}",
+    exportFailedBody: "جرّب التصدير تاني، أو ضيّق الفلاتر.",
+    autoBookingFailedTitle: "الأوردر {orderNumber} ما اتحجزش لوحده مع {integration}",
+    autoBookingFailedBody: "{reason} احجزه من صفحة الأوردر.",
     batchDoneTitle: "اتحجز {booked} من {total} أوردر مع {carrier}",
-    batchFailedBody: "لم يُحجز {failed}. افتح التقرير لمعرفة السبب وإعادة إرسالها.",
+    batchFailedBody: "{failed} ما اتحجزوش. افتح التقرير تعرف السبب وابعتهم تاني.",
+    followupTitle: "متابعة: {title}",
+    followupBody: "مع {name}",
   },
 } satisfies Messages;
 
@@ -133,6 +167,13 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
       return { title: fmt(t.orderSuspiciousTitle, { orderNumber: str(d.orderNumber) }), body: t.orderSuspiciousBody };
     case "stock.low":
       if (!d.label) break;
+      // A digital product's licence codes, not a variant's stock (digital/codePoolAlerts.js, handoff 213).
+      if (Number(d.waitingCodes) > 0) {
+        return { title: fmt(t.codesWaitingTitle, { label: str(d.label) }), body: fmt(t.codesWaitingBody, { count: num(d.waitingCodes) }) };
+      }
+      if ((n.link ?? "").includes("tab=digital")) {
+        return { title: fmt(t.codesLowTitle, { label: str(d.label) }), body: fmt(t.codesLowBody, { available: num(d.available) }) };
+      }
       return {
         title: fmt(t.stockLowTitle, { label: str(d.label) }),
         body: fmt(t.stockLowBody, { available: str(d.available) }),
@@ -162,6 +203,17 @@ export function notificationText(t: NotificationStrings, n: MerchantNotification
       if (d.limit === "leads") return { title: fmt(t.limitLeadsTitle, { allowed: str(d.allowed) }), body: t.limitLeadsBody };
       if (d.limit === "storage_bytes") return { title: t.limitStorageTitle, body: t.limitStorageBody };
       break;
+    case "customer.followup":
+      // A follow-up that fell due (customerNotes, handoff 209): what to do, and with whom.
+      if (!d.title) break;
+      return { title: fmt(t.followupTitle, { title: str(d.title) }), body: d.customerName ? fmt(t.followupBody, { name: str(d.customerName) }) : null };
+    case "message.undelivered":
+      // A customer email or SMS the provider reported back as not arrived (handoff 386).
+      if (!d.orderNumber) break;
+      return {
+        title: fmt(d.status === "complained" ? t.undeliveredSpamTitle : d.channel === "sms" ? t.undeliveredSmsTitle : t.undeliveredEmailTitle, { n: str(d.orderNumber) }),
+        body: null,
+      };
     case "export.ready":
       if (!d.name) break;
       if (d.failed) return { title: fmt(t.exportFailedTitle, { name: str(d.name) }), body: t.exportFailedBody };

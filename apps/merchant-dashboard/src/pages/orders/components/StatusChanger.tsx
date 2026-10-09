@@ -117,16 +117,23 @@ export function StatusChanger({ order, onChanged }: Props) {
   );
 }
 
-function StatusDialog({
+/**
+ * The dialog on its own, for a caller that opens it from somewhere else than
+ * the button above (the order page's stage chip and its «…» menu).
+ * `initialTarget` preselects one of `next`.
+ */
+export function StatusDialog({
   order,
   next,
   onClose,
   onDone,
+  initialTarget,
 }: {
   order: Order;
   next: OrderStage[];
   onClose: () => void;
   onDone: () => void;
+  initialTarget?: OrderStage;
 }) {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
@@ -135,7 +142,7 @@ function StatusDialog({
   const errorMessage = useOrderErrorMessage();
   const manualCancelPrompt = useManualCancelPrompt();
 
-  const [target, setTarget] = useState<OrderStage>(next[0]);
+  const [target, setTarget] = useState<OrderStage>(initialTarget && next.includes(initialTarget) ? initialTarget : next[0]);
   const [reason, setReason] = useState("");
   const [followUp, setFollowUp] = useState<"unreachable" | "postponed">("unreachable");
   const [courier, setCourier] = useState("");

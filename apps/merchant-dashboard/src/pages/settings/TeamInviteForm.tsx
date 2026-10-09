@@ -10,6 +10,7 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { DataState } from "@/components/DataState";
 import { TextField } from "@/components/Field";
+import { roleAboveYoursMessage, useTeamLimitTexts, type TeamLimits } from "./teamAccessLimits";
 
 /**
  * The invite dialog (SPEC §17.1): an email, then "Admin" or "Partial" with a
@@ -34,7 +35,9 @@ const STRINGS = {
     cancel: "Cancel",
     send: "Send invite",
     sending: "Sending…",
-    sent: "Invite sent to {email}.",
+    sent: "Invitation sent to {email}. They join the team once they accept it",
+    alreadyMember: "That person is already on the team.",
+    alreadyInvited: "That email already has an invitation waiting.",
     pick: "Tick at least one section.",
     "s.orders": "Orders",
     "s.orders.hint": "See, confirm, edit, cancel and refund orders",
@@ -45,7 +48,7 @@ const STRINGS = {
     "s.customers": "Customers",
     "s.customers.hint": "Customers, contacts and form data",
     "s.discounts": "Discounts",
-    "s.discounts.hint": "Discount codes and offers",
+    "s.discounts.hint": "Discount codes and offers; change prices on orders (a line's price, a custom line, or a staff discount)",
     "s.store": "Store design",
     "s.store.hint": "Pages, theme, templates and domains",
     "s.funnels": "Funnels",
@@ -77,7 +80,9 @@ const STRINGS = {
     cancel: "إلغاء",
     send: "إرسال الدعوة",
     sending: "بنبعت…",
-    sent: "الدعوة اتبعتت لـ {email}.",
+    sent: "اتبعتت الدعوة لـ {email}. هتظهر في الفريق لما يقبلها",
+    alreadyMember: "الشخص ده في الفريق بالفعل.",
+    alreadyInvited: "الإيميل ده عنده دعوة مستنية بالفعل.",
     pick: "علّم على قسم واحد على الأقل.",
     "s.orders": "الطلبات",
     "s.orders.hint": "عرض وتأكيد وتعديل وإلغاء واسترجاع الطلبات",
@@ -88,7 +93,7 @@ const STRINGS = {
     "s.customers": "العملاء",
     "s.customers.hint": "العملاء وجهات الاتصال وبيانات النماذج",
     "s.discounts": "الخصومات",
-    "s.discounts.hint": "أكواد الخصم والعروض",
+    "s.discounts.hint": "أكواد الخصم والعروض، وتعديل الأسعار في الطلبات (سعر سطر، سطر مخصص، أو خصم يدوي على الطلب)",
     "s.store": "تصميم المتجر",
     "s.store.hint": "الصفحات والثيم والقوالب والدومينات",
     "s.funnels": "مسارات البيع",
@@ -106,7 +111,10 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-export function TeamInviteForm({ onCancel, onDone }: { onCancel: () => void; onDone: () => void }) {
+export function TeamInviteForm({ onCancel, onDone, limits }: { onCancel: () => void; onDone: () => void; /** What the inviter may not give (handoff 346). */ limits?: TeamLimits }) {
+  const limitText = useTeamLimitTexts();
+  // Without a known role nothing is held back; the server still decides.
+  const holds = (permission: string) => limits?.holds(permission) !== false;
   const t = useT(STRINGS);
   const labels = t as Record<string, string>;
   const workspaceId = useWorkspaceId();
@@ -124,6 +132,8 @@ export function TeamInviteForm({ onCancel, onDone }: { onCancel: () => void; onD
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const data = options.data;
+  // "Admin" gives everything but the owner-only permissions: offered only to someone who holds all of that.
+  const canGiveAdmin = !data || data.permissions.filter((p) => !data.ownerOnly.includes(p)).every(holds);
   const seats = data?.seats;
   const full = Boolean(seats && seats.limit !== null && seats.used >= seats.limit);
   const fromSections = new Set((data?.sections ?? []).filter((s) => sections.includes(s.key)).flatMap((s) => s.permissions));
@@ -146,7 +156,13 @@ export function TeamInviteForm({ onCancel, onDone }: { onCancel: () => void; onD
     } catch (err) {
       const fields = getFieldErrors(err);
       setFieldErrors(fields);
-      if (err instanceof ApiError && err.code === "PLAN_LIMIT_REACHED") setFormError(t.seatsFull);
+      const above = roleAboveYoursMessage(err, limitText);
+      if (above) {
+        toast.error(above);
+        setFormError(above);
+      } else if (err instanceof ApiError && (err.code as string | undefined) === "ALREADY_MEMBER") setFormError(t.alreadyMember);
+      else if (err instanceof ApiError && (err.code as string | undefined) === "ALREADY_INVITED") setFormError(t.alreadyInvited);
+      else if (err instanceof ApiError && err.code === "PLAN_LIMIT_REACHED") setFormError(t.seatsFull);
       else if (!fields.email) setFormError(fields.permissions ?? fields.sections ?? errorMessage(err));
     } finally {
       setSaving(false);
@@ -180,8 +196,19 @@ export function TeamInviteForm({ onCancel, onDone }: { onCancel: () => void; onD
               { value: "partial", label: t.partial, hint: t.partialHint },
             ] as const
           ).map((option) => (
-            <label key={option.value} className="flex cursor-pointer items-start gap-2 rounded-md border border-line p-3">
-              <input type="radio" name="team-access" className="mt-1" checked={access === option.value} onChange={() => setAccess(option.value)} />
+            <label
+              key={option.value}
+              title={option.value === "admin" && !canGiveAdmin ? limitText.roleBeyond : undefined}
+              className="flex min-h-11 cursor-pointer items-start gap-3 rounded-[0.875rem] border border-line p-3 has-[:checked]:border-primary has-[:checked]:bg-primary-soft has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
+            >
+              <input
+                type="radio"
+                name="team-access"
+                className="mt-0.5 size-5 shrink-0 cursor-pointer accent-primary"
+                checked={access === option.value}
+                disabled={option.value === "admin" && !canGiveAdmin}
+                onChange={() => setAccess(option.value)}
+              />
               <span>
                 <span className="block text-sm font-medium text-ink">{option.label}</span>
                 <span className="block text-xs text-ink-soft">{option.hint}</span>
@@ -194,12 +221,20 @@ export function TeamInviteForm({ onCancel, onDone }: { onCancel: () => void; onD
           <fieldset>
             <legend className="mb-2 text-sm font-medium text-ink">{t.sections}</legend>
             <div className="grid gap-2 sm:grid-cols-2">
-              {data.sections.map((section) => (
-                <label key={section.key} className="flex cursor-pointer items-start gap-2 rounded-md border border-line p-2.5">
+              {data.sections.map((section) => {
+                // A section holding a permission the inviter lacks is not theirs to give.
+                const beyond = !section.permissions.every(holds);
+                return (
+                <label
+                  key={section.key}
+                  title={beyond ? limitText.roleBeyond : undefined}
+                  className="flex min-h-11 cursor-pointer items-start gap-3 rounded-[0.875rem] border border-line p-2.5 has-[:checked]:border-primary has-[:checked]:bg-primary-soft has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
+                >
                   <input
                     type="checkbox"
-                    className="mt-1"
-                    checked={sections.includes(section.key)}
+                    className="mt-0.5 size-5 shrink-0 cursor-pointer accent-primary"
+                    checked={!beyond && sections.includes(section.key)}
+                    disabled={beyond}
                     onChange={() => setSections((prev) => toggle(prev, section.key))}
                   />
                   <span className="min-w-0">
@@ -207,10 +242,11 @@ export function TeamInviteForm({ onCancel, onDone }: { onCancel: () => void; onD
                     <span className="block text-xs text-ink-soft">{labels[`s.${section.key}.hint`] ?? ""}</span>
                   </span>
                 </label>
-              ))}
+                );
+              })}
             </div>
 
-            <button type="button" className="mt-3 text-sm font-medium text-primary hover:underline" onClick={() => setAdvanced((v) => !v)}>
+            <button type="button" aria-expanded={advanced} className="mt-2 inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-primary" onClick={() => setAdvanced((v) => !v)}>
               {advanced ? t.hideAdvanced : t.advanced}
             </button>
             {advanced && (
@@ -219,12 +255,13 @@ export function TeamInviteForm({ onCancel, onDone }: { onCancel: () => void; onD
                   .filter((permission) => !data.ownerOnly.includes(permission))
                   .map((permission) => {
                     const implied = fromSections.has(permission);
+                    const beyond = !holds(permission);
                     return (
-                      <label key={permission} className="flex cursor-pointer items-center gap-2 text-xs text-ink">
+                      <label key={permission} title={beyond ? limitText.permissionBeyond : undefined} className="flex min-h-11 cursor-pointer items-center gap-2 text-xs text-ink has-[:disabled]:cursor-default sm:min-h-8">
                         <input
                           type="checkbox"
-                          checked={implied || extra.includes(permission)}
-                          disabled={implied}
+                          checked={!beyond && (implied || extra.includes(permission))}
+                          disabled={implied || beyond}
                           onChange={() => setExtra((prev) => toggle(prev, permission))}
                         />
                         <code dir="ltr" className="font-mono">
@@ -240,10 +277,10 @@ export function TeamInviteForm({ onCancel, onDone }: { onCancel: () => void; onD
         )}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
+          <Button type="button" variant="outline" className="min-h-11" onClick={onCancel} disabled={saving}>
             {t.cancel}
           </Button>
-          <Button type="submit" disabled={saving || full || email.trim() === ""}>
+          <Button type="submit" className="min-h-11" disabled={saving || full || email.trim() === ""}>
             {saving ? t.sending : t.send}
           </Button>
         </div>

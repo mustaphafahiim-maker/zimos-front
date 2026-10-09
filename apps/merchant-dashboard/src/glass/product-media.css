@@ -1,0 +1,241 @@
+/* Product photos (sortable grid), video and the variants grid — pages/catalog/components/ProductImagesSection.tsx,
+   ProductVideoSection.tsx, VariantsSection.tsx and pages/catalog/media/*, pages/catalog/variants/*.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   Blur is used once: the drop target, which floats over the section while files are held
+   over it. Tiles, cells and cards are in the page flow: translucent, lit along the rim, no blur.
+
+   Text: tinted panes are mixed over a near-solid fill (--lg-control-lit / --lg-overlay) and
+   written in the deeper shades the glass layer keeps for them (--lg-text-primary,
+   --lg-text-danger, --lg-ink-soft): 4.5:1 or better in both themes. What is written on a
+   photo (the menu disc, the play glyph, the upload veil) is white on black at 55-60%, which
+   holds 5:1 even over a white picture. */
+:root:not([data-glass="off"]) {
+  --pm-tint: color-mix(in srgb, var(--color-primary) 12%, var(--lg-control-lit));
+  --pm-tint-edge: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  --pm-tint-rim: inset 0 1px 0 0 rgb(255 255 255 / 0.6);
+
+  &.dark {
+    --pm-tint: color-mix(in srgb, var(--color-primary) 18%, var(--lg-control-lit));
+    --pm-tint-edge: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    --pm-tint-rim: inset 0 1px 0 0 rgb(255 255 255 / 0.12);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Tiles: a photo, a file on its way, a video. The pane shows only
+   * while the picture loads; the rim is drawn over the picture, so a
+   * photo reads as a pane of glass with something behind it.
+   * ---------------------------------------------------------------- */
+  .zimos-pm-tile {
+    background-color: var(--lg-control);
+    --tw-ring-color: var(--lg-edge);
+  }
+  .zimos-pm-tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.5),
+      inset 0 0 0 1px rgb(255 255 255 / 0.14);
+  }
+  &.dark .zimos-pm-tile::after {
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.18),
+      inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  }
+  /* Held: it lifts off the grid — the store's colour around it, the pop shadow and the brand glow under it. */
+  [data-slot="photo-tile"][data-dragging] {
+    box-shadow:
+      0 0 0 2px var(--lg-brand-solid),
+      var(--shadow-pop),
+      var(--lg-brand-glow);
+  }
+
+  /* «الصورة الرئيسية»: the shared selection fill, with a small shadow so it stands off any photo. */
+  .zimos-pm-cover {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.28),
+      0 2px 8px -2px rgb(0 0 0 / 0.4);
+  }
+
+  /* «…» on a photo and the play glyph: dark discs, lit on top. No blur — a phone shows twenty of them. */
+  .zimos-item-menu[data-tone="photo"],
+  .zimos-pm-play {
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.25),
+      0 1px 4px rgb(0 0 0 / 0.3);
+  }
+
+  /* «ارفع صور» / «ارفع فيديو»: a small dashed pane that lights up in the store's colour. */
+  .zimos-pm-add {
+    background-color: var(--lg-control);
+    border-color: color-mix(in srgb, var(--color-ink) 28%, transparent);
+    color: var(--lg-ink-soft);
+  }
+  @media (hover: hover) {
+    .zimos-pm-add:hover {
+      background-color: var(--lg-control-lit);
+      border-color: var(--lg-brand-solid);
+      color: var(--lg-text-primary);
+    }
+  }
+  .zimos-pm-add:has(:focus-visible) {
+    background-color: var(--lg-control-lit);
+    border-color: var(--lg-brand-solid);
+    color: var(--lg-text-primary);
+  }
+
+  /* A file that did not upload: the danger tint over a near-solid fill, so its words hold on any preview. */
+  .zimos-pm-error {
+    background-color: color-mix(in srgb, var(--color-danger) 12%, var(--lg-overlay));
+    color: var(--lg-text-danger);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The drop target: an overlay pane over the section while files are
+   * held over it — frosted (the grid is underneath), tinted with the
+   * store's colour, a dashed brand edge. The blur exists only while it
+   * is shown.
+   * ---------------------------------------------------------------- */
+  .zimos-pm-drop {
+    background-color: color-mix(in srgb, var(--color-primary) 12%, var(--lg-overlay));
+    border-color: var(--lg-brand-solid);
+    color: var(--lg-text-primary);
+    box-shadow: var(--lg-rim-line), var(--lg-brand-glow);
+  }
+  .zimos-pm-drop[data-over] {
+    -webkit-backdrop-filter: var(--lg-blur-overlay);
+    backdrop-filter: var(--lg-blur-overlay);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The variants grid: a lighter sheet lying in the group's pane
+   * (liquid-glass.css already gives a raised box that holds a table
+   * its fill, tinted head and hairlines). Here: its rim, and the cells.
+   * ---------------------------------------------------------------- */
+  .zimos-variant-grid,
+  .zimos-variant-bulk {
+    --tw-inset-shadow: var(--lg-rim-line);
+    --tw-ring-color: var(--lg-edge);
+  }
+  .zimos-variant-empty {
+    background-color: var(--lg-control);
+    border-color: color-mix(in srgb, var(--color-ink) 24%, transparent);
+  }
+  .zimos-variant-card .border-line {
+    border-color: var(--lg-hairline);
+  }
+
+  /* A figure that can be changed in place. Under the pointer it becomes a lit well, like a field;
+     while its pane is open it wears the brand ring, so the eye knows which cell is being edited. */
+  .zimos-variant-cell {
+    transition:
+      background-color var(--dur-fade) var(--ease-out),
+      box-shadow var(--dur-fade) var(--ease-out),
+      scale var(--dur-fade) var(--ease-out);
+  }
+  @media (hover: hover) {
+    .zimos-variant-cell:hover {
+      background-color: var(--lg-control-lit);
+      box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+    }
+  }
+  .zimos-variant-cell:focus-visible {
+    background-color: var(--lg-control-lit);
+  }
+  .zimos-variant-cell[data-popup-open] {
+    background-color: var(--lg-control-lit);
+    box-shadow:
+      0 0 0 2px var(--lg-brand-solid),
+      0 0 0 5px color-mix(in srgb, var(--lg-brand-solid) 18%, transparent);
+  }
+  /* Saving: the value is dimmed by the component; the cell goes quiet until the answer. */
+  .zimos-variant-cell[aria-busy="true"] {
+    background-color: transparent;
+    box-shadow: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .zimos-variant-cell {
+      transition: none;
+    }
+  }
+
+  /* The on / off switch: off, a sunken track; on, the shared selection fill with its glow. */
+  .zimos-variant-switch-track {
+    background-color: color-mix(in srgb, var(--color-ink) 28%, transparent);
+    box-shadow:
+      inset 0 1px 2px rgb(0 0 0 / 0.18),
+      0 0 0 1px var(--lg-edge);
+  }
+  .zimos-variant-switch-track[data-on] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.28),
+      var(--lg-brand-glow);
+  }
+  .zimos-variant-switch-thumb {
+    background-image: linear-gradient(180deg, #fff 0%, #eef1f7 100%);
+    box-shadow:
+      0 1px 3px rgb(0 0 0 / 0.28),
+      inset 0 1px 0 0 #fff;
+  }
+  @media (forced-colors: active) {
+    .zimos-variant-switch-track[data-on] {
+      background-color: Highlight;
+      background-image: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Inside the sheets (drawn outside the page, so the page rules do
+   * not reach them): the options well and its chips, the table of
+   * "edit all", its fill bar.
+   * ---------------------------------------------------------------- */
+  .zimos-option-well {
+    background-color: var(--lg-control-lit);
+    border-color: var(--lg-edge);
+  }
+  .zimos-option-chip,
+  .zimos-variant-fill {
+    background-color: var(--pm-tint);
+    box-shadow:
+      var(--pm-tint-rim),
+      inset 0 0 0 1px var(--pm-tint-edge);
+  }
+  .zimos-option-chip {
+    color: var(--lg-text-primary);
+  }
+  .zimos-variant-bulk {
+    background-color: var(--lg-control);
+  }
+  .zimos-variant-bulk thead > tr {
+    background-color: var(--lg-thead);
+  }
+  .zimos-variant-bulk :where(tr) {
+    border-color: var(--lg-hairline);
+  }
+  .zimos-variant-bulk tbody > tr[data-selected] {
+    background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  }
+  .zimos-variant-bulk tbody > tr[data-invalid] {
+    background-color: color-mix(in srgb, var(--color-danger) 13%, transparent);
+  }
+}
+
+/* The bar of a file on its way: it travels, because the upload reports no percentage. */
+@keyframes product-media-progress {
+  0% {
+    translate: -110% 0;
+  }
+  100% {
+    translate: 260% 0;
+  }
+}

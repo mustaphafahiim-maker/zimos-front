@@ -1,0 +1,153 @@
+/* «مستنيك دلوقتي» — the brand-gradient work queue — pages/home/today/WorkQueue.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables. */
+:root:not([data-glass="off"]) {
+  /* ---------------------------------------------------------------- *
+   * The one floating card of the home: the fill of the main button and
+   * the current menu row (--lg-brand-grad), with the ink that fill
+   * carries (--lg-on-brand: white on the light theme's deep brand, the
+   * page's dark ink on the dark theme's light brand).
+   *
+   * Everything drawn ON the card is mixed from currentColor, so a row is
+   * frost of the ink in either theme. Frost moves the ground TOWARD the
+   * ink, so the light card is first taken one step deeper (--hq-shade),
+   * or its rows would lose 4.5:1 at the plain-brand end of the gradient
+   * (white on #165dff is 5.19:1; under a 14% frost it is 4.1:1).
+   *
+   * Contrast, by arithmetic from the tokens (store brand #165dff), at
+   * the weakest point of the gradient:
+   *   light  card 7.6:1 · row sentence 5.6:1 · cost line (88% ink on a
+   *          row) 4.75:1 · count chip 5.4:1 · action pill (brand-dark on
+   *          white) 8.4:1
+   *   dark   card 7.0:1 · row sentence 5.4:1 · cost line 4.7:1 · count
+   *          chip 5.2:1 · action pill (ink on the pane colour) 15:1
+   *   late chip (dark ink on amber) 8.4:1 light, 10.4:1 dark.
+   * The corner pool (--hq-tint) is deeper than the card on light and
+   * lighter than it on dark, so it only ever adds contrast. Nothing here
+   * lightens the ground under the pointer: hover is the rim, not a wash.
+   * Change the shade, the frost or the 88% only together with that sum.
+   *
+   * No blur: the card lies in the page, nothing passes beneath it.
+   * ---------------------------------------------------------------- */
+  .zimos-queue {
+    --hq-shade: rgb(10 16 78 / 0.3);
+    --hq-tint: radial-gradient(78% 130% at 0% 100%, rgb(91 33 182 / 0.5), transparent 64%);
+    /* The card's own colour, for the ring that cuts the late dot out of its chip. */
+    --hq-ground: color-mix(in srgb, var(--lg-brand-solid) 70%, rgb(10 16 78));
+    color: var(--lg-on-brand);
+    background-color: var(--lg-brand-solid);
+    background-image: var(--hq-tint), linear-gradient(var(--hq-shade), var(--hq-shade)), var(--lg-brand-grad);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.3),
+      inset 0 0 0 1px rgb(255 255 255 / 0.07),
+      0 30px 52px -28px color-mix(in srgb, var(--lg-brand-solid) 88%, transparent),
+      0 12px 24px -16px color-mix(in srgb, var(--lg-brand-solid) 55%, transparent);
+  }
+  &.dark .zimos-queue {
+    --hq-shade: transparent;
+    --hq-tint: radial-gradient(78% 130% at 0% 100%, rgb(255 255 255 / 0.2), transparent 64%);
+    --hq-ground: var(--lg-brand-solid);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.55),
+      0 30px 52px -30px color-mix(in srgb, var(--lg-brand-solid) 70%, transparent);
+  }
+
+  /* The count beside the title: ink on a drop of frost. */
+  .zimos-queue-total {
+    border-color: transparent;
+    background-color: color-mix(in srgb, currentColor 16%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 22%, transparent);
+  }
+
+  /* A row: a frosted pill on the gradient, a hairline of the ink at its rim
+     and a line of light along its top edge. */
+  .zimos-queue-row {
+    border-color: color-mix(in srgb, currentColor 28%, transparent);
+    background-color: color-mix(in srgb, currentColor 14%, transparent);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.16);
+  }
+  &.dark .zimos-queue-row {
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.38);
+  }
+  @media (hover: hover) {
+    .zimos-queue-row:hover {
+      border-color: color-mix(in srgb, currentColor 62%, transparent);
+      box-shadow:
+        inset 0 1px 0 0 rgb(255 255 255 / 0.24),
+        0 14px 22px -16px rgb(6 10 48 / 0.7);
+    }
+    &.dark .zimos-queue-row:hover {
+      box-shadow:
+        inset 0 1px 0 0 rgb(255 255 255 / 0.5),
+        0 14px 22px -16px rgb(6 10 48 / 0.45);
+    }
+  }
+
+  /* The kind's icon: a rounder, brighter drop of the same frost. */
+  .zimos-queue-icon {
+    background-color: color-mix(in srgb, currentColor 16%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.24),
+      inset 0 0 0 1px color-mix(in srgb, currentColor 14%, transparent);
+  }
+  /* Late: an amber dot cut out of the chip by a ring of the card's colour. */
+  .zimos-queue-dot {
+    box-shadow: 0 0 0 2px var(--hq-ground);
+  }
+
+  /* The cost of waiting and the notes under the list: one step quieter than
+     the sentence. 88% of the ink, not less — see the sum above. */
+  .zimos-queue-cost,
+  .zimos-queue-note {
+    color: color-mix(in srgb, currentColor 88%, transparent);
+  }
+  /* The late age: solid amber with dark ink, lit from above. Inset light only —
+     the cost line clips at its edge (that is how a wrapped piece loses its «·»). */
+  .zimos-queue-late {
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.38), rgb(255 255 255 / 0) 62%);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.5),
+      inset 0 -1px 0 0 rgb(70 40 0 / 0.16);
+  }
+
+  /* The button of a row: white with the brand's deep text on light, the pane
+     colour with light text on dark (both set by the component's own classes).
+     Here it only gets its lift off the frost. */
+  .zimos-queue-action {
+    box-shadow:
+      inset 0 -1px 0 0 rgb(18 44 110 / 0.1),
+      0 8px 16px -10px rgb(6 10 48 / 0.6);
+  }
+  &.dark .zimos-queue-action {
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.1),
+      0 8px 16px -10px rgb(6 10 48 / 0.55);
+  }
+
+  /* «كمان ٣»: the same rim with no frost, so it reads as the quieter row. */
+  .zimos-queue-more {
+    border-color: color-mix(in srgb, currentColor 34%, transparent);
+  }
+  @media (hover: hover) {
+    .zimos-queue-more:hover {
+      border-color: color-mix(in srgb, currentColor 62%, transparent);
+      background-color: color-mix(in srgb, currentColor 8%, transparent);
+    }
+  }
+
+  /* Rows settle in one after another, once, when the list first arrives. */
+  @media (prefers-reduced-motion: no-preference) {
+    .zimos-queue [data-enter] > li {
+      animation: home-queue-settle 320ms var(--ease-out) backwards;
+      animation-delay: calc(var(--hq-i, 0) * 40ms);
+    }
+  }
+}
+
+@keyframes home-queue-settle {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}

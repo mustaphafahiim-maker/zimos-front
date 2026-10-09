@@ -13,6 +13,14 @@ import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import { formatDateTime, formatNumber, formatRelative } from "@/lib/format";
 
+/** A plain name for the actions that have one; the rest show their key only. */
+const ACTION_LABELS: Record<string, string> = {
+  "user.suspend": "Account suspended",
+  "user.unsuspend": "Suspension lifted",
+  "user.delete": "Account deleted",
+  "subscription.manual_pricing_expired": "Manual pricing period ended",
+};
+
 /** Rows revealed per "Load more" click, within the fetched window. */
 const PAGE = 25;
 
@@ -179,6 +187,7 @@ export function AuditLogPage() {
             <option value="all">All actions</option>
             {actions.map((a) => (
               <option key={a} value={a}>
+                {ACTION_LABELS[a] ? `${ACTION_LABELS[a]} — ` : ""}
                 {a}
               </option>
             ))}
@@ -262,6 +271,7 @@ export function AuditLogPage() {
                         {r.actorEmail && <span className="text-xs text-ink-soft">{r.actorEmail}</span>}
                       </Td>
                       <Td>
+                        {ACTION_LABELS[r.action] && <span className="block">{ACTION_LABELS[r.action]}</span>}
                         <Mono>{r.action}</Mono>
                       </Td>
                       <Td>

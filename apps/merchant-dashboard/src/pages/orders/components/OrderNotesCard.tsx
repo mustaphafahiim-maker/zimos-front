@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Trash2 } from "lucide-react";
+import { IconDelete } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import { ordersAddNote, ordersDeleteNote, ordersListNotes, type Order } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -160,7 +160,7 @@ export function OrderNotesCard({ order, onChanged }: { order: Order; onChanged: 
                     title={t.delete}
                     className="ms-auto inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-ink-soft hover:text-danger focus-visible:outline-2 focus-visible:outline-primary"
                   >
-                    <Trash2 className="size-4" aria-hidden />
+                    <IconDelete className="size-4" aria-hidden />
                   </button>
                 </div>
                 <p className="mt-1 whitespace-pre-line text-sm text-ink">{note.body}</p>

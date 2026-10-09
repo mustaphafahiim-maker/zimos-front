@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download } from "lucide-react";
+import { IconDownload } from "@/components/icons";
 import { Alert, Button, Spinner } from "@store-builder/ui";
 import {
   exportFileStartOrders,
@@ -37,6 +37,9 @@ const STRINGS = {
     limit: "A file holds up to {max} orders.",
     cancel: "Cancel",
     download: "Download CSV",
+    downloadExcel: "Download Excel",
+    fileFormat: "File format",
+    excel: "Excel (.xlsx)",
     downloading: "Preparing…",
     done: "Your orders file was downloaded.",
     prepare: "Prepare file",
@@ -51,29 +54,32 @@ const STRINGS = {
     layoutSaved: "Layout saved.",
   },
   ar: {
-    open: "تصدير",
-    title: "تصدير الطلبات",
-    description: "ملف CSV يفتح في Excel أو Google Sheets.",
-    scopeFiltered: "يصدّر الطلبات المطابقة للبحث والتواريخ والتبويب الحالي.",
-    scopeSelected: "يصدّر الطلبات المحددة ({count}).",
-    scopeAll: "يصدّر كل طلبات المتجر. اختار تبويبًا أو تواريخ أولًا لتحديد جزء منها.",
-    masked: "أرقام الموبايل بتظهر مخفية جزئيًا في الملف إلا لو دورك يسمح بشوف أرقام العملاء كاملة.",
+    open: "صدّر",
+    title: "صدّر الأوردرات",
+    description: "ملف CSV بيتفتح في Excel أو Google Sheets.",
+    scopeFiltered: "هيصدّر الأوردرات اللي ظاهرة بالبحث والتواريخ والمرحلة اللي إنت عليها.",
+    scopeSelected: "هيصدّر الأوردرات اللي حدّدتها ({count}).",
+    scopeAll: "هيصدّر كل أوردرات المتجر. اختار مرحلة أو تواريخ الأول لو عايز جزء منها.",
+    masked: "أرقام الموبايل بتطلع مخفي جزء منها في الملف، إلا لو دورك يسمح يشوف أرقام العملاء كاملة.",
     rowPer: "الصفوف",
-    rowPerOrder: "صف لكل طلب",
+    rowPerOrder: "صف لكل أوردر",
     rowPerItem: "صف لكل منتج",
     columns: "الأعمدة",
-    selectAll: "تحديد الكل",
-    reset: "الرجوع للافتراضي",
+    selectAll: "علّم الكل",
+    reset: "رجّع الافتراضي",
     perItemGroup: "لكل منتج",
-    none: "اختار عمودًا واحدًا على الأقل.",
-    limit: "الملف يحمل حتى {max} طلب.",
+    none: "اختار عمود واحد على الأقل.",
+    limit: "الملف بياخد لحد {max} أوردر.",
     cancel: "إلغاء",
-    download: "تنزيل CSV",
+    download: "نزّل CSV",
+    downloadExcel: "نزّل Excel",
+    fileFormat: "صيغة الملف",
+    excel: "Excel (.xlsx)",
     downloading: "بنجهّز…",
-    done: "تم تنزيل ملف الطلبات.",
-    prepare: "تجهيز الملف",
-    background: "يُجهَّز الملف في الخلفية: يصلك الرابط في الإشعارات وبالبريد، ويعمل لمدة 7 أيام.",
-    queued: "بنجهّز الملف. سيصلك إشعار بالرابط.",
+    done: "ملف الأوردرات نزل.",
+    prepare: "جهّز الملف",
+    background: "الملف بيتجهّز في الخلفية: اللينك هيوصلك في الإشعارات وعلى الإيميل، وبيفضل شغّال ٧ أيام.",
+    queued: "بنجهّز الملف. هيوصلك إشعار باللينك.",
     layout: "الشكل",
     ownColumns: "أعمدتك (اختارها تحت)",
     newLayout: "قالب شركة شحن جديد",
@@ -121,7 +127,7 @@ export function ExportOrders({
   return (
     <>
       <Button variant="outline" size={size} className={size ? "min-h-11" : undefined} onClick={() => setOpen(true)}>
-        <Download className="size-4" aria-hidden />
+        <IconDownload className="size-4" aria-hidden />
         {label ?? t.open}
       </Button>
       {open && <ExportOrdersDialog filters={filters} onClose={() => setOpen(false)} />}
@@ -129,7 +135,7 @@ export function ExportOrders({
   );
 }
 
-function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters; onClose: () => void }) {
+export function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters; onClose: () => void }) {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const { locale } = useLocale();
@@ -247,7 +253,7 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
             {t.cancel}
           </Button>
           <Button onClick={download} disabled={busy || !catalogue || editing !== null || (!preset && chosen === 0)}>
-            {busy ? t.downloading : background ? t.prepare : format === "xlsx" ? t.download.replace("CSV", "Excel") : t.download}
+            {busy ? t.downloading : background ? t.prepare : format === "xlsx" ? t.downloadExcel : t.download}
           </Button>
         </>
       }
@@ -321,12 +327,12 @@ function ExportOrdersDialog({ filters, onClose }: { filters: ExportOrdersFilters
           </div>
 
           <fieldset>
-            <legend className="mb-2 text-sm font-medium text-ink">{locale === "ar" ? "صيغة الملف" : "File format"}</legend>
+            <legend className="mb-2 text-sm font-medium text-ink">{t.fileFormat}</legend>
             <div className="flex flex-wrap gap-x-6 gap-y-2">
               {(["csv", "xlsx"] as const).map((kind) => (
                 <label key={kind} className="flex cursor-pointer items-center gap-2 text-sm text-ink">
                   <input type="radio" name="export-format" checked={format === kind} onChange={() => setFormat(kind)} />
-                  {kind === "csv" ? "CSV" : "Excel (.xlsx)"}
+                  {kind === "csv" ? "CSV" : t.excel}
                 </label>
               ))}
             </div>

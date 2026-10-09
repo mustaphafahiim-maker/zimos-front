@@ -10,7 +10,7 @@ export const GIFT_CARD_STRINGS = {
   en: {
     // list
     title: "Gift cards",
-    description: "Cards with a balance your customers spend at checkout, with cash on delivery.",
+    description: "Cards with a balance your customers spend at checkout, with cash on delivery or an online payment.",
     issue: "Issue gift card",
     searchLabel: "Search gift cards",
     searchPlaceholder: "Full code, last 4 or email",
@@ -105,6 +105,10 @@ export const GIFT_CARD_STRINGS = {
     kind_redeem: "Spent on an order",
     kind_refund: "Returned from an order",
     kind_adjust: "Adjusted by your team",
+    // With an online payment (handoff 201): held at checkout, then spent or given back.
+    kind_hold: "Held for an order",
+    kind_hold_released: "Hold released",
+    kind_release: "Returned to card",
     colWhen: "When",
     colWhat: "What",
     colChange: "Change",
@@ -162,7 +166,7 @@ export const GIFT_CARD_STRINGS = {
   ar: {
     // list
     title: "كروت الهدايا",
-    description: "كروت برصيد العميل بيخصمه من الأوردر في صفحة الدفع، مع الدفع عند الاستلام.",
+    description: "كروت برصيد العميل بيخصمه من الأوردر في صفحة الدفع، مع الدفع عند الاستلام أو الدفع أونلاين.",
     issue: "اعمل كارت هدية",
     searchLabel: "دوّر في كروت الهدايا",
     searchPlaceholder: "الكود كامل أو آخر ٤ حروف أو الإيميل",
@@ -257,6 +261,9 @@ export const GIFT_CARD_STRINGS = {
     kind_redeem: "اتصرف في أوردر",
     kind_refund: "رجع من أوردر",
     kind_adjust: "تعديل من فريقك",
+    kind_hold: "محجوز لطلب",
+    kind_hold_released: "اتفك الحجز",
+    kind_release: "رجع للكارت",
     colWhen: "إمتى",
     colWhat: "إيه اللي حصل",
     colChange: "التغيير",
@@ -336,6 +343,9 @@ export const KIND_KEY: Record<GiftCardTransactionKind, keyof GiftCardStrings> = 
   redeem: "kind_redeem",
   refund: "kind_refund",
   adjust: "kind_adjust",
+  hold: "kind_hold",
+  hold_released: "kind_hold_released",
+  release: "kind_release",
 };
 
 /** "2026-12-31" (a date field) → the end of that day on this device, as ISO; "" → null. */

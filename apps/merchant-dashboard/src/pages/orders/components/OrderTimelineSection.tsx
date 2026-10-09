@@ -11,10 +11,13 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { formatDateTime, humanize } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
-import { Section } from "@/components/Section";
+import { CardFrame } from "@/pages/orders/detail/CardFrame";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { STAGE_TONE, useOrderLabels } from "../orderLabels";
+// Whether a customer email or SMS really arrived: the chip on a message and the provider's report (handoff 386).
+import { MessageStatusChip, UndeliveredLine } from "./MessageDelivery";
+import { disputeTimelineDetail } from "@/pages/payments/ledger/disputeText";
 
 const STRINGS = {
   en: {
@@ -44,6 +47,7 @@ const STRINGS = {
     webhook_failed: "failed, will retry",
     webhook_exhausted: "failed",
     courier_update: "{carrier} update",
+    courier_failed: "Delivery attempt failed",
     message_email: "Email to the customer",
     message_sms: "SMS to the customer",
     message_whatsapp: "WhatsApp to the customer",
@@ -63,6 +67,14 @@ const STRINGS = {
     "a_order.switched_to_cod": "Switched to cash on delivery",
     "a_order.reopened_after_payment": "Reopened after a late payment",
     "a_order.items_update": "Items edited",
+    "a_order.payment_dispute": "Payment dispute",
+    "a_order.price_change": "Prices changed by staff",
+    "a_order.packed": "Order packed",
+    "a_order.on_account_payment": "On-account payment recorded",
+    "a_order.address_changed_by_customer": "The customer changed the address",
+    "a_order.delivery_slot_change": "Delivery time changed",
+    "a_pickup.ready": "Marked ready for pickup",
+    "a_pickup.collected": "Handed over to the customer",
     "a_shipment.create": "Shipment created",
     "a_shipment.update": "Shipment updated",
     "a_refund.create": "Refund recorded",
@@ -101,6 +113,7 @@ const STRINGS = {
     webhook_failed: "فشل وسيُعاد",
     webhook_exhausted: "فشل",
     courier_update: "تحديث من {carrier}",
+    courier_failed: "محاولة تسليم فاشلة",
     message_email: "إيميل للعميل",
     message_sms: "رسالة SMS للعميل",
     message_whatsapp: "واتساب للعميل",
@@ -120,6 +133,14 @@ const STRINGS = {
     "a_order.switched_to_cod": "اتحوّل للدفع عند الاستلام",
     "a_order.reopened_after_payment": "أُعيد فتحه بعد دفع متأخر",
     "a_order.items_update": "تعديل المنتجات",
+    "a_order.payment_dispute": "نزاع على الدفعة",
+    "a_order.price_change": "تعديل أسعار من الفريق",
+    "a_order.packed": "الأوردر اتغلّف",
+    "a_order.on_account_payment": "اتسجّلت دفعة آجل",
+    "a_order.address_changed_by_customer": "العميل غيّر العنوان",
+    "a_order.delivery_slot_change": "اتغيّر ميعاد التوصيل",
+    "a_pickup.ready": "اتعلّم جاهز للاستلام",
+    "a_pickup.collected": "اتسلّم للعميل",
     "a_shipment.create": "تم إنشاء شحنة",
     "a_shipment.update": "تم تحديث الشحنة",
     "a_refund.create": "تم تسجيل استرداد",
@@ -162,7 +183,7 @@ function auditDetail(t: Strings, after: Record<string, unknown> | null): string 
  * The order's whole story, newest first. `refreshKey` changes when the order
  * is reloaded, so anything done on the page shows up at once.
  */
-export function OrderTimelineSection({ order, refreshKey }: { order: Order; refreshKey: string }) {
+export function OrderTimelineSection({ order, refreshKey, frameless }: { order: Order; refreshKey: string; /** Inside a folding section of the order page: no card and no title of its own. */ frameless?: boolean }) {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS) as Strings;
   const labels = useOrderLabels();
@@ -219,7 +240,7 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
         <>
           <div className="flex flex-wrap items-center gap-1.5 text-sm">
             <span className="font-medium text-ink">{fmt(t.courier_update, { carrier: providerName(String(d.carrierCode ?? "")) })}</span>
-            {status && <StatusBadge value={status} tone="neutral" text={labels.shipment(status)} />}
+            {status && <StatusBadge value={status} tone="neutral" text={status === "failed" ? t.courier_failed : labels.shipment(status)} />}
           </div>
           {typeof d.description === "string" && d.description && (
             <p className="mt-1 text-sm text-ink-soft">
@@ -229,14 +250,29 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
         </>
       );
     }
+    // The provider reported back on a message: bounced, not delivered, marked as spam (handoff 386).
+    if ((event.type as string) === "message_status") {
+      return (
+        <>
+          <p className="text-sm">
+            <UndeliveredLine channel={d.channel} status={d.status} reason={d.reason} />
+          </p>
+          {typeof d.subject === "string" && d.subject && (
+            <p className="mt-1 text-sm text-ink">
+              <bdi>{d.subject}</bdi>
+            </p>
+          )}
+        </>
+      );
+    }
     if (event.type === "message") {
       const channel = lookup(t, `message_${String(d.channel)}`) ?? humanize(String(d.channel));
-      const status = lookup(t, `message_${String(d.status)}`) ?? humanize(String(d.status));
       const failed = d.status === "failed";
       return (
         <>
-          <p className="text-sm font-medium text-ink">
-            {channel} — <span className={failed ? "text-danger" : undefined}>{status}</span>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-ink">
+            {channel}
+            <MessageStatusChip status={String(d.status)} reason={typeof d.statusReason === "string" ? d.statusReason : null} />
           </p>
           {typeof d.subject === "string" && d.subject && (
             <p className="mt-1 text-sm text-ink">
@@ -260,7 +296,8 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
       );
     }
     const action = String(d.action);
-    const detail = auditDetail(t, (d.after as Record<string, unknown> | null) ?? null);
+    // Handoff 377: a dispute row says the status it moved to.
+    const detail = disputeTimelineDetail(action, d.after) ?? auditDetail(t, (d.after as Record<string, unknown> | null) ?? null);
     return (
       <>
         <p className="text-sm font-medium text-ink">{lookup(t, `a_${action}`) ?? humanize(action.replace(/\./g, " "))}</p>
@@ -270,7 +307,7 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
   }
 
   return (
-    <Section title={t.title} description={t.description}>
+    <CardFrame frameless={frameless} title={t.title} description={t.description}>
       <DataState
         loading={timeline.loading && !timeline.data}
         error={timeline.error}
@@ -295,6 +332,6 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
           ))}
         </ol>
       </DataState>
-    </Section>
+    </CardFrame>
   );
 }

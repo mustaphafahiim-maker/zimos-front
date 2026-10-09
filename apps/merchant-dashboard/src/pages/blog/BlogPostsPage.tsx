@@ -1,55 +1,58 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ExternalLink, FolderTree, Newspaper, Pencil, Plus, Search, Trash2 } from "lucide-react";
-import { Button, Input } from "@store-builder/ui";
+import { useSearchParams } from "react-router-dom";
+import { Button, cn } from "@store-builder/ui";
 import {
   blogCategoriesList,
   blogPostDelete,
   blogPostsList,
   type BlogCategory,
   type BlogPostListItem,
+  type BlogPostPage,
   type BlogPostState,
 } from "@store-builder/api-client";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import type { ContextMenuItem } from "@/components/ContextMenu";
+import { DataState } from "@/components/DataState";
+import { EmptyState } from "@/components/EmptyState";
+import { IconBlog, IconDelete, IconEdit, IconExternal, IconPlus, IconSearch, IconTree } from "@/components/icons";
+import { ChipRow, FilterChoice, FilterGroup, FilterSheet, ListSkeleton, ListToolbar, type ChipItem } from "@/components/list";
+import { LoadMore } from "@/components/LoadMore";
+import { PageHeader } from "@/components/PageHeader";
+import { useToast } from "@/components/Toast";
+import { ViewLink } from "@/components/ViewLink";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { apiClient } from "@/lib/apiClient";
-import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { formatDate } from "@/lib/format";
 import { pluralOf } from "@/lib/plural";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
-import { PageHeader } from "@/components/PageHeader";
-import { DataState } from "@/components/DataState";
-import { DataTable, type Column } from "@/components/DataTable";
-import { EmptyState } from "@/components/EmptyState";
-import { FilterTabs } from "@/components/FilterTabs";
-import { LoadMore } from "@/components/LoadMore";
-import { Select } from "@/components/Select";
-import { StatusBadge } from "@/components/StatusBadge";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { useToast } from "@/components/Toast";
-import { BLOG_WORDS, STATE_TONE } from "./blogStrings";
+import { useAsync } from "@/lib/useAsync";
+import { useCachedAsync } from "@/lib/useCachedAsync";
+import { useViewNavigate } from "@/lib/viewTransition";
+import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { ItemMenu } from "@/pages/catalog/media/ItemMenu";
+import { ActiveFilters } from "@/pages/returns/rowkit/ActiveFilters";
+import { DeskList } from "@/pages/returns/rowkit/DeskList";
+import { useIsCompact, useIsPhone } from "@/pages/returns/rowkit/useScreen";
+import { BlogPostRow, POST_COLUMNS } from "./BlogPostRow";
+import { BLOG_WORDS } from "./blogStrings";
 
 const STRINGS = {
   en: {
     description: "Write posts that bring shoppers from Google and answer their questions before they order.",
-    openBlog: "Open the blog",
+    tools: "Tools",
+    openBlog: "Open the blog in your store",
     all: "All",
-    tabs: "Show posts",
-    search: "Search posts by title",
+    tabs: "Posts by status",
+    search: "Search the posts",
+    searchPlaceholder: "Search by title",
     category: "Category",
-    allCategories: "All categories",
+    chipCategory: "Category: {name}",
     post: "Post",
     state: "Status",
     date: "Date",
-    noCategory: "No category",
-    actions: "Actions",
     edit: "Edit",
-    editAria: "Edit “{title}”",
     view: "View in store",
-    viewAria: "View “{title}” in the store",
     remove: "Delete",
-    removeAria: "Delete “{title}”",
     deleteTitle: "Delete “{title}”?",
     deleteBody: "The post leaves your store and can't be brought back.",
     deleteConfirm: "Delete post",
@@ -66,32 +69,31 @@ const STRINGS = {
     noScheduledHint: "Pick a date and time when you publish a post, and it goes live by itself.",
     showAll: "Show all posts",
     untitled: "Untitled post",
+    show_one: "Show 1 post",
+    show_other: "Show {n} posts",
   },
   ar: {
-    description: "اكتب مقالات تجيب زباين من جوجل وتجاوب على أسئلتهم قبل ما يطلبوا.",
-    openBlog: "افتح المدونة",
+    description: "اكتب مقالات تجيب عملاء من جوجل وتجاوب على أسئلتهم قبل ما يطلبوا.",
+    tools: "أدوات",
+    openBlog: "افتح المدونة في متجرك",
     all: "الكل",
-    tabs: "اعرض المقالات",
-    search: "دوّر بعنوان المقال",
+    tabs: "المقالات حسب الحالة",
+    search: "دوّر في المقالات",
+    searchPlaceholder: "دوّر بعنوان المقال",
     category: "التصنيف",
-    allCategories: "كل التصنيفات",
+    chipCategory: "التصنيف: {name}",
     post: "المقال",
     state: "الحالة",
     date: "التاريخ",
-    noCategory: "من غير تصنيف",
-    actions: "إجراءات",
     edit: "عدّل",
-    editAria: "عدّل «{title}»",
     view: "شوفه في المتجر",
-    viewAria: "شوف «{title}» في المتجر",
     remove: "امسح",
-    removeAria: "امسح «{title}»",
     deleteTitle: "تمسح «{title}»؟",
     deleteBody: "المقال هيختفي من المتجر ومش هينفع يرجع.",
     deleteConfirm: "امسح المقال",
     deleted: "المقال اتمسح",
     firstTitle: "اكتب أول مقال",
-    firstBody: "النصايح وطرق الاستخدام والأخبار بتجيب زباين من جوجل وبترجّعهم تاني. مقالاتك بتظهر في صفحة المدونة في متجرك.",
+    firstBody: "النصايح وطرق الاستخدام والأخبار بتجيب عملاء من جوجل وبترجّعهم تاني. مقالاتك بتظهر في صفحة المدونة في متجرك.",
     noMatch: "مفيش مقالات بالشكل ده",
     noMatchHint: "جرّب كلمة تانية أو تصنيف تاني أو تبويب تاني.",
     noDrafts: "مفيش مسودات",
@@ -102,63 +104,104 @@ const STRINGS = {
     noScheduledHint: "اختار يوم وساعة وانت بتنشر المقال، وهينزل لوحده.",
     showAll: "اعرض كل المقالات",
     untitled: "مقال من غير عنوان",
+    show_zero: "مفيش مقالات بالفلتر ده",
+    show_one: "اعرض مقال واحد",
+    show_two: "اعرض مقالين",
+    show_few: "اعرض {n} مقالات",
+    show_other: "اعرض {n} مقال",
   },
 } satisfies Messages;
 
 type Tab = BlogPostState | "all";
 const PAGE_SIZE = 20;
 
+function tabOf(value: string | null): Tab {
+  return value === "draft" || value === "published" || value === "scheduled" ? value : "all";
+}
+
+/** A page of posts with the filter it answers, so a page kept from another filter is never taken for this one's. */
+type Keyed = BlogPostPage<BlogPostListItem> & { key: string };
+
 /**
- * Store → Blog (handoff item 190, website.edit): the store's posts with
- * Drafts / Published / Scheduled tabs, a title search and a category
- * filter; each post opens its editor. Cards on a phone (DataTable).
+ * Store → Blog (handoff item 190, website.edit): the store's posts. Status
+ * chips, a title search and — in the Filters sheet — the category; a row opens
+ * the post's editor. `?state=` keeps the chosen chip, so coming back from a
+ * post lands where the merchant was, and the first page of a filter already
+ * seen shows at once.
  */
 export function BlogPostsPage() {
   const t = useT(STRINGS);
   const words = useT(BLOG_WORDS);
   const workspaceId = useWorkspaceId();
-  const navigate = useNavigate();
+  const navigate = useViewNavigate();
   const toast = useToast();
   const errorMessage = useErrorMessage();
+  const compact = useIsCompact();
+  const phone = useIsPhone();
 
-  const [tab, setTab] = useState<Tab>("all");
+  const [params, setParams] = useSearchParams();
+  const tab = tabOf(params.get("state"));
+  function selectTab(next: Tab) {
+    setParams(
+      (prev) => {
+        const out = new URLSearchParams(prev);
+        if (next === "all") out.delete("state");
+        else out.set("state", next);
+        return out;
+      },
+      { replace: true }
+    );
+  }
+
   const [query, setQuery] = useState("");
   const [q, setQ] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [more, setMore] = useState<BlogPostListItem[]>([]);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [removing, setRemoving] = useState<BlogPostListItem | null>(null);
+  const [removing, setRemoving] = useState<{ post: BlogPostListItem; open: boolean } | null>(null);
 
+  // The request waits for the typing to pause; the field itself never does.
   useEffect(() => {
     const timer = window.setTimeout(() => setQ(query.trim()), 300);
     return () => window.clearTimeout(timer);
   }, [query]);
 
   const categories = useAsync<BlogCategory[]>(() => blogCategoriesList(apiClient, workspaceId), [workspaceId]);
-  const list = useAsync(async () => {
-    const result = await blogPostsList(apiClient, workspaceId, {
-      state: tab === "all" ? undefined : tab,
-      categoryId: categoryId || undefined,
-      q: q || undefined,
-      page: 1,
-      limit: PAGE_SIZE,
-    });
-    return result;
-  }, [workspaceId, tab, categoryId, q]);
+  const key = `blog-posts:${workspaceId}:${tab}:${categoryId}:${q}`;
+  const list = useCachedAsync<Keyed>(
+    key,
+    async () => {
+      const result = await blogPostsList(apiClient, workspaceId, {
+        state: tab === "all" ? undefined : tab,
+        categoryId: categoryId || undefined,
+        q: q || undefined,
+        page: 1,
+        limit: PAGE_SIZE,
+      });
+      return { ...result, key };
+    },
+    [workspaceId, tab, categoryId, q]
+  );
   // A new filter starts again from its first page.
   useEffect(() => {
     setMore([]);
     setPage(1);
   }, [workspaceId, tab, categoryId, q]);
 
-  const rows = [...(list.data?.posts ?? []), ...more];
-  const total = list.data?.total ?? 0;
+  // This filter's own answer; until it lands, the rows of the filter before stay on screen, dimmed.
+  const current = list.data && list.data.key === key ? list.data : null;
+  const waiting = current === null && list.data !== null && !list.error;
+  const shown = current ?? list.data;
+  const rows = [...(shown?.posts ?? []), ...(current ? more : [])];
+  const total = current?.total ?? 0;
   const filtered = tab !== "all" || Boolean(q) || Boolean(categoryId);
   // A store with no posts yet sees the first-post card alone, without filters for nothing.
-  const nothingYet = Boolean(list.data) && !filtered && total === 0 && !query;
+  const nothingYet = current !== null && !filtered && total === 0 && !query;
   // A failure of the categories list hides the filter; the posts still show.
   const categoryList = categories.data ?? [];
+  const chosenCategory = categoryList.find((c) => c.id === categoryId);
 
   async function loadMore() {
     setLoadingMore(true);
@@ -181,109 +224,59 @@ export function BlogPostsPage() {
 
   async function remove(post: BlogPostListItem) {
     await blogPostDelete(apiClient, workspaceId, post.id);
-    setRemoving(null);
+    setRemoving((prev) => (prev ? { ...prev, open: false } : prev));
     toast.success(t.deleted);
     // Out of the list where it is, without reloading the pages already shown.
     setMore((prev) => prev.filter((p) => p.id !== post.id));
-    list.setData((prev) => ({ ...prev!, posts: prev!.posts.filter((p) => p.id !== post.id), total: Math.max(0, prev!.total - 1) }));
+    list.setData((prev) => {
+      const base = prev ?? { posts: [], total: 0, page: 1, limit: PAGE_SIZE, key };
+      return { ...base, posts: base.posts.filter((p) => p.id !== post.id), total: Math.max(0, base.total - 1) };
+    });
   }
 
   const clearFilters = () => {
-    setTab("all");
+    selectTab("all");
     setQuery("");
     setQ("");
     setCategoryId("");
   };
 
   const titleOf = (post: BlogPostListItem) => post.title || t.untitled;
-  const dateOf = (post: BlogPostListItem) =>
-    post.state === "published"
-      ? fmt(words.publishedOn, { date: formatDate(post.publishedAt) })
-      : post.state === "scheduled"
-        ? fmt(words.goesLive, { date: formatDate(post.publishedAt) })
-        : fmt(words.editedOn, { date: formatDate(post.updatedAt) });
 
-  const columns: Column<BlogPostListItem>[] = [
-    {
-      key: "post",
-      header: t.post,
-      cell: (post) => (
-        <Link to={`/blog/${post.id}`} className="flex min-w-0 items-center gap-3" onClick={(e) => e.stopPropagation()}>
-          {post.coverUrl ? (
-            <img src={post.coverUrl} alt="" loading="lazy" className="size-12 shrink-0 rounded-[var(--radius)] bg-paper-sunken object-cover ring-1 ring-line" />
-          ) : (
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius)] bg-paper-sunken text-ink-soft" aria-hidden>
-              <Newspaper className="size-5" />
-            </span>
-          )}
-          <span className="min-w-0">
-            <span className="block truncate font-medium text-ink" dir="auto">
-              {titleOf(post)}
-            </span>
-            {post.excerpt && (
-              <span className="mt-0.5 line-clamp-1 text-xs text-ink-soft" dir="auto">
-                {post.excerpt}
-              </span>
-            )}
-          </span>
-        </Link>
-      ),
-    },
-    {
-      key: "state",
-      header: t.state,
-      cell: (post) => <StatusBadge value={post.state} tone={STATE_TONE[post.state]} text={words[post.state]} />,
-    },
-    {
-      key: "category",
-      header: t.category,
-      cell: (post) => <span className={post.category ? "text-ink" : "text-ink-soft"}>{post.category?.name ?? t.noCategory}</span>,
-    },
-    {
-      key: "date",
-      header: t.date,
-      cell: (post) => <span className="whitespace-nowrap text-ink-soft">{dateOf(post)}</span>,
-    },
-    {
-      key: "actions",
-      header: <span className="sr-only">{t.actions}</span>,
-      align: "end",
-      cell: (post) => (
-        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button asChild size="sm" variant="ghost" className="min-h-11 md:min-h-8">
-            <Link to={`/blog/${post.id}`} aria-label={fmt(t.editAria, { title: titleOf(post) })}>
-              <Pencil className="size-4" aria-hidden />
-              {t.edit}
-            </Link>
-          </Button>
-          {post.state === "published" && (
-            <Button asChild size="sm" variant="ghost" className="min-h-11 md:min-h-8">
-              <a
-                href={`${STOREFRONT_URL}/store/${workspaceId}/blog/${encodeURIComponent(post.slug)}`}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={fmt(t.viewAria, { title: titleOf(post) })}
-                title={t.view}
-              >
-                <ExternalLink className="size-4" aria-hidden />
-              </a>
-            </Button>
-          )}
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="min-h-11 min-w-11 text-ink-soft hover:bg-danger-soft hover:text-danger md:min-h-8 md:min-w-8"
-            aria-label={fmt(t.removeAria, { title: titleOf(post) })}
-            title={t.remove}
-            onClick={() => setRemoving(post)}
-          >
-            <Trash2 className="size-4" aria-hidden />
-          </Button>
-        </div>
-      ),
-    },
+  function menuFor(post: BlogPostListItem): ContextMenuItem[] {
+    const items: ContextMenuItem[] = [{ id: "edit", label: t.edit, icon: IconEdit, onSelect: () => navigate(`/blog/${post.id}`) }];
+    if (post.state === "published") {
+      items.push({
+        id: "view",
+        label: t.view,
+        icon: IconExternal,
+        onSelect: () => window.open(`${STOREFRONT_URL}/store/${workspaceId}/blog/${encodeURIComponent(post.slug)}`, "_blank", "noopener,noreferrer"),
+      });
+    }
+    items.push({ id: "delete", label: t.remove, icon: IconDelete, destructive: true, separatorBefore: true, onSelect: () => setRemoving({ post, open: true }) });
+    return items;
+  }
+
+  const tools: ContextMenuItem[] = [
+    { id: "categories", label: words.categories, icon: IconTree, onSelect: () => navigate("/blog/categories") },
+    { id: "open", label: t.openBlog, icon: IconExternal, onSelect: () => window.open(`${STOREFRONT_URL}/store/${workspaceId}/blog`, "_blank", "noopener,noreferrer") },
   ];
+
+  const chips: ChipItem<Tab>[] = [
+    { value: "all", label: t.all },
+    { value: "draft", label: words.draft },
+    { value: "published", label: words.published },
+    { value: "scheduled", label: words.scheduled },
+  ];
+
+  const newPost = (
+    <Button asChild className="min-h-11 rounded-full px-5">
+      <ViewLink to="/blog/new">
+        <IconPlus className="size-4" weight="bold" aria-hidden />
+        {words.newPost}
+      </ViewLink>
+    </Button>
+  );
 
   const emptyFiltered = (() => {
     if (q || categoryId) return { title: t.noMatch, hint: t.noMatchHint };
@@ -292,119 +285,105 @@ export function BlogPostsPage() {
     return { title: t.noScheduled, hint: t.noScheduledHint };
   })();
 
+  const lines = rows.map((post) => <BlogPostRow key={post.id} post={post} compact={compact} menu={menuFor(post)} />);
+
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-5xl">
       <PageHeader
         title={words.blog}
-        description={t.description}
-        actions={
-          <>
-            <Button asChild variant="ghost" className="min-h-11 md:min-h-10">
-              <a href={`${STOREFRONT_URL}/store/${workspaceId}/blog`} target="_blank" rel="noreferrer">
-                <ExternalLink className="size-4" aria-hidden />
-                {t.openBlog}
-              </a>
-            </Button>
-            <Button asChild variant="outline" className="min-h-11 md:min-h-10">
-              <Link to="/blog/categories">
-                <FolderTree className="size-4" aria-hidden />
-                {words.categories}
-              </Link>
-            </Button>
-            <Button asChild className="min-h-11 md:min-h-10">
-              <Link to="/blog/new">
-                <Plus className="size-4" aria-hidden />
-                {words.newPost}
-              </Link>
-            </Button>
-          </>
-        }
+        // A phone keeps the first screen for the posts: the sentence is for wider screens.
+        description={phone ? undefined : t.description}
+        actions={<ItemMenu items={tools} label={t.tools} />}
+        primaryAction={newPost}
       />
 
-      {/* No filters over nothing: a store without posts yet, or a first load that failed (error / no permission). */}
-      <div className={nothingYet || (list.error && !list.data) ? "hidden" : "mb-4 space-y-3"}>
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          <FilterTabs
-            label={t.tabs}
-            value={tab}
-            onChange={setTab}
-            className="flex-nowrap"
-            buttonClassName="min-h-11 whitespace-nowrap md:min-h-0"
-            tabs={[
-              { value: "all", label: t.all },
-              { value: "draft", label: words.draft },
-              { value: "published", label: words.published },
-              { value: "scheduled", label: words.scheduled },
-            ]}
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[12rem] flex-1">
-            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
-            <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.search} aria-label={t.search} className="ps-9" />
-          </div>
-          {categoryList.length > 0 && (
-            <Select aria-label={t.category} className="w-full sm:w-auto" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-              <option value="">{t.allCategories}</option>
-              {categoryList.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
+      <div className="flex flex-col gap-3">
+        {/* No filters over nothing: a store without posts yet, or a first load that failed (error / no permission). */}
+        {!nothingYet && !(list.error && !list.data) && (
+          <>
+            <ListToolbar
+              search={{ value: query, onChange: setQuery, placeholder: t.searchPlaceholder, label: t.search }}
+              filters={categoryList.length > 0 ? { count: categoryId ? 1 : 0, onOpen: () => setFiltersOpen(true) } : undefined}
+            />
+            <ChipRow items={chips} value={tab} onChange={selectTab} label={t.tabs} />
+            <ActiveFilters
+              filters={chosenCategory ? [{ id: "category", label: fmt(t.chipCategory, { name: chosenCategory.name }), onRemove: () => setCategoryId("") }] : []}
+              onClearAll={() => setCategoryId("")}
+            />
+          </>
+        )}
+
+        <DataState
+          loading={list.loading && !list.data}
+          error={list.data ? null : list.error}
+          onRetry={() => void list.refresh()}
+          skeleton={<ListSkeleton variant={compact ? "card" : "table"} rows={5} />}
+        >
+          {rows.length === 0 ? (
+            waiting ? (
+              <ListSkeleton variant={compact ? "card" : "table"} rows={3} />
+            ) : filtered ? (
+              <EmptyState
+                icon={<IconSearch aria-hidden />}
+                title={emptyFiltered.title}
+                description={emptyFiltered.hint}
+                action={
+                  <Button variant="outline" className="rounded-full px-5" onClick={clearFilters}>
+                    {t.showAll}
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyState icon={<IconBlog aria-hidden />} title={t.firstTitle} description={t.firstBody} action={newPost} />
+            )
+          ) : (
+            <div aria-busy={waiting || undefined} className={cn("transition-opacity duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none", waiting && "opacity-60")}>
+              {compact ? (
+                <ul aria-label={words.blog} className="flex flex-col gap-2.5">
+                  {lines}
+                </ul>
+              ) : (
+                <DeskList columns={POST_COLUMNS} label={words.blog} head={[{ label: t.post }, { label: t.state }, { label: t.category }, { label: t.date }, { label: "" }]}>
+                  {lines}
+                </DeskList>
+              )}
+              <LoadMore hasMore={current !== null && rows.length < total} loading={loadingMore} onClick={() => void loadMore()} />
+              {current !== null && (
+                <p className="pt-3 text-center text-xs text-ink-soft tabular-nums" role="status">
+                  {pluralOf(words, "posts", total)}
+                </p>
+              )}
+            </div>
           )}
-        </div>
+        </DataState>
       </div>
 
-      <DataState loading={list.loading && !list.data} error={list.error} onRetry={() => void list.refresh()}>
-        {rows.length === 0 ? (
-          filtered ? (
-            <EmptyState
-              icon={<Search aria-hidden />}
-              title={emptyFiltered.title}
-              description={emptyFiltered.hint}
-              action={
-                <Button variant="outline" className="min-h-11" onClick={clearFilters}>
-                  {t.showAll}
-                </Button>
-              }
-            />
-          ) : (
-            <EmptyState
-              icon={<Newspaper aria-hidden />}
-              title={t.firstTitle}
-              description={t.firstBody}
-              action={
-                <Button asChild className="min-h-11">
-                  <Link to="/blog/new">
-                    <Plus className="size-4" aria-hidden />
-                    {words.newPost}
-                  </Link>
-                </Button>
-              }
-            />
-          )
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-ink-soft" role="status">
-              {pluralOf(words, "posts", total)}
-            </p>
-            <div className="md:overflow-hidden md:rounded-[var(--radius-card)] md:bg-paper-raised md:shadow-[var(--shadow-card)] md:ring-1 md:ring-line">
-              <DataTable columns={columns} rows={rows} rowKey={(post) => post.id} onRowClick={(post) => navigate(`/blog/${post.id}`)} minWidth="44rem" />
-            </div>
-            <LoadMore hasMore={rows.length < total} loading={loadingMore} onClick={() => void loadMore()} />
-          </div>
-        )}
-      </DataState>
+      <FilterSheet
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        activeCount={categoryId ? 1 : 0}
+        onReset={() => setCategoryId("")}
+        applyLabel={pluralOf(t, "show", total)}
+      >
+        <FilterGroup label={t.category}>
+          <FilterChoice
+            label={t.category}
+            allowClear
+            value={categoryId || null}
+            onChange={(next) => setCategoryId(next ?? "")}
+            options={categoryList.map((c) => ({ value: c.id, label: c.name }))}
+          />
+        </FilterGroup>
+      </FilterSheet>
 
       <ConfirmDialog
-        open={removing !== null}
-        title={fmt(t.deleteTitle, { title: removing ? titleOf(removing) : "" })}
+        open={Boolean(removing?.open)}
+        title={fmt(t.deleteTitle, { title: removing ? titleOf(removing.post) : "" })}
         description={t.deleteBody}
         confirmLabel={t.deleteConfirm}
         destructive
-        onCancel={() => setRemoving(null)}
-        onConfirm={() => (removing ? remove(removing) : undefined)}
+        onCancel={() => setRemoving((prev) => (prev ? { ...prev, open: false } : prev))}
+        onConfirm={() => (removing ? remove(removing.post) : undefined)}
       />
     </div>
   );

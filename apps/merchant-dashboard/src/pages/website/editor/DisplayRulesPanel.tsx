@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ListFilter, Monitor, Smartphone, Tablet, X } from "lucide-react";
+import { IconClose, IconDesktop, IconFilter, IconPhoneDevice, IconTablet } from "@/components/icons";
 import { Button, Input, cn } from "@store-builder/ui";
 import {
   DISPLAY_DEVICES,
@@ -122,7 +122,7 @@ const STRINGS = {
 
 type T = (typeof STRINGS)["en"];
 
-const DEVICE_ICON: Record<DisplayDevice, typeof Monitor> = { mobile: Smartphone, tablet: Tablet, desktop: Monitor };
+const DEVICE_ICON: Record<DisplayDevice, typeof IconDesktop> = { mobile: IconPhoneDevice, tablet: IconTablet, desktop: IconDesktop };
 const UTM_LABEL: Record<DisplayUtmKey, "utmSource" | "utmMedium" | "utmCampaign"> = {
   source: "utmSource",
   medium: "utmMedium",
@@ -290,7 +290,7 @@ export function DisplayRulesChip({ element, onOpen }: { element: PageElement; on
   );
   const body = (
     <>
-      <ListFilter className="size-3.5 shrink-0" aria-hidden />
+      <IconFilter className="size-3.5 shrink-0" aria-hidden />
       <span className="min-w-0 truncate">{text}</span>
     </>
   );
@@ -316,7 +316,7 @@ export function DisplayRulesBadge({ element }: { element: PageElement }) {
       title={summarize(rules)}
       className="ms-2 inline-flex items-center gap-1 rounded-full bg-accent-soft px-1.5 py-px align-middle text-[11px] font-medium text-accent-dark"
     >
-      <ListFilter className="size-3" aria-hidden />
+      <IconFilter className="size-3" aria-hidden />
       {t.rules}
     </span>
   );
@@ -387,8 +387,8 @@ export function DisplayRulesPanel({
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <p className="text-sm font-medium text-ink">{t.title}</p>
-        <p className="text-xs text-ink-soft">{t.intro}</p>
+        <h3 className="text-[13px] font-semibold text-ink">{t.title}</h3>
+        <p className="text-xs leading-5 text-ink-soft">{t.intro}</p>
       </div>
 
       <fieldset className="space-y-2">
@@ -424,7 +424,7 @@ export function DisplayRulesPanel({
                 aria-pressed={on}
                 onClick={() => toggleDevice(device)}
                 className={cn(
-                  "inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full px-3 text-sm font-medium ring-1 ring-inset transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                  "inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full px-3 text-sm font-medium ring-1 ring-inset transition-colors duration-[var(--dur-fade)] ease-[var(--ease-out)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none pointer-coarse:min-h-11",
                   on ? "bg-primary-soft text-primary-dark ring-primary/40 dark:text-primary" : "text-ink-soft ring-line-strong hover:text-ink"
                 )}
               >
@@ -461,7 +461,7 @@ export function DisplayRulesPanel({
         {countryMode !== "all" && (
           <>
             {countryList.length > 0 && (
-              <ul className="flex flex-wrap gap-1.5">
+              <ul className="flex flex-wrap gap-2">
                 {countryList.map((code) => (
                   <li
                     key={code}
@@ -476,9 +476,9 @@ export function DisplayRulesPanel({
                         setCountries(countryMode, countryList.filter((c) => c !== code));
                       }}
                       aria-label={fmt(t.removeCountry, { name: countryName(code) })}
-                      className="inline-flex size-7 cursor-pointer items-center justify-center rounded-full hover:bg-paper-raised focus-visible:outline-2 focus-visible:outline-primary"
+                      className="relative inline-flex size-7 cursor-pointer items-center justify-center rounded-full before:absolute before:-inset-2 before:content-[''] hover:bg-paper-raised focus-visible:outline-2 focus-visible:outline-primary"
                     >
-                      <X className="size-3.5" aria-hidden />
+                      <IconClose className="size-3.5" aria-hidden />
                     </button>
                   </li>
                 ))}
@@ -578,7 +578,7 @@ function DateRow({
         />
         {value && (
           <Button type="button" size="icon-sm" variant="ghost" aria-label={clearLabel} title={clearLabel} onClick={() => onChange("")}>
-            <X className="size-4" aria-hidden />
+            <IconClose className="size-4" aria-hidden />
           </Button>
         )}
       </div>

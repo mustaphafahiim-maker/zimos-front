@@ -58,7 +58,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     // Auth is still resolving on a fresh page load — stay in the loading state
     // rather than briefly reporting "no workspaces" (which bounces deep links
     // and refreshes to the workspace picker).
-    if (status === "loading") {
+    // Same while the server is unreachable: the list is kept pending, so the
+    // moment the session is confirmed again the merchant lands back on their
+    // page instead of bouncing through the store picker on an empty list.
+    if (status === "loading" || status === "unreachable") {
       setLoading(true);
       return;
     }

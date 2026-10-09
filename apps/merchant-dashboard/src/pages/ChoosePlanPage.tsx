@@ -1,15 +1,18 @@
 import { useEffect, useId, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Alert, Button, Spinner } from "@store-builder/ui";
+import { Alert, Button } from "@store-builder/ui";
 import { isApiErrorCode, type PublicPlan } from "@store-builder/api-client";
+import { IconRefresh, IconWarning } from "@/components/icons";
 import { apiClient } from "@/lib/apiClient";
 import { useAuth } from "@/context/AuthContext";
-import { AuthBackdrop } from "@/components/AuthBackdrop";
-import { PlanPicker, type PlanChoice } from "@/components/plans/PlanPicker";
+import { SkeletonBar, StateMessage } from "@/components/DataState";
+import type { PlanChoice } from "@/components/plans/PlanPicker";
 import { TermsConsent } from "@/components/plans/TermsConsent";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { forgetPlanChoice, recallPlanChoice } from "@/lib/planChoice";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { AUTH_SUBMIT, AuthFooter, AuthHeading, AuthLinkButton, AuthShell } from "./AuthShell";
+import { PlanCards } from "./PlanCards";
 
 const STRINGS = {
   en: {
@@ -20,7 +23,8 @@ const STRINGS = {
     choose: "Choose a plan to continue.",
     planGone: "That plan is no longer available. Choose another one.",
     loading: "Loading plans…",
-    loadFailed: "We couldn't load the plans.",
+    loadFailed: "We couldn't load the plans",
+    loadFailedBody: "Check your connection and try again.",
     retry: "Try again",
     signOut: "Sign out",
     notNow: "Not you, or not now?",
@@ -33,12 +37,36 @@ const STRINGS = {
     choose: "اختار باقة عشان تكمّل.",
     planGone: "الباقة دي مبقتش متاحة. اختار باقة تانية.",
     loading: "بنحمّل الباقات…",
-    loadFailed: "معرفناش نحمّل الباقات.",
+    loadFailed: "معرفناش نحمّل الباقات",
+    loadFailedBody: "راجع النت وجرّب تاني.",
     retry: "جرّب تاني",
     signOut: "اخرج من الحساب",
     notNow: "مش إنت، أو مش دلوقتي؟",
   },
 } satisfies Messages;
+
+/** Two plan cards while the list loads: a name, a price and three lines, in the cards' own box. */
+function PlansSkeleton({ label }: { label: string }) {
+  return (
+    <div role="status" aria-live="polite" aria-busy="true">
+      <span className="sr-only">{label}</span>
+      <div aria-hidden className="space-y-3">
+        <SkeletonBar className="h-11 w-44" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[0, 1].map((card) => (
+            <div key={card} data-slot="plan-card" className="rounded-[1.25rem] border border-line bg-paper-raised p-4">
+              <SkeletonBar className="h-4 w-1/2" />
+              <SkeletonBar className="mt-4 h-6 w-2/3" />
+              <SkeletonBar className="mt-5 w-4/5" />
+              <SkeletonBar className="mt-3 w-3/5" />
+              <SkeletonBar className="mt-3 w-2/3" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * The step an account made through Google goes through while the server
@@ -105,62 +133,61 @@ export function ChoosePlanPage() {
   }
 
   return (
-    <div className="auth-glass">
-      <AuthBackdrop />
-      <div className="auth-glass-stage">
-        <div className="w-full max-w-xl">
-          <h1 id={headingId} className="font-display text-3xl font-medium text-ink">
-            {t.title}
-          </h1>
-          <p className="mt-2 text-sm text-ink-soft">{t.body}</p>
+    <AuthShell size="md">
+      <AuthHeading id={headingId} title={t.title}>
+        {t.body}
+      </AuthHeading>
 
-          {error && (
-            <Alert variant="danger" className="mt-4">
-              {error}
-            </Alert>
-          )}
-
-          <div className="mt-6">
-            {loadError ? (
-              <div className="space-y-3">
-                <Alert variant="danger">{t.loadFailed}</Alert>
-                <Button variant="outline" className="min-h-11" onClick={load}>
-                  {t.retry}
-                </Button>
-              </div>
-            ) : !plans ? (
-              <div className="flex items-center gap-2 text-sm text-ink-soft" role="status">
-                <Spinner className="size-4" /> {t.loading}
-              </div>
-            ) : (
-              <PlanPicker plans={plans} value={choice} onChange={setChoice} disabled={saving} labelledBy={headingId} />
-            )}
-          </div>
-
-          <div className="mt-6">
-            <TermsConsent
-              checked={acceptTerms}
-              onChange={(next) => {
-                setAcceptTerms(next);
-                if (next) setTermsError(false);
-              }}
-              showError={termsError}
-              disabled={saving}
-            />
-          </div>
-
-          <Button className="mt-6 min-h-11 w-full" onClick={() => void save()} disabled={saving || !plans}>
-            {saving ? t.saving : t.save}
-          </Button>
-          {/* A way out of this step (Google sign-ups land here first). */}
-          <p className="mt-4 text-center text-sm text-ink-soft">
-            {t.notNow}{" "}
-            <button type="button" onClick={() => logout()} className="min-h-11 cursor-pointer font-medium text-primary-dark hover:underline">
-              {t.signOut}
-            </button>
-          </p>
-        </div>
+      <div className="mt-5">
+        {loadError ? (
+          <StateMessage
+            role="alert"
+            tone="danger"
+            icon={<IconWarning aria-hidden />}
+            title={t.loadFailed}
+            description={t.loadFailedBody}
+            className="shadow-none"
+            action={
+              <Button variant="outline" className="min-h-11 rounded-full px-5" onClick={load}>
+                <IconRefresh weight="bold" className="size-4" aria-hidden />
+                {t.retry}
+              </Button>
+            }
+          />
+        ) : !plans ? (
+          <PlansSkeleton label={t.loading} />
+        ) : (
+          <PlanCards plans={plans} value={choice} onChange={setChoice} disabled={saving} labelledBy={headingId} />
+        )}
       </div>
-    </div>
+
+      {/* Said right over the two things it can be about: the plans above, the terms and the button below. */}
+      {error && (
+        <Alert variant="danger" className="mt-4">
+          {error}
+        </Alert>
+      )}
+
+      <div className="mt-5">
+        <TermsConsent
+          checked={acceptTerms}
+          onChange={(next) => {
+            setAcceptTerms(next);
+            if (next) setTermsError(false);
+          }}
+          showError={termsError}
+          disabled={saving}
+        />
+      </div>
+
+      <Button className={`mt-5 ${AUTH_SUBMIT}`} onClick={() => void save()} disabled={saving || !plans}>
+        {saving ? t.saving : t.save}
+      </Button>
+      {/* A way out of this step (Google sign-ups land here first). */}
+      <AuthFooter>
+        {t.notNow}
+        <AuthLinkButton onClick={() => logout()}>{t.signOut}</AuthLinkButton>
+      </AuthFooter>
+    </AuthShell>
   );
 }

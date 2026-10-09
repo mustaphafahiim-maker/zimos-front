@@ -9,6 +9,8 @@ import { STAGE_TONE, useOrderLabels } from "../orderLabels";
 import { OrderTimelineLines } from "./OrderTimelineLines";
 import { OrderLineThumb } from "./OrderLineThumb";
 import { useSourceLabel, type OrderColumn } from "./OrderListFilters";
+import { OrderPackedBadge, OrderTagBadge } from "../packing/PackingEntryPoints";
+import { OrderFulfilmentBadges } from "./OrderFulfilmentBadges";
 
 const STRINGS = {
   en: {
@@ -111,6 +113,10 @@ export function OrderColumnCell({
             {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
             <RiskBadge order={order} />
             <OrderNetworkRate order={order} />
+            {/* «اتغلّف» once the order was confirmed packed (handoff 249); the tags column says it too when shown. */}
+            <OrderPackedBadge order={order} />
+            {/* «إجازة» / «استلام من الفرع» (handoff 216, 225), said without the tags column too. */}
+            <OrderFulfilmentBadges order={order} />
           </div>
         </td>
       );
@@ -127,7 +133,7 @@ export function OrderColumnCell({
             {meta.tags.length === 0 ? (
               <span className="text-ink-soft">—</span>
             ) : (
-              meta.tags.map((tag) => <StatusBadge key={tag} value={tag} tone="info" text={tag} />)
+              meta.tags.map((tag) => <OrderTagBadge key={tag} tag={tag} />)
             )}
           </div>
         </td>

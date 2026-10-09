@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { StorefrontStoreApp } from "@store-builder/api-client";
 import { useStoreBasePath } from "@/components/StoreRoute";
 import { storeHref } from "@/lib/storeHref";
@@ -29,6 +29,10 @@ function remembered(): boolean {
  * where the browser allows it (on iPhone, the Share-menu hint instead). Once
  * dismissed it stays away in this browser. Nothing at all while the merchant
  * has the store app off.
+ *
+ * The card is one of several things that want the bottom of a phone screen;
+ * where it rests, and what makes room for it, is in globals.css ("The bottom
+ * of the screen on a store page").
  */
 export function StoreAppInstall({ app, locale }: { app: StorefrontStoreApp | null; locale: "ar" | "en" }) {
   const base = useStoreBasePath();
@@ -36,6 +40,26 @@ export function StoreAppInstall({ app, locale }: { app: StorefrontStoreApp | nul
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null);
   const [ios, setIos] = useState(false);
   const [hidden, setHidden] = useState(true);
+  const card = useRef<HTMLDivElement>(null);
+  const showing = Boolean(app) && !hidden && (prompt !== null || ios);
+
+  // While the card shows, the store wrapper knows how tall it is (globals.css,
+  // `--sf-prompt-h`). On a phone the card spans the screen, so the WhatsApp
+  // button, the way back up and a sales notification wait above it instead of
+  // sitting on it; the card itself rests above any bar pinned to the bottom.
+  useEffect(() => {
+    const el = card.current;
+    const wrapper = showing && el ? el.closest<HTMLElement>(".brand-theme") : null;
+    if (!el || !wrapper) return;
+    const apply = () => wrapper.style.setProperty("--sf-prompt-h", `${el.offsetHeight + 12}px`);
+    apply();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(apply);
+    observer?.observe(el);
+    return () => {
+      observer?.disconnect();
+      wrapper.style.removeProperty("--sf-prompt-h");
+    };
+  }, [showing]);
 
   useEffect(() => {
     if (!app || !("serviceWorker" in navigator)) return;
@@ -78,8 +102,11 @@ export function StoreAppInstall({ app, locale }: { app: StorefrontStoreApp | nul
     <>
       <link rel="manifest" href={storeHref(base, "/manifest.webmanifest")} />
       <link rel="apple-touch-icon" href={app.iconUrl ?? "/brand/zimos-icon-180.png"} />
-      {!hidden && (prompt || ios) && (
-        <div className="fixed inset-x-3 bottom-20 z-30 mx-auto flex max-w-sm items-center gap-3 rounded-2xl border border-line bg-paper-raised p-3 shadow-lg sm:bottom-6 sm:start-6 sm:mx-0">
+      {showing && (
+        <div
+          ref={card}
+          className="fixed inset-x-3 bottom-[var(--sf-prompt-bottom,5rem)] z-30 mx-auto flex max-w-sm items-center gap-3 rounded-2xl border border-line bg-paper-raised p-3 shadow-lg sm:start-6 sm:mx-0"
+        >
           {app.iconUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={app.iconUrl} alt="" className="size-10 shrink-0 rounded-xl object-cover" />
@@ -93,7 +120,7 @@ export function StoreAppInstall({ app, locale }: { app: StorefrontStoreApp | nul
               {t.install}
             </button>
           ) : null}
-          <button type="button" onClick={dismiss} className="min-h-11 px-2 text-xs text-ink-soft" aria-label={t.close}>
+          <button type="button" onClick={dismiss} className="min-h-11 min-w-11 cursor-pointer px-2 text-xs text-ink-soft" aria-label={t.close}>
             {t.close}
           </button>
         </div>

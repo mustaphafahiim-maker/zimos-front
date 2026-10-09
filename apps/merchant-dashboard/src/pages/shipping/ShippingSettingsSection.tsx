@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Alert, Button } from "@store-builder/ui";
+import { useId, useMemo, useState, type FormEvent } from "react";
+import { Alert } from "@store-builder/ui";
 import {
   hiddenPlacesOf,
   type ShippingPlacesPayload,
@@ -9,16 +9,23 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAsync } from "@/lib/useAsync";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
 import { getFieldErrors } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { majorToMinor, minorToMajorInput } from "@/lib/format";
-import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
-import { DataState } from "@/components/DataState";
-import { Field } from "@/components/Field";
+import { minorToMajorInput } from "@/lib/format";
+import { pluralOf } from "@/lib/plural";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { CardSkeleton, DataState } from "@/components/DataState";
+import { ListSkeleton } from "@/components/list";
 import { MoneyInput } from "@/components/MoneyInput";
+import { SaveBar } from "@/components/SaveBar";
 import { Select } from "@/components/Select";
+import { SettingsGroup, SettingsRow } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+import { GovernorateTable, parseAmount } from "./sections/GovernorateTable";
+import { ManualTrackingCard } from "./ManualTrackingCard";
 
 const STRINGS = {
   en: {
@@ -39,6 +46,7 @@ const STRINGS = {
     tierModeNote:
       "This store prices shipping by weight tier, so the prices per governorate below are not used until you switch back to rate pricing. The default price and free-shipping threshold still apply.",
     invalidAmount: "Enter an amount of 0 or more, or leave it blank.",
+    fixFields: "Something needs fixing. Check the fields marked in red.",
     save: "Save shipping prices",
     saving: "Saving…",
     saved: "Shipping prices saved.",
@@ -50,74 +58,94 @@ const STRINGS = {
     applyAllHint: "Fills every governorate shown below; change any of them after, then save.",
     hide: "Don't deliver here",
     hiddenCount: "{count} hidden: customers can't choose them at checkout.",
+    govChanged_one: "1 governorate changed",
+    govChanged_two: "2 governorates changed",
+    govChanged_few: "{n} governorates changed",
+    govChanged_many: "{n} governorates changed",
+    govChanged_other: "{n} governorates changed",
+    regionChanged_one: "1 region changed",
+    regionChanged_two: "2 regions changed",
+    regionChanged_few: "{n} regions changed",
+    regionChanged_many: "{n} regions changed",
+    regionChanged_other: "{n} regions changed",
   },
   ar: {
     title: "أسعار الشحن",
     description:
       "ما يدفعه العميل مقابل الشحن. تعرض صفحة الدفع هذا المبلغ نفسه بمجرد أن يختار العميل محافظته، ويُحاسَب الطلب عليه دون تغيير.",
-    defaultRate: "سعر الشحن الافتراضي",
-    defaultRateHint: "يُطبَّق على أي محافظة ليس لها سعر خاص. اتركه فارغًا لعدم احتساب أي مبلغ.",
-    threshold: "الشحن مجاني ابتداءً من",
-    thresholdHint: "الطلبات التي يبلغ إجماليها المبدئي هذا المبلغ أو أكثر تُشحن مجانًا. اتركه فارغًا لإيقافه.",
-    carrier: "شركة الشحن الافتراضية",
-    carrierHint: "تُختار تلقائيًا عند شحن الطلب. يمكنك اختيار شركة أخرى لكل طلب، ولا يتغير السعر الذي دفعه العميل.",
+    defaultRate: "سعر الشحن الأساسي",
+    defaultRateHint: "ده اللي العميل بيدفعه لأي محافظة مالهاش سعر لوحدها. سيبه فاضي لو مش هتحسب شحن.",
+    threshold: "الشحن مجاني من أول",
+    thresholdHint: "الأوردر اللي قيمته توصل للمبلغ ده أو أكتر شحنه مجاني. سيبه فاضي لو مش عايزه.",
+    carrier: "شركة الشحن الأساسية",
+    carrierHint: "بتتختار لوحدها وأنت بتشحن الأوردر. تقدر تغيّرها في أي أوردر، وسعر العميل مش بيتغيّر.",
     carrierNone: "بدون تفضيل",
-    carrierManual: "يدوي (أحجز مع شركة الشحن بنفسي)",
-    carrierNotConnected: "{name} (غير متصلة)",
-    governorates: "السعر حسب المحافظة",
-    governoratesHint: "اترك المحافظة فارغة لاستخدام السعر الافتراضي، أو اكتب 0 لشحن مجاني إليها.",
+    carrierManual: "يدوي (بحجز مع شركة الشحن بنفسي)",
+    carrierNotConnected: "{name} (مش مربوطة)",
+    governorates: "السعر لكل محافظة",
+    governoratesHint: "سيب المحافظة فاضية تاخد السعر الأساسي، أو اكتب 0 لو الشحن ليها مجاني.",
     tierModeNote:
-      "يحتسب هذا المتجر الشحن حسب شرائح الوزن، لذلك لا تُستخدم أسعار المحافظات أدناه حتى تعود إلى التسعير بالأسعار. يظل السعر الافتراضي وحد الشحن المجاني مطبقين.",
-    invalidAmount: "اكتب مبلغًا يساوي 0 أو أكثر، أو اتركه فارغًا.",
-    save: "حفظ أسعار الشحن",
+      "المتجر ده بيحسب الشحن بشرائح الوزن، فأسعار المحافظات اللي تحت مش بتتستخدم لحد ما ترجع للتسعير بالأسعار. السعر الأساسي وحد الشحن المجاني لسه شغّالين.",
+    invalidAmount: "اكتب مبلغ 0 أو أكتر، أو سيبه فاضي.",
+    fixFields: "فيه حاجة محتاجة تتصلّح. راجع الخانات اللي بالأحمر.",
+    save: "احفظ أسعار الشحن",
     saving: "بنحفظ…",
-    saved: "تم حفظ أسعار الشحن.",
-    productNote: "يمكن أيضًا جعل شحن منتج بعينه مجانيًا أو إضافة رسوم إضافية عليه — من بيانات كل منتج.",
-    regions: "السعر حسب المنطقة",
-    regionsHint: "اترك المنطقة فارغة لاستخدام السعر الافتراضي، أو اكتب 0 لشحن مجاني إليها.",
+    saved: "أسعار الشحن اتحفظت.",
+    productNote: "ممكن كمان تخلّي شحن منتج معيّن مجاني أو تزوّد عليه رسوم — من بيانات المنتج نفسه.",
+    regions: "السعر لكل منطقة",
+    regionsHint: "سيب المنطقة فاضية تاخد السعر الأساسي، أو اكتب 0 لو الشحن ليها مجاني.",
     allPrice: "سعر واحد للكل",
     applyAll: "طبّق على الكل",
     applyAllHint: "بيملا كل المحافظات اللي تحت؛ عدّل أي واحدة بعدها واحفظ.",
     hide: "مش بنوصّل هنا",
     hiddenCount: "{count} مخفية: العميل مش هيقدر يختارها في صفحة الدفع.",
+    govChanged_one: "محافظة واحدة اتغيّرت",
+    govChanged_two: "محافظتين اتغيّروا",
+    govChanged_few: "{n} محافظات اتغيّرت",
+    govChanged_many: "{n} محافظة اتغيّرت",
+    govChanged_other: "{n} محافظة اتغيّرت",
+    regionChanged_one: "منطقة واحدة اتغيّرت",
+    regionChanged_two: "منطقتين اتغيّروا",
+    regionChanged_few: "{n} مناطق اتغيّرت",
+    regionChanged_many: "{n} منطقة اتغيّرت",
+    regionChanged_other: "{n} منطقة اتغيّرت",
   },
 } satisfies Messages;
 
-/** "" -> null; a valid amount -> minor units; anything else -> "invalid". */
-function parseAmount(input: string): number | null | "invalid" {
-  if (input.trim() === "") return null;
-  const minor = majorToMinor(input);
-  return Number.isFinite(minor) && minor >= 0 ? minor : "invalid";
+/** The pane while it loads: the default-price card, then the table. */
+function RatesSkeleton() {
+  return (
+    <div className="flex flex-col gap-[var(--bento-gap)]">
+      <CardSkeleton lines={2} />
+      <ListSkeleton rows={8} variant="table" />
+    </div>
+  );
 }
 
 /**
- * The store's shipping prices: a default, a price per governorate, a free-
- * shipping threshold and the default courier. Saved through PATCH
- * /shipping/settings (shipping.manage), audited server-side.
+ * The store's shipping prices: the default first, then the free-shipping
+ * threshold and the default courier, then every governorate as one compact
+ * table. Saved through PATCH /shipping/settings (shipping.manage), audited
+ * server-side — one request carrying the whole map.
  */
 export function ShippingSettingsSection({ onSaved }: { onSaved?: () => Promise<void> | void }) {
   const workspaceId = useWorkspaceId();
-  const t = useT(STRINGS);
   const data = useAsync(() => apiClient.getShippingSettings(workspaceId), [workspaceId]);
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-      <DataState loading={data.loading} error={data.error} empty={false} onRetry={() => data.refresh()}>
-        {data.data && (
-          <SettingsForm
-            // Re-seed the form from what the server saved.
-            key={JSON.stringify(data.data.settings)}
-            initial={data.data}
-            onSaved={async (settings) => {
-              data.setData({ ...data.data!, settings });
-              await onSaved?.();
-            }}
-          />
-        )}
-      </DataState>
-    </section>
+    <DataState loading={data.loading} error={data.error} empty={false} onRetry={() => data.refresh()} skeleton={<RatesSkeleton />}>
+      {data.data && (
+        <SettingsForm
+          // Re-seed the form from what the server saved.
+          key={JSON.stringify(data.data.settings)}
+          initial={data.data}
+          onSaved={async (settings) => {
+            data.setData({ ...data.data!, settings });
+            await onSaved?.();
+          }}
+        />
+      )}
+    </DataState>
   );
 }
 
@@ -129,25 +157,74 @@ function SettingsForm({
   onSaved: (settings: ShippingSettingsResponse["settings"]) => Promise<void>;
 }) {
   const workspaceId = useWorkspaceId();
+  const { currentWorkspace } = useWorkspace();
   const t = useT(STRINGS);
-  const { locale } = useLocale();
   const toast = useToast();
   const errorMessage = useErrorMessage();
+  const carrierId = useId();
   const { settings, governorates, carriers } = initial;
+  const currency = currentWorkspace?.defaultCurrency ?? "EGP";
   // Saudi stores price by region, Egyptian ones by governorate (with North Coast).
   const regional = (initial as ShippingSettingsResponseWithPlaces).country === "SA";
-  const [hidden, setHidden] = useState<Set<string>>(() => new Set(hiddenPlacesOf(settings)));
-  const [allPrice, setAllPrice] = useState("");
 
-  const [defaultRate, setDefaultRate] = useState(minorToMajorInput(settings.defaultRateAmount));
-  const [threshold, setThreshold] = useState(minorToMajorInput(settings.freeShippingThresholdAmount));
-  const [carrier, setCarrier] = useState(settings.defaultCarrierCode ?? "");
-  const [rates, setRates] = useState<Record<string, string>>(() =>
-    Object.fromEntries(governorates.map((g) => [g.code, minorToMajorInput(settings.governorateRates[g.code])]))
+  // What the server holds, in the shape the fields are typed in: the start of the draft and what Discard puts back.
+  const saved = useMemo(
+    () => ({
+      defaultRate: minorToMajorInput(settings.defaultRateAmount),
+      threshold: minorToMajorInput(settings.freeShippingThresholdAmount),
+      carrier: settings.defaultCarrierCode ?? "",
+      rates: Object.fromEntries(governorates.map((g) => [g.code, minorToMajorInput(settings.governorateRates[g.code])])) as Record<string, string>,
+      hidden: new Set(hiddenPlacesOf(settings)) as ReadonlySet<string>,
+    }),
+    [settings, governorates]
   );
+
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set(saved.hidden));
+  const [defaultRate, setDefaultRate] = useState(saved.defaultRate);
+  const [threshold, setThreshold] = useState(saved.threshold);
+  const [carrier, setCarrier] = useState(saved.carrier);
+  const [rates, setRates] = useState<Record<string, string>>(saved.rates);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Everything the form saves, as one string: while it differs from the one last saved, there are unsaved edits.
+  const snapshot = JSON.stringify([
+    defaultRate,
+    threshold,
+    carrier,
+    rates,
+    governorates.filter((g) => hidden.has(g.code)).map((g) => g.code),
+  ]);
+  const [savedSnapshot, setSavedSnapshot] = useState(snapshot);
+  const dirty = snapshot !== savedSnapshot;
+
+  // Tell the page, so a switch to another section asks before this form is unmounted with edits in it.
+  useReportDirty(dirty);
+
+  const changedPlaces = governorates.filter(
+    (g) => (rates[g.code] ?? "").trim() !== (saved.rates[g.code] ?? "").trim() || hidden.has(g.code) !== saved.hidden.has(g.code)
+  ).length;
+
+  // The table speaks of a row by its code; the form's errors are keyed the way the API names the field.
+  const rowErrors = useMemo(() => {
+    const out: Record<string, string> = {};
+    const prefix = "governorateRates.";
+    for (const [key, message] of Object.entries(fieldErrors)) {
+      if (key.startsWith(prefix)) out[key.slice(prefix.length)] = message;
+    }
+    return out;
+  }, [fieldErrors]);
+
+  function discard() {
+    setDefaultRate(saved.defaultRate);
+    setThreshold(saved.threshold);
+    setCarrier(saved.carrier);
+    setRates(saved.rates);
+    setHidden(new Set(saved.hidden));
+    setFieldErrors({});
+    setFormError(null);
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -177,9 +254,10 @@ function SettingsForm({
         defaultCarrierCode: carrier || null,
         hiddenPlaces: governorates.filter((g) => hidden.has(g.code)).map((g) => g.code),
       };
-      const saved = await apiClient.updateShippingSettings(workspaceId, payload as UpdateShippingSettingsPayload);
+      const next = await apiClient.updateShippingSettings(workspaceId, payload as UpdateShippingSettingsPayload);
+      setSavedSnapshot(snapshot);
       toast.success(t.saved);
-      await onSaved(saved);
+      await onSaved(next);
     } catch (err) {
       const fields = getFieldErrors(err);
       setFieldErrors(fields);
@@ -189,17 +267,26 @@ function SettingsForm({
     }
   }
 
-  return (
-    <form onSubmit={submit} className="mt-4 space-y-5">
-      {formError && <Alert variant="danger">{formError}</Alert>}
+  const hasProblem = formError !== null || Object.keys(fieldErrors).length > 0;
 
-      <div className="grid gap-4 sm:grid-cols-2">
+  return (
+    <form onSubmit={submit} noValidate className="flex min-w-0 flex-col gap-[var(--bento-gap)]">
+      {/* While the form is dirty the save bar at the end carries the error; one announcement, not two. */}
+      {formError && !dirty && <Alert variant="danger">{formError}</Alert>}
+
+      {/* The default price: the first thing on the pane, and the largest. */}
+      <div
+        data-slot="card"
+        className="grid min-w-0 gap-x-5 gap-y-4 rounded-[var(--radius-card)] bg-card p-4 text-card-foreground shadow-[var(--shadow-card)] ring-1 ring-line [--radius-card:1.25rem] sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] sm:p-5"
+      >
         <MoneyInput
           label={t.defaultRate}
           value={defaultRate}
           onChange={setDefaultRate}
           error={fieldErrors.defaultRateAmount}
           hint={t.defaultRateHint}
+          currency={currency}
+          className="[&_input]:h-14 [&_input]:ps-14 [&_input]:text-2xl [&_input]:font-semibold [&_input]:tabular-nums [&_label]:text-[15px] [&_label]:font-semibold"
         />
         <MoneyInput
           label={t.threshold}
@@ -207,83 +294,82 @@ function SettingsForm({
           onChange={setThreshold}
           error={fieldErrors.freeShippingThresholdAmount}
           hint={t.thresholdHint}
+          currency={currency}
+          placeholder="—"
+          className="[&_input]:h-11"
         />
       </div>
 
-      <Field label={t.carrier} hint={t.carrierHint} error={fieldErrors.defaultCarrierCode} className="sm:max-w-[calc(50%-0.5rem)]">
-        {({ id, ...aria }) => (
-          <Select id={id} {...aria} value={carrier} onChange={(e) => setCarrier(e.target.value)}>
-            <option value="">{t.carrierNone}</option>
-            <option value="manual">{t.carrierManual}</option>
-            {carriers.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.connected ? c.name : fmt(t.carrierNotConnected, { name: c.name })}
-              </option>
-            ))}
-          </Select>
+      <SettingsGroup>
+        <SettingsRow
+          label={t.carrier}
+          hint={t.carrierHint}
+          htmlFor={carrierId}
+          error={fieldErrors.defaultCarrierCode}
+          control={
+            <Select id={carrierId} value={carrier} onChange={(e) => setCarrier(e.target.value)} className="h-11 w-auto max-w-full">
+              <option value="">{t.carrierNone}</option>
+              <option value="manual">{t.carrierManual}</option>
+              {carriers.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.connected ? c.name : fmt(t.carrierNotConnected, { name: c.name })}
+                </option>
+              ))}
+            </Select>
+          }
+        />
+      </SettingsGroup>
+
+      {/* Manual and imported waybills that update themselves (handoff 387); saves on its own. */}
+      <ManualTrackingCard />
+
+      <div className="min-w-0 pt-2">
+        <div className="mb-2 px-4">
+          <h3 className="text-[13px] leading-5 font-semibold text-ink-soft">{regional ? t.regions : t.governorates}</h3>
+          <p className="mt-0.5 text-[13px] leading-5 text-ink-soft">{regional ? t.regionsHint : t.governoratesHint}</p>
+        </div>
+        {settings.pricingMode === "weight_tiers" && (
+          <Alert variant="info" className="mb-3">
+            {t.tierModeNote}
+          </Alert>
         )}
-      </Field>
-
-      <fieldset className="space-y-3">
-        <legend className="text-sm font-medium text-ink">{regional ? t.regions : t.governorates}</legend>
-        <p className="text-xs text-ink-soft">{regional ? t.regionsHint : t.governoratesHint}</p>
-        <div className="flex flex-wrap items-end gap-3">
-          <MoneyInput label={t.allPrice} value={allPrice} onChange={setAllPrice} hint={t.applyAllHint} className="w-full sm:w-64" />
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-11"
-            disabled={parseAmount(allPrice) === null || parseAmount(allPrice) === "invalid"}
-            onClick={() => setRates(Object.fromEntries(governorates.map((g) => [g.code, allPrice.trim()])))}
-          >
-            {t.applyAll}
-          </Button>
-        </div>
-        {hidden.size > 0 && <p className="text-xs text-ink-soft">{fmt(t.hiddenCount, { count: hidden.size })}</p>}
-        {settings.pricingMode === "weight_tiers" && <Alert variant="info">{t.tierModeNote}</Alert>}
-        {fieldErrors.governorateRates && <p className="text-xs font-medium text-danger">{fieldErrors.governorateRates}</p>}
-        <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-          {governorates.map((g) => {
-            const off = hidden.has(g.code);
-            return (
-              <div key={g.code} className={off ? "opacity-60" : undefined}>
-                <MoneyInput
-                  label={g[locale]}
-                  value={rates[g.code] ?? ""}
-                  onChange={(value) => setRates((prev) => ({ ...prev, [g.code]: value }))}
-                  error={fieldErrors[`governorateRates.${g.code}`]}
-                  placeholder={defaultRate.trim() || "—"}
-                  disabled={off}
-                />
-                <label className="mt-1 flex min-h-9 cursor-pointer items-center gap-2 text-xs text-ink-soft">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-[var(--color-primary)]"
-                    checked={off}
-                    onChange={(e) =>
-                      setHidden((prev) => {
-                        const next = new Set(prev);
-                        if (e.target.checked) next.add(g.code);
-                        else next.delete(g.code);
-                        return next;
-                      })
-                    }
-                  />
-                  {t.hide}
-                </label>
-              </div>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      <p className="text-xs text-ink-soft">{t.productNote}</p>
-
-      <div className="flex justify-end">
-        <Button type="submit" disabled={saving}>
-          {saving ? t.saving : t.save}
-        </Button>
+        {fieldErrors.governorateRates && (
+          <p role="alert" className="mb-2 px-4 text-[13px] font-medium text-danger">
+            {fieldErrors.governorateRates}
+          </p>
+        )}
+        <GovernorateTable
+          governorates={governorates}
+          regional={regional}
+          currency={currency}
+          rates={rates}
+          hidden={hidden}
+          savedRates={saved.rates}
+          savedHidden={saved.hidden}
+          defaultRate={defaultRate}
+          errors={rowErrors}
+          disabled={saving}
+          onRatesChange={setRates}
+          onHiddenChange={setHidden}
+        />
+        <p className="mt-2 px-4 text-[13px] leading-5 text-ink-soft">{t.productNote}</p>
       </div>
+
+      <SaveBar
+        dirty={dirty}
+        saving={saving}
+        onDiscard={discard}
+        // The field that stopped the save may be several screens away from the bar.
+        message={
+          hasProblem ? (
+            <span role="alert" className="text-danger">
+              {formError ?? t.fixFields}
+            </span>
+          ) : changedPlaces > 0 ? (
+            pluralOf(t, regional ? "regionChanged" : "govChanged", changedPlaces)
+          ) : undefined
+        }
+      />
     </form>
   );
 }

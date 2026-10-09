@@ -1,4 +1,4 @@
-import { Check, CircleAlert, Loader2 } from "lucide-react";
+import { IconCheck, IconError, IconSpinner } from "@/components/icons";
 import { Input, Label, cn } from "@store-builder/ui";
 import { ROOT_DOMAIN } from "@/lib/storeAddress";
 import type { SlugCheckState } from "@/lib/useSlugCheck";
@@ -109,19 +109,19 @@ export function StoreAddressField({
       >
         {state.status === "checking" && (
           <>
-            <Loader2 className="size-3.5 animate-spin" aria-hidden />
+            <IconSpinner className="size-3.5 animate-spin" aria-hidden />
             {t.checking}
           </>
         )}
         {state.status === "available" && (
           <>
-            <Check className="size-3.5" aria-hidden />
+            <IconCheck className="size-3.5" aria-hidden />
             {fmt(t.available, { address: `${value}.${ROOT_DOMAIN}` })}
           </>
         )}
         {state.status === "unavailable" && (
           <>
-            <CircleAlert className="size-3.5" aria-hidden />
+            <IconError className="size-3.5" aria-hidden />
             {reasonText(state.result.reason)}
           </>
         )}

@@ -1,7 +1,8 @@
 import { useRef, useState, type FormEvent } from "react";
-import { AlertTriangle, CheckCircle2, Search } from "lucide-react";
+import { IconCart, IconSearch, IconSuccess, IconWarning } from "@/components/icons";
 import { Alert, Button, Input } from "@store-builder/ui";
 import {
+  domainRegistrantGet,
   domainSearch,
   isApiErrorCode,
   storeDesignCheckDomainSsl,
@@ -12,14 +13,18 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useErrorMessage } from "@/lib/errorMessages";
+import { useAsync } from "@/lib/useAsync";
 import { formatDate } from "@/lib/format";
 import { fmt, useT } from "@/i18n/LocaleContext";
+import { AccordionSection } from "@/components/Accordion";
 import { Section } from "@/components/Section";
 import { Field } from "@/components/Field";
 import { StatusBadge } from "@/components/StatusBadge";
 import { BuyDomainDialog } from "./BuyDomainDialog";
 import { PURCHASE_STRINGS, formatDomainPrice, placeNode } from "./domainPurchaseStrings";
+// Handoff 305: no registrar on this server, and the endings a name can be bought on.
+import { DomainPurchaseUnavailableNotice, useDomainPurchaseAvailability } from "./DomainPurchaseAvailability";
+import { useDomainPurchaseErrorMessage } from "./DomainOwnerStep";
 
 interface BuyDomainSectionProps {
   /** A domain was bought: it is now one of the store's domains and a bought domain. */
@@ -40,7 +45,11 @@ interface BuyDomainSectionProps {
 export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectionProps) {
   const t = useT(PURCHASE_STRINGS);
   const workspaceId = useWorkspaceId();
-  const errorMessage = useErrorMessage();
+  const errorMessage = useDomainPurchaseErrorMessage();
+  // Handoff 325: a name the registrar did not price can't be bought. Only the development sandbox — the one
+  // registrar that asks for no owner details (`required: false`) — sells without a price, so there «اشتري» stays on.
+  const registrant = useAsync(() => domainRegistrantGet(apiClient, workspaceId).catch(() => null), [workspaceId]);
+  const sandboxRegistrar = registrant.data?.required === false;
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [queryError, setQueryError] = useState<string | null>(null);
@@ -52,6 +61,7 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
   const [bought, setBought] = useState<DomainPurchase | null>(null);
   // Bought, but not connected yet (502 DOMAIN_CONNECT_FAILED): support finishes it.
   const [notConnected, setNotConnected] = useState<string | null>(null);
+  const availability = useDomainPurchaseAvailability();
   const searchId = useRef(0);
 
   async function search(e: FormEvent) {
@@ -68,6 +78,7 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
     } catch (err) {
       if (id !== searchId.current) return;
       setResponse(null);
+      if (availability.refused(err)) return;
       if (isApiErrorCode(err, "VALIDATION_ERROR")) setQueryError(t.badQuery);
       else setSearchError(errorMessage(err));
     } finally {
@@ -115,7 +126,7 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
     return (
       <Section title={t.buyTitle}>
         <div role="status" className="flex flex-col items-start gap-3 rounded-[var(--radius-card)] bg-success-soft px-4 py-4 sm:flex-row sm:items-center">
-          <CheckCircle2 className="size-6 shrink-0 text-success" aria-hidden />
+          <IconSuccess className="size-6 shrink-0 text-success" aria-hidden />
           <div className="min-w-0 flex-1">
             <p className="text-[15px] font-semibold text-ink">{placeNode(t.liveOn, "domain", domainNode(bought.hostname))}</p>
             <p className="mt-0.5 text-sm text-ink-soft">
@@ -135,7 +146,7 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
     return (
       <Section title={t.buyTitle}>
         <div role="status" className="flex flex-col items-start gap-3 rounded-[var(--radius-card)] bg-accent-soft px-4 py-4 sm:flex-row sm:items-center">
-          <AlertTriangle className="size-6 shrink-0 text-accent-dark" aria-hidden />
+          <IconWarning className="size-6 shrink-0 text-accent-dark" aria-hidden />
           <div className="min-w-0 flex-1">
             <p className="text-[15px] font-semibold text-ink">{placeNode(t.connectFailedTitle, "domain", domainNode(notConnected))}</p>
             <p className="mt-0.5 text-sm text-ink-soft">{t.connectFailedBody}</p>
@@ -148,12 +159,22 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
     );
   }
 
+  if (availability.unavailable) {
+    return (
+      <Section title={t.buyTitle}>
+        <DomainPurchaseUnavailableNotice />
+      </Section>
+    );
+  }
+
   const results = response?.results ?? [];
 
   return (
-    <Section title={t.buyTitle} description={t.buyDescription}>
+    // Bought once in a while: folded to one row. Kept mounted, so the name being searched survives a fold.
+    <AccordionSection title={t.buyTitle} summary={t.buyDescription} icon={IconCart} persistKey="store-settings:domains:buy" keepMounted>
+      <p className="mb-3 text-[13px] leading-5 text-ink-soft">{t.buyDescription}</p>
       <form onSubmit={search} className="flex flex-wrap items-start gap-2" role="search">
-        <Field label={t.searchLabel} error={queryError ?? undefined} labelHidden className="min-w-0 flex-1 basis-48">
+        <Field label={t.searchLabel} error={queryError ?? undefined} hint={availability.endingsHint} labelHidden className="min-w-0 flex-1 basis-48">
           {({ id, ...aria }) => (
             <Input
               id={id}
@@ -170,8 +191,8 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
             />
           )}
         </Field>
-        <Button type="submit" className="min-h-11 sm:min-h-10" disabled={searching || !query.trim()}>
-          <Search className="size-4" aria-hidden />
+        <Button type="submit" className="min-h-11 rounded-full px-5 sm:min-h-10" disabled={searching || !query.trim()}>
+          <IconSearch className="size-4" aria-hidden />
           {searching ? t.searching : t.search}
         </Button>
       </form>
@@ -201,7 +222,7 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
                           {result.price ? (
                             <bdi className="tabular-nums">{fmt(t.perYear, { price: formatDomainPrice(result.price) })}</bdi>
                           ) : (
-                            t.priceOnRequest
+                            t.priceUnavailable
                           )}
                         </p>
                       )}
@@ -216,6 +237,7 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
                         type="button"
                         className="min-h-11 sm:min-h-0"
                         aria-label={fmt(t.buyNamed, { domain: result.domain })}
+                        disabled={!result.price && !sandboxRegistrar}
                         onClick={() => openBuy(result)}
                       >
                         {t.buy}
@@ -240,8 +262,12 @@ export function BuyDomainSection({ onBought, onPurchaseFailed }: BuyDomainSectio
           onUnavailable={(domain) => updateResult(domain, { available: false, price: null, renewalPrice: null })}
           onConnectFailed={handleConnectFailed}
           onFailed={onPurchaseFailed}
+          onPurchaseUnavailable={(err) => {
+            setDialogOpen(false);
+            availability.refused(err);
+          }}
         />
       )}
-    </Section>
+    </AccordionSection>
   );
 }

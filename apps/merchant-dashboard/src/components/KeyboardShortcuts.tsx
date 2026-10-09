@@ -17,6 +17,8 @@ const STRINGS = {
     do: "Do",
     go: "Go to — press G, then the letter",
     search: "Search and jump to any page",
+    quickLook: "Quick Look at the row you are on",
+    close: "Close what is open",
     help: "Show this list",
     focus: "Full screen: hide or show the side menu",
     newOrder: "New order",
@@ -26,32 +28,43 @@ const STRINGS = {
     confirm: "Orders to confirm",
     products: "Products",
     customers: "Customers",
-    analytics: "Analytics",
+    analytics: "Reports",
     affiliates: "Affiliates",
-    website: "Website",
+    website: "Store editor",
     settings: "Settings",
     then: "then",
+    or: "or",
+    // What is printed on the key. Esc and Ctrl read the same on an Arabic keyboard.
+    keySpace: "Space",
+    keyEsc: "Esc",
+    keyCtrl: "Ctrl",
   },
   ar: {
     title: "اختصارات الكيبورد",
-    description: "تعمل في أي مكان في الداشبورد، إلا وأنت تكتب داخل حقل.",
-    do: "تنفيذ",
-    go: "انتقال — اضغط G ثم الحرف",
-    search: "بحث وانتقال لأي صفحة",
-    help: "عرض هذه القائمة",
-    focus: "ملء الشاشة: إخفاء أو إظهار القائمة الجانبية",
-    newOrder: "طلب جديد",
-    newProduct: "إضافة منتج",
+    description: "شغّالة في أي مكان في الداشبورد، إلا وإنت بتكتب في خانة.",
+    do: "اعمل",
+    go: "روح لـ — دوس G وبعدها الحرف",
+    search: "دوّر وروح لأي صفحة",
+    quickLook: "بصّة سريعة على الصف اللي واقف عليه",
+    close: "اقفل اللي مفتوح",
+    help: "اعرض القايمة دي",
+    focus: "ملء الشاشة: خبّي أو رجّع القايمة الجانبية",
+    newOrder: "أوردر جديد",
+    newProduct: "ضيف منتج",
     home: "الرئيسية",
-    orders: "الطلبات",
-    confirm: "طلبات تنتظر التأكيد",
+    orders: "الأوردرات",
+    confirm: "أوردرات مستنية تأكيد",
     products: "المنتجات",
     customers: "العملاء",
-    analytics: "التحليلات",
-    affiliates: "المسوّقون",
-    website: "الموقع",
+    analytics: "التقارير",
+    affiliates: "المسوّقين بالعمولة",
+    website: "محرر المتجر",
     settings: "الإعدادات",
-    then: "ثم",
+    then: "وبعدها",
+    or: "أو",
+    keySpace: "مسافة",
+    keyEsc: "Esc",
+    keyCtrl: "Ctrl",
   },
 } satisfies Messages;
 
@@ -76,8 +89,20 @@ const GO: Array<{ code: string; cap: string; to: string; label: Label }> = [
   { code: "KeyS", cap: "S", to: "/settings", label: "settings" },
 ];
 
+/** The search palette's own shortcut is ⌘K on Apple keyboards and Ctrl K everywhere else. */
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+
+/**
+ * One key, drawn as a keycap: at least 26 by 26, a hairline edge that is
+ * thicker along the bottom, 12px mono. The lit glass face is in
+ * glass/states.css (`.zimos-keycap`).
+ */
 function Key({ children }: { children: string }) {
-  return <kbd className="inline-flex min-w-6 items-center justify-center rounded-md border border-line bg-paper px-1.5 py-0.5 font-mono text-xs font-medium text-ink">{children}</kbd>;
+  return (
+    <kbd className="zimos-keycap inline-flex h-[26px] min-w-[26px] items-center justify-center rounded-[7px] border border-b-2 border-line-strong/45 bg-paper-raised px-1.5 font-mono text-xs leading-none font-medium text-ink">
+      {children}
+    </kbd>
+  );
 }
 
 /**
@@ -162,23 +187,26 @@ export function KeyboardShortcuts() {
 
   return (
     <Modal open={open} onClose={() => setOpen(false)} title={t.title} description={t.description}>
-      <div className="space-y-5 text-sm">
+      <div className="space-y-6 text-sm">
         <section>
           <h3 className="text-xs font-semibold text-ink-soft">{t.do}</h3>
-          <ul className="mt-2 divide-y divide-line">
+          <ul className="mt-1.5 divide-y divide-line">
             {DIRECT.map((entry) => (
-              <Row key={entry.code} label={t[entry.label]} keys={[entry.cap]} />
+              <Row key={entry.code} label={t[entry.label]} combos={[[entry.cap]]} />
             ))}
-            <Row label={t.focus} keys={["F"]} />
-            <Row label={t.search} keys={["/"]} />
-            <Row label={t.help} keys={["?"]} />
+            {/* Ctrl+K / ⌘K is the palette's own; "/" is the one-key way to it. */}
+            <Row label={t.search} combos={[isMac ? ["⌘", "K"] : [t.keyCtrl, "K"], ["/"]]} joiner={t.or} />
+            <Row label={t.quickLook} combos={[[t.keySpace]]} />
+            <Row label={t.focus} combos={[["F"]]} />
+            <Row label={t.close} combos={[[t.keyEsc]]} />
+            <Row label={t.help} combos={[["?"]]} />
           </ul>
         </section>
         <section>
           <h3 className="text-xs font-semibold text-ink-soft">{t.go}</h3>
-          <ul className="mt-2 grid gap-x-6 sm:grid-cols-2">
+          <ul className="mt-1.5 grid gap-x-8 sm:grid-cols-2">
             {GO.map((entry) => (
-              <Row key={entry.code} label={t[entry.label]} keys={["G", entry.cap]} then={t.then} />
+              <Row key={entry.code} label={t[entry.label]} combos={[["G"], [entry.cap]]} joiner={t.then} />
             ))}
           </ul>
         </section>
@@ -187,15 +215,27 @@ export function KeyboardShortcuts() {
   );
 }
 
-function Row({ label, keys, then }: { label: string; keys: string[]; then?: string }) {
+/**
+ * One shortcut. `combos` are the key groups in the order they are read, with
+ * `joiner` between them («وبعدها» for a sequence, «أو» for another way). The
+ * groups follow the page's direction, so an Arabic reader meets G before the
+ * letter; the keys held together inside one group (⌘ K) always read left to
+ * right, as they are written everywhere.
+ */
+function Row({ label, combos, joiner }: { label: string; combos: string[][]; joiner?: string }) {
   return (
-    <li className="flex items-center justify-between gap-3 py-2">
-      <span className="min-w-0 truncate text-ink">{label}</span>
-      <span className="flex shrink-0 items-center gap-1.5" dir="ltr">
-        {keys.map((key, index) => (
-          <span key={key + index} className="flex items-center gap-1.5">
-            {index > 0 && <span className="text-xs text-ink-soft">{then}</span>}
-            <Key>{key}</Key>
+    <li className="flex min-h-10 items-center justify-between gap-3 py-1.5">
+      {/* Wraps rather than cuts: a shortcut with half a name is no use. */}
+      <span className="min-w-0 leading-5 text-ink">{label}</span>
+      <span className="flex shrink-0 items-center gap-1.5">
+        {combos.map((keys, index) => (
+          <span key={index} className="flex items-center gap-1.5">
+            {index > 0 && joiner && <span className="text-xs text-ink-soft">{joiner}</span>}
+            <span dir="ltr" className="inline-flex items-center gap-1">
+              {keys.map((key) => (
+                <Key key={key}>{key}</Key>
+              ))}
+            </span>
           </span>
         ))}
       </span>

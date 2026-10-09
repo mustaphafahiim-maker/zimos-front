@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Alert, Button } from "@store-builder/ui";
 import {
   shippingOptionsGet,
@@ -10,8 +10,12 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { CardSkeleton } from "@/components/DataState";
+import { SaveBar } from "@/components/SaveBar";
+import { IconPlus } from "@/components/icons";
 import { majorToMinor, minorToMajorInput } from "@/lib/format";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { Field, TextField } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
@@ -68,6 +72,10 @@ const STRINGS = {
 } satisfies Messages;
 
 type Draft = Omit<ShippingOptionExtra, "amount"> & { amount: string };
+
+/** One option's pane; it is the container its fields measure against (two columns once there is room). */
+const CARD =
+  "@container min-w-0 rounded-[var(--radius-card)] bg-card p-4 text-card-foreground shadow-[var(--shadow-card)] ring-1 ring-line [--radius-card:1.25rem]";
 const toNumber = (v: string) => (v.trim() === "" ? null : Math.max(0, Math.min(90, Math.round(Number(v)) || 0)));
 
 /** SPEC §12.1 shipping options: standard plus up to five more the shopper can pick. */
@@ -87,6 +95,25 @@ export function ShippingOptionsSection({ currency = "EGP" }: { currency?: string
     setStandard(loaded.data.standard);
     setExtra(loaded.data.extra.map((o) => ({ ...o, amount: minorToMajorInput(o.amount) })));
   }, [loaded.data]);
+
+  // What the server holds, in the shape the draft is kept in: while the draft differs, there are unsaved edits.
+  const baseline = useMemo(
+    () =>
+      loaded.data
+        ? JSON.stringify([loaded.data.standard, loaded.data.extra.map((o) => ({ ...o, amount: minorToMajorInput(o.amount) }))])
+        : null,
+    [loaded.data]
+  );
+  const dirty = standard !== null && baseline !== null && JSON.stringify([standard, extra]) !== baseline;
+  // Tell the page, so a switch to another section asks before these edits are dropped.
+  useReportDirty(dirty);
+
+  function discard() {
+    if (!loaded.data) return;
+    setStandard(loaded.data.standard);
+    setExtra(loaded.data.extra.map((o) => ({ ...o, amount: minorToMajorInput(o.amount) })));
+    setError(null);
+  }
 
   const patch = (i: number, change: Partial<Draft>) => setExtra((list) => list.map((o, j) => (j === i ? { ...o, ...change } : o)));
 
@@ -117,27 +144,34 @@ export function ShippingOptionsSection({ currency = "EGP" }: { currency?: string
   );
 
   return (
-    <section>
-      <div className="max-w-2xl">
-        <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-        <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-      </div>
-      <div className="mt-4">
-        <DataState loading={loaded.loading && !standard} error={loaded.error} onRetry={() => void loaded.refresh()}>
+    <section className="flex min-w-0 flex-col gap-[var(--bento-gap)]">
+      <p className="px-1 text-sm leading-6 text-ink-soft">{t.description}</p>
+      <div>
+        <DataState
+          loading={loaded.loading && !standard}
+          error={loaded.error}
+          onRetry={() => void loaded.refresh()}
+          skeleton={
+            <div className="space-y-4">
+              <CardSkeleton lines={2} />
+              <CardSkeleton lines={3} />
+            </div>
+          }
+        >
           {standard && (
             <form onSubmit={save} className="space-y-4">
-              <fieldset className="rounded-[var(--radius-card)] border border-line p-4">
-                <legend className="px-1 text-sm font-medium text-ink">{t.standard}</legend>
-                <div className="grid gap-3 sm:grid-cols-4">
+              <fieldset data-slot="card" className={CARD}>
+                <legend className="float-start mb-3 w-full text-[15px] font-semibold text-ink">{t.standard}</legend>
+                <div className="clear-both grid gap-3 @lg:grid-cols-2">
                   <TextField label={t.nameAr} value={standard.nameAr ?? ""} onChange={(e) => setStandard({ ...standard, nameAr: e.target.value })} />
                   <TextField label={t.nameEn} dir="ltr" value={standard.nameEn ?? ""} onChange={(e) => setStandard({ ...standard, nameEn: e.target.value })} />
                   {days(standard, (v) => setStandard({ ...standard, ...v }))}
                 </div>
               </fieldset>
               {extra.map((o, i) => (
-                <fieldset key={i} className="rounded-[var(--radius-card)] border border-line p-4">
-                  <legend className="px-1 text-sm font-medium text-ink">{t.extra.replace("{n}", String(i + 1))}</legend>
-                  <div className="grid gap-3 sm:grid-cols-4">
+                <fieldset key={i} data-slot="card" className={CARD}>
+                  <legend className="float-start mb-3 w-full text-[15px] font-semibold text-ink">{fmt(t.extra, { n: i + 1 })}</legend>
+                  <div className="clear-both grid gap-3 @lg:grid-cols-2">
                     <TextField label={t.key} hint={t.keyHint} dir="ltr" required maxLength={40} value={o.key} onChange={(e) => patch(i, { key: e.target.value })} />
                     <TextField label={t.nameAr} value={o.nameAr ?? ""} onChange={(e) => patch(i, { nameAr: e.target.value })} />
                     <TextField label={t.nameEn} dir="ltr" value={o.nameEn ?? ""} onChange={(e) => patch(i, { nameEn: e.target.value })} />
@@ -151,8 +185,8 @@ export function ShippingOptionsSection({ currency = "EGP" }: { currency?: string
                     </Field>
                     <MoneyInput label={t.amount} currency={currency} value={o.amount} onChange={(value) => patch(i, { amount: value })} />
                     {days(o, (v) => patch(i, v))}
-                    <label className="flex min-h-11 items-center gap-2 self-end text-sm text-ink">
-                      <input type="checkbox" checked={o.active} onChange={(e) => patch(i, { active: e.target.checked })} />
+                    <label className="flex min-h-11 cursor-pointer items-center gap-2.5 self-end text-sm text-ink">
+                      <input type="checkbox" className="size-[18px] accent-[var(--color-primary)]" checked={o.active} onChange={(e) => patch(i, { active: e.target.checked })} />
                       {t.active}
                     </label>
                   </div>
@@ -164,20 +198,19 @@ export function ShippingOptionsSection({ currency = "EGP" }: { currency?: string
                 </fieldset>
               ))}
               {error && <Alert variant="danger">{error}</Alert>}
-              <div className="flex flex-wrap justify-between gap-2">
+              <div className="flex flex-wrap justify-start gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  className="min-h-11"
+                  className="min-h-11 rounded-full px-4"
                   disabled={extra.length >= 5}
                   onClick={() => setExtra((list) => [...list, { key: "", nameAr: "", nameEn: "", mode: "add", amount: "", daysMin: null, daysMax: null, active: true }])}
                 >
+                  <IconPlus weight="bold" aria-hidden />
                   {t.add}
                 </Button>
-                <Button type="submit" className="min-h-11" disabled={busy}>
-                  {busy ? t.saving : t.save}
-                </Button>
               </div>
+              <SaveBar dirty={dirty} saving={busy} saveLabel={t.save} savingLabel={t.saving} onDiscard={discard} />
             </form>
           )}
         </DataState>

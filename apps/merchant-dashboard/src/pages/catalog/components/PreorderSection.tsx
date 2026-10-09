@@ -1,5 +1,5 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
-import { CalendarClock, Lock } from "lucide-react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { IconLock, IconSchedule } from "@/components/icons";
 import { Alert, Button, Input, Spinner, cn } from "@store-builder/ui";
 import {
   PREORDER_LIMIT_MAX,
@@ -20,6 +20,7 @@ import { countOf } from "@/lib/plural";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
+import { SectionSaveBar } from "../product/saveQueue";
 import { ProductPageCard } from "./ProductPageCard";
 
 const STRINGS = {
@@ -135,7 +136,7 @@ export function PreorderSection({ productId }: { productId: string }) {
       ) : data.error || !data.data ? (
         isPermissionError(data.error) ? (
           <p className="flex items-center gap-2 text-sm text-ink-soft">
-            <Lock className="size-4 shrink-0" aria-hidden />
+            <IconLock className="size-4 shrink-0" aria-hidden />
             {t.noView}
           </p>
         ) : (
@@ -170,6 +171,7 @@ function PreorderForm({
   const dateId = useId();
   const limitId = useId();
   const messageId = useId();
+  const form = useRef<HTMLFormElement>(null);
 
   const saved = toDraft(data.preorder);
   const [draft, setDraft] = useState<Draft>(saved);
@@ -241,7 +243,7 @@ function PreorderForm({
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-4">
+    <form ref={form} onSubmit={submit} noValidate className="space-y-4">
       <div>
         <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium text-ink">
           <input
@@ -263,7 +265,7 @@ function PreorderForm({
       {draft.enabled && !showFields && (
         <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] bg-paper-sunken px-3 py-2">
           <p className="flex min-w-0 items-center gap-2 text-sm text-ink">
-            <CalendarClock className="size-4 shrink-0 text-ink-soft" aria-hidden />
+            <IconSchedule className="size-4 shrink-0 text-ink-soft" aria-hidden />
             <span className="min-w-0">{summary}</span>
           </p>
           <Button type="button" variant="ghost" className="min-h-11 shrink-0" onClick={() => setExpanded(true)}>
@@ -381,16 +383,24 @@ function PreorderForm({
 
       {saveError && <Alert variant="danger">{saveError}</Alert>}
 
-      {(dirty || saving || (expanded && draft.enabled)) && (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={reset}>
+      {/* Opened to look, nothing changed: one quiet button folds it back to its line. */}
+      {expanded && draft.enabled && !dirty && !saving && (
+        <div className="flex justify-end">
+          <Button type="button" variant="outline" className="min-h-11" onClick={reset}>
             {t.cancel}
-          </Button>
-          <Button type="submit" className="min-h-11" disabled={saving || !dirty}>
-            {saving ? t.saving : t.save}
           </Button>
         </div>
       )}
+
+      {/* The page’s one save bar: same save, same payload (the form is submitted as before). */}
+      <SectionSaveBar
+        section={t.title}
+        dirty={dirty}
+        saving={saving}
+        error={saveError ?? dateError ?? limitError}
+        onSave={() => form.current?.requestSubmit()}
+        onDiscard={reset}
+      />
     </form>
   );
 }

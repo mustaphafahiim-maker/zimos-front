@@ -194,7 +194,7 @@ export function BillingAddressFields({ idPrefix, state }: { idPrefix: string; st
         </label>
         {control({ id, ...(errors[name] ? { "aria-invalid": true, "aria-describedby": `${id}-error` } : {}) })}
         {errors[name] && (
-          <p id={`${id}-error`} className="mt-1 text-xs font-medium text-danger">
+          <p id={`${id}-error`} className="mt-1.5 text-sm font-medium text-danger">
             {errors[name]}
           </p>
         )}
@@ -225,6 +225,8 @@ export function BillingAddressFields({ idPrefix, state }: { idPrefix: string; st
                 {...a11y}
                 type="text"
                 autoComplete="billing name"
+                autoCapitalize="words"
+                enterKeyHint="next"
                 maxLength={200}
                 value={values.fullName}
                 onChange={(e) => state.set("fullName", e.target.value)}
@@ -302,6 +304,7 @@ export function BillingAddressFields({ idPrefix, state }: { idPrefix: string; st
                   type="text"
                   required
                   autoComplete="billing address-level2"
+                  enterKeyHint="next"
                   maxLength={100}
                   value={values.city}
                   onChange={(e) => state.set("city", e.target.value)}
@@ -318,6 +321,7 @@ export function BillingAddressFields({ idPrefix, state }: { idPrefix: string; st
                   {...a11y}
                   type="text"
                   autoComplete="billing address-level3"
+                  enterKeyHint="next"
                   maxLength={100}
                   value={values.area}
                   onChange={(e) => state.set("area", e.target.value)}
@@ -335,6 +339,7 @@ export function BillingAddressFields({ idPrefix, state }: { idPrefix: string; st
                   type="text"
                   inputMode="numeric"
                   autoComplete="billing postal-code"
+                  enterKeyHint="next"
                   dir="ltr"
                   maxLength={20}
                   value={values.postalCode}
@@ -353,6 +358,7 @@ export function BillingAddressFields({ idPrefix, state }: { idPrefix: string; st
                   type="text"
                   required
                   autoComplete="billing street-address"
+                  enterKeyHint="done"
                   maxLength={500}
                   placeholder={t.form.addressPlaceholder}
                   value={values.addressLine}

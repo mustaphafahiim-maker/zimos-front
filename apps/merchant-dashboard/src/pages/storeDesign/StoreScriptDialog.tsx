@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { IconClose } from "@/components/icons";
 import { Alert, Button, Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label } from "@store-builder/ui";
 import {
   storeScriptsCreate,
@@ -159,7 +159,7 @@ export function StoreScriptDialog({
             <DialogDescription>{s.liveOnly}</DialogDescription>
           </div>
           <DialogClose render={<Button type="button" size="icon-sm" variant="ghost" aria-label={t.close} title={t.close} />}>
-            <X className="size-4" aria-hidden />
+            <IconClose className="size-4" aria-hidden />
           </DialogClose>
         </DialogHeader>
 

@@ -15,6 +15,7 @@ import { useStore } from "@/lib/StoreContext";
 import { useStoreCountry } from "@/lib/storeCountry";
 import { codeCooldownOf, shopperErrorMessage, takeSignedOutByServer, useShopperApi } from "@/lib/shopperSession";
 import { UserIcon } from "./accountIcons";
+import { ShopperGoogleSignIn } from "./ShopperGoogleSignIn";
 
 const CODE_LENGTH = 6;
 
@@ -163,6 +164,8 @@ export function ShopperSignIn({
       </div>
 
       <div className={`${card} mt-6 p-5 sm:p-6`}>
+        {/* Google's own button above the code form, when the store offers it (handoff 217, 279). */}
+        {!sent && <ShopperGoogleSignIn onSignedIn={onSignedIn} />}
         {!sent ? (
           <form onSubmit={requestCode} noValidate className="space-y-4">
             {offered.length > 1 && (

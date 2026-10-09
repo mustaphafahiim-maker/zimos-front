@@ -1,6 +1,7 @@
+import { cn } from "@store-builder/ui";
 import { formatDateTime } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
-import { Section } from "@/components/Section";
+import { CardFrame } from "@/pages/orders/detail/CardFrame";
 
 /**
  * How the shopper reached the store before placing this order (SPEC §13.4):
@@ -23,6 +24,11 @@ interface Touch {
   ttclid?: string;
   gclid?: string;
   scCid?: string;
+  /** The click ids of X, Reddit, Microsoft Ads and Taboola (handoff 254). */
+  twclid?: string;
+  rdt_cid?: string;
+  msclkid?: string;
+  tblci?: string;
   ref?: string;
   referrer?: string;
   landingPage?: string;
@@ -58,6 +64,10 @@ const STRINGS = {
     clickTiktok: "TikTok ad",
     clickGoogle: "Google ad",
     clickSnap: "Snapchat ad",
+    clickX: "X ad",
+    clickReddit: "Reddit ad",
+    clickMicrosoft: "Microsoft Ads ad",
+    clickTaboola: "Taboola ad",
     at: "When",
     firstVisit: "First seen",
     sessions: "Visits",
@@ -70,7 +80,7 @@ const STRINGS = {
     title: "مصدر الزيارة",
     description: "من أين جاء هذا العميل، حسب تتبع المتجر نفسه.",
     first: "أول زيارة",
-    last: "قبل الطلب",
+    last: "قبل الأوردر",
     same: "أول وآخر زيارة",
     direct: "مباشر",
     source: "المصدر",
@@ -87,6 +97,10 @@ const STRINGS = {
     clickTiktok: "إعلان TikTok",
     clickGoogle: "إعلان Google",
     clickSnap: "إعلان Snapchat",
+    clickX: "إعلان X",
+    clickReddit: "إعلان Reddit",
+    clickMicrosoft: "إعلان Microsoft Ads",
+    clickTaboola: "إعلان Taboola",
     at: "الوقت",
     firstVisit: "أول ظهور",
     sessions: "الزيارات",
@@ -106,7 +120,8 @@ function Row({ label, value, ltr }: { label: string; value: string | undefined; 
   return (
     <div className="flex gap-2 text-sm">
       <dt className="w-28 shrink-0 text-ink-soft">{label}</dt>
-      <dd dir={ltr ? "ltr" : undefined} className="min-w-0 break-all text-start text-ink">
+      {/* Only a URL or a code may break anywhere; Arabic words wrap whole. */}
+      <dd dir={ltr ? "ltr" : undefined} className={cn("min-w-0 text-start text-ink", ltr ? "break-all" : "break-words")}>
         {value}
       </dd>
     </div>
@@ -114,7 +129,23 @@ function Row({ label, value, ltr }: { label: string; value: string | undefined; 
 }
 
 function TouchBlock({ t, title, touch }: { t: T; title: string; touch: Touch }) {
-  const click = touch.fbclid ? t.clickMeta : touch.ttclid ? t.clickTiktok : touch.gclid ? t.clickGoogle : touch.scCid ? t.clickSnap : undefined;
+  const click = touch.fbclid
+    ? t.clickMeta
+    : touch.ttclid
+      ? t.clickTiktok
+      : touch.gclid
+        ? t.clickGoogle
+        : touch.scCid
+          ? t.clickSnap
+          : touch.twclid
+            ? t.clickX
+            : touch.rdt_cid
+              ? t.clickReddit
+              : touch.msclkid
+                ? t.clickMicrosoft
+                : touch.tblci
+                  ? t.clickTaboola
+                  : undefined;
   return (
     <div className="min-w-0">
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">{title}</h3>
@@ -135,7 +166,7 @@ function TouchBlock({ t, title, touch }: { t: T; title: string; touch: Touch }) 
   );
 }
 
-export function OrderAttributionSection({ order }: { order: object }) {
+export function OrderAttributionSection({ order, frameless }: { order: object; /** Inside a folding section of the order page: no card and no title of its own. */ frameless?: boolean }) {
   const t = useT(STRINGS);
   const raw = order as { attribution?: unknown; sessionStats?: unknown };
   const attribution = isObject(raw.attribution) ? raw.attribution : null;
@@ -153,8 +184,9 @@ export function OrderAttributionSection({ order }: { order: object }) {
         : fmt(t.seconds, { s: stats.durationSeconds });
 
   return (
-    <Section title={t.title} description={t.description}>
-      <div className="grid gap-6 sm:grid-cols-2">
+    <CardFrame frameless={frameless} title={t.title} description={t.description}>
+      {/* One column: this card sits in the order page's narrow side column, where two would leave ~15px per value. */}
+      <div className="grid gap-4">
         {same && first ? (
           <TouchBlock t={t} title={t.same} touch={first} />
         ) : (
@@ -164,7 +196,7 @@ export function OrderAttributionSection({ order }: { order: object }) {
           </>
         )}
         {stats && (
-          <dl className="space-y-1 sm:col-span-2 sm:grid sm:grid-cols-2 sm:gap-x-6 sm:space-y-0">
+          <dl className="space-y-1">
             <Row label={t.firstVisit} value={stats.firstVisitAt ? formatDateTime(stats.firstVisitAt) : undefined} />
             <Row label={t.sessions} value={stats.sessions !== undefined ? String(stats.sessions) : undefined} />
             <Row label={t.pageViews} value={stats.pageViews !== undefined ? String(stats.pageViews) : undefined} />
@@ -172,6 +204,6 @@ export function OrderAttributionSection({ order }: { order: object }) {
           </dl>
         )}
       </div>
-    </Section>
+    </CardFrame>
   );
 }

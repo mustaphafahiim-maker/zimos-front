@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CornerLeftUp } from "lucide-react";
+import { IconCornerUp } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import type { PageSection } from "@store-builder/api-client";
 import { columnTitle, sectionColumnCount, sectionLabel } from "./blocks";
@@ -61,7 +61,7 @@ export function SelectParentButton({ parent, locale, onSelect }: { parent: { id:
   const label = editorUi(locale).selectParent(parent.label);
   return (
     <Button type="button" size="icon-sm" variant="ghost" aria-label={label} title={label} onClick={() => onSelect(parent.id)}>
-      <CornerLeftUp className="size-3.5 rtl:-scale-x-100" aria-hidden />
+      <IconCornerUp className="size-3.5 rtl:-scale-x-100" aria-hidden />
     </Button>
   );
 }

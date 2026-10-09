@@ -7,6 +7,8 @@ Where `docs/LANES.md` and `docs/SPEC.md` differ, `docs/LANES.md` wins.
 The short version:
 
 - For UI work, also read `docs/UI_RULES.md` and `docs/UI_SYSTEM.md`. The
+  dashboard's glass look is one layer, `apps/merchant-dashboard/src/liquid-glass.css`
+  (off with `data-glass="off"`): extend it there, never page by page. The
   development-only `/design-system` lab proposes an opt-in Glass material;
   it does not authorize restyling existing screens or changing the stack.
 

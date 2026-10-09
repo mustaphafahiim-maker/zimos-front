@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Target } from "lucide-react";
+import { IconTarget } from "@/components/icons";
 import { Button, Input, cn } from "@store-builder/ui";
 import {
   funnelsList,
@@ -15,6 +15,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { formatMoney, formatPercentValue } from "@/lib/format";
 import { formatAxisDate, formatCount, formatWindow, percentToRatio, rangeWindows, type AnalyticsRange } from "@/lib/analytics";
 import { PageHeader } from "@/components/PageHeader";
+import { AdSourceMark } from "@/components/AdPlatformMark";
 import { DataState } from "@/components/DataState";
 import { DataTable, type Column } from "@/components/DataTable";
 import { EmptyState } from "@/components/EmptyState";
@@ -68,7 +69,7 @@ const STRINGS = {
   },
   ar: {
     title: "مصادر المبيعات",
-    description: "أي المصادر والحملات والإعلانات تجلب زوارًا يشترون فعلًا — وأي الطلبات تُسلَّم فعلًا.",
+    description: "أي المصادر والحملات والإعلانات تجلب زوارًا يشترون فعلًا — وأي الأوردرات تُسلَّم فعلًا.",
     allStore: "المتجر كله",
     funnelFilter: "المتجر أو مسار البيع",
     source: "المصدر",
@@ -83,23 +84,23 @@ const STRINGS = {
     salesChart: "المبيعات يوميًا",
     chartSummary: "{what} خلال {window}",
     tableTitle: "حسب {dimension}",
-    tableDesc: "يُحتسب كل طلب مرة واحدة حسب ما تختاره: آخر إعلان أو رابط قبل الشراء، أو أول ما جاء بالعميل.",
+    tableDesc: "يُحتسب كل أوردر مرة واحدة حسب ما تختاره: آخر إعلان أو رابط قبل الشراء، أو أول ما جاء بالعميل.",
     touchLabel: "نسب البيع إلى",
     touchLast: "آخر نقطة تواصل",
     touchFirst: "أول نقطة تواصل",
     visitors: "الزوار",
-    orders: "الطلبات",
+    orders: "الأوردرات",
     sales: "المبيعات",
     conversion: "التحويل",
-    aov: "متوسط الطلب",
+    aov: "متوسط الأوردر",
     delivered: "المسلَّم",
     deliveredSales: "مبيعات مسلَّمة",
     spend: "الإنفاق الإعلاني",
     roas: "العائد الحقيقي",
-    cpa: "تكلفة الطلب المسلَّم",
+    cpa: "تكلفة الأوردر المسلَّم",
     total: "الإجمالي",
     untracked: "بدون UTM (مباشر، هاتف، يدوي)",
-    emptyTitle: "مفيش زيارات أو طلبات في هذه الفترة",
+    emptyTitle: "مفيش زيارات أو أوردرات في الفترة دي",
     emptyDesc: "أضف معاملات UTM إلى روابط إعلاناتك — منشئ الروابط في صفحة التسويق يكتبها لك — وستظهر المصادر هنا.",
     openMarketing: "افتح منشئ الروابط",
     spendHint: "سجّل الإنفاق الإعلاني من صفحة الإنفاق الإعلاني ليظهر هنا الإنفاق والعائد الحقيقي.",
@@ -152,8 +153,12 @@ export function AttributionPage() {
         key: "key",
         header: t[groupBy],
         cell: (r) => (
-          <span className={cn("font-medium text-ink", !r.key && "font-normal text-ink-soft")} dir="auto">
-            {r.key || t.untracked}
+          <span className="inline-flex items-center gap-2">
+            {/* A source that is an ad platform carries its mark (handoff 254). */}
+            {groupBy === "source" && <AdSourceMark source={r.key} />}
+            <span className={cn("font-medium text-ink", !r.key && "font-normal text-ink-soft")} dir="auto">
+              {r.key || t.untracked}
+            </span>
           </span>
         ),
       },
@@ -273,7 +278,7 @@ export function AttributionPage() {
       <DataState loading={report.loading && !data} error={report.error} onRetry={() => void report.refresh()}>
         {data && isEmpty && !filtered ? (
           <EmptyState
-            icon={<Target />}
+            icon={<IconTarget />}
             title={t.emptyTitle}
             description={t.emptyDesc}
             action={

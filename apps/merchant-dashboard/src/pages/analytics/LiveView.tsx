@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Maximize2, ShoppingBag, ShoppingCart, Users, Wallet } from "lucide-react";
+import { IconCart, IconExpand, IconOrders, IconPeople, IconWallet } from "@/components/icons";
 import { Button, Card, cn } from "@store-builder/ui";
 import { funnelsList, liveStreamUrl, type LiveBlock, type LiveSnapshot, type LiveStreamEvent } from "@store-builder/api-client";
 import { apiBaseUrl, apiClient } from "@/lib/apiClient";
@@ -37,13 +37,13 @@ const STRINGS = {
     funnelFilter: "المتجر أو مسار البيع",
     fullscreen: "ملء الشاشة",
     visitorsToday: "زوار اليوم",
-    ordersToday: "طلبات اليوم",
+    ordersToday: "أوردرات اليوم",
     salesToday: "مبيعات اليوم",
-    checkingOut: "يُتمّون الطلب الآن",
-    noCheckouts: "لا أحد في صفحة إتمام الطلب الآن.",
+    checkingOut: "بيكملوا الأوردر دلوقتي",
+    noCheckouts: "مفيش حد في صفحة إتمام الأوردر دلوقتي.",
     checkout: "{items} منتج · {amount}",
     purchases: "أحدث المشتريات",
-    noPurchases: "مفيش طلبات خلال آخر 24 ساعة.",
+    noPurchases: "مفيش أوردرات في آخر ٢٤ ساعة.",
     sec: "منذ {s} ث",
     min: "منذ {m} د",
     hour: "منذ {h} س",
@@ -171,7 +171,7 @@ export function LivePanel({
             else void el.requestFullscreen?.();
           }}
         >
-          <Maximize2 className="size-4" aria-hidden />
+          <IconExpand className="size-4" aria-hidden />
           {t.fullscreen}
         </Button>
       </div>
@@ -179,15 +179,15 @@ export function LivePanel({
       {live && (
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Today icon={<Users />} label={t.visitorsToday} value={formatCount(live.today.visitors)} />
-            <Today icon={<ShoppingBag />} label={t.ordersToday} value={formatCount(live.today.orders)} />
-            <Today icon={<Wallet />} label={t.salesToday} value={formatMoney(live.today.sales, live.currency)} />
+            <Today icon={<IconPeople />} label={t.visitorsToday} value={formatCount(live.today.visitors)} />
+            <Today icon={<IconOrders />} label={t.ordersToday} value={formatCount(live.today.orders)} />
+            <Today icon={<IconWallet />} label={t.salesToday} value={formatMoney(live.today.sales, live.currency)} />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="gap-0 p-4">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
-                <ShoppingCart className="size-4" aria-hidden />
+                <IconCart className="size-4" aria-hidden />
                 {t.checkingOut}
                 <bdi dir="ltr" className="tabular-nums text-ink-soft">
                   {formatCount(live.checkingOut.length)}
@@ -213,7 +213,7 @@ export function LivePanel({
 
             <Card className="gap-0 p-4">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
-                <ShoppingBag className="size-4" aria-hidden />
+                <IconOrders className="size-4" aria-hidden />
                 {t.purchases}
               </h2>
               {live.purchases.length === 0 ? (

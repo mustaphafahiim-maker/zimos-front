@@ -1,5 +1,15 @@
 import { getTrackingContext, setPixelInfoProvider } from "./analyticsEvents";
 import type { TrackData, TrackEvent } from "./track";
+// X, Taboola, Outbrain, Kwai, Reddit and Microsoft Ads: their tags and event wording (handoff 251).
+import {
+  AD_TAG_PLATFORMS,
+  adTagEventsOf,
+  sendAdTagPageView,
+  sendToAdPlatformTags,
+  type AdTagEvent,
+  type AdTagEvents,
+  type AdTagPlatform,
+} from "./adPlatformTags";
 
 /**
  * The merchant's tracking pixels (dashboard → Marketing → Tracking tools),
@@ -17,7 +27,7 @@ import type { TrackData, TrackEvent } from "./track";
  * no pixels sends nothing.
  */
 
-export type PixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity" | "pinterest";
+export type PixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity" | "pinterest" | AdTagPlatform;
 
 export interface StorePixel {
   platform: PixelPlatform;
@@ -30,7 +40,23 @@ export interface StorePixel {
    * `AW-` id with labels (GET /store/:ws, handoff 169). A kind without one is not sent.
    */
   sendTo?: Partial<Record<ConversionEvent, string>>;
+  /**
+   * For X, Taboola, Outbrain, Kwai, Reddit and Microsoft Ads: our event → the
+   * platform's name for it (GET /store/:ws, handoff 251). An event without one is not sent.
+   */
+  events?: AdTagEvents;
 }
+
+/** Our event names as the `events` of those pixels key them. */
+const AD_TAG_EVENT: Record<TrackEvent, AdTagEvent> = {
+  PageView: "page_view",
+  ViewContent: "view_content",
+  AddToCart: "add_to_cart",
+  InitiateCheckout: "begin_checkout",
+  AddPaymentInfo: "add_payment_info",
+  Purchase: "purchase",
+  Lead: "lead",
+};
 
 type Fn = (...args: unknown[]) => void;
 type TikTokInstance = { track: Fn; page: Fn };
@@ -240,6 +266,7 @@ function sendPageViewTo(pixels: StorePixel[]): void {
         w.pintrk("page");
       }
     }
+    sendAdTagPageView(pixels);
   } catch {
     /* a broken third-party script must never break the store */
   }
@@ -378,6 +405,10 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
         ecommerce: { ...common, transaction_id: data.orderId, items: data.contentIds?.map((id) => ({ item_id: id })) },
       });
     }
+
+    // X, Taboola, Outbrain, Kwai, Reddit, Microsoft Ads: the in-scope pixels, under the platform's own
+    // name for the event (an order reported as a lead goes out as their lead), with the same id.
+    sendToAdPlatformTags(registry.filter(inScope), AD_TAG_EVENT[name], { value, currency: data.currency, orderId: data.orderId, dedupeId });
   } catch {
     /* a broken third-party script must never break the store */
   }
@@ -385,7 +416,7 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
 
 // ------------------------------------------------------------- store pixels --
 
-const PLATFORMS: readonly PixelPlatform[] = ["meta", "tiktok", "snapchat", "google", "gtm", "clarity", "pinterest"];
+const PLATFORMS: readonly PixelPlatform[] = ["meta", "tiktok", "snapchat", "google", "gtm", "clarity", "pinterest", ...AD_TAG_PLATFORMS];
 // IDs are validated by the backend; re-checked here because they are placed in inline scripts.
 const SAFE = /^[A-Za-z0-9_-]{4,64}$/;
 
@@ -430,7 +461,15 @@ export function storePixelsOf(store: unknown): StorePixel[] {
       const ids = Array.isArray(scope.ids) ? scope.ids.filter((x): x is string => typeof x === "string") : [];
       const label = typeof r.adsConversionLabel === "string" && SAFE.test(r.adsConversionLabel) ? r.adsConversionLabel : undefined;
       const sendTo = platform === "google" ? adsSendTo(pixelId, r.sendTo, label) : undefined;
-      out.push({ platform, pixelId, scope: { type, ids }, ...(label ? { adsConversionLabel: label } : {}), ...(sendTo ? { sendTo } : {}) });
+      const events = adTagEventsOf(platform, r.events);
+      out.push({
+        platform,
+        pixelId,
+        scope: { type, ids },
+        ...(label ? { adsConversionLabel: label } : {}),
+        ...(sendTo ? { sendTo } : {}),
+        ...(events ? { events } : {}),
+      });
     }
     return out;
   }

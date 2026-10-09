@@ -15,15 +15,19 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { IconLanguage } from "@/components/icons";
+import { AccordionSection } from "@/components/Accordion";
 import { DataState } from "@/components/DataState";
 import { FilterTabs } from "@/components/FilterTabs";
-import { Section } from "@/components/Section";
 import { Select } from "@/components/Select";
+import { SettingsGroup, SettingsRow, SettingsSwitch } from "@/components/settings";
+import { useReportDirty, useUnsavedGuard } from "@/lib/useUnsavedGuard";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { ContentTranslationRows } from "./ContentTranslationRows";
 import { AiTranslateButton } from "./AiTranslateButton";
+import { STACK, SettingsSkeleton } from "./sections/parts";
 
 const STRINGS = {
   en: {
@@ -58,6 +62,8 @@ const STRINGS = {
     languagesSaved: "Languages saved.",
     noLanguage: "Switch on another language above to start translating.",
     nothing: "Nothing to translate here yet.",
+    progress: "{pct}% translated · {done} of {total} texts",
+    translateSummary: "Into {language}: products, collections, pages, funnels and store texts",
   },
   ar: {
     title: "اللغات",
@@ -90,7 +96,9 @@ const STRINGS = {
     saved: "اتحفظت الترجمة.",
     languagesSaved: "تم حفظ اللغات.",
     noLanguage: "فعّل لغة أخرى بالأعلى لتبدأ الترجمة.",
-    nothing: "مفيش ما يُترجم هنا لسه.",
+    nothing: "مفيش حاجة تتترجم هنا لسه.",
+    progress: "اتترجم {pct}% · {done} من {total} نص",
+    translateSummary: "لـ{language}: المنتجات والتصنيفات والصفحات ومسارات البيع ونصوص المتجر",
   },
 } satisfies Messages;
 
@@ -111,14 +119,25 @@ export function LanguagesTab() {
   const extra = (data?.languages ?? []).filter((l) => !l.isDefault);
   const active: StoreLocale | "" = extra.some((l) => l.locale === locale) ? locale : (extra[0]?.locale ?? "");
 
-  async function toggle(code: StoreLocale, on: boolean) {
+  // Changing the language or the kind of content swaps the rows below: with a translation typed and not saved, ask first.
+  const { confirmLeave } = useUnsavedGuard();
+  async function changeLocale(next: StoreLocale) {
+    if (next !== active && (await confirmLeave())) setLocale(next);
+  }
+  async function changeKind(next: TranslatableEntity | ContentEntity) {
+    if (next !== kind && (await confirmLeave())) setKind(next);
+  }
+
+  /** Saves at once, as before; `undoable` offers to take it back (the same save with the language put back). */
+  async function toggle(code: StoreLocale, on: boolean, undoable = true) {
     if (!data) return;
     setBusy(true);
     try {
       const current = extra.map((l) => l.locale);
       const next = on ? [...new Set([...current, code])] : current.filter((l) => l !== code);
       await storeDesignSaveLanguages(apiClient, workspaceId, next);
-      toast.success(t.languagesSaved);
+      if (undoable) toast.undo(t.languagesSaved, () => toggle(code, !on, false));
+      else toast.success(t.languagesSaved);
       await overview.refresh({ silent: true });
       void refresh({ silent: true });
     } catch (err) {
@@ -129,53 +148,47 @@ export function LanguagesTab() {
   }
 
   return (
-    <DataState loading={overview.loading} error={overview.error} onRetry={() => void overview.refresh()}>
+    <DataState loading={overview.loading} error={overview.error} onRetry={() => void overview.refresh()} skeleton={<SettingsSkeleton groups={1} rows={6} />}>
       {data && (
-        <div className="space-y-5">
-          <Section title={t.title} description={t.description}>
-            <ul className="divide-y divide-line">
-              {data.available.map((code) => {
-                const row = data.languages.find((l) => l.locale === code);
-                const isDefault = code === data.defaultLocale;
+        <div className={STACK}>
+          {/* Each language is a switch that saves at once; an offered one says how much of the store is translated. */}
+          <SettingsGroup description={t.description} footer={t.interfaceNote}>
+            {data.available.map((code) => {
+              const row = data.languages.find((l) => l.locale === code);
+              const progress = row ? fmt(t.progress, { pct: row.percent, done: row.translatedFields, total: data.totalFields }) : undefined;
+              if (code === data.defaultLocale) {
                 return (
-                  <li key={code} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-ink">
-                        {t[code]}
-                        {isDefault && <span className="ms-2 text-xs font-normal text-ink-soft">{t.yourLanguage}</span>}
-                      </p>
-                      {row && (
-                        <>
-                          <div className="mt-1.5 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-line" aria-hidden>
-                            <div className="h-full rounded-full bg-primary" style={{ width: `${row.percent}%` }} />
-                          </div>
-                          <p className="mt-1 text-xs text-ink-soft">
-                            {t.done.replace("{pct}", String(row.percent))} ·{" "}
-                            {t.fields.replace("{done}", String(row.translatedFields)).replace("{total}", String(data.totalFields))}
-                          </p>
-                        </>
-                      )}
-                    </div>
-                    {!isDefault && (
-                      <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
-                        <input
-                          type="checkbox"
-                          className="size-5 accent-primary"
-                          checked={!!row}
-                          disabled={busy}
-                          onChange={(e) => void toggle(code, e.target.checked)}
-                        />
-                        {t.offer}
-                      </label>
-                    )}
-                  </li>
+                  <SettingsRow
+                    key={code}
+                    label={t[code]}
+                    hint={progress}
+                    control={<span className="text-sm text-ink-soft">{t.yourLanguage}</span>}
+                  />
                 );
-              })}
-            </ul>
-            <p className="mt-3 text-xs text-ink-soft">{t.interfaceNote}</p>
-          </Section>
+              }
+              return (
+                <SettingsSwitch
+                  key={code}
+                  label={t[code]}
+                  hint={progress}
+                  checked={!!row}
+                  disabled={busy}
+                  onChange={(on) => void toggle(code, on)}
+                />
+              );
+            })}
+          </SettingsGroup>
 
-          <Section title={t.translate} description={t.translateDescription}>
+          {/* The long part: folded once it is known, and kept mounted so a translation being typed survives a fold. */}
+          <AccordionSection
+            title={t.translate}
+            icon={IconLanguage}
+            summary={active === "" ? t.noLanguage : fmt(t.translateSummary, { language: t[active] })}
+            defaultOpen={active !== ""}
+            persistKey="store-settings:languages:translate"
+            keepMounted
+          >
+            <p className="mb-3 text-[13px] leading-5 text-ink-soft">{t.translateDescription}</p>
             {active === "" ? (
               <Alert>{t.noLanguage}</Alert>
             ) : (
@@ -183,9 +196,9 @@ export function LanguagesTab() {
                 <div className="flex flex-wrap items-center gap-3">
                   <Select
                     aria-label={t.language}
-                    className="w-auto"
+                    className="min-h-11 w-auto text-base sm:text-sm"
                     value={active}
-                    onChange={(e) => setLocale(e.target.value as StoreLocale)}
+                    onChange={(e) => void changeLocale(e.target.value as StoreLocale)}
                   >
                     {extra.map((l) => (
                       <option key={l.locale} value={l.locale}>
@@ -193,10 +206,23 @@ export function LanguagesTab() {
                       </option>
                     ))}
                   </Select>
+                  <AiTranslateButton
+                    locale={active}
+                    kind={kind}
+                    onDone={() => {
+                      setVersion((v) => v + 1);
+                      void overview.refresh({ silent: true });
+                    }}
+                  />
+                </div>
+                {/* Six kinds of content on one line that scrolls by itself on a phone, never the page. */}
+                <div className="-mx-1 max-w-full overflow-x-auto px-1 pb-1">
                   <FilterTabs
                     label={t.kind}
                     value={kind}
-                    onChange={setKind}
+                    onChange={(next) => void changeKind(next)}
+                    className="flex-nowrap"
+                    buttonClassName="min-h-11 whitespace-nowrap sm:min-h-9"
                     tabs={[
                       { value: "product", label: t.products },
                       { value: "collection", label: t.collections },
@@ -205,14 +231,6 @@ export function LanguagesTab() {
                       { value: "product_details", label: t.productDetails },
                       { value: "store_text", label: t.storeTexts },
                     ]}
-                  />
-                  <AiTranslateButton
-                    locale={active}
-                    kind={kind}
-                    onDone={() => {
-                      setVersion((v) => v + 1);
-                      void overview.refresh({ silent: true });
-                    }}
                   />
                 </div>
                 {kind !== "product" && kind !== "collection" ? (
@@ -232,7 +250,7 @@ export function LanguagesTab() {
                 )}
               </div>
             )}
-          </Section>
+          </AccordionSection>
         </div>
       )}
     </DataState>
@@ -247,6 +265,8 @@ function TranslationRows({ locale, kind, onSaved }: { locale: StoreLocale; kind:
   const items = useAsync(() => translationsList(apiClient, workspaceId, kind, locale), [workspaceId, kind, locale]);
   const [drafts, setDrafts] = useState<Record<string, { name?: string; description?: string }>>({});
   const [saving, setSaving] = useState<string | null>(null);
+  // A translation typed and not saved yet: a switch of section, language or kind asks first.
+  useReportDirty(Object.keys(drafts).length > 0);
 
   async function save(item: TranslationItem) {
     const draft = drafts[item.entityId];
@@ -316,7 +336,7 @@ function TranslationRows({ locale, kind, onSaved }: { locale: StoreLocale; kind:
                   />
                 )}
                 <div className="flex justify-end">
-                  <Button size="sm" disabled={!draft || saving === item.entityId} onClick={() => void save(item)}>
+                  <Button className="min-h-11 rounded-full px-5 sm:min-h-9" disabled={!draft || saving === item.entityId} onClick={() => void save(item)}>
                     {t.save}
                   </Button>
                 </div>

@@ -13,8 +13,10 @@ import {
   Layers,
   ListChecks,
   Gauge,
+  Globe,
   Network,
   Palette,
+  Plug,
   LifeBuoy,
   Megaphone,
   MessageCircle,
@@ -38,7 +40,13 @@ export interface NavItem {
 }
 
 export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
-  { label: null, items: [{ label: "Overview", to: "/", icon: LayoutDashboard, permission: P.OVERVIEW_VIEW }] },
+  {
+    label: null,
+    items: [
+      { label: "Overview", to: "/", icon: LayoutDashboard, permission: P.OVERVIEW_VIEW },
+      { label: "Site traffic", to: "/site-traffic", icon: Globe, permission: P.OVERVIEW_VIEW },
+    ],
+  },
   {
     label: "Merchants",
     items: [
@@ -46,6 +54,8 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { label: "Users", to: "/users", icon: Users, permission: P.WORKSPACES_VIEW },
       { label: "Subscriptions", to: "/subscriptions", icon: CreditCard, permission: P.SUBSCRIPTIONS_VIEW },
       { label: "Plans", to: "/plans", icon: Layers, permission: P.PLANS_VIEW },
+      { label: "Transfer proofs", to: "/payment-proofs", icon: ClipboardCheck, permission: P.PAYMENTS_RECORD },
+      { label: "Payment methods", to: "/payment-methods", icon: Wallet, permission: P.PAYMENTS_RECORD },
       { label: "Usage", to: "/usage", icon: Gauge, permission: P.SUBSCRIPTIONS_VIEW },
     ],
   },
@@ -65,6 +75,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { label: "Suppliers", to: "/suppliers", icon: Factory, permission: P.TEMPLATES_VIEW },
       { label: "Apps", to: "/apps", icon: Puzzle, permission: P.TEMPLATES_VIEW },
       { label: "Marketplace review", to: "/marketplace", icon: ClipboardCheck, permission: P.TEMPLATES_VIEW },
+      { label: "Partner apps", to: "/partner-apps", icon: Plug, permission: P.PROVIDERS_VIEW },
     ],
   },
   {

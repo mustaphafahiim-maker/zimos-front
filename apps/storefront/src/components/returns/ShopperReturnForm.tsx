@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { PHOTO_MAX_BYTES } from "@/lib/photoLimit";
 import {
   ApiError,
   apiErrorCode,
@@ -9,8 +10,12 @@ import {
   RETURN_REASON_CODES,
   SHOPPER_RETURN_DETAIL_MAX,
   SHOPPER_RETURN_MAX_PHOTOS,
+  shopperExchangeOptionsOf,
+  shopperExchangesOn,
+  shopperReturnOrExchange,
   shopperReturnRefusalOf,
   shopperReturnRequest,
+  type ReturnResolution,
   type ReturnReasonCode,
   type ShopperReturnEligibility,
   type ShopperReturnOrderRef,
@@ -22,12 +27,14 @@ import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
 import { QuantityStepper } from "../QuantityStepper";
+import { ExchangeLineSelect, ResolutionChoice, useReturnCaseCopy } from "./ShopperReturnCase";
 import { btnGhost, btnPrimaryLg, btnSecondary, focusRing, input, label as labelClass } from "../ui";
 
 // The checkout photo field's rules (components/checkout/CheckoutPhotoField): same types, same size, same shrink.
 const ACCEPT = "image/jpeg,image/png,image/webp";
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
-const RAW_LIMIT = 15 * 1024 * 1024;
+// Shoppers' photos are refused above 5 MB (handoff 400).
+const RAW_LIMIT = PHOTO_MAX_BYTES;
 const COMPRESS = { maxBytes: 4 * 1024 * 1024, maxEdgeSteps: [2400, 2000, 1600, 1200], qualitySteps: [0.85, 0.75, 0.65] };
 
 type Photo = { key: string; preview: string; status: "uploading" | "done" | "error"; uploadId?: string; message?: string };
@@ -122,6 +129,12 @@ export function ShopperReturnForm({ orderRef, workspaceId, eligibility, onSent, 
   // One line to return: start at one of it, so the shopper only picks a reason.
   const [qty, setQty] = useState<Record<string, number>>(() => (open.length === 1 ? { [open[0].orderItemId]: 1 } : {}));
   const [reasonCode, setReasonCode] = useState<ReturnReasonCode | "">("");
+  // Handoff 372: a refund, or another size or colour of the same product (when the store takes exchanges).
+  const caseCopy = useReturnCaseCopy();
+  const exchangesOn = shopperExchangesOn(eligibility);
+  const [resolution, setResolution] = useState<ReturnResolution>("refund");
+  const [swapTo, setSwapTo] = useState<Record<string, string>>({});
+  const exchanging = exchangesOn && resolution === "exchange";
   const [detail, setDetail] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
@@ -185,7 +198,16 @@ export function ShopperReturnForm({ orderRef, workspaceId, eligibility, onSent, 
       const next: Errors = {};
       for (const p of problems) {
         const m = /^items\.(\d+)\.quantity$/.exec(p.field);
-        if (m) {
+        const swap = /^items\.(\d+)\.exchangeVariantId$/.exec(p.field);
+        if (swap) {
+          // Missing, no longer sold or out of stock: the shopper picks again from fresh options.
+          const line = sent[Number(swap[1])];
+          if (line) next.lines = { ...next.lines, [line.orderItemId]: caseCopy.optionGone };
+          onStale?.();
+        } else if (p.field === "resolution") {
+          next.form = caseCopy.noExchanges;
+          onStale?.();
+        } else if (m) {
           const line = sent[Number(m[1])];
           const most = /(\d+)/.exec(p.message);
           if (line) next.lines = { ...next.lines, [line.orderItemId]: most ? r.tooMany(Number(most[1])) : r.quantityGeneric };
@@ -221,6 +243,10 @@ export function ShopperReturnForm({ orderRef, workspaceId, eligibility, onSent, 
       .filter((l) => l.quantity > 0);
     const next: Errors = {};
     if (items.length === 0) next.items = r.chooseItems;
+    if (exchanging) {
+      const missing = items.filter((line) => !swapTo[line.orderItemId]);
+      if (missing.length) next.lines = Object.fromEntries(missing.map((line) => [line.orderItemId, caseCopy.chooseExchange]));
+    }
     if (!reasonCode) next.reason = r.chooseReason;
     if (photos.uploading) next.photos = r.waitPhotos;
     else if (photoNeeded && photos.ids.length === 0) next.photos = r.needPhoto;
@@ -229,18 +255,20 @@ export function ShopperReturnForm({ orderRef, workspaceId, eligibility, onSent, 
 
     setBusy(true);
     try {
-      const created = await shopperReturnRequest(
-        client,
-        workspaceId,
-        orderRef,
-        {
-          reasonCode: reasonCode as ReturnReasonCode,
-          ...(detail.trim() ? { reasonDetail: detail.trim().slice(0, SHOPPER_RETURN_DETAIL_MAX) } : {}),
-          items,
-          ...(photos.ids.length ? { photoUploadIds: photos.ids } : {}),
-        },
-        getVisitorId(workspaceId)
-      );
+      const common = {
+        reasonCode: reasonCode as ReturnReasonCode,
+        ...(detail.trim() ? { reasonDetail: detail.trim().slice(0, SHOPPER_RETURN_DETAIL_MAX) } : {}),
+        ...(photos.ids.length ? { photoUploadIds: photos.ids } : {}),
+      };
+      const created = exchanging
+        ? await shopperReturnOrExchange(
+            client,
+            workspaceId,
+            orderRef,
+            { ...common, resolution: "exchange", items: items.map((line) => ({ ...line, exchangeVariantId: swapTo[line.orderItemId] })) },
+            getVisitorId(workspaceId)
+          )
+        : await shopperReturnRequest(client, workspaceId, orderRef, { ...common, items }, getVisitorId(workspaceId));
       onSent(created);
     } catch (err) {
       const explained = explain(err, items);
@@ -259,6 +287,17 @@ export function ShopperReturnForm({ orderRef, workspaceId, eligibility, onSent, 
         </h4>
         <p className="mt-0.5 text-sm text-ink-soft">{r.formHint}</p>
       </div>
+
+      {exchangesOn && (
+        <ResolutionChoice
+          value={resolution}
+          disabled={busy}
+          onChange={(next) => {
+            setResolution(next);
+            setErrors((prev) => ({ ...prev, lines: {}, form: undefined }));
+          }}
+        />
+      )}
 
       <div>
         <ul className="space-y-3">
@@ -294,6 +333,17 @@ export function ShopperReturnForm({ orderRef, workspaceId, eligibility, onSent, 
                     onChange={(n) => {
                       setQty((prev) => ({ ...prev, [line.orderItemId]: n }));
                       setErrors((prev) => ({ ...prev, items: undefined, lines: { ...prev.lines, [line.orderItemId]: "" } }));
+                    }}
+                  />
+                )}
+                {exchanging && line.returnable > 0 && (qty[line.orderItemId] ?? 0) > 0 && (
+                  <ExchangeLineSelect
+                    line={line}
+                    value={swapTo[line.orderItemId] ?? ""}
+                    disabled={busy}
+                    onChange={(variantId) => {
+                      setSwapTo((prev) => ({ ...prev, [line.orderItemId]: variantId }));
+                      setErrors((prev) => ({ ...prev, lines: { ...prev.lines, [line.orderItemId]: "" } }));
                     }}
                   />
                 )}
@@ -436,7 +486,7 @@ export function ShopperReturnForm({ orderRef, workspaceId, eligibility, onSent, 
 
       <div className="space-y-2">
         <button type="submit" disabled={busy} aria-busy={busy} className={btnPrimaryLg}>
-          {busy ? r.sending : r.send}
+          {busy ? r.sending : exchanging ? caseCopy.requestExchange : r.send}
         </button>
         {onCancel && (
           <button type="button" onClick={onCancel} disabled={busy} className={`${btnGhost} w-full`}>

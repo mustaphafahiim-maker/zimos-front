@@ -9,6 +9,7 @@ import {
 import { CatalogFilters } from "@/components/catalog/CatalogFilters";
 import { FilterDrawer } from "@/components/catalog/FilterDrawer";
 import { SortSelect } from "@/components/catalog/SortSelect";
+import { SpecFilteredResults } from "@/components/specs/SpecFilteredResults";
 import { ChevronIcon } from "@/components/Icons";
 import { ProductCard } from "@/components/ProductCard";
 import { StoreLink } from "@/components/StoreRoute";
@@ -18,6 +19,12 @@ import { getDictionary, type Dictionary, type Locale } from "@/lib/i18n";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreCollections, getStoreMeta } from "@/lib/storeMeta";
+import { SearchMatches, ServedAsNote } from "@/components/catalog/SearchMatches";
+import { searchListing } from "@/lib/searchListing";
+// Sold-out products in the lists: the store's setting and the "In stock only" switch (handoff 390).
+import { soldOutModeOf, withAvailableOnly } from "@store-builder/api-client";
+import { InStockOnly } from "@/components/catalog/InStockOnly";
+import { redirectIfMoved } from "@/lib/urlRedirectsServer";
 
 export const revalidate = 60;
 
@@ -85,21 +92,32 @@ export default async function ProductsPage({ params, searchParams }: { params: P
 
   let listing: StorefrontListing;
   try {
-    listing = await client.searchStorefrontProducts(workspaceId, {
+    // A search also carries the shopper's visitor id and comes back with its searchId (handoff 211).
+    listing = await searchListing(state.available ? withAvailableOnly(client) : client, workspaceId, {
       ...toListingParams(state, catalog.default_sort),
       limit: PAGE_SIZE,
       facets: catalog.sidebar_enabled,
     });
   } catch (err) {
     // A collection that no longer exists.
-    if (err instanceof ApiError && err.status === 404) notFound();
+    if (err instanceof ApiError && err.status === 404) {
+      // A collection whose address changed goes on to its new one (Store settings → URL redirects, handoff 232).
+      await redirectIfMoved(workspaceId, "/products", state.collection ? { collection: state.collection } : query, query);
+      notFound();
+    }
     throw err;
   }
   const collections = catalog.sidebar_enabled ? await getStoreCollections(workspaceId) : [];
   const filterCount = activeFilterCount(state);
   const sidebar = catalog.sidebar_enabled && listing.facets !== undefined;
   const title = state.q ? t.catalog.searchTitle(state.q) : (listing.collection?.name ?? t.catalog.allProducts);
-  const clearHref = catalogHref(state, { collection: null, tags: [], min: null, max: null, options: {} });
+  const clearHref = catalogHref(state, { collection: null, tags: [], min: null, max: null, options: {}, available: false });
+  // Nothing sold out is listed when the store hides them, so the switch has nothing to take away.
+  const inStockSwitch = soldOutModeOf(catalog) === "hide" ? null : (
+    <div className="mb-4">
+      <InStockOnly state={state} />
+    </div>
+  );
 
   const filters = sidebar ? (
     <CatalogFilters
@@ -142,6 +160,7 @@ export default async function ProductsPage({ params, searchParams }: { params: P
           <div className="flex flex-wrap items-center gap-3">
             {sidebar && (
               <FilterDrawer count={filterCount} total={listing.total}>
+                {inStockSwitch}
                 {/* The sheet's own copy: separate ids from the sidebar's. */}
                 <CatalogFilters
                   state={state}
@@ -164,6 +183,7 @@ export default async function ProductsPage({ params, searchParams }: { params: P
         <div className={sidebar ? "mt-8 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10" : "mt-8"}>
           {sidebar && (
             <aside aria-label={t.catalog.filters} className="hidden lg:block">
+              {inStockSwitch}
               {filters}
               {filterCount > 0 && (
                 <StoreLink href={clearHref} scroll={false} className={`${btnSecondary} mt-6 w-full`}>
@@ -174,6 +194,8 @@ export default async function ProductsPage({ params, searchParams }: { params: P
           )}
 
           <div className="min-w-0">
+            {/* Specification filters (handoff 231): once a value is ticked, its matches stand in for the results below. */}
+            <SpecFilteredResults key={listing.collection?.id ?? "all"} workspaceId={workspaceId} collectionId={listing.collection?.id ?? null} currency={store.currency} locale={locale} disabled={Boolean(state.q)}>
             {state.q ? (
               <SearchResults t={t} state={state} listing={listing} currency={store.currency} locale={locale} />
             ) : listing.products.length === 0 ? (
@@ -185,10 +207,11 @@ export default async function ProductsPage({ params, searchParams }: { params: P
                 )}
               </EmptyState>
             ) : (
-              <ProductGrid products={listing.products} currency={store.currency} locale={locale} />
+              <ProductGrid products={listing.products} currency={store.currency} locale={locale} lead />
             )}
 
             <Pagination t={t} state={state} listing={listing} />
+            </SpecFilteredResults>
           </div>
         </div>
       </div>
@@ -196,11 +219,25 @@ export default async function ProductsPage({ params, searchParams }: { params: P
   );
 }
 
-function ProductGrid({ products, currency, locale }: { products: StorefrontProduct[]; currency: string; locale: Locale }) {
+/**
+ * `lead` marks the grid at the top of the page: the photos of its first cards are what the
+ * shopper sees first, so they are fetched with the page instead of lazily (ProductCard `priority`).
+ */
+function ProductGrid({
+  products,
+  currency,
+  locale,
+  lead = false,
+}: {
+  products: StorefrontProduct[];
+  currency: string;
+  locale: Locale;
+  lead?: boolean;
+}) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3">
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} currency={currency} locale={locale} />
+      {products.map((product, index) => (
+        <ProductCard key={product.id} product={product} currency={currency} locale={locale} priority={lead && index < 4} />
       ))}
     </div>
   );
@@ -236,12 +273,15 @@ function SearchResults({
         <h2 id="search-results-title" className="mb-4 font-display text-xl font-bold text-ink">
           {t.catalog.results}
         </h2>
+        <ServedAsNote listing={listing} locale={locale} />
         {listing.products.length === 0 ? (
           <EmptyState message={t.catalog.noResults(state.q)}>
             <p className="max-w-md text-sm text-ink-soft">{t.catalog.noResultsHint}</p>
           </EmptyState>
         ) : (
-          <ProductGrid products={listing.products} currency={currency} locale={locale} />
+          <SearchMatches listing={listing} query={state.q}>
+            <ProductGrid products={listing.products} currency={currency} locale={locale} lead />
+          </SearchMatches>
         )}
       </section>
       {related.length > 0 && (

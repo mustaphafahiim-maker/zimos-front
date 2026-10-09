@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link2 } from "lucide-react";
+import { IconLink } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import { paymentRulesCreateLink } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -59,7 +59,7 @@ export function PaymentLinkButton({ workspaceId, orderId }: { workspaceId: strin
   return (
     <>
       <Button variant="outline" className="min-h-11" disabled={busy} onClick={() => void create()}>
-        <Link2 className="size-4" aria-hidden />
+        <IconLink className="size-4" aria-hidden />
         {busy ? t.working : t.button}
       </Button>
       <Modal

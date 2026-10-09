@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { Check, Loader2, X } from "lucide-react";
+import { IconCheck, IconClose, IconSpinner } from "@/components/icons";
 import { Input, Label, cn } from "@store-builder/ui";
 import { ApiError } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -134,9 +134,9 @@ export function UsernameField({
           placeholder="your.name"
         />
         <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center px-3" aria-hidden>
-          {status === "checking" && <Loader2 className="size-4 animate-spin text-ink-soft" />}
-          {(status === "available" || status === "current") && <Check className="size-4 text-success" />}
-          {bad && <X className="size-4 text-danger" />}
+          {status === "checking" && <IconSpinner className="size-4 animate-spin text-ink-soft" />}
+          {(status === "available" || status === "current") && <IconCheck className="size-4 text-success" />}
+          {bad && <IconClose className="size-4 text-danger" />}
         </span>
       </div>
       <p id={`${statusId}-hint`} className="text-xs text-ink-soft">

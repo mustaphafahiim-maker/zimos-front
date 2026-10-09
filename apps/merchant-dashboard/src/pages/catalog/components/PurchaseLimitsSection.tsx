@@ -1,5 +1,5 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
-import { Lock } from "lucide-react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { IconLock } from "@/components/icons";
 import { Alert, Button, Input, Spinner, cn } from "@store-builder/ui";
 import {
   PURCHASE_LIMIT_MAX,
@@ -16,6 +16,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { numberField, parseWholeNumber } from "@/lib/wholeNumber";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
+import { SectionSaveBar } from "../product/saveQueue";
 import { ProductPageCard } from "./ProductPageCard";
 
 const STRINGS = {
@@ -99,7 +100,7 @@ export function PurchaseLimitsSection({ productId }: { productId: string }) {
       ) : data.error || !data.data ? (
         isPermissionError(data.error) ? (
           <p className="flex items-center gap-2 text-sm text-ink-soft">
-            <Lock className="size-4 shrink-0" aria-hidden />
+            <IconLock className="size-4 shrink-0" aria-hidden />
             {t.noView}
           </p>
         ) : (
@@ -131,6 +132,7 @@ function LimitsForm({
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const baseId = useId();
+  const form = useRef<HTMLFormElement>(null);
   const saved = toDraft(limits);
   const [draft, setDraft] = useState<Draft>(saved);
   const [errors, setErrors] = useState<Partial<Record<Key, string>>>({});
@@ -192,7 +194,7 @@ function LimitsForm({
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-4">
+    <form ref={form} onSubmit={submit} noValidate className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-3">
         {KEYS.map((k) => {
           const id = `${baseId}-${k}`;
@@ -233,26 +235,19 @@ function LimitsForm({
 
       {saveError && <Alert variant="danger">{saveError}</Alert>}
 
-      {(dirty || saving) && (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-11"
-            disabled={saving}
-            onClick={() => {
-              setDraft(saved);
-              setErrors({});
-              setSaveError(null);
-            }}
-          >
-            {t.cancel}
-          </Button>
-          <Button type="submit" className="min-h-11" disabled={saving}>
-            {saving ? t.saving : t.save}
-          </Button>
-        </div>
-      )}
+      {/* The page's one save bar: same save, same payload (the form is submitted as before). */}
+      <SectionSaveBar
+        section={t.title}
+        dirty={dirty}
+        saving={saving}
+        error={saveError ?? Object.values(errors).find(Boolean) ?? null}
+        onSave={() => form.current?.requestSubmit()}
+        onDiscard={() => {
+          setDraft(saved);
+          setErrors({});
+          setSaveError(null);
+        }}
+      />
     </form>
   );
 }

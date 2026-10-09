@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { Copy, MessageCircle, RefreshCw } from "lucide-react";
-import { Alert, Button, Card, Spinner, cn } from "@store-builder/ui";
+import { IconCopy, IconGuide, IconRefresh } from "@/components/icons";
+import { Alert, Button, Spinner, cn } from "@store-builder/ui";
 import type { WhatsappIntegrationConnected } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
@@ -10,7 +10,11 @@ import { formatRelativeTime } from "@/lib/relativeTime";
 import { DataState } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField } from "@/components/Field";
+import { AccordionSection } from "@/components/Accordion";
+import { SettingsGroup, SettingsRow } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { PaneSkeleton, SettingsCard } from "./sections/SettingsCard";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { WhatsappTemplatesPanel } from "@/components/WhatsappTemplates";
 
@@ -23,6 +27,8 @@ const STRINGS = {
     connected: "Connected",
     errorStatus: "Needs attention",
     guideTitle: "How to get your details from Meta",
+    guideSummary: "Six steps, done once",
+    connectTitle: "Your details from Meta",
     step1: "Go to developers.facebook.com, sign in, and create a new app of type “Business”.",
     step2: "Inside the app, add the “WhatsApp” product and link your WhatsApp Business account.",
     step3:
@@ -81,6 +87,8 @@ const STRINGS = {
     connected: "مربوط",
     errorStatus: "محتاج مراجعة",
     guideTitle: "إزاي تجيب البيانات من Meta",
+    guideSummary: "ست خطوات، مرة واحدة بس",
+    connectTitle: "بياناتك من Meta",
     step1: "ادخل developers.facebook.com وسجّل دخول، واعمل App جديد نوعه «Business».",
     step2: "جوه الـ App ضيف منتج «WhatsApp» واربطه بحساب واتساب بيزنس بتاعك.",
     step3: "افتح WhatsApp ← API Setup وانسخ «Phone number ID» (و«WhatsApp Business Account ID» لو حابب).",
@@ -156,39 +164,43 @@ export function WhatsappSection() {
   }
 
   return (
-    <Card id="whatsapp" className="gap-0 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <MessageCircle className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-ink">{t.waTitle}</h2>
-            <p className="mt-0.5 text-xs text-ink-soft">{t.waHint}</p>
-          </div>
-        </div>
-        {data && <StatusPill integration={data.connected ? data : null} />}
-      </div>
-
-      <div className="mt-3">
-        <DataState
-          loading={integration.loading}
-          error={integration.error}
-          onRetry={() => integration.refresh()}
-        >
-          {data && isConnected && !reconnecting ? (
-            <>
-              <ConnectedView
-                integration={data as WhatsappIntegrationConnected}
-                onReconnect={() => setReconnecting(true)}
-                onDisconnect={() => setConfirmDisconnect(true)}
-              />
-              {/* The account's templates and their status in Meta (components/WhatsappTemplates.tsx). */}
-              <WhatsappTemplatesPanel />
-            </>
-          ) : data ? (
-            <div className="space-y-5">
-              {!isConnected && <SetupGuide />}
+    <>
+      <DataState
+        loading={integration.loading}
+        error={integration.error}
+        onRetry={() => integration.refresh()}
+        skeleton={<PaneSkeleton rows={3} />}
+      >
+        {data && (
+          <SettingsGroup>
+            <SettingsRow label={t.waTitle} hint={t.waHint} control={<StatusPill integration={data.connected ? data : null} />} />
+          </SettingsGroup>
+        )}
+        {data && isConnected && !reconnecting ? (
+          <SettingsCard id="whatsapp">
+            <ConnectedView
+              integration={data as WhatsappIntegrationConnected}
+              onReconnect={() => setReconnecting(true)}
+              onDisconnect={() => setConfirmDisconnect(true)}
+            />
+            {/* The account's templates and their status in Meta (components/WhatsappTemplates.tsx). */}
+            <WhatsappTemplatesPanel />
+          </SettingsCard>
+        ) : data ? (
+          <>
+            {/* Six steps read once: they fold to one row above the form they lead to. */}
+            {!isConnected && (
+              <AccordionSection
+                title={t.guideTitle}
+                summary={t.guideSummary}
+                icon={IconGuide}
+                persistKey="settings:whatsapp-guide"
+                className="[--radius-card:1.25rem]"
+              >
+                <SetupGuide />
+              </AccordionSection>
+            )}
+            <SettingsCard id="whatsapp" title={t.connectTitle}>
               <ConnectForm
                 onCancel={reconnecting ? () => setReconnecting(false) : undefined}
                 onDone={() => {
@@ -196,10 +208,10 @@ export function WhatsappSection() {
                   void integration.refresh({ silent: true });
                 }}
               />
-            </div>
-          ) : null}
-        </DataState>
-      </div>
+            </SettingsCard>
+          </>
+        ) : null}
+      </DataState>
 
       <ConfirmDialog
         open={confirmDisconnect}
@@ -212,7 +224,7 @@ export function WhatsappSection() {
         onCancel={() => setConfirmDisconnect(false)}
         onConfirm={disconnect}
       />
-    </Card>
+    </>
   );
 }
 
@@ -244,13 +256,12 @@ function SetupGuide() {
   const t = useT(STRINGS);
   const steps = [t.step1, t.step2, t.step3, t.step4, t.step5, t.step6];
   return (
-    <div className="rounded-lg bg-paper p-4 ring-1 ring-foreground/10">
-      <h3 className="text-sm font-medium text-ink">{t.guideTitle}</h3>
-      <ol className="mt-3 space-y-2">
+    <div>
+      <ol className="space-y-2.5">
         {steps.map((s, i) => (
           <li key={i} className="flex gap-3 text-sm text-ink-soft">
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
-              {i + 1}
+              {fmt("{n}", { n: i + 1 })}
             </span>
             <span className="min-w-0 pt-0.5">{s}</span>
           </li>
@@ -271,6 +282,8 @@ function ConnectForm({ onCancel, onDone }: { onCancel?: () => void; onDone: () =
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  // Four pasted values not connected yet: the page asks before they are left behind.
+  useReportDirty([phoneNumberId, accessToken, businessAccountId, appSecret].some((value) => value.trim() !== ""));
 
   function errorText(err: unknown): string {
     if (err instanceof ApiError) {
@@ -395,7 +408,7 @@ function ConnectedView({
             <p className="text-sm">{integration.lastError ?? "—"}</p>
           </div>
           <Button size="sm" onClick={onReconnect}>
-            <RefreshCw className="size-4" /> {t.reconnect}
+            <IconRefresh className="size-4" /> {t.reconnect}
           </Button>
         </Alert>
       )}
@@ -478,7 +491,7 @@ function CopyRow({ label, value }: { label: string; value: string }) {
         {value}
       </code>
       <Button size="icon-sm" variant="ghost" onClick={copy} aria-label={fmt(t.copyLabel, { label })}>
-        <Copy className="size-4" />
+        <IconCopy className="size-4" />
       </Button>
     </div>
   );

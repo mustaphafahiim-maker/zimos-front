@@ -35,6 +35,8 @@ export const AUTOMATION_STRINGS = {
     step_add_tag: "Add tag to order",
     step_set_status: "Change order status",
     step_notify_team: "Notify the team",
+    step_notify_channel: "Message a team channel",
+    sumChannel: "Message the team channel: {text}",
     unit_minutes: "minutes",
     unit_hours: "hours",
     unit_days: "days",
@@ -50,21 +52,21 @@ export const AUTOMATION_STRINGS = {
     sumNotify: "Notify the team: {text}",
   },
   ar: {
-    "trigger_order.created": "إنشاء الطلب",
-    "trigger_order.confirmed": "تأكيد الطلب",
-    "trigger_order.rejected": "رفض الطلب",
-    "trigger_order.cancelled": "إلغاء الطلب",
-    "trigger_order.shipped": "شحن الطلب",
-    "trigger_order.out_for_delivery": "خرج للتوصيل",
-    "trigger_order.delivered": "تسليم الطلب",
-    "trigger_order.unreachable": "العميل لم يرد",
-    "trigger_order.postponed": "تأجيل الطلب",
-    "trigger_order.returned": "إرجاع الطلب",
+    "trigger_order.created": "أوردر جديد اتعمل",
+    "trigger_order.confirmed": "الأوردر اتأكد",
+    "trigger_order.rejected": "الأوردر اترفض",
+    "trigger_order.cancelled": "الأوردر اتلغى",
+    "trigger_order.shipped": "الأوردر اتشحن",
+    "trigger_order.out_for_delivery": "الأوردر خرج مع المندوب",
+    "trigger_order.delivered": "الأوردر اتسلّم",
+    "trigger_order.unreachable": "العميل ما ردّش",
+    "trigger_order.postponed": "الأوردر اتأجّل",
+    "trigger_order.returned": "الأوردر رجع",
     "trigger_order.payment_failed": "فشل الدفع",
     "trigger_order.transfer_rejected": "رفض التحويل",
     "trigger_order.digital_delivered": "المنتجات الرقمية جاهزة",
-    "trigger_checkout.abandoned": "ترك صفحة الطلب",
-    "trigger_lost_order.created": "تسجيل طلب مفقود",
+    "trigger_checkout.abandoned": "العميل ساب الأوردر في النص",
+    "trigger_lost_order.created": "تسجيل أوردر مفقود",
     "trigger_review.request": "طلب تقييم (بعد التسليم بأيام)",
     "trigger_lead.created": "عميل محتمل جديد",
     "trigger_subscription.renewal_failed": "فشل تجديد الاشتراك",
@@ -72,24 +74,26 @@ export const AUTOMATION_STRINGS = {
     step_wait: "انتظار",
     step_whatsapp_template: "قالب واتساب",
     step_sms: "رسالة SMS",
-    step_email: "بريد إلكتروني",
+    step_email: "إيميل",
     step_webhook: "Webhook",
-    step_add_tag: "إضافة وسم للطلب",
-    step_set_status: "تغيير حالة الطلب",
+    step_add_tag: "إضافة وسم للأوردر",
+    step_set_status: "تغيير حالة الأوردر",
     step_notify_team: "تنبيه الفريق",
+    step_notify_channel: "رسالة لقناة الفريق",
+    sumChannel: "رسالة لقناة الفريق: {text}",
     unit_minutes: "دقيقة",
     unit_hours: "ساعة",
     unit_days: "يوم",
     status_confirmed: "مؤكد",
     status_cancelled: "ملغي",
-    sumWait: "انتظار {amount} {unit}",
+    sumWait: "استنى {amount} {unit}",
     sumWhatsapp: "قالب واتساب «{template}»",
     sumSms: "SMS: {text}",
-    sumEmail: "بريد: {text}",
-    sumWebhook: "إرسال إلى {text}",
-    sumTag: "وسم الطلب بـ «{text}»",
-    sumStatus: "تحويل الطلب إلى {text}",
-    sumNotify: "تنبيه الفريق: {text}",
+    sumEmail: "إيميل: {text}",
+    sumWebhook: "ابعت لـ {text}",
+    sumTag: "حط على الأوردر وسم «{text}»",
+    sumStatus: "خلّي الأوردر {text}",
+    sumNotify: "نبّه الفريق: {text}",
   },
 } satisfies Messages;
 
@@ -121,6 +125,8 @@ export function stepSummary(t: AutomationStrings, step: AutomationStep): string 
       return fmt(t.sumStatus, { text: lookup(t, `status_${step.status}`) ?? step.status });
     case "notify_team":
       return fmt(t.sumNotify, { text: clip(step.message) });
+    case "notify_channel":
+      return fmt(t.sumChannel, { text: clip(step.message) });
     default:
       return stepTypeLabel(t, (step as { type: string }).type);
   }
@@ -145,6 +151,8 @@ export function emptyStep(type: AutomationStepType): AutomationStep {
       return { type, status: "confirmed" };
     case "notify_team":
       return { type, message: "" };
+    case "notify_channel":
+      return { type, teamChannelId: "", message: "" };
   }
 }
 
@@ -165,6 +173,8 @@ export function stepProblem(step: AutomationStep): boolean {
       return step.tag.trim() === "";
     case "notify_team":
       return step.message.trim() === "";
+    case "notify_channel":
+      return step.teamChannelId === "" || step.message.trim() === "";
     default:
       return false;
   }

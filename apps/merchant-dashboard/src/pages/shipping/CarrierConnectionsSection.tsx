@@ -27,6 +27,11 @@ import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { CopyButton } from "@/components/CopyButton";
 import { ProviderLogo } from "@/components/ProviderLogo";
+import { Sheet } from "@/components/Sheet";
+import { IconCaretRight } from "@/components/icons";
+import { ListSkeleton } from "@/components/list";
+import { useReportDirty, useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { LIST_CARD } from "./sections/RowControls";
 import {
   ENVIRONMENT_FIELD,
   SHIPPING_ROLES,
@@ -291,7 +296,7 @@ const isTierMapField = (f: CarrierFieldDescriptor) => f.kind === "tier_map";
 type Settings = Record<string, unknown>;
 type TierMap = Record<string, BostaTierPackage>;
 
-/** Courier connections on the Shipping page, one card per courier the server offers this store. */
+/** Courier connections on the Shipping page: one row per courier the server offers this store, each opening its sheet. */
 export function CarrierConnectionsSection() {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
@@ -310,19 +315,21 @@ export function CarrierConnectionsSection() {
   const canManage = roleAllows && !forbidden;
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-
-      <div className="mt-4 space-y-4">
+    <section className="min-w-0">
+      <div className="space-y-4">
         {!roleAllows ? (
           <Alert>{t.viewOnly}</Alert>
         ) : (
-          <DataState loading={carriers.loading} error={carriers.error} onRetry={() => carriers.refresh()}>
+          <DataState
+            loading={carriers.loading}
+            error={carriers.error}
+            onRetry={() => carriers.refresh()}
+            skeleton={<ListSkeleton rows={4} variant="card" />}
+          >
             {list && (!list.configured || list.carriers.length === 0) ? (
               // The platform has no credentials key (or offers this store no
               // courier): neutral, not an error.
-              <div className="rounded-[0.5rem] border border-dashed border-line px-4 py-5">
+              <div className="rounded-[1.25rem] border border-dashed border-line-strong/50 px-4 py-5">
                 <p className="text-sm font-medium text-ink">{t.notAvailableTitle}</p>
                 <p className="mt-1 text-sm text-ink-soft">{t.notAvailable}</p>
               </div>
@@ -331,15 +338,19 @@ export function CarrierConnectionsSection() {
                 {forbidden && <Alert>{t.viewOnlyForbidden}</Alert>}
                 {filter.bar}
                 {filter.empty}
-                {filter.filtered.map((carrier) => (
-                  <CarrierCard
-                    key={carrier.code}
-                    carrier={carrier}
-                    canManage={canManage}
-                    onForbidden={() => setForbidden(true)}
-                    onChanged={() => carriers.refresh({ silent: true })}
-                  />
-                ))}
+                {filter.filtered.length > 0 && (
+                  <ul role="list" data-slot="card" className={cn(LIST_CARD, "divide-y divide-line")}>
+                    {filter.filtered.map((carrier) => (
+                      <CarrierCard
+                        key={carrier.code}
+                        carrier={carrier}
+                        canManage={canManage}
+                        onForbidden={() => setForbidden(true)}
+                        onChanged={() => carriers.refresh({ silent: true })}
+                      />
+                    ))}
+                  </ul>
+                )}
               </>
             )}
           </DataState>
@@ -391,6 +402,17 @@ function CarrierCard({
   const [credentialErrors, setCredentialErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
+  // The courier's sheet: everything about one courier (its state, key, settings, booking, areas) opens from its row.
+  const [open, setOpen] = useState(false);
+  // The settings as the form was opened with, to know whether anything in it was changed.
+  const [draftBase, setDraftBase] = useState("{}");
+  const { confirmLeave } = useUnsavedGuard();
+  // A key being typed, or settings changed and not saved: closing the sheet (or leaving the section) asks first.
+  useReportDirty(
+    open &&
+      ((mode === "key" && Object.values(credentials).some((value) => value.trim() !== "")) ||
+        (mode === "settings" && JSON.stringify(draft) !== draftBase))
+  );
   // What the last connect could not check comes with the connection on
   // GET /carriers. A connect's own answer is used until the list refresh
   // it triggers arrives (a new `connection` object).
@@ -444,6 +466,22 @@ function CarrierCard({
     setCredentialErrors({});
     setNotice(null);
     setError(null);
+    // A courier that is not connected has nothing else in its sheet: cancelling the key closes it.
+    if (!connection) setOpen(false);
+  }
+
+  function openSheet() {
+    setError(null);
+    // Not connected yet: the sheet starts on the key, the one thing there is to do.
+    if (!connection && canManage) setMode("key");
+    setOpen(true);
+  }
+
+  async function requestClose() {
+    if (busy !== null) return;
+    if (!(await confirmLeave())) return;
+    cancelEditing();
+    setOpen(false);
   }
 
   async function put(payload: ConnectCarrierPayload) {
@@ -458,6 +496,7 @@ function CarrierCard({
     const next: Settings = result ? (result.carrier.connection?.settings ?? {}) : current;
     setLocations(result && pickupField ? (result.verification.pickupLocations ?? []) : null);
     setDraft(next);
+    setDraftBase(JSON.stringify(next));
     setMode("settings");
   }
 
@@ -569,6 +608,7 @@ function CarrierCard({
     setFresh({ connection, verification: {} });
     setDisconnecting(false);
     setMode("view");
+    setOpen(false);
     toast.success(fmt(t.disconnectedToast, { name }));
     onChanged();
   }
@@ -603,31 +643,57 @@ function CarrierCard({
       ? (locations.find((l) => l.id === currentPickup)?.name ?? t.unknownLocation)
       : t.chosenLocation;
 
+  const sandboxBadge = environment === "sandbox" ? <StatusBadge value="sandbox" tone="warning" text={t.sandbox} /> : null;
+  const sinceLine = connection ? (
+    <>
+      {fmt(t.connectedSince, { date: formatDateTime(connection.connectedAt) })}
+      {connection.lastVerifiedAt && <> · {fmt(t.lastVerified, { date: formatDateTime(connection.lastVerifiedAt) })}</>}
+    </>
+  ) : null;
+
   return (
-    <div className="rounded-[0.5rem] border border-line p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <ProviderLogo code={carrier.code} name={name} />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-medium text-ink">{name}</h3>
-              {statusBadge}
-              {environment === "sandbox" && <StatusBadge value="sandbox" tone="warning" text={t.sandbox} />}
-            </div>
-            {connection && (
-              <p className="mt-1 text-xs text-ink-soft">
-                {fmt(t.connectedSince, { date: formatDateTime(connection.connectedAt) })}
-                {connection.lastVerifiedAt && <> · {fmt(t.lastVerified, { date: formatDateTime(connection.lastVerifiedAt) })}</>}
-              </p>
-            )}
+    <li className="group/li">
+      <button
+        type="button"
+        onClick={openSheet}
+        aria-haspopup="dialog"
+        className="flex min-h-16 w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-start transition-[background-color] duration-[var(--dur-fade)] ease-[var(--ease-out)] group-first/li:rounded-t-[1.25rem] group-last/li:rounded-b-[1.25rem] hover:bg-ink/4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary active:bg-ink/8 motion-reduce:transition-none"
+      >
+        <ProviderLogo code={carrier.code} name={name} />
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="min-w-0 truncate text-[15px] leading-5 font-medium text-ink">{name}</span>
+            {statusBadge}
+            {sandboxBadge}
+          </span>
+          {connection ? (
+            <span className="mt-0.5 block truncate text-[13px] leading-5 text-ink-soft">{sinceLine}</span>
+          ) : (
+            canManage && <span className="mt-0.5 block truncate text-[13px] leading-5 font-medium text-primary">{fmt(t.connect, { name })}</span>
+          )}
+        </span>
+        <IconCaretRight className="size-4 shrink-0 text-ink-soft rtl:-scale-x-100" weight="bold" aria-hidden />
+      </button>
+
+      <Sheet
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) void requestClose();
+        }}
+        title={name}
+        description={sinceLine ?? undefined}
+        size="lg"
+      >
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            {statusBadge}
+            {sandboxBadge}
           </div>
-        </div>
-        {canManage && mode === "view" && !connection && (
-          <Button className="min-h-11" onClick={() => setMode("key")}>
-            {fmt(t.connect, { name })}
-          </Button>
-        )}
-      </div>
+          {canManage && mode === "view" && !connection && (
+            <Button className="mt-3 min-h-11 rounded-full px-5" onClick={() => setMode("key")}>
+              {fmt(t.connect, { name })}
+            </Button>
+          )}
 
       {environment === "sandbox" && mode === "view" && (
         <div className="mt-3 rounded-[0.5rem] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-dark">
@@ -846,7 +912,9 @@ function CarrierCard({
         onCancel={() => setDisconnecting(false)}
         onConfirm={confirmDisconnect}
       />
-    </div>
+        </div>
+      </Sheet>
+    </li>
   );
 }
 

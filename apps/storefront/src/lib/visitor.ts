@@ -36,7 +36,8 @@ export interface Attribution {
   campaign?: string;
   referrer?: string;
   landingPage?: string;
-  clickIds?: { gclid?: string; fbclid?: string; ttclid?: string };
+  /** twclid, rdt_cid, msclkid, tblci: X, Reddit, Microsoft Ads and Taboola (handoff 254). */
+  clickIds?: { gclid?: string; fbclid?: string; ttclid?: string; twclid?: string; rdt_cid?: string; msclkid?: string; tblci?: string };
 }
 
 // --- storage --------------------------------------------------------------------
@@ -206,6 +207,10 @@ export function attributionFrom(input: {
   if (gclid) clickIds.gclid = gclid;
   if (fbclid) clickIds.fbclid = fbclid;
   if (ttclid) clickIds.ttclid = ttclid;
+  for (const key of ["twclid", "rdt_cid", "msclkid", "tblci"] as const) {
+    const value = clip(params.get(key));
+    if (value) clickIds[key] = value;
+  }
 
   const out: Attribution = {};
   const source = clip(params.get("utm_source")) ?? ref?.host;

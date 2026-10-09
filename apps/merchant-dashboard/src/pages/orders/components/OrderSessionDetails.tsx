@@ -5,7 +5,7 @@ import { useAsync } from "@/lib/useAsync";
 import { formatDateTime, humanize } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { countOf } from "@/lib/plural";
-import { Section } from "@/components/Section";
+import { CardFrame } from "@/pages/orders/detail/CardFrame";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useOrderLabels } from "../orderLabels";
 
@@ -42,6 +42,12 @@ const STRINGS = {
     "a_order.meta_update": "Order details updated",
     "a_order.update": "Order edited",
     "a_order.items_update": "Products edited",
+    "a_order.packed": "Order packed",
+    "a_order.on_account_payment": "On-account payment recorded",
+    "a_order.address_changed_by_customer": "The customer changed the address",
+    "a_order.delivery_slot_change": "Delivery time changed",
+    "a_pickup.ready": "Marked ready for pickup",
+    "a_pickup.collected": "Handed over to the customer",
     "a_shipment.create": "Shipment created",
     "a_shipment.update": "Shipment updated",
     "a_refund.create": "Refund recorded",
@@ -83,6 +89,12 @@ const STRINGS = {
     "a_order.meta_update": "اتحدّثت بيانات الأوردر",
     "a_order.update": "اتعدّل الأوردر",
     "a_order.items_update": "اتعدّلت المنتجات",
+    "a_order.packed": "الأوردر اتغلّف",
+    "a_order.on_account_payment": "اتسجّلت دفعة آجل",
+    "a_order.address_changed_by_customer": "العميل غيّر العنوان",
+    "a_order.delivery_slot_change": "اتغيّر ميعاد التوصيل",
+    "a_pickup.ready": "اتعلّم جاهز للاستلام",
+    "a_pickup.collected": "اتسلّم للعميل",
     "a_shipment.create": "اتعملت شحنة",
     "a_shipment.update": "اتحدّثت الشحنة",
     "a_refund.create": "اتسجّل استرداد",
@@ -174,16 +186,17 @@ function Fact({ label, value }: { label: string; value: string | null }) {
 }
 
 /** SPEC §4.4 card 4 + the "first order" of card 5. Nothing while loading or when it could not load. */
-export function OrderSessionCard({ details }: { details: OrderSessionDetails | null | undefined }) {
+export function OrderSessionCard({ details, frameless }: { details: OrderSessionDetails | null | undefined; /** Inside a folding section of the order page: no card and no title of its own. */ frameless?: boolean }) {
   const t = useT(STRINGS) as Strings;
   if (!details) return null;
   const c = details.customer;
   const sequence = c && c.orderSequence !== null ? (c.orderSequence === 1 ? t.firstOrder : fmt(t.orderSequence, { n: c.orderSequence })) : null;
 
   return (
-    <Section title={t.title} description={t.description}>
+    <CardFrame frameless={frameless} title={t.title} description={t.description}>
       <div className="space-y-4">
-        <dl className="space-y-1 sm:grid sm:grid-cols-2 sm:gap-x-6 sm:space-y-0">
+        {/* One column: from lg up the card sits in the order page's narrow side column. */}
+        <dl className="space-y-1">
           <Fact label={t.customerOrders} value={sequence && c ? `${sequence} · ${fmt(t.inAll, { n: c.totalOrders })}` : null} />
           <Fact label={t.firstVisit} value={details.firstVisitAt ? formatDateTime(details.firstVisitAt) : null} />
           <Fact
@@ -226,6 +239,6 @@ export function OrderSessionCard({ details }: { details: OrderSessionDetails | n
           </div>
         )}
       </div>
-    </Section>
+    </CardFrame>
   );
 }

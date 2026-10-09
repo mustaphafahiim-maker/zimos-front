@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { FlaskConical, Pause, Play, Trash2, Upload } from "lucide-react";
-import { Alert, Badge, Button, Card, CardContent, Spinner } from "@store-builder/ui";
+import { IconDelete, IconExperiment, IconPause, IconPlay, IconUpload } from "@/components/icons";
+import { Alert, Badge, Button, Spinner } from "@store-builder/ui";
 import {
   ApiError,
   productTestChooseWinner,
@@ -25,6 +25,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { MoneyInput } from "@/components/MoneyInput";
 import { TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
+import { ProductPageCard } from "./ProductPageCard";
 
 const STRINGS = {
   en: {
@@ -197,15 +198,8 @@ export function ProductTestSection({
   const past = (tests.data ?? []).filter((x) => x.status === "completed");
 
   return (
-    <Card>
-      <CardContent className="space-y-4 pt-6">
-        <div className="flex items-start gap-3">
-          <FlaskConical className="mt-1 size-5 shrink-0 text-primary" aria-hidden />
-          <div>
-            <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-            <p className="mt-1 text-sm text-ink-soft">{t.help}</p>
-          </div>
-        </div>
+    <ProductPageCard title={t.title} description={t.help} icon={IconExperiment}>
+      <div className="space-y-4">
 
         {tests.loading ? (
           <p role="status" className="flex items-center gap-2 text-sm text-ink-soft">
@@ -262,8 +256,8 @@ export function ProductTestSection({
             </ul>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </ProductPageCard>
   );
 }
 
@@ -402,7 +396,7 @@ function NewTestForm({
             })}
           </ul>
           <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-[0.5rem] border border-line px-4 text-sm font-medium text-ink hover:border-primary has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40">
-            {uploading ? <Spinner className="size-4" /> : <Upload className="size-4" aria-hidden />}
+            {uploading ? <Spinner className="size-4" /> : <IconUpload className="size-4" aria-hidden />}
             {uploading ? t.uploading : t.addPicture}
             <input
               type="file"
@@ -516,15 +510,15 @@ function OpenTest({
         <div className="flex flex-wrap gap-1">
           {test.status === "running" ? (
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => void run(() => productTestUpdate(apiClient, workspaceId, test.id, { status: "paused" }), t.paused)}>
-              <Pause className="size-4" aria-hidden /> {t.pause}
+              <IconPause className="size-4" aria-hidden /> {t.pause}
             </Button>
           ) : (
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => void run(() => productTestUpdate(apiClient, workspaceId, test.id, { status: "running" }), t.running)}>
-              <Play className="size-4" aria-hidden /> {t.resume}
+              <IconPlay className="size-4" aria-hidden /> {t.resume}
             </Button>
           )}
           <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft" disabled={busy} onClick={() => setDeleting(true)}>
-            <Trash2 className="size-4" aria-hidden /> {t.remove}
+            <IconDelete className="size-4" aria-hidden /> {t.remove}
           </Button>
         </div>
       </div>

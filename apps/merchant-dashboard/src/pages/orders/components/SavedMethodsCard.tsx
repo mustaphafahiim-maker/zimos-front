@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CreditCard, Trash2 } from "lucide-react";
+import { IconCard, IconDelete } from "@/components/icons";
 import { Badge, Button } from "@store-builder/ui";
 import {
   savedMethodsCharge,
@@ -15,6 +15,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { savedMethodChargeProblem, savedMethodPlainName } from "./savedMethodText";
 
 const STRINGS = {
   en: {
@@ -79,7 +80,8 @@ export function SavedMethodsCard({
 
   const data = state.data;
   if (!data || (data.saved.length === 0 && data.saveable.length === 0)) return null;
-  const cardName = (m: SavedMethod) => fmt(t.card, { brand: m.brand ?? "", last4: m.last4 ?? "····" });
+  // A saved PayPal has no card number: «PayPal», not "PayPal ending ····" (handoff 380).
+  const cardName = (m: SavedMethod) => savedMethodPlainName(m) ?? fmt(t.card, { brand: m.brand ?? "", last4: m.last4 ?? "····" });
   const due = formatMoney(data.outstandingAmount, currency);
 
   async function save(paymentId: string) {
@@ -101,7 +103,8 @@ export function SavedMethodsCard({
       if (dialog.kind === "charge") await savedMethodsCharge(apiClient, workspaceId, dialog.method.id, orderId);
       else await savedMethodsDelete(apiClient, workspaceId, dialog.method.id);
     } catch (err) {
-      throw new Error(getErrorMessage(err));
+      // The bank wants the customer to confirm (not a decline), or the order is already paid (handoff 380).
+      throw new Error(savedMethodChargeProblem(err) ?? getErrorMessage(err));
     }
     toast.success(dialog.kind === "charge" ? t.chargedToast : t.removedToast);
     setDialog(null);
@@ -112,7 +115,7 @@ export function SavedMethodsCard({
   return (
     <div className="rounded-lg border border-line p-4">
       <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <CreditCard className="size-4" aria-hidden />
+        <IconCard className="size-4" aria-hidden />
         {t.title}
       </p>
       <ul className="mt-2 space-y-2">
@@ -135,7 +138,7 @@ export function SavedMethodsCard({
                 </Button>
               )}
               <Button size="sm" variant="ghost" aria-label={t.remove} onClick={() => setDialog({ kind: "remove", method: m })}>
-                <Trash2 className="size-4" aria-hidden />
+                <IconDelete className="size-4" aria-hidden />
               </Button>
             </span>
           </li>

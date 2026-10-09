@@ -12,6 +12,7 @@ import { StoreAccessPanel } from "@/components/storeAccess";
 import { SupportAccessPanel } from "@/components/supportAccess";
 import { SupportViewPanel } from "@/components/supportView";
 import { FeatureOverridesPanel, ManualSubscriptionPanel, StoreAuditPanel } from "@/components/storeBilling";
+import { StoreBalancePanel } from "@/components/billingExtras";
 import { useAuth } from "@/context/AuthContext";
 import { P } from "@/lib/permissions";
 import { useAsync } from "@/lib/useAsync";
@@ -222,6 +223,12 @@ export function WorkspaceDetailPage() {
           )}
 
           {sub && can(P.SUBSCRIPTIONS_VIEW) && <SubscriptionCharges key={planVersion} workspaceId={ws.id} />}
+
+          {sub && can(P.SUBSCRIPTIONS_VIEW) && (
+            <div className="mt-4">
+              <StoreBalancePanel key={planVersion} workspaceId={ws.id} />
+            </div>
+          )}
 
           {can(P.AUDIT_LOG_VIEW) && (
             <div className="mt-4">

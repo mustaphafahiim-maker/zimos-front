@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from "react";
-import { CheckCircle2, CircleAlert, CircleDashed, Globe, RefreshCw, Trash2 } from "lucide-react";
+import { IconDelete, IconError, IconGlobe, IconPending, IconRefresh, IconSuccess } from "@/components/icons";
 import { Alert, Button, Input, Label, Spinner, cn } from "@store-builder/ui";
 import {
   apiFieldProblems,
   sendingDomainAdd,
-  sendingDomainGet,
+  sendingDomainGetState,
   sendingDomainRemove,
   sendingDomainSetLocalPart,
   sendingDomainVerify,
@@ -15,7 +15,6 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { isPermissionError } from "@/lib/errors";
-import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { TextField } from "@/components/Field";
@@ -23,7 +22,16 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { DataTable, type Column } from "@/components/DataTable";
 import { CopyButton } from "@/components/CopyButton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { AccordionSection } from "@/components/Accordion";
 import { useToast } from "@/components/Toast";
+// Handoff 395 (Brevo): no provider on the server, the provider's refusals, a domain waiting for its new records.
+import {
+  SendingDomainProviderChangedNote,
+  SendingDomainUnavailable,
+  sendingDomainNeedsNewRecords,
+  useSendingDomainErrorMessage,
+  useSendingDomainProblem,
+} from "./sendingDomainBrevo";
 
 /**
  * Settings → Messages → Order emails → "Sending domain" (handoff item 173):
@@ -73,6 +81,8 @@ const STRINGS = {
     purpose_dkim: "DKIM",
     purpose_return_path: "Return path",
     purpose_dmarc: "DMARC",
+    purpose_brevo_code: "Brevo verification code",
+    purpose_ownership: "Store ownership",
     verify: "Verify",
     verifying: "Checking…",
     checkAgain: "Check again",
@@ -133,6 +143,8 @@ const STRINGS = {
     purpose_dkim: "DKIM",
     purpose_return_path: "Return path",
     purpose_dmarc: "DMARC",
+    purpose_brevo_code: "كود التحقق من Brevo",
+    purpose_ownership: "إثبات ملكية المتجر",
     verify: "تحقق",
     verifying: "بيفحص…",
     checkAgain: "افحص تاني",
@@ -177,24 +189,32 @@ const STATUS_TONE = { pending: "warning", verified: "success", failed: "danger" 
 export function SendingDomainSection() {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
-  const current = useAsync(() => sendingDomainGet(apiClient, workspaceId), [workspaceId]);
+  // False when the server has no email provider (handoff 395): the add form gives way to a note.
+  const [available, setAvailable] = useState(true);
+  const current = useAsync(async () => {
+    const answer = await sendingDomainGetState(apiClient, workspaceId);
+    setAvailable(answer.available);
+    return answer.sendingDomain;
+  }, [workspaceId]);
 
   // The templates list below already explains a missing permission.
   if (current.error && isPermissionError(current.error)) return null;
 
   const domain = current.data;
   return (
-    <section aria-labelledby="sending-domain-title" className="mt-4 space-y-3 rounded-[var(--radius-card)] bg-paper p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 id="sending-domain-title" className="flex items-center gap-1.5 text-sm font-semibold text-ink">
-            <Globe className="size-4 text-ink-soft" aria-hidden />
-            {t.title}
-          </h3>
-          <p className="mt-0.5 text-xs text-ink-soft">{t.description}</p>
-        </div>
-        {domain && <StatusBadge value={domain.status} tone={STATUS_TONE[domain.status] ?? "neutral"} text={t[domain.status] ?? domain.status} />}
-      </div>
+    // Set up once and then left alone, so it folds to one line: the address in use, or what it is for.
+    // Kept mounted: a half-typed domain survives a fold.
+    <AccordionSection
+      title={t.title}
+      summary={domain ? <bdi dir="ltr">{domain.fromAddress}</bdi> : t.description}
+      icon={IconGlobe}
+      badge={domain ? <StatusBadge value={domain.status} tone={STATUS_TONE[domain.status] ?? "neutral"} text={t[domain.status] ?? domain.status} /> : undefined}
+      persistKey="settings:sending-domain"
+      keepMounted
+      className="[--radius-card:1.25rem]"
+    >
+      <div className="space-y-3">
+      <p className="text-[13px] leading-5 text-ink-soft">{t.description}</p>
 
       {current.loading ? (
         <p role="status" className="flex items-center gap-2 text-sm text-ink-soft">
@@ -210,18 +230,22 @@ export function SendingDomainSection() {
         </Alert>
       ) : domain ? (
         <DomainDetails t={t} domain={domain} onChange={(next) => current.setData(next)} />
+      ) : !available ? (
+        <SendingDomainUnavailable />
       ) : (
         <AddDomainForm t={t} onAdded={(next) => current.setData(next)} />
       )}
-    </section>
+      </div>
+    </AccordionSection>
   );
 }
 
 function AddDomainForm({ t, onAdded }: { t: T; onAdded: (domain: SendingDomain) => void }) {
   const workspaceId = useWorkspaceId();
-  const errorMessage = useErrorMessage();
+  const errorMessage = useSendingDomainErrorMessage();
   const [domain, setDomain] = useState("");
   const [localPart, setLocalPart] = useState("orders");
+  const domainProblem = useSendingDomainProblem();
   const [errors, setErrors] = useState<{ domain?: string; localPart?: string; form?: string }>({});
   const [busy, setBusy] = useState(false);
 
@@ -242,7 +266,7 @@ function AddDomainForm({ t, onAdded }: { t: T; onAdded: (domain: SendingDomain) 
       onAdded(added);
     } catch (err) {
       const fields = apiFieldProblems(err);
-      if (fields.some((f) => f.field === "domain")) setErrors({ domain: t.domainInvalid });
+      if (fields.some((f) => f.field === "domain")) setErrors({ domain: domainProblem(fields, t.domainInvalid) });
       else if (fields.some((f) => f.field === "localPart")) setErrors({ localPart: t.addressInvalid });
       else setErrors({ form: errorMessage(err, { EMAIL_DOMAIN_TAKEN: t.domainTaken }) });
     } finally {
@@ -316,7 +340,7 @@ function LocalPartField({ t, value, onChange, domain, error }: { t: T; value: st
 function DomainDetails({ t, domain, onChange }: { t: T; domain: SendingDomain; onChange: (domain: SendingDomain | null) => void }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
-  const errorMessage = useErrorMessage();
+  const errorMessage = useSendingDomainErrorMessage();
   const [verifying, setVerifying] = useState(false);
   const [editingAddress, setEditingAddress] = useState(false);
   const [localPart, setLocalPart] = useState(domain.localPart);
@@ -376,7 +400,7 @@ function DomainDetails({ t, domain, onChange }: { t: T; domain: SendingDomain; o
 
       {verified ? (
         <p className="flex items-start gap-2 rounded-[var(--radius)] bg-success-soft px-3 py-2 text-sm text-success">
-          <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <IconSuccess className="mt-0.5 size-4 shrink-0" aria-hidden />
           <span>
             {sentBefore}
             {address}
@@ -436,7 +460,9 @@ function DomainDetails({ t, domain, onChange }: { t: T; domain: SendingDomain; o
         </button>
       )}
 
-      {showRecords && (
+      <SendingDomainProviderChangedNote domain={domain} />
+
+      {showRecords && !sendingDomainNeedsNewRecords(domain) && (
         <div className="space-y-2">
           {!verified && <p className="text-sm font-medium text-ink">{t.records}</p>}
           <RecordsTable t={t} records={domain.records} checked={checked} />
@@ -445,7 +471,7 @@ function DomainDetails({ t, domain, onChange }: { t: T; domain: SendingDomain; o
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-3">
         <Button onClick={() => void verify()} disabled={verifying} variant={verified ? "outline" : "default"} className="min-h-11 sm:min-h-9">
-          {verifying ? <Spinner className="size-4" aria-hidden /> : <RefreshCw className="size-4" aria-hidden />}
+          {verifying ? <Spinner className="size-4" aria-hidden /> : <IconRefresh className="size-4" aria-hidden />}
           {verifying ? t.verifying : verified ? t.checkAgain : t.verify}
         </Button>
         <div className="min-w-0 text-xs text-ink-soft">
@@ -457,7 +483,7 @@ function DomainDetails({ t, domain, onChange }: { t: T; domain: SendingDomain; o
           className="ms-auto min-h-11 text-danger hover:bg-danger-soft hover:text-danger sm:min-h-9"
           onClick={() => setConfirmRemove(true)}
         >
-          <Trash2 className="size-4" aria-hidden />
+          <IconDelete className="size-4" aria-hidden />
           {t.remove}
         </Button>
       </div>
@@ -527,17 +553,17 @@ function RecordsTable({ t, records, checked }: { t: T; records: SendingDomainRec
       cell: (r) =>
         !checked || r.ok === undefined ? (
           <span className="inline-flex items-center gap-1 text-xs text-ink-soft">
-            <CircleDashed className="size-4" aria-hidden />
+            <IconPending className="size-4" aria-hidden />
             {t.notChecked}
           </span>
         ) : r.ok ? (
           <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
-            <CheckCircle2 className="size-4" aria-hidden />
+            <IconSuccess className="size-4" aria-hidden />
             {t.found}
           </span>
         ) : (
           <span className={cn("inline-flex items-center gap-1 text-xs font-medium", r.purpose === "dmarc" ? "text-ink-soft" : "text-danger")}>
-            <CircleAlert className="size-4" aria-hidden />
+            <IconError className="size-4" aria-hidden />
             {t.notFound}
           </span>
         ),

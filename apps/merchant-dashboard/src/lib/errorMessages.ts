@@ -38,6 +38,14 @@ const STRINGS = {
     NOT_FOUND: "We couldn't find that. It may have been deleted.",
     CONFLICT: "This changed in the meantime. Reload and try again.",
     RATE_LIMITED: "Too many requests. Wait a moment and try again.",
+    // AI (handoff "Go-live pass — AI errors"): AI_LIMIT_REACHED is worded by its details.scope in translateError.
+    AI_NOT_CONFIGURED: "AI isn't available right now",
+    AI_PROVIDER_UNAVAILABLE: "The AI service is busy — try again in a moment",
+    AI_LIMIT_REACHED: "This month's AI requests on your plan are used up.",
+    aiLimitHour: "Too many AI requests in the last hour. Try again later.",
+    AI_OUTPUT_INVALID: "The AI couldn't write this. Change the wording and try again.",
+    AI_NOTHING_TO_ANSWER: "The customer hasn't written anything to answer yet.",
+    AI_LANGUAGE_UNSUPPORTED: "AI translation works for Arabic, English and French only.",
     IDEMPOTENCY_KEY_CONFLICT: "This request was already sent. Reload to see the result.",
     INSUFFICIENT_STOCK: "There isn't enough stock for this.",
     DUPLICATE_RESOURCE: "That already exists.",
@@ -48,6 +56,11 @@ const STRINGS = {
     ORDER_ALREADY_SHIPPED: "This order has already shipped and can no longer be changed. Open a return instead.",
     ORDER_NOT_CONFIRMED: "Confirm this cash-on-delivery order before booking a courier.",
     ORDER_NOT_PAID: "This prepaid order must be paid before booking a courier.",
+    ORDER_PAYMENT_DISPUTED: "This card payment is disputed or was charged back — review the order before shipping it",
+    IDEMPOTENCY_KEY_IN_PROGRESS: "The refund is being processed — wait a few seconds",
+    MANUAL_PAYMENT_NOT_APPROVED: "Approve the payment first",
+    MANUAL_PAYMENT_NOT_SUBMITTED: "There's no screenshot waiting for review",
+    PAYOUTS_NOT_AVAILABLE: "None of your connected gateways reports payouts — only Stripe and the Sandbox do for now.",
     SHIPMENT_ALREADY_EXISTS: "This order already has an active shipment. Cancel it before adding another.",
     CARRIER_NAME_RESERVED: "That's a connected courier's name. Choose the courier's own option to ship with it.",
     SHIPPING_ADDRESS_REQUIRED: "This order has no shipping address. Add one first.",
@@ -67,6 +80,14 @@ const STRINGS = {
     STEP_MISMATCH: "This page is out of date. Reload to continue.",
     FUNNEL_PAUSED: "This funnel is paused.",
     PAGE_PATH_RESERVED: "That path is reserved for a built-in store page. Choose a different one.",
+    // handoff 373: the trash for funnels, websites and pages
+    PAGE_PATH_IN_TRASH: "A page in the trash uses this path. Restore it or delete it for good first",
+    WEBSITE_HAS_DOMAINS: "This is the store's only website and its domains point at it. Remove the domains first",
+    WEBSITE_IN_TRASH: "This page's website is in the trash: restore the website first",
+    // handoff 401
+    TEMPLATE_KIND_MISMATCH: "This is a store template — pick a funnel or landing template",
+    // handoff 400
+    IMAGE_DIMENSIONS_TOO_LARGE: "The image is larger than 60 megapixels. Make it smaller and try again.",
     PRODUCT_HAS_ORDERS: "This product has orders, so it can only be archived.",
     PRODUCT_IN_FUNNEL: "This product is used in a funnel. Remove it from the funnel first.",
     PRODUCT_NOT_ARCHIVED: "Only an archived product can be restored.",
@@ -118,6 +139,8 @@ const STRINGS = {
     REFUND_PAYMENT_INVALID: "That payment can't be refunded through the gateway.",
     ORDER_TEST_PAYMENT: "This order was paid in test mode, so it can't be shipped.",
     PLAN_LIMIT_REACHED: "Your plan's limit has been reached. Upgrade your plan to add more.",
+    PLAN_FEATURE_REQUIRED: "Your plan doesn't include {feature} — upgrade your plan to use it",
+    WALLET_BALANCE_TOO_LOW: "Your balance is too low for another order — top up from Subscription and try again",
     STORE_NOT_SET_UP: "Set up your store (add a product) before connecting a domain.",
     DOMAIN_TAKEN: "That domain is already connected to a store.",
     DOMAIN_PRICE_CHANGED: "The price changed — check it and confirm again.",
@@ -176,6 +199,12 @@ const STRINGS = {
     // handoff 193/196/197
     WEBHOOK_ENDPOINT_LIMIT:
       "Your store already has 25 webhooks, the most it can hold — every Zapier or Make trigger is one. Remove one you no longer use, then try again.",
+    // handoff 266
+    WEBHOOK_APP_REMOVED: "The app that made this webhook was removed, so it can't be turned back on.",
+    // handoff 273–274 / 298 / 305
+    ORDER_TENDER_RETURNED: "The points, store credit or gift card went back to the customer when this was cancelled — place a new order",
+    TOO_MANY_TEST_EMAILS: "You've reached today's test email limit",
+    DOMAIN_PURCHASE_UNAVAILABLE: "Buying a domain isn't available yet — connect one you own",
     // handoff 189
     GIFT_CARD_NO_EMAIL: "This card has no recipient email. Add one from “Edit details”, then send it again.",
     GIFT_CARD_NOT_FOUND: "This gift card code is not valid.",
@@ -190,6 +219,29 @@ const STRINGS = {
     MARKETPLACE_TOO_LARGE: "This funnel is too big to share. Remove a few sections or pages and try again.",
     MARKETPLACE_GONE: "This template isn't in the marketplace anymore.",
     MARKETPLACE_BAD_PICTURE: "The picture link has to start with https://.",
+    // Parcels, return pickups and exchanges, manual-shipment tracking (handoff 318, 351-396).
+    SHIPMENT_BOOKED: "This order is booked with a courier. Cancel the shipment first to edit the order, then book it again",
+    CARRIER_WAYBILL_LOCKED: "This shipment is booked with the courier under another waybill. Cancel the booking first if you're shipping another way.",
+    ORDER_SPLIT_SHIPPED: "Part of this order is in a parcel — cancel its parcels to edit the items",
+    SHIPMENT_ITEMS_UNAVAILABLE: "These units are already in another parcel",
+    SHIPMENT_REQUIRED: "This order has more than one parcel — choose which",
+    COD_EXCEEDS_DUE: "That's more than the customer still owes",
+    SHIPMENT_NO_WAYBILL: "Add the waybill number first",
+    TRACKING_PROVIDER_FAILED: "The tracking provider isn't answering, try again later",
+    ORDER_NOT_RETURNED: "This order's parcel isn't back yet.",
+    ORDER_WAS_DELIVERED: "This parcel was delivered before it came back. Open a return and restock it from there",
+    ORDER_ALREADY_RESTOCKED: "These items are already back in stock.",
+    RETURN_NOT_APPROVED: "Approve the return first",
+    RETURN_PICKUP_EXISTS: "A pickup is already booked for this return",
+    CARRIER_NO_RETURN_PICKUP: "This courier can't collect returns through ZIMOS — book it with them and record the waybill",
+    RETURN_PICKUP_COLLECTED: "The courier already has the parcel — restock it when it arrives",
+    RETURN_NO_PICKUP: "No pickup is booked for this return.",
+    RETURN_PICKUP_MANUAL: "This pickup was booked outside ZIMOS, so its status can't be read from here.",
+    CARRIER_NO_RETURN_PICKUP_STATUS: "This courier doesn't report where a return pickup is.",
+    RETURN_PICKUP_MANUAL_CANCEL_REQUIRED: "Cancel the pickup in the courier's dashboard first, then confirm it here.",
+    RETURN_NOT_CANCELLABLE: "This return can't be cancelled anymore.",
+    RETURN_NOT_PENDING: "This return has already been decided.",
+    DROPSHIP_PUSH_IN_PROGRESS: "This order is being sent to the supplier — refresh in a moment",
   },
   ar: {
     network: "النت فصل أو السيرفر مش بيرد. اتأكد من الاتصال وجرّب تاني.",
@@ -204,6 +256,13 @@ const STRINGS = {
     NOT_FOUND: "مش لاقيين الحاجة دي. ممكن تكون اتمسحت.",
     CONFLICT: "حد عدّل هنا في نفس الوقت. اعمل تحديث للصفحة وجرّب تاني.",
     RATE_LIMITED: "طلبات كتير ورا بعض. استنى دقيقة وجرّب تاني.",
+    AI_NOT_CONFIGURED: "الذكاء الاصطناعي مش متاح دلوقتي",
+    AI_PROVIDER_UNAVAILABLE: "خدمة الذكاء الاصطناعي مشغولة — جرّب كمان شوية",
+    AI_LIMIT_REACHED: "طلبات الذكاء الاصطناعي في باقتك للشهر ده خلصت.",
+    aiLimitHour: "طلبات ذكاء اصطناعي كتير في آخر ساعة. جرّب تاني بعدين.",
+    AI_OUTPUT_INVALID: "الذكاء الاصطناعي ماقدرش يكتب ده. غيّر الصياغة وجرّب تاني.",
+    AI_NOTHING_TO_ANSWER: "العميل لسه ماكتبش حاجة نرد عليها.",
+    AI_LANGUAGE_UNSUPPORTED: "الترجمة بالذكاء الاصطناعي متاحة للعربي والإنجليزي والفرنساوي بس.",
     IDEMPOTENCY_KEY_CONFLICT: "الطلب ده اتبعت قبل كده. اعمل تحديث للصفحة وشوف النتيجة.",
     INSUFFICIENT_STOCK: "الكمية دي مش موجودة في المخزن.",
     DUPLICATE_RESOURCE: "ده موجود قبل كده.",
@@ -214,6 +273,11 @@ const STRINGS = {
     ORDER_ALREADY_SHIPPED: "الأوردر ده اتشحن خلاص ومينفعش يتعدّل. افتح مرتجع بداله.",
     ORDER_NOT_CONFIRMED: "أكّد الأوردر الأول (دفع عند الاستلام) قبل ما تحجز المندوب.",
     ORDER_NOT_PAID: "الأوردر ده مدفوع أونلاين ولسه متدفعش. استنى الدفع قبل ما تحجز المندوب.",
+    ORDER_PAYMENT_DISPUTED: "الدفع بالبطاقة عليه نزاع أو اترجع من البنك — راجع الطلب قبل ما تشحنه",
+    IDEMPOTENCY_KEY_IN_PROGRESS: "الاسترجاع بيتنفذ — استنى ثواني",
+    MANUAL_PAYMENT_NOT_APPROVED: "لازم تقبل الدفع الأول",
+    MANUAL_PAYMENT_NOT_SUBMITTED: "مفيش صورة تحويل مستنية المراجعة",
+    PAYOUTS_NOT_AVAILABLE: "مفيش بوابة مربوطة بتبعت التحويلات — Stripe والـ Sandbox بس دلوقتي.",
     SHIPMENT_ALREADY_EXISTS: "الأوردر ده ليه شحنة شغالة. الغيها الأول لو عايز تعمل واحدة تانية.",
     CARRIER_NAME_RESERVED: "ده اسم شركة شحن ممكن تربطها. اختارها من القايمة عشان تشحن معاها.",
     SHIPPING_ADDRESS_REQUIRED: "الأوردر ده مالوش عنوان شحن. ضيف العنوان الأول.",
@@ -233,6 +297,11 @@ const STRINGS = {
     STEP_MISMATCH: "الصفحة دي قديمة. اعمل تحديث وكمّل.",
     FUNNEL_PAUSED: "مسار البيع ده موقوف دلوقتي.",
     PAGE_PATH_RESERVED: "اللينك ده محجوز لصفحة أساسية في المتجر. اختار لينك تاني.",
+    PAGE_PATH_IN_TRASH: "فيه صفحة في سلة المحذوفات على الرابط ده. ارجعها أو امسحها نهائيًا الأول",
+    WEBSITE_HAS_DOMAINS: "ده الموقع الوحيد والدومينات مربوطة بيه. شيل الدومينات الأول",
+    WEBSITE_IN_TRASH: "موقع الصفحة دي في سلة المحذوفات: ارجع الموقع الأول",
+    TEMPLATE_KIND_MISMATCH: "القالب ده للمتجر، اختار قالب فانل أو صفحة هبوط",
+    IMAGE_DIMENSIONS_TOO_LARGE: "أبعاد الصورة أكبر من 60 ميجابكسل. صغّرها وحاول مرة أخرى.",
     PRODUCT_HAS_ORDERS: "المنتج ده عليه أوردرات، فينفع تأرشفه بس مش تمسحه.",
     PRODUCT_IN_FUNNEL: "المنتج ده مستخدم في مسار بيع. شيله من المسار الأول.",
     PRODUCT_NOT_ARCHIVED: "ينفع ترجّع المنتج المؤرشف بس.",
@@ -283,6 +352,8 @@ const STRINGS = {
     REFUND_PAYMENT_INVALID: "الدفعة دي مينفعش ترجع عن طريق البوابة.",
     ORDER_TEST_PAYMENT: "الأوردر ده اتدفع تجريبي، فمينفعش يتشحن.",
     PLAN_LIMIT_REACHED: "وصلت للحد بتاع باقتك. رقّي الباقة عشان تضيف أكتر.",
+    PLAN_FEATURE_REQUIRED: "باقتك مش فيها {feature} — رقّي باقتك عشان تستخدمها",
+    WALLET_BALANCE_TOO_LOW: "رصيدك مش كفاية لطلب جديد — اشحن من الاشتراك وجرّب تاني",
     STORE_NOT_SET_UP: "جهّز متجرك الأول (ضيف منتج) قبل ما تربط دومين.",
     DOMAIN_TAKEN: "الدومين ده مربوط بمتجر تاني.",
     DOMAIN_PRICE_CHANGED: "السعر اتغير — راجعه وأكّد تاني.",
@@ -339,6 +410,12 @@ const STRINGS = {
     NO_FILE: "اختار ملف الأول.",
     // handoff 193/196/197
     WEBHOOK_ENDPOINT_LIMIT: "متجرك فيه ٢٥ webhook، وده أقصى عدد — وكل حدث في زابير أو ميك بيبقى واحد منهم. امسح واحد مش بتستخدمه وجرّب تاني.",
+    // handoff 266
+    WEBHOOK_APP_REMOVED: "التطبيق اللي عمل الـ webhook ده اتشال، فمينفعش يتشغّل تاني.",
+    // handoff 273–274 / 298 / 305
+    ORDER_TENDER_RETURNED: "النقاط / الرصيد / كارت الهدية رجعوا للعميل لما الطلب اتلغى — اعمل طلب جديد",
+    TOO_MANY_TEST_EMAILS: "وصلت لحد الإيميلات التجريبية النهارده",
+    DOMAIN_PURCHASE_UNAVAILABLE: "شراء الدومين مش متاح دلوقتي — اربط دومين عندك",
     // handoff 189
     GIFT_CARD_NO_EMAIL: "الكارت ده مالوش إيميل مستلم. ضيفه من «عدّل البيانات» وبعدين ابعته تاني.",
     GIFT_CARD_NOT_FOUND: "كود كارت الهدية ده مش صحيح.",
@@ -353,6 +430,29 @@ const STRINGS = {
     MARKETPLACE_TOO_LARGE: "مسار البيع ده كبير أوي على المشاركة. شيل شوية أقسام أو صفحات وجرّب تاني.",
     MARKETPLACE_GONE: "القالب ده مبقاش موجود في السوق.",
     MARKETPLACE_BAD_PICTURE: "رابط الصورة لازم يبدأ بـ https://.",
+    // Parcels, return pickups and exchanges, manual-shipment tracking (handoff 318, 351-396).
+    SHIPMENT_BOOKED: "الطلب محجوز مع شركة الشحن. ألغِ الشحنة الأول عشان تعدّل الطلب، وبعدين احجزه تاني",
+    CARRIER_WAYBILL_LOCKED: "الشحنة دي محجوزة مع شركة الشحن برقم بوليصة تاني. الغي الحجز الأول لو هتشحن بطريقة تانية",
+    ORDER_SPLIT_SHIPPED: "جزء من الطلب في شحنة — الغي الشحنات الأول عشان تعدّل المنتجات",
+    SHIPMENT_ITEMS_UNAVAILABLE: "القطع دي في شحنة تانية بالفعل",
+    SHIPMENT_REQUIRED: "الطلب ده له أكتر من شحنة — اختار الشحنة",
+    COD_EXCEEDS_DUE: "المبلغ أكبر من الباقي على العميل",
+    SHIPMENT_NO_WAYBILL: "ضيف رقم البوليصة الأول",
+    TRACKING_PROVIDER_FAILED: "مزوّد التتبع مش بيرد دلوقتي، جرّب تاني بعد شوية",
+    ORDER_NOT_RETURNED: "شحنة الطلب ده لسه مرجعتش.",
+    ORDER_WAS_DELIVERED: "الشحنة اتسلمت قبل ما ترجع، افتح مرتجع ورجّعه للمخزون من هناك",
+    ORDER_ALREADY_RESTOCKED: "المنتجات دي رجعت للمخزون بالفعل.",
+    RETURN_NOT_APPROVED: "لازم توافق على المرتجع الأول",
+    RETURN_PICKUP_EXISTS: "فيه مندوب محجوز للمرتجع ده بالفعل",
+    CARRIER_NO_RETURN_PICKUP: "شركة الشحن دي مش بتستلم مرتجعات من خلال زيمّوس — احجز معاهم وسجّل رقم البوليصة",
+    RETURN_PICKUP_COLLECTED: "المندوب استلم الشحنة بالفعل وهي راجعة — اعمل ريستوك لما توصل",
+    RETURN_NO_PICKUP: "مفيش مندوب محجوز للمرتجع ده.",
+    RETURN_PICKUP_MANUAL: "الاستلام ده اتحجز بره زيمّوس، فحالته مش بتتقري من هنا.",
+    CARRIER_NO_RETURN_PICKUP_STATUS: "شركة الشحن دي مش بتبلّغ بحالة استلام المرتجع.",
+    RETURN_PICKUP_MANUAL_CANCEL_REQUIRED: "الغي الاستلام من لوحة شركة الشحن الأول، وبعدين أكّد هنا.",
+    RETURN_NOT_CANCELLABLE: "المرتجع ده مينفعش يتلغي دلوقتي.",
+    RETURN_NOT_PENDING: "المرتجع ده اتاخد فيه قرار بالفعل.",
+    DROPSHIP_PUSH_IN_PROGRESS: "الطلب بيتبعت للمورد دلوقتي — حدّث الصفحة بعد شوية",
   },
 } satisfies Messages;
 
@@ -371,6 +471,7 @@ const OWN_KEY_LIST = [
   "limitStores",
   "limitDrafts",
   "limitDomains",
+  "aiLimitHour",
 ] as const;
 type CodeKey = Exclude<keyof typeof STRINGS.en, (typeof OWN_KEY_LIST)[number]>;
 const OWN_KEYS: ReadonlySet<string> = new Set(OWN_KEY_LIST);
@@ -421,6 +522,11 @@ function translateError(t: (typeof STRINGS)["en"], err: unknown, overrides?: Err
     if (VERBATIM_CODES.has(code) && err instanceof ApiError && err.message) return err.message;
     // A draft store (not subscribed yet) is not an expired one.
     if (code === "SUBSCRIPTION_REQUIRED" && apiErrorDetails<{ draft?: boolean }>(err)?.draft) return t.draftRequired;
+    // handoff 333: the plan gate names the feature in both languages.
+    if (code === "PLAN_FEATURE_REQUIRED") {
+      const label = apiErrorDetails<{ feature?: string; label?: { en?: string; ar?: string } }>(err);
+      return fmt(t.PLAN_FEATURE_REQUIRED, { feature: label?.label?.[getLocale()] ?? label?.label?.en ?? label?.feature ?? "" });
+    }
     if (code === "PLAN_LIMIT_REACHED") {
       const limit = apiErrorDetails<{ limit?: string; max?: number; allowed?: number; used?: number; resetsAt?: string }>(err);
       const counts = { max: limit?.max ?? limit?.allowed ?? "", used: limit?.used ?? "" };
@@ -428,6 +534,11 @@ function translateError(t: (typeof STRINGS)["en"], err: unknown, overrides?: Err
       if (limit?.limit === "stores") return fmt(t.limitStores, counts);
       if (limit?.limit === "draft_stores") return t.limitDrafts;
       if (limit?.limit === "domains") return fmt(t.limitDomains, counts);
+    }
+    if (code === "AI_LIMIT_REACHED") {
+      // scope "provider" is the AI provider's own rate limit (no limit/used): the "busy" wording, not the plan's.
+      const scope = apiErrorDetails<{ scope?: string }>(err)?.scope;
+      return scope === "provider" ? t.AI_PROVIDER_UNAVAILABLE : scope === "hour" ? t.aiLimitHour : t.AI_LIMIT_REACHED;
     }
     if (code === "CARRIER_CANCEL_FAILED") {
       // Only order cancellation raises it. The courier-side cause decides

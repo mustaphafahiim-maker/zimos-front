@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, Mail } from "lucide-react";
+import { IconDownload, IconEmail } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import { storeGateSignups, type StoreGateSignup } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -11,7 +11,7 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { DataTable, type Column } from "@/components/DataTable";
 import { EmptyState } from "@/components/EmptyState";
-import { Section } from "@/components/Section";
+import { AccordionSection } from "@/components/Accordion";
 
 const STRINGS = {
   en: {
@@ -110,27 +110,31 @@ export function StoreGateSignups() {
   }
 
   return (
-    <Section
-      title={total > 0 ? fmt("{title} ({n})", { title: t.title, n: total }) : t.title}
-      description={t.description}
+    // A list read now and then: folded to one row with the count, the CSV one tap away without opening it.
+    <AccordionSection
+      title={t.title}
+      icon={IconEmail}
+      summary={t.description}
+      badge={total > 0 ? <span className="text-sm font-semibold tabular-nums text-ink-soft">{fmt("{n}", { n: total })}</span> : undefined}
+      persistKey="store-settings:access:signups"
       actions={
         rows.length > 0 && (
-          <Button type="button" variant="outline" className="min-h-11" onClick={() => downloadCsv(rows)}>
-            <Download className="size-4" aria-hidden />
-            {t.download}
+          <Button type="button" variant="ghost" size="icon" className="size-11" aria-label={t.download} title={t.download} onClick={() => downloadCsv(rows)}>
+            <IconDownload className="size-5" aria-hidden />
           </Button>
         )
       }
     >
+      <p className="mb-3 text-[13px] leading-5 text-ink-soft">{t.description}</p>
       <DataState loading={list.loading && !list.data} error={list.error} onRetry={() => void list.refresh()}>
         {rows.length === 0 ? (
-          <EmptyState icon={<Mail aria-hidden />} title={t.emptyTitle} description={t.emptyBody} />
+          <EmptyState icon={<IconEmail aria-hidden />} title={t.emptyTitle} description={t.emptyBody} />
         ) : (
           <div className="space-y-3">
             <DataTable columns={columns} rows={shown} rowKey={(r) => r.email} />
             {!all && rows.length > FIRST && (
               <div className="flex justify-center">
-                <Button type="button" variant="outline" className="min-h-11" onClick={() => setAll(true)}>
+                <Button type="button" variant="outline" className="min-h-11 rounded-full px-4" onClick={() => setAll(true)}>
                   {`${t.showAll} (${pluralOf(t, "count", rows.length)})`}
                 </Button>
               </div>
@@ -138,6 +142,6 @@ export function StoreGateSignups() {
           </div>
         )}
       </DataState>
-    </Section>
+    </AccordionSection>
   );
 }

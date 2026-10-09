@@ -5,6 +5,7 @@ import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { track } from "@/lib/track";
 import { registerPixels, type ConversionEvent, type PurchaseTiming, type StorePixel } from "@/lib/adPixels";
+import { AdPlatformTags } from "./AdPlatformTags";
 
 /**
  * Loads the tracking pixels the merchant configured (dashboard → Marketing →
@@ -60,6 +61,8 @@ export function TrackingPixels({
 
   return (
     <>
+      {/* X, Taboola, Outbrain, Kwai, Reddit and Microsoft Ads (handoff 251): loaded from lib/adPlatformTags.ts. */}
+      <AdPlatformTags pixels={pixels} />
       {meta.length > 0 && (
         <Script id="zimos-meta-pixel" strategy="afterInteractive">
           {`!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');${meta

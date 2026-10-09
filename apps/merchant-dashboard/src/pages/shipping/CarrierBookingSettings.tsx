@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
 import { Button } from "@store-builder/ui";
 import {
   carrierBookingOf,
@@ -79,7 +80,10 @@ export function CarrierBookingSettings({
   // A fresh listing (after any change on the page) resets the form to what is stored.
   useEffect(() => setDraft(carrierBookingOf(connection)), [connection]);
 
-  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  // Compared the way the save sends it: notes typed then cleared ("" vs null) are not a change.
+  const normalised = (b: typeof draft) => ({ ...b, courierNotes: b.courierNotes?.trim() || null });
+  const dirty = JSON.stringify(normalised(draft)) !== JSON.stringify(normalised(saved));
+  useReportDirty(dirty);
 
   async function submit(e: FormEvent) {
     e.preventDefault();

@@ -13,6 +13,8 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { TextField } from "@/components/Field";
+import { SettingsRow } from "@/components/settings";
+import { formatDate } from "@/lib/format";
 
 /**
  * Backup codes for two-step sign-in (backend: auth/twoFactorRecovery.js):
@@ -97,17 +99,17 @@ export function BackupCodesPanel({ status, onChanged }: { status: TwoFactorStatu
   const text = made ? made.codes.join("\n") : "";
 
   return (
-    <div className="mt-3 rounded-md border border-line p-3">
-      <p className="text-sm font-medium text-ink">{t.title}</p>
-      <p className="mt-0.5 text-xs text-ink-soft">
-        {backupCodesCreatedAt
-          ? fmt(t.left, { count: backupCodesLeft, date: new Date(backupCodesCreatedAt).toLocaleDateString() })
-          : t.none}
-        {backupCodesCreatedAt && backupCodesLeft <= 3 && <span className="ms-1 font-medium text-danger">{t.low}</span>}
-      </p>
-      <Button size="sm" variant="outline" className="mt-2" disabled={busy} onClick={start}>
-        {backupCodesCreatedAt ? t.remake : t.make}
-      </Button>
+    <>
+      <SettingsRow
+        label={t.title}
+        hint={backupCodesCreatedAt ? fmt(t.left, { count: backupCodesLeft, date: formatDate(backupCodesCreatedAt) }) : t.none}
+        error={backupCodesCreatedAt && backupCodesLeft <= 3 ? t.low : undefined}
+        control={
+          <Button variant="outline" className="min-h-11" disabled={busy} onClick={start}>
+            {backupCodesCreatedAt ? t.remake : t.make}
+          </Button>
+        }
+      />
 
       <Modal open={asking} onClose={() => setAsking(false)} title={t.title}>
         <form
@@ -141,7 +143,7 @@ export function BackupCodesPanel({ status, onChanged }: { status: TwoFactorStatu
       <Modal open={made !== null} onClose={() => setMade(null)} title={t.title} description={t.shownOnce}>
         {made && (
           <div className="space-y-4">
-            <ul dir="ltr" className="grid grid-cols-2 gap-2 rounded-md bg-muted p-3 font-mono text-sm text-ink">
+            <ul dir="ltr" className="grid grid-cols-2 gap-2 rounded-[0.875rem] bg-paper-sunken p-3 font-mono text-sm text-ink">
               {made.codes.map((code) => (
                 <li key={code}>{code}</li>
               ))}
@@ -162,7 +164,7 @@ export function BackupCodesPanel({ status, onChanged }: { status: TwoFactorStatu
                 {t.copy}
               </Button>
               <a
-                className="inline-flex items-center rounded-md border border-line px-3 py-2 text-sm font-medium text-ink hover:border-primary"
+                className="inline-flex min-h-11 items-center rounded-full border border-line px-4 text-sm font-medium text-ink hover:border-primary focus-visible:outline-2 focus-visible:outline-primary sm:min-h-9"
                 href={`data:text/plain;charset=utf-8,${encodeURIComponent(`Zimos backup codes\n\n${text}\n`)}`}
                 download="zimos-backup-codes.txt"
               >
@@ -175,6 +177,6 @@ export function BackupCodesPanel({ status, onChanged }: { status: TwoFactorStatu
           </div>
         )}
       </Modal>
-    </div>
+    </>
   );
 }

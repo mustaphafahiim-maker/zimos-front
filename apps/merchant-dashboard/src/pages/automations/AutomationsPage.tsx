@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Bot, Check, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Alert, Button, Card, Input, cn } from "@store-builder/ui";
 import {
   automationFlowsDelete,
@@ -9,6 +8,7 @@ import {
   automationFlowsListRuns,
   automationFlowsListTemplates,
   automationFlowsUpdate,
+  type AutomationFlowList,
   type AutomationFlowRule,
   type AutomationFlowRun,
   type AutomationFlowRunStatus,
@@ -19,27 +19,43 @@ import { useAsync } from "@/lib/useAsync";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime } from "@/lib/format";
+import { formatRelativeTime } from "@/lib/relativeTime";
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
-import { PageHeader } from "@/components/PageHeader";
-import { DataState } from "@/components/DataState";
-import { DataTable } from "@/components/DataTable";
-import { EmptyState } from "@/components/EmptyState";
-import { FilterTabs } from "@/components/FilterTabs";
-import { LoadMore } from "@/components/LoadMore";
-import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Section } from "@/components/Section";
+import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
+import { CardSkeleton, DataState } from "@/components/DataState";
+import { EmptyState } from "@/components/EmptyState";
+import { IconCheck, IconChecklist, IconDelete, IconEdit, IconPause, IconPlay, IconPlus, IconRobot, IconSparkle } from "@/components/icons";
+import { ChipRow, ListRowCard, ListSkeleton, type ChipItem } from "@/components/list";
+import { LoadMore } from "@/components/LoadMore";
+import { PageHeader } from "@/components/PageHeader";
+import { Segmented } from "@/components/Segmented";
 import { Select } from "@/components/Select";
+import { Sheet } from "@/components/Sheet";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { ViewLink } from "@/components/ViewLink";
+import { Fact, Facts } from "@/pages/marketing/kit/Facts";
+import { Switch } from "@/pages/marketing/kit/Switch";
+import { DeskList, DeskRow } from "@/pages/returns/rowkit/DeskList";
+import { RowAction, rowKeyProps } from "@/pages/returns/rowkit/RowBits";
+import { useIsCompact, useIsPhone } from "@/pages/returns/rowkit/useScreen";
 import { AUTOMATION_STRINGS, stepSummary, stepTypeLabel, triggerLabel } from "./automationText";
+// «إنشاء على واتساب»: a ready-made automation's templates sent to the store's WhatsApp account (handoff 391).
+import { TemplateWhatsappBadge, TemplateWhatsappPanel } from "./TemplateWhatsappPanel";
+import { RUN_DETAIL_STRINGS, runDetailText } from "./runDetail";
 import { RuleEditorDialog } from "./RuleEditorDialog";
 
 /**
  * Automations (SPEC §14.2): rules that run an ordered sequence of steps when
  * something happens to an order — messages, waits, a webhook, a tag, a status
- * change, a note to the team. Ready-made templates switch on with one click;
- * every step of every run is in the log below.
+ * change, a note to the team.
+ *
+ * Three views as chips (`?tab=` keeps the choice): the store's own automations
+ * first — each a card with its switch and ONE sentence of what starts it and
+ * what it does; the ready-made ones, switched on with a tap; and the run log.
+ * A card opens its preview (every step, its numbers, edit, delete); the editor
+ * is a sheet.
  */
 
 const STRINGS = {
@@ -49,10 +65,15 @@ const STRINGS = {
     newRule: "New automation",
     notConnected: "WhatsApp isn't connected, so WhatsApp steps will fail until it is.",
     connect: "Connect WhatsApp",
-    templatesTitle: "Ready-made automations",
-    templatesDesc: "Switch one on with a click, then adjust it like any other automation.",
+    tabsLabel: "Automations view",
+    tabRules: "Yours",
+    tabTemplates: "Ready-made",
+    tabLog: "Run log",
+    templatesDesc: "Switch one on with a tap, then adjust it like any other automation.",
     enable: "Switch on",
+    enabling: "Switching on…",
     enabled: "Switched on",
+    off: "Off",
     viewMessages: "Messages to approve",
     messagesTitle: "WhatsApp templates for “{name}”",
     messagesDesc:
@@ -60,18 +81,32 @@ const STRINGS = {
     templateName: "Template name",
     buttons: "Quick-reply buttons",
     close: "Close",
-    templateEnabled: "“{name}” is on. Review its steps below.",
+    templateEnabled: "“{name}” is on. Review its steps.",
     templateCoupon: "Coupon for the last reminder (optional)",
-    rulesTitle: "Your automations",
+    noTemplates: "No ready-made automations yet",
     noRules: "No automations yet",
-    noRulesDesc: "Switch on a ready-made one above, or build your own sequence.",
+    noRulesDesc: "An automation does the follow-up for you: a WhatsApp message when an order ships, a reminder for an abandoned checkout. Start from a ready-made one.",
+    seeTemplates: "See the ready-made ones",
     active: "Active",
+    sentence: "When: {trigger} ← {steps}",
+    stepJoin: " ← ",
     whenTrigger: "When",
     stats: "{sent} done · {skipped} skipped · {failed} failed",
+    statsTitle: "Runs",
     lastRun: "Last run {date}",
+    lastRunFact: "Last run",
     never: "Never ran",
+    stepsTitle: "Steps, in order",
+    peek: "Preview the automation {name}",
+    menuLabel: "Actions for this automation",
     edit: "Edit",
     delete: "Delete",
+    deleteRule: "Delete this automation",
+    turnOn: "Turn on",
+    turnOff: "Turn off",
+    showLog: "Show its runs",
+    turnedOn: "“{name}” is on.",
+    turnedOff: "“{name}” is off. Sequences already waiting carry on.",
     saved: "Automation saved.",
     created: "Automation created.",
     deleteTitle: "Delete this automation?",
@@ -79,7 +114,6 @@ const STRINGS = {
     deleting: "Deleting…",
     cancel: "Cancel",
     deleted: "Automation deleted.",
-    runsTitle: "Run log",
     filter: "Filter runs by result",
     allRules: "All automations",
     all: "All",
@@ -96,66 +130,93 @@ const STRINGS = {
     colDetail: "Detail",
     deletedRule: "Deleted automation",
     wholeRule: "Whole automation",
+    stepN: "{n}. {step}",
   },
   ar: {
     title: "الأتمتة",
-    description: "نفّذ سلسلة خطوات تلقائيًا عندما يحدث شيء للطلب: رسائل، انتظار، وسوم، تغيير حالة.",
+    description: "خلّي سلسلة خطوات تتنفّذ لوحدها لما حاجة تحصل للأوردر: رسايل، انتظار، وسوم، تغيير حالة.",
     newRule: "أتمتة جديدة",
-    notConnected: "واتساب غير مربوط، لذلك ستفشل خطوات واتساب حتى يتم ربطه.",
-    connect: "ربط واتساب",
-    templatesTitle: "أتمتة جاهزة",
-    templatesDesc: "فعّل أيًّا منها بضغطة، ثم عدّلها مثل أي أتمتة أخرى.",
-    enable: "تفعيل",
-    enabled: "مفعّلة",
-    viewMessages: "الرسائل المطلوب اعتمادها",
+    notConnected: "واتساب مش مربوط، فخطوات واتساب هتفشل لحد ما تربطه.",
+    connect: "اربط واتساب",
+    tabsLabel: "عرض الأتمتة",
+    tabRules: "بتاعتك",
+    tabTemplates: "جاهزة",
+    tabLog: "السجل",
+    templatesDesc: "شغّل أي واحدة بضغطة، وبعدين عدّلها زي أي أتمتة تانية.",
+    enable: "شغّلها",
+    enabling: "بنشغّلها…",
+    enabled: "شغّالة",
+    off: "متوقفة",
+    viewMessages: "الرسايل اللي لازم تتعتمد",
     messagesTitle: "قوالب واتساب لـ «{name}»",
     messagesDesc:
-      "واتساب يرسل فقط القوالب المعتمدة في حسابك على Meta. أنشئ كل قالب هناك بنفس الاسم تمامًا؛ وحتى تعتمده Meta ستفشل هذه الخطوة ويظهر السبب في السجل.",
+      "واتساب بيبعت بس القوالب المعتمدة في حسابك على Meta. اعمل كل قالب هناك بنفس الاسم بالظبط؛ ولحد ما Meta تعتمده الخطوة دي هتفشل والسبب هيظهر في السجل.",
     templateName: "اسم القالب",
     buttons: "أزرار الرد السريع",
     close: "إغلاق",
-    templateEnabled: "تم تفعيل «{name}». راجع خطواتها بالأسفل.",
+    templateEnabled: "«{name}» اشتغلت. راجع خطواتها.",
     templateCoupon: "كود خصم للتذكير الأخير (اختياري)",
-    rulesTitle: "الأتمتة الخاصة بك",
-    noRules: "مفيش أتمتة لسه",
-    noRulesDesc: "فعّل واحدة جاهزة من الأعلى، أو ابنِ سلسلتك الخاصة.",
-    active: "مفعّلة",
-    whenTrigger: "عند",
-    stats: "{sent} تمت · {skipped} تخطّت · {failed} فشلت",
+    noTemplates: "لسه مفيش أتمتة جاهزة",
+    noRules: "لسه مفيش أتمتة",
+    noRulesDesc: "الأتمتة بتعمل المتابعة مكانك: رسالة واتساب لما الأوردر يتشحن، تذكير للي ساب الأوردر في النص. ابدأ بواحدة جاهزة.",
+    seeTemplates: "شوف الجاهزة",
+    active: "شغّالة",
+    sentence: "لما: {trigger} ← {steps}",
+    stepJoin: " ← ",
+    whenTrigger: "لما",
+    stats: "{sent} تمّت · {skipped} اتخطّت · {failed} فشلت",
+    statsTitle: "التشغيل",
     lastRun: "آخر تشغيل {date}",
-    never: "لم تعمل بعد",
-    edit: "تعديل",
-    delete: "حذف",
-    saved: "تم حفظ الأتمتة.",
-    created: "تم إنشاء الأتمتة.",
-    deleteTitle: "حذف هذه الأتمتة؟",
-    deleteDesc: "ستتوقف «{name}» عن العمل، وتتوقف السلاسل المنتظرة أيضًا. سجل تشغيلها السابق يبقى.",
+    lastRunFact: "آخر تشغيل",
+    never: "لسه ما اشتغلتش",
+    stepsTitle: "الخطوات بالترتيب",
+    peek: "معاينة أتمتة {name}",
+    menuLabel: "إجراءات الأتمتة",
+    edit: "عدّل",
+    delete: "امسح",
+    deleteRule: "امسح الأتمتة دي",
+    turnOn: "شغّلها",
+    turnOff: "وقّفها",
+    showLog: "شوف سجلّها",
+    turnedOn: "«{name}» اشتغلت.",
+    turnedOff: "«{name}» اتوقفت. السلاسل اللي مستنية هتكمّل.",
+    saved: "الأتمتة اتحفظت.",
+    created: "الأتمتة اتعملت.",
+    deleteTitle: "تمسح الأتمتة دي؟",
+    deleteDesc: "«{name}» هتبطّل تشتغل، والسلاسل اللي مستنية هتقف كمان. سجل تشغيلها القديم هيفضل.",
     deleting: "بنمسح…",
     cancel: "إلغاء",
-    deleted: "تم حذف الأتمتة.",
-    runsTitle: "سجل التشغيل",
-    filter: "تصفية السجل حسب النتيجة",
+    deleted: "الأتمتة اتمسحت.",
+    filter: "فلتر السجل بالنتيجة",
     allRules: "كل الأتمتة",
     all: "الكل",
-    sent: "تمت",
-    skipped: "تخطّت",
+    sent: "تمّت",
+    skipped: "اتخطّت",
     failed: "فشلت",
-    noRuns: "لم يعمل شيء بعد",
-    noRunsDesc: "كل خطوة تنفّذها الأتمتة أو تتخطاها أو تفشل فيها تظهر هنا.",
+    noRuns: "لسه مفيش حاجة اشتغلت",
+    noRunsDesc: "كل خطوة الأتمتة تنفّذها أو تتخطاها أو تفشل فيها بتظهر هنا.",
     colTime: "الوقت",
     colRule: "الأتمتة",
     colStep: "الخطوة",
-    colOrder: "الطلب",
+    colOrder: "الأوردر",
     colStatus: "النتيجة",
     colDetail: "التفاصيل",
-    deletedRule: "أتمتة محذوفة",
+    deletedRule: "أتمتة اتمسحت",
     wholeRule: "الأتمتة كلها",
+    stepN: "{n}. {step}",
   },
 } satisfies Messages;
+
+// Stopgap: the server's copy for one ready-made automation still carries a reference to the spec,
+// "(SPEC §18.2)", written for developers. Remove once automationTemplates.js in the backend is clean.
+const withoutSpecRefs = (text: string) => text.replace(/\s*\(SPEC §[\d.]+\)/g, "");
 
 const RUN_TONE = { sent: "success", skipped: "neutral", failed: "danger" } as const;
 const RUNS_PAGE = 50;
 type RunFilter = "all" | AutomationFlowRunStatus;
+type Tab = "rules" | "templates" | "log";
+const isTab = (value: string | null): value is Tab => value === "rules" || value === "templates" || value === "log";
+const EMPTY_RULES: AutomationFlowList = { rules: [], triggers: [], tokens: [], stepTypes: [] };
 
 export function AutomationsPage() {
   const t = useT(STRINGS);
@@ -164,6 +225,23 @@ export function AutomationsPage() {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
+  const compact = useIsCompact();
+  const phone = useIsPhone();
+
+  const [params, setParams] = useSearchParams();
+  const rawTab = params.get("tab");
+  const tab: Tab = isTab(rawTab) ? rawTab : "rules";
+  function selectTab(next: Tab) {
+    setParams(
+      (prev) => {
+        const out = new URLSearchParams(prev);
+        if (next === "rules") out.delete("tab");
+        else out.set("tab", next);
+        return out;
+      },
+      { replace: true }
+    );
+  }
 
   const integration = useAsync(() => apiClient.getWhatsappIntegration(workspaceId), [workspaceId]);
   const rules = useAsync(() => automationFlowsList(apiClient, workspaceId), [workspaceId]);
@@ -174,6 +252,11 @@ export function AutomationsPage() {
   const [toggling, setToggling] = useState<string | null>(null);
   const [enabling, setEnabling] = useState<string | null>(null);
   const [messagesOf, setMessagesOf] = useState<AutomationFlowTemplate | null>(null);
+  // Bumped when templates were sent to WhatsApp or synced: the cards' review chips are read again.
+  const [whatsappVersion, setWhatsappVersion] = useState(0);
+  const runWords = useT(RUN_DETAIL_STRINGS);
+  // The automation being looked at. It stays here while its sheet closes, so the sheet does not empty on its way out.
+  const [peek, setPeek] = useState<{ id: string; open: boolean } | null>(null);
 
   // --- run log (own paging + filters) ---
   const [runFilter, setRunFilter] = useState<RunFilter>("all");
@@ -219,13 +302,27 @@ export function AutomationsPage() {
 
   const list = rules.data?.rules ?? [];
   const ruleNames = new Map(list.map((r) => [r.id, r.name]));
+  const peeked = peek ? (list.find((r) => r.id === peek.id) ?? null) : null;
+  const closePeek = () => setPeek((current) => (current ? { ...current, open: false } : current));
 
-  async function toggle(rule: AutomationFlowRule, next: boolean) {
+  const patchRule = (id: string, isActive: boolean) =>
+    rules.setData((prev) => {
+      const current = prev ?? EMPTY_RULES;
+      return { ...current, rules: current.rules.map((r) => (r.id === id ? { ...r, isActive } : r)) };
+    });
+
+  /** The switch answers at once; the request follows, and the toast can take it back. */
+  async function toggle(rule: AutomationFlowRule, next: boolean, undoable = true): Promise<void> {
     setToggling(rule.id);
+    patchRule(rule.id, next);
     try {
       await automationFlowsUpdate(apiClient, workspaceId, rule.id, { isActive: next });
-      await rules.refresh({ silent: true });
+      const message = fmt(next ? t.turnedOn : t.turnedOff, { name: rule.name });
+      if (undoable) toast.undo(message, () => toggle(rule, !next, false));
+      else toast.success(message);
+      void rules.refresh({ silent: true });
     } catch (err) {
+      patchRule(rule.id, !next);
       toast.error(errorMessage(err));
     } finally {
       setToggling(null);
@@ -234,13 +331,14 @@ export function AutomationsPage() {
 
   // The coupon a template that offers one gives in its last message (abandoned cart).
   const [templateCoupons, setTemplateCoupons] = useState<Record<string, string>>({});
+  const lang = locale === "en" ? "en" : "ar";
 
   async function enableTemplate(template: AutomationFlowTemplate) {
     setEnabling(template.key);
     try {
       const couponCode = template.acceptsCoupon ? (templateCoupons[template.key] ?? "").trim() : "";
-      await automationFlowsEnableTemplate(apiClient, workspaceId, template.key, locale === "en" ? "en" : "ar", couponCode ? { couponCode } : {});
-      toast.success(fmt(t.templateEnabled, { name: template.name[locale === "en" ? "en" : "ar"] }));
+      await automationFlowsEnableTemplate(apiClient, workspaceId, template.key, lang, couponCode ? { couponCode } : {});
+      toast.success(fmt(t.templateEnabled, { name: template.name[lang] }));
       await Promise.all([rules.refresh({ silent: true }), templates.refresh({ silent: true })]);
       if (template.whatsappTemplates.length > 0) setMessagesOf(template);
     } catch (err) {
@@ -250,248 +348,386 @@ export function AutomationsPage() {
     }
   }
 
-  const lang = locale === "en" ? "en" : "ar";
+  function showLogOf(rule: AutomationFlowRule) {
+    closePeek();
+    setRunRule(rule.id);
+    selectTab("log");
+  }
+
+  function menuFor(rule: AutomationFlowRule): ContextMenuItem[] {
+    return [
+      { id: "edit", label: t.edit, icon: IconEdit, onSelect: () => setEditing(rule) },
+      {
+        id: "toggle",
+        label: rule.isActive ? t.turnOff : t.turnOn,
+        icon: rule.isActive ? IconPause : IconPlay,
+        disabled: toggling === rule.id,
+        onSelect: () => void toggle(rule, !rule.isActive),
+      },
+      { id: "log", label: t.showLog, icon: IconChecklist, onSelect: () => showLogOf(rule) },
+      { id: "delete", label: t.delete, icon: IconDelete, destructive: true, separatorBefore: true, onSelect: () => setToDelete(rule) },
+    ];
+  }
+
+  const chips: ChipItem<Tab>[] = [
+    { value: "rules", label: t.tabRules, count: rules.data ? list.length : null },
+    { value: "templates", label: t.tabTemplates, count: templates.data ? templates.data.length : null },
+    { value: "log", label: t.tabLog },
+  ];
+
+  const newButton = (
+    <Button type="button" className="min-h-11 rounded-full px-5" onClick={() => setEditing("new")} disabled={!rules.data}>
+      <IconPlus className="size-4" weight="bold" aria-hidden />
+      {t.newRule}
+    </Button>
+  );
+
+  const cardsSkeleton = (
+    <div className="grid gap-[var(--bento-gap)] md:grid-cols-2">
+      <CardSkeleton lines={2} />
+      <CardSkeleton lines={2} />
+    </div>
+  );
+
+  const stepName = (run: AutomationFlowRun) =>
+    run.stepType
+      ? run.stepIndex !== null
+        ? fmt(t.stepN, { n: run.stepIndex + 1, step: stepTypeLabel(at, run.stepType) })
+        : stepTypeLabel(at, run.stepType)
+      : t.wholeRule;
+
+  const runRows = runs.map((run) => {
+    const name = (run.ruleId && ruleNames.get(run.ruleId)) ?? t.deletedRule;
+    const result = <StatusBadge value={run.status} tone={RUN_TONE[run.status]} text={t[run.status]} />;
+    const order = run.order ? (
+      <ViewLink
+        to={`/orders/${run.order.id}`}
+        className="rounded-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        <bdi dir="ltr">{run.order.orderNumber ?? "—"}</bdi>
+      </ViewLink>
+    ) : null;
+    const when = (
+      <time dateTime={run.createdAt} title={formatDateTime(run.createdAt)}>
+        {formatRelativeTime(run.createdAt)}
+      </time>
+    );
+    // The server's own words (or the platform's), in whatever language they came.
+    const detail = run.detail ? (
+      <span dir="auto" className={cn("wrap-anywhere", run.status === "failed" ? "text-danger" : "text-ink-soft")}>
+        {runDetailText(runWords, run.detail)}
+      </span>
+    ) : null;
+    if (compact) {
+      return (
+        <li key={run.id}>
+          <ListRowCard
+            title={<bdi dir="auto">{name}</bdi>}
+            amount={order}
+            status={result}
+            meta={
+              <>
+                {stepName(run)} · {when}
+              </>
+            }
+            footer={detail && <span className="text-xs leading-4">{detail}</span>}
+          />
+        </li>
+      );
+    }
+    return (
+      <DeskRow key={run.id}>
+        <span className="text-xs whitespace-nowrap text-ink-soft">{when}</span>
+        <div className="min-w-0">
+          <p dir="auto" className="truncate text-sm leading-6 font-medium text-ink">
+            {name}
+          </p>
+          <p className="truncate text-xs leading-5 text-ink-soft">{stepName(run)}</p>
+        </div>
+        <span className="text-sm">{order ?? "—"}</span>
+        <div className="flex items-center">{result}</div>
+        <p className="min-w-0 text-[13px] leading-5">{detail ?? <span className="text-ink-soft">—</span>}</p>
+      </DeskRow>
+    );
+  });
 
   return (
-    <div className="min-w-0 max-w-6xl">
+    <div className="min-w-0 max-w-5xl">
       <PageHeader
         tutorial="automations"
         title={t.title}
-        description={t.description}
-        actions={
-          <Button onClick={() => setEditing("new")} disabled={!rules.data}>
-            <Plus className="size-4" />
-            {t.newRule}
-          </Button>
-        }
+        // A phone keeps the first screen for the automations: the sentence is for wider screens.
+        description={phone ? undefined : t.description}
+        primaryAction={newButton}
       />
 
       {integration.data && !integration.data.connected && (
-        <Alert variant="default" className="mb-6 border-accent/40 bg-accent-soft text-accent-dark dark:text-accent">
+        <Alert variant="default" className="mb-4 border-accent/40 bg-accent-soft text-accent-dark dark:text-accent">
           <p>
             {t.notConnected}{" "}
-            <Link to="/settings#whatsapp" className="font-medium underline">
+            <Link to="/settings#whatsapp" className="font-semibold underline">
               {t.connect}
             </Link>
           </p>
         </Alert>
       )}
 
-      <Section title={t.templatesTitle} description={t.templatesDesc} className="mb-8">
-        <DataState loading={templates.loading && !templates.data} error={templates.error} onRetry={() => templates.refresh()}>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {(templates.data ?? []).map((template) => (
-              <div key={template.key} className="flex flex-col rounded-[0.5rem] border border-line p-3">
-                <div className="flex items-start gap-2">
-                  <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-medium text-ink">{template.name[lang]}</h3>
-                    <p className="mt-0.5 text-xs text-ink-soft">{template.description[lang]}</p>
-                  </div>
-                </div>
-                {template.acceptsCoupon && !template.ruleId && (
-                  <Input
-                    className="mt-3 h-8 text-xs"
-                    dir="ltr"
-                    maxLength={100}
-                    aria-label={t.templateCoupon}
-                    placeholder={t.templateCoupon}
-                    value={templateCoupons[template.key] ?? ""}
-                    onChange={(e) => setTemplateCoupons((prev) => ({ ...prev, [template.key]: e.target.value }))}
-                  />
-                )}
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pt-1">
-                  {template.whatsappTemplates.length > 0 ? (
-                    <button type="button" onClick={() => setMessagesOf(template)} className="cursor-pointer text-xs text-primary hover:underline">
-                      {t.viewMessages}
-                    </button>
-                  ) : (
-                    <span />
-                  )}
-                  {template.ruleId ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
-                      <Check className="size-4" aria-hidden />
-                      {t.enabled}
-                    </span>
-                  ) : (
-                    <Button size="sm" variant="outline" disabled={enabling === template.key} onClick={() => void enableTemplate(template)}>
-                      {t.enable}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </DataState>
-      </Section>
+      <div className="flex flex-col gap-3">
+        <ChipRow items={chips} value={tab} onChange={selectTab} label={t.tabsLabel} collapseEmpty={false} countsLoading={rules.loading || templates.loading} />
 
-      <section className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold text-ink">{t.rulesTitle}</h2>
-        <DataState loading={rules.loading && !rules.data} error={rules.error} onRetry={() => rules.refresh()}>
-          {list.length === 0 ? (
-            <EmptyState icon={<Bot />} title={t.noRules} description={t.noRulesDesc} action={<Button onClick={() => setEditing("new")}>{t.newRule}</Button>} />
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {list.map((rule) => (
-                <Card key={rule.id} className="gap-0 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="truncate font-medium text-ink" dir="auto">
-                        {rule.name}
-                      </h3>
-                      <p className="text-sm text-ink-soft">
-                        {t.whenTrigger}: {triggerLabel(at, rule.trigger)}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={rule.isActive}
-                      aria-label={`${t.active}: ${rule.name}`}
-                      disabled={toggling === rule.id}
-                      onClick={() => void toggle(rule, !rule.isActive)}
-                      className={cn(
-                        "relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                        rule.isActive ? "border-primary bg-primary" : "border-line-strong bg-paper"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute top-0.5 size-4.5 rounded-full bg-paper-raised shadow-sm transition-[inset-inline-start]",
-                          rule.isActive ? "start-[1.375rem]" : "start-0.5"
+        {tab === "rules" && (
+          <DataState loading={rules.loading && !rules.data} error={rules.data ? null : rules.error} onRetry={() => void rules.refresh()} skeleton={cardsSkeleton}>
+            {list.length === 0 ? (
+              <EmptyState
+                icon={<IconRobot aria-hidden />}
+                title={t.noRules}
+                description={t.noRulesDesc}
+                action={
+                  <Button type="button" className="rounded-full px-5" onClick={() => selectTab("templates")}>
+                    <IconSparkle className="size-4" weight="bold" aria-hidden />
+                    {t.seeTemplates}
+                  </Button>
+                }
+              />
+            ) : (
+              <ul aria-label={t.tabRules} className="grid gap-[var(--bento-gap)] md:grid-cols-2">
+                {list.map((rule) => {
+                  const onPeek = () => setPeek({ id: rule.id, open: true });
+                  const keys = rowKeyProps(onPeek);
+                  return (
+                    <li key={rule.id} className="min-w-0">
+                      <ContextMenu items={menuFor(rule)} label={t.menuLabel}>
+                        <Card
+                          data-on={rule.isActive ? "" : undefined}
+                          className="zimos-auto-card relative h-full gap-0 p-4 transition-[scale] duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-safe:has-[[data-row-open]:active]:scale-[0.985] motion-reduce:transition-none"
+                        >
+                          {/* The card is one target: a button laid over it; the switch sits above it. */}
+                          <div
+                            role="button"
+                            aria-haspopup="dialog"
+                            aria-label={fmt(t.peek, { name: rule.name })}
+                            data-row-open=""
+                            {...keys}
+                            onKeyDown={(event) => {
+                              keys.onKeyDown(event);
+                              if (event.key !== "Enter" || event.target !== event.currentTarget || event.defaultPrevented) return;
+                              event.preventDefault();
+                              onPeek();
+                            }}
+                            onClick={onPeek}
+                            className="absolute inset-0 cursor-pointer rounded-[inherit] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                          />
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 dir="auto" className="min-w-0 flex-1 truncate pt-2.5 text-[15px] leading-6 font-semibold text-ink">
+                              {rule.name}
+                            </h3>
+                            <Switch
+                              checked={rule.isActive}
+                              busy={toggling === rule.id}
+                              label={`${t.active}: ${rule.name}`}
+                              onChange={(next) => void toggle(rule, next)}
+                              className="-me-1"
+                            />
+                          </div>
+                          {/* What starts it and what it does, in one sentence. */}
+                          <p dir="auto" className={cn("mt-1 line-clamp-2 text-sm leading-6", rule.isActive ? "text-ink" : "text-ink-soft")}>
+                            {fmt(t.sentence, { trigger: triggerLabel(at, rule.trigger), steps: rule.actions.map((step) => stepSummary(at, step)).join(t.stepJoin) })}
+                          </p>
+                          <p className="mt-2 text-xs leading-5 text-ink-soft">
+                            {fmt(t.stats, { sent: rule.stats.sent, skipped: rule.stats.skipped, failed: rule.stats.failed })}
+                            {" · "}
+                            {rule.stats.lastRunAt ? fmt(t.lastRun, { date: formatRelativeTime(rule.stats.lastRunAt) }) : t.never}
+                          </p>
+                        </Card>
+                      </ContextMenu>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </DataState>
+        )}
+
+        {tab === "templates" && (
+          <DataState loading={templates.loading && !templates.data} error={templates.data ? null : templates.error} onRetry={() => void templates.refresh()} skeleton={cardsSkeleton}>
+            {(templates.data ?? []).length === 0 ? (
+              <EmptyState icon={<IconSparkle aria-hidden />} title={t.noTemplates} />
+            ) : (
+              <>
+                <p className="px-1 text-[13px] leading-5 text-ink-soft">{t.templatesDesc}</p>
+                <ul className="grid gap-[var(--bento-gap)] md:grid-cols-2 xl:grid-cols-3">
+                  {(templates.data ?? []).map((template) => (
+                    <li key={template.key} className="min-w-0">
+                      <Card className="h-full gap-0 p-4">
+                        <div className="flex items-start gap-3">
+                          <span className="zimos-accordion-chip flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                            <IconSparkle className="size-[18px]" weight="duotone" aria-hidden />
+                          </span>
+                          <div className="min-w-0">
+                            <h3 className="text-[15px] leading-6 font-semibold text-ink">{template.name[lang]}</h3>
+                            <p className="mt-0.5 text-[13px] leading-5 text-ink-soft">{withoutSpecRefs(template.description[lang])}</p>
+                          </div>
+                        </div>
+                        {template.whatsappTemplates.length > 0 && (
+                          <div className="mt-2 empty:hidden">
+                            <TemplateWhatsappBadge templateKey={template.key} version={whatsappVersion} />
+                          </div>
                         )}
-                      />
-                    </button>
-                  </div>
+                        {template.acceptsCoupon && !template.ruleId && (
+                          <Input
+                            className="mt-3"
+                            dir="ltr"
+                            maxLength={100}
+                            aria-label={t.templateCoupon}
+                            placeholder={t.templateCoupon}
+                            value={templateCoupons[template.key] ?? ""}
+                            onChange={(e) => setTemplateCoupons((prev) => ({ ...prev, [template.key]: e.target.value }))}
+                          />
+                        )}
+                        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
+                          {template.whatsappTemplates.length > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => setMessagesOf(template)}
+                              className="-mx-2 inline-flex min-h-11 cursor-pointer items-center rounded-full px-2 text-[13px] font-semibold text-primary hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                            >
+                              {t.viewMessages}
+                            </button>
+                          ) : (
+                            <span />
+                          )}
+                          {template.ruleId ? (
+                            <span className="inline-flex min-h-9 items-center gap-1 text-[13px] font-semibold text-success">
+                              <IconCheck className="size-4" weight="bold" aria-hidden />
+                              {t.enabled}
+                            </span>
+                          ) : (
+                            <RowAction label={t.enable} icon={IconPlay} busy={enabling === template.key} disabled={enabling !== null} onClick={() => void enableTemplate(template)} />
+                          )}
+                        </div>
+                      </Card>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </DataState>
+        )}
 
-                  <ol className="mt-3 space-y-1.5">
-                    {rule.actions.map((step, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-paper text-xs font-medium text-ink-soft" aria-hidden>
-                          {i + 1}
-                        </span>
-                        <span className={cn("min-w-0 break-words", step.type === "wait" ? "text-ink-soft" : "text-ink")} dir="auto">
-                          {stepSummary(at, step)}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
-                    <p className="text-xs text-ink-soft">
-                      {fmt(t.stats, { sent: rule.stats.sent, skipped: rule.stats.skipped, failed: rule.stats.failed })}
-                      {" · "}
-                      {rule.stats.lastRunAt ? fmt(t.lastRun, { date: formatDateTime(rule.stats.lastRunAt) }) : t.never}
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => setEditing(rule)}>
-                        <Pencil className="size-4" />
-                        {t.edit}
-                      </Button>
-                      <Button size="icon-sm" variant="ghost" onClick={() => setToDelete(rule)} aria-label={`${t.delete} ${rule.name}`}>
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+        {tab === "log" && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <Segmented
+                label={t.filter}
+                size="sm"
+                className="max-sm:w-full"
+                value={runFilter}
+                onChange={setRunFilter}
+                options={[
+                  { value: "all", label: t.all },
+                  { value: "sent", label: t.sent },
+                  { value: "skipped", label: t.skipped },
+                  { value: "failed", label: t.failed },
+                ]}
+              />
+              <Select aria-label={t.colRule} value={runRule} onChange={(e) => setRunRule(e.target.value)} className="h-11 rounded-full sm:ms-auto sm:h-10 sm:w-auto sm:max-w-60">
+                <option value="">{t.allRules}</option>
+                {list.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </Select>
             </div>
-          )}
-        </DataState>
-      </section>
+            <DataState loading={runsLoading} error={runs.length === 0 ? runsError : null} onRetry={() => void loadRuns(null)} skeleton={<ListSkeleton variant={compact ? "card" : "table"} rows={5} />}>
+              {runs.length === 0 ? (
+                <EmptyState icon={<IconChecklist aria-hidden />} title={t.noRuns} description={t.noRunsDesc} />
+              ) : compact ? (
+                <ul aria-label={t.tabLog} className="flex flex-col gap-2.5">
+                  {runRows}
+                </ul>
+              ) : (
+                <DeskList
+                  columns="grid-cols-[max-content_minmax(0,1.1fr)_max-content_max-content_minmax(0,1.4fr)]"
+                  label={t.tabLog}
+                  head={[{ label: t.colTime }, { label: t.colRule }, { label: t.colOrder }, { label: t.colStatus }, { label: t.colDetail }]}
+                >
+                  {runRows}
+                </DeskList>
+              )}
+              <LoadMore hasMore={Boolean(runsCursor)} loading={runsMore} onClick={() => void loadRuns(runsCursor)} />
+            </DataState>
+          </>
+        )}
+      </div>
 
-      <Section
-        title={t.runsTitle}
-        flush
-        actions={
-          <Select aria-label={t.colRule} value={runRule} onChange={(e) => setRunRule(e.target.value)} className="h-9 max-w-52">
-            <option value="">{t.allRules}</option>
-            {list.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </Select>
-        }
-      >
-        <div className="px-4 pb-3">
-          <FilterTabs
-            label={t.filter}
-            value={runFilter}
-            onChange={setRunFilter}
-            tabs={[
-              { value: "all", label: t.all },
-              { value: "sent", label: t.sent },
-              { value: "skipped", label: t.skipped },
-              { value: "failed", label: t.failed },
-            ]}
-          />
-        </div>
-        <DataState loading={runsLoading} error={runsError} onRetry={() => void loadRuns(null)}>
-          {runs.length === 0 ? (
-            <div className="px-4 pb-4">
-              <EmptyState title={t.noRuns} description={t.noRunsDesc} />
+      {/* The preview of an automation: every step, its numbers, and what can be done to it. */}
+      {peeked && (
+        <Sheet
+          open={Boolean(peek?.open)}
+          onOpenChange={(open) => setPeek((current) => (current ? { ...current, open } : current))}
+          side="auto-end"
+          title={<bdi dir="auto">{peeked.name}</bdi>}
+          description={`${t.whenTrigger}: ${triggerLabel(at, peeked.trigger)}`}
+          footer={
+            <>
+              <Button type="button" variant="outline" className="rounded-full px-5" onClick={() => showLogOf(peeked)}>
+                <IconChecklist className="size-4" weight="bold" aria-hidden />
+                {t.showLog}
+              </Button>
+              <Button
+                type="button"
+                className="rounded-full px-5"
+                onClick={() => {
+                  closePeek();
+                  setEditing(peeked);
+                }}
+              >
+                <IconEdit className="size-4" weight="bold" aria-hidden />
+                {t.edit}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-[13px] leading-5 font-semibold text-ink-soft">{t.stepsTitle}</h3>
+              <ol className="mt-2 space-y-2">
+                {peeked.actions.map((step, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm leading-6">
+                    <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold tabular-nums text-primary" aria-hidden>
+                      {fmt("{n}", { n: i + 1 })}
+                    </span>
+                    <span className={cn("min-w-0 wrap-anywhere", step.type === "wait" ? "text-ink-soft" : "text-ink")} dir="auto">
+                      {stepSummary(at, step)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
             </div>
-          ) : (
-            <DataTable
-              rows={runs}
-              rowKey={(run) => run.id}
-              minWidth="50rem"
-              columns={[
-                { key: "time", header: t.colTime, cell: (run) => <span className="text-ink-soft">{formatDateTime(run.createdAt)}</span> },
-                {
-                  key: "rule",
-                  header: t.colRule,
-                  cell: (run) => (
-                    <span className="text-ink" dir="auto">
-                      {(run.ruleId && ruleNames.get(run.ruleId)) ?? t.deletedRule}
-                    </span>
-                  ),
-                },
-                {
-                  key: "step",
-                  header: t.colStep,
-                  cell: (run) => (
-                    <span className="text-ink-soft">
-                      {run.stepType ? `${run.stepIndex !== null ? `${run.stepIndex + 1}. ` : ""}${stepTypeLabel(at, run.stepType)}` : t.wholeRule}
-                    </span>
-                  ),
-                },
-                {
-                  key: "order",
-                  header: t.colOrder,
-                  cell: (run) =>
-                    run.order ? (
-                      <Link to={`/orders/${run.order.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
-                        <bdi dir="ltr">{run.order.orderNumber ?? "—"}</bdi>
-                      </Link>
-                    ) : (
-                      "—"
-                    ),
-                },
-                {
-                  key: "status",
-                  header: t.colStatus,
-                  cell: (run) => <StatusBadge value={run.status} tone={RUN_TONE[run.status]} text={t[run.status]} />,
-                },
-                {
-                  key: "detail",
-                  header: t.colDetail,
-                  cell: (run) => (
-                    <span className={cn(run.status === "failed" ? "text-danger" : "text-ink-soft")} dir="auto">
-                      {run.detail ?? "—"}
-                    </span>
-                  ),
-                },
-              ]}
-            />
-          )}
-          <div className="pb-4">
-            <LoadMore hasMore={Boolean(runsCursor)} loading={runsMore} onClick={() => void loadRuns(runsCursor)} />
+            <Facts>
+              <Fact label={t.active}>
+                <StatusBadge value={peeked.isActive ? "active" : "paused"} tone={peeked.isActive ? "success" : "neutral"} text={peeked.isActive ? t.enabled : t.off} />
+              </Fact>
+              <Fact label={t.statsTitle}>{fmt(t.stats, { sent: peeked.stats.sent, skipped: peeked.stats.skipped, failed: peeked.stats.failed })}</Fact>
+              <Fact label={t.lastRunFact}>{peeked.stats.lastRunAt ? formatDateTime(peeked.stats.lastRunAt) : t.never}</Fact>
+            </Facts>
+            <div className="border-t border-line pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  closePeek();
+                  setToDelete(peeked);
+                }}
+                className="-mx-2 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-3 text-sm font-semibold text-danger transition-[background-color,scale] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-danger-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-safe:active:scale-[0.97] motion-reduce:transition-none"
+              >
+                <IconDelete className="size-4" aria-hidden />
+                {t.deleteRule}
+              </button>
+            </div>
           </div>
-        </DataState>
-      </Section>
+        </Sheet>
+      )}
 
       {editing && rules.data && (
         <RuleEditorDialog
@@ -528,28 +764,35 @@ export function AutomationsPage() {
         }}
       />
 
-      <Modal
+      {/* Nothing is typed here: a plain sheet, so closing it never asks. */}
+      <Sheet
         open={Boolean(messagesOf)}
-        onClose={() => setMessagesOf(null)}
+        onOpenChange={(open) => {
+          if (!open) setMessagesOf(null);
+        }}
         title={messagesOf ? fmt(t.messagesTitle, { name: messagesOf.name[lang] }) : ""}
         description={t.messagesDesc}
-        footer={<Button onClick={() => setMessagesOf(null)}>{t.close}</Button>}
+        footer={
+          <Button type="button" className="rounded-full px-5" onClick={() => setMessagesOf(null)}>
+            {t.close}
+          </Button>
+        }
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           {(messagesOf?.whatsappTemplates ?? []).map((m) => (
-            <div key={m.name} className="rounded-[0.5rem] border border-line p-3">
+            <div key={m.name} data-slot="sweep-well" className="rounded-2xl bg-paper-sunken px-4 py-3">
               <p className="text-xs text-ink-soft">{t.templateName}</p>
-              <code dir="ltr" className="block select-all font-mono text-sm text-ink text-start">
+              <code dir="ltr" className="block text-start font-mono text-sm text-ink select-all">
                 {m.name}
               </code>
-              <p dir="rtl" className="mt-2 select-all whitespace-pre-wrap rounded bg-paper p-2 text-sm text-ink">
+              <p dir="rtl" className="mt-2 rounded-xl bg-paper-raised p-3 text-sm leading-6 whitespace-pre-wrap text-ink select-all">
                 {m.body}
               </p>
               {m.buttons && m.buttons.length > 0 && (
                 <p className="mt-2 text-xs text-ink-soft">
                   {t.buttons}:{" "}
                   {m.buttons.map((b) => (
-                    <span key={b} dir="rtl" className="me-1 inline-block rounded-full border border-line px-2 py-0.5 text-ink">
+                    <span key={b} dir="rtl" className="me-1 inline-block rounded-full bg-paper-raised px-2.5 py-0.5 text-ink ring-1 ring-line">
                       {b}
                     </span>
                   ))}
@@ -557,8 +800,19 @@ export function AutomationsPage() {
               )}
             </div>
           ))}
+          {messagesOf && messagesOf.whatsappTemplates.length > 0 && (
+            <TemplateWhatsappPanel
+              key={messagesOf.key}
+              templateKey={messagesOf.key}
+              couponCode={messagesOf.acceptsCoupon ? (templateCoupons[messagesOf.key] ?? "").trim() || undefined : undefined}
+              onChanged={() => {
+                setWhatsappVersion((current) => current + 1);
+                void Promise.all([rules.refresh({ silent: true }), templates.refresh({ silent: true })]);
+              }}
+            />
+          )}
         </div>
-      </Modal>
+      </Sheet>
     </div>
   );
 }

@@ -139,6 +139,8 @@ const HUMANIZE: Record<string, string> = {
   wrong_item: "Wrong item",
   arrived_late: "Arrived late",
   bank_transfer: "Bank transfer",
+  // Pay later on account (handoff 229): every screen that names an order's payment method.
+  on_account: "Pay on account",
   cod: "Cash on delivery",
   valu: "valU",
   paypal: "PayPal",
@@ -192,6 +194,7 @@ const HUMANIZE_AR: Record<string, string> = {
   damaged: "تالف",
   arrived_late: "وصل متأخر",
   bank_transfer: "تحويل بنكي",
+  on_account: "دفع آجل",
   cod: "دفع عند الاستلام",
   card: "كارت",
   wallet: "محفظة",

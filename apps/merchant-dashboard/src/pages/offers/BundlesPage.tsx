@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Layers } from "lucide-react";
-import { Alert, Button, Card, Input } from "@store-builder/ui";
+import { IconDelete, IconEdit, IconLayers, IconPlus, IconPower, IconProducts } from "@/components/icons";
+import { Button, Input, cn } from "@store-builder/ui";
 import {
   bundlesDelete,
   bundlesGet,
@@ -13,89 +13,94 @@ import {
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
+import { useCachedAsync } from "@/lib/useCachedAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatMoney } from "@/lib/format";
+import { countOf } from "@/lib/plural";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
-import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { Modal } from "@/components/Modal";
-import { StatusBadge } from "@/components/StatusBadge";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import type { ContextMenuItem } from "@/components/ContextMenu";
 import { useToast } from "@/components/Toast";
 import { BundleEditorDialog } from "./BundleEditorDialog";
+import { MixAndMatchNote } from "./MixAndMatchParts";
 import { OfferNumbers, useOfferStats } from "./OfferNumbers";
+import { FormProblem, OfferList, OfferListState, OfferPage, OfferRow, SheetActions, TOUCH_BUTTON, TOUCH_FIELD } from "./OfferKit";
 
 /**
- * Quantity bundles (SPEC §10.1): the list of the store's bundles, each with
- * its ladder and the products that use it.
+ * Quantity bundles (SPEC §10.1): the list of the store's bundles — each with
+ * its ladder in one line, the products that use it, its numbers and its state
+ * switch. A row opens the bundle's sheet; «…» holds its products and delete.
  */
 
 const STRINGS = {
   en: {
     title: "Bundles",
-    description: "Quantity offers — buy more, pay less per piece. Build one and use it on any number of products.",
-    back: "Offers",
+    description: "Buy more, pay less per piece. Build one and use it on any number of products.",
     newBundle: "New bundle",
+    listLabel: "Your bundles",
     emptyTitle: "No bundles yet",
     emptyDescription: "Offer 5% off two pieces and 10% off three, and raise the value of every order.",
-    active: "Active",
-    inactive: "Off",
-    products: "{count} products",
+    onProducts: "On {products}",
     noProducts: "Not on any product yet",
     edit: "Edit",
-    chooseProducts: "Products",
+    chooseProducts: "Choose its products",
     turnOn: "Turn on",
     turnOff: "Turn off",
     delete: "Delete",
-    deleteConfirm: "Delete “{name}”? Its products go back to their normal price.",
-    deleted: "Bundle deleted.",
-    tier_percentage: "{q} pcs · {v}% off",
-    tier_fixed_price: "{q} pcs · {v}",
-    tier_fixed_amount_off: "{q} pcs · {v} off",
-    tier_buy_x_get_y: "{q} pcs · {v} free",
+    deleteTitle: "Delete “{name}”?",
+    deleteHint: "Its products go back to their normal price. Orders already placed keep theirs.",
+    deleted: "“{name}” was deleted.",
+    turnedOn: "“{name}” is on.",
+    turnedOff: "“{name}” is off.",
+    tier_percentage: "{q} pcs: {v}% off",
+    tier_fixed_price: "{q} pcs for {v}",
+    tier_fixed_amount_off: "{q} pcs: {v} off",
+    tier_buy_x_get_y: "{q} pcs: {v} free",
     tier_none: "{q} pcs",
-    freeShipping: "free shipping",
-    productsTitle: "Products using “{name}”",
+    tierJoin: " · ",
+    withFreeShipping: "{tier} + free shipping",
+    productsTitle: "Products of “{name}”",
     productsDescription: "A product has one bundle. Ticking a product here takes it off any other bundle.",
     search: "Search products",
     noMatch: "No products match.",
-    cancel: "Cancel",
-    save: "Save",
-    saving: "Saving…",
+    picked: "{count} picked",
     productsSaved: "Products saved.",
   },
   ar: {
     title: "الباقات",
-    description: "عروض الكمية — اشترِ أكثر وادفع أقل للقطعة. أنشئ باقة واستخدمها على أي عدد من المنتجات.",
-    back: "العروض",
+    description: "اشتري أكتر وادفع أقل في القطعة. اعمل باقة واستخدمها على أي عدد من المنتجات.",
     newBundle: "باقة جديدة",
-    emptyTitle: "مفيش باقات لسه",
-    emptyDescription: "قدّم خصم 5% على قطعتين و10% على ثلاث، وارفع قيمة كل أوردر.",
-    active: "مفعّلة",
-    inactive: "متوقفة",
-    products: "{count} منتج",
-    noProducts: "غير مستخدمة على أي منتج بعد",
-    edit: "تعديل",
-    chooseProducts: "المنتجات",
-    turnOn: "تفعيل",
-    turnOff: "إيقاف",
-    delete: "حذف",
-    deleteConfirm: "حذف «{name}»؟ منتجاتها ترجع لسعرها العادي.",
-    deleted: "تم حذف الباقة.",
-    tier_percentage: "{q} قطع · خصم {v}%",
-    tier_fixed_price: "{q} قطع · {v}",
-    tier_fixed_amount_off: "{q} قطع · خصم {v}",
-    tier_buy_x_get_y: "{q} قطع · {v} مجانًا",
+    listLabel: "الباقات بتاعتك",
+    emptyTitle: "لسه مفيش باقات",
+    emptyDescription: "اعمل خصم 5% على قطعتين و10% على تلاتة، وكبّر قيمة كل أوردر.",
+    onProducts: "على {products}",
+    noProducts: "لسه مش على أي منتج",
+    edit: "عدّل",
+    chooseProducts: "اختار منتجاتها",
+    turnOn: "شغّلها",
+    turnOff: "وقّفها",
+    delete: "امسح",
+    deleteTitle: "تمسح «{name}»؟",
+    deleteHint: "منتجاتها هترجع لسعرها العادي. الأوردرات اللي اتعملت بيها هتفضل زي ما هي.",
+    deleted: "«{name}» اتمسحت.",
+    turnedOn: "«{name}» شغّالة.",
+    turnedOff: "«{name}» اتوقفت.",
+    tier_percentage: "{q} قطع: خصم {v}%",
+    tier_fixed_price: "{q} قطع بـ {v}",
+    tier_fixed_amount_off: "{q} قطع: خصم {v}",
+    tier_buy_x_get_y: "{q} قطع: {v} ببلاش",
     tier_none: "{q} قطع",
-    freeShipping: "شحن مجاني",
-    productsTitle: "المنتجات التي تستخدم «{name}»",
-    productsDescription: "للمنتج باقة واحدة. تحديد منتج هنا ينقله من أي باقة أخرى.",
-    search: "ابحث في المنتجات",
-    noMatch: "مفيش منتجات مطابقة.",
-    cancel: "إلغاء",
-    save: "حفظ",
-    saving: "بنحفظ…",
-    productsSaved: "تم حفظ المنتجات.",
+    tierJoin: " · ",
+    withFreeShipping: "{tier} + شحن ببلاش",
+    productsTitle: "منتجات «{name}»",
+    productsDescription: "المنتج له باقة واحدة. لو علّمت منتج هنا هيتشال من أي باقة تانية.",
+    search: "دوّر في المنتجات",
+    noMatch: "مفيش منتج بالاسم ده.",
+    picked: "اخترت {count}",
+    productsSaved: "المنتجات اتحفظت.",
   },
 } satisfies Messages;
 
@@ -103,14 +108,18 @@ type Strings = (typeof STRINGS)["en"];
 
 function tierText(tier: BundleTierDto, t: Strings): string {
   const q = tier.quantity;
-  if (!tier.discountValue) return fmt(t.tier_none, { q });
-  const v =
-    tier.discountType === "percentage"
-      ? String(tier.discountValue / 100)
-      : tier.discountType === "buy_x_get_y"
-        ? String(tier.discountValue)
-        : formatMoney(tier.discountValue);
-  return fmt(t[`tier_${tier.discountType}`], { q, v });
+  const base = !tier.discountValue
+    ? fmt(t.tier_none, { q })
+    : fmt(t[`tier_${tier.discountType}`], {
+        q,
+        v:
+          tier.discountType === "percentage"
+            ? tier.discountValue / 100
+            : tier.discountType === "buy_x_get_y"
+              ? tier.discountValue
+              : formatMoney(tier.discountValue),
+      });
+  return tier.freeShipping ? fmt(t.withFreeShipping, { tier: base }) : base;
 }
 
 export function BundlesPage() {
@@ -120,20 +129,27 @@ export function BundlesPage() {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
-  const list = useAsync(() => bundlesList(apiClient, workspaceId), [workspaceId]);
+  // Shown at once from the session's copy on the way back from the hub, and read again behind it.
+  const list = useCachedAsync(`offer-bundles:${workspaceId}`, () => bundlesList(apiClient, workspaceId), [workspaceId]);
   const [editing, setEditing] = useState<BundleDto | "new" | null>(null);
   const [assigning, setAssigning] = useState<BundleDto | null>(null);
+  const [deleting, setDeleting] = useState<BundleDto | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const bundles = list.data ?? [];
   const reload = () => list.refresh({ silent: true });
 
-  async function act(bundle: BundleDto, run: () => Promise<unknown>, done?: string) {
+  /** The switch moves at once; a refusal puts it back and says why. Undo is the opposite call. */
+  async function setActive(bundle: BundleDto, isActive: boolean, undoable = true): Promise<void> {
     setBusyId(bundle.id);
+    list.setData((prev) => (prev ?? []).map((b) => (b.id === bundle.id ? { ...b, isActive } : b)));
     try {
-      await run();
-      if (done) toast.success(done);
-      await reload();
+      await bundlesUpdate(apiClient, workspaceId, bundle.id, { isActive });
+      const said = fmt(isActive ? t.turnedOn : t.turnedOff, { name: bundle.name });
+      if (undoable) toast.undo(said, () => setActive(bundle, !isActive, false));
+      else toast.success(said);
+      void reload();
     } catch (err) {
+      list.setData((prev) => (prev ?? []).map((b) => (b.id === bundle.id ? { ...b, isActive: !isActive } : b)));
       toast.error(errorMessage(err));
     } finally {
       setBusyId(null);
@@ -141,80 +157,48 @@ export function BundlesPage() {
   }
 
   const newButton = (
-    <Button type="button" onClick={() => setEditing("new")}>
+    <Button type="button" className={TOUCH_BUTTON} onClick={() => setEditing("new")}>
+      <IconPlus className="size-4" weight="bold" aria-hidden />
       {t.newBundle}
     </Button>
   );
 
-  return (
-    <div className="max-w-4xl">
-      <PageHeader title={t.title} description={t.description} back={{ to: "/offers", label: t.back }} actions={newButton} />
+  const menuFor = (bundle: BundleDto): ContextMenuItem[] => [
+    { id: "edit", label: t.edit, icon: IconEdit, onSelect: () => setEditing(bundle) },
+    { id: "products", label: t.chooseProducts, icon: IconProducts, onSelect: () => setAssigning(bundle) },
+    { id: "toggle", label: bundle.isActive ? t.turnOff : t.turnOn, icon: IconPower, onSelect: () => void setActive(bundle, !bundle.isActive) },
+    { id: "delete", label: t.delete, icon: IconDelete, destructive: true, separatorBefore: true, onSelect: () => setDeleting(bundle) },
+  ];
 
-      <DataState loading={list.loading} error={list.error} onRetry={() => list.refresh()}>
+  return (
+    <OfferPage title={t.title} description={t.description} primaryAction={bundles.length > 0 ? newButton : undefined}>
+      <OfferListState loading={list.loading} error={list.error} onRetry={() => void list.refresh()}>
         {bundles.length === 0 ? (
-          <EmptyState icon={<Layers />} title={t.emptyTitle} description={t.emptyDescription} action={newButton} />
+          <EmptyState icon={<IconLayers />} title={t.emptyTitle} description={t.emptyDescription} action={newButton} />
         ) : (
-          <div className="space-y-3">
+          <OfferList label={t.listLabel}>
             {bundles.map((bundle) => (
-              <Card key={bundle.id} className="space-y-3 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h2 className="font-medium text-ink">{bundle.name}</h2>
-                    <p className="mt-0.5 text-sm text-ink-soft">
-                      {bundle.productCount > 0 ? fmt(t.products, { count: bundle.productCount }) : t.noProducts}
-                    </p>
+              <OfferRow
+                key={bundle.id}
+                name={bundle.name}
+                line={<bdi>{bundle.tiers.map((tier) => tierText(tier, t)).join(t.tierJoin)}</bdi>}
+                details={
+                  <>
+                    <span className="tabular-nums">
+                      {bundle.productCount > 0 ? fmt(t.onProducts, { products: countOf("item", bundle.productCount) }) : t.noProducts}
+                    </span>
+                    <MixAndMatchNote bundle={bundle} />
                     <OfferNumbers stat={stats?.bundles[bundle.id]} />
-                  </div>
-                  <StatusBadge
-                    value={bundle.isActive ? "active" : "inactive"}
-                    tone={bundle.isActive ? "success" : "neutral"}
-                    text={bundle.isActive ? t.active : t.inactive}
-                  />
-                </div>
-                <ul className="flex flex-wrap gap-2">
-                  {bundle.tiers.map((tier) => (
-                    <li key={tier.id} className="rounded-full border border-line bg-paper px-3 py-1 text-xs text-ink">
-                      {tierText(tier, t)}
-                      {tier.freeShipping ? ` · ${t.freeShipping}` : ""}
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" disabled={busyId === bundle.id} onClick={() => setEditing(bundle)}>
-                    {t.edit}
-                  </Button>
-                  <Button size="sm" variant="outline" disabled={busyId === bundle.id} onClick={() => setAssigning(bundle)}>
-                    {t.chooseProducts}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={busyId === bundle.id}
-                    onClick={() =>
-                      void act(bundle, () => bundlesUpdate(apiClient, workspaceId, bundle.id, { isActive: !bundle.isActive }))
-                    }
-                  >
-                    {bundle.isActive ? t.turnOff : t.turnOn}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="ms-auto text-danger hover:bg-danger-soft"
-                    disabled={busyId === bundle.id}
-                    onClick={() => {
-                      if (window.confirm(fmt(t.deleteConfirm, { name: bundle.name }))) {
-                        void act(bundle, () => bundlesDelete(apiClient, workspaceId, bundle.id), t.deleted);
-                      }
-                    }}
-                  >
-                    {t.delete}
-                  </Button>
-                </div>
-              </Card>
+                  </>
+                }
+                onOpen={() => setEditing(bundle)}
+                toggle={{ checked: bundle.isActive, busy: busyId === bundle.id, onChange: (next) => void setActive(bundle, next) }}
+                menu={menuFor(bundle)}
+              />
             ))}
-          </div>
+          </OfferList>
         )}
-      </DataState>
+      </OfferListState>
 
       {editing && (
         <BundleEditorDialog
@@ -239,7 +223,22 @@ export function BundlesPage() {
           }}
         />
       )}
-    </div>
+      <ConfirmDialog
+        open={deleting !== null}
+        title={fmt(t.deleteTitle, { name: deleting?.name ?? "" })}
+        description={t.deleteHint}
+        confirmLabel={t.delete}
+        destructive
+        onCancel={() => setDeleting(null)}
+        onConfirm={async () => {
+          if (!deleting) return;
+          await bundlesDelete(apiClient, workspaceId, deleting.id);
+          toast.success(fmt(t.deleted, { name: deleting.name }));
+          setDeleting(null);
+          void reload();
+        }}
+      />
+    </OfferPage>
   );
 }
 
@@ -285,27 +284,33 @@ function BundleProductsDialog({ bundle, onClose, onSaved }: { bundle: BundleDto;
       onClose={busy ? () => {} : onClose}
       title={fmt(t.productsTitle, { name: bundle.name })}
       description={t.productsDescription}
-      footer={
-        <>
-          <Button type="button" variant="outline" disabled={busy} onClick={onClose}>
-            {t.cancel}
-          </Button>
-          <Button type="button" disabled={busy || !selected} onClick={() => void save()}>
-            {busy ? t.saving : t.save}
-          </Button>
-        </>
-      }
+      footer={<SheetActions busy={busy} disabled={!selected} onCancel={onClose} onSave={() => void save()} />}
     >
       <div className="space-y-3">
-        <Input aria-label={t.search} placeholder={t.search} value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="flex items-center gap-3">
+          <Input
+            type="search"
+            aria-label={t.search}
+            placeholder={t.search}
+            value={search}
+            // Looking for a product is not an edit: closing after a search alone asks nothing.
+            onInput={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              e.stopPropagation();
+              setSearch(e.target.value);
+            }}
+            className={cn("min-w-0 flex-1", TOUCH_FIELD)}
+          />
+          {selected && selected.size > 0 && <span className="shrink-0 text-xs text-ink-soft tabular-nums">{fmt(t.picked, { count: selected.size })}</span>}
+        </div>
         <DataState loading={data.loading} error={data.error} onRetry={() => data.refresh()} empty={shown.length === 0} emptyMessage={t.noMatch}>
-          <ul className="max-h-80 divide-y divide-line overflow-y-auto rounded-[0.5rem] border border-line">
+          <ul className="zimos-offer-checklist max-h-80 divide-y divide-line overflow-y-auto overscroll-contain rounded-[0.875rem] bg-paper-raised ring-1 ring-line">
             {shown.map((product) => (
               <li key={product.id}>
-                <label className="flex min-h-11 cursor-pointer items-center gap-3 px-3 py-2 text-sm text-ink hover:bg-paper">
+                <label className="flex min-h-11 cursor-pointer items-center gap-3 px-3 py-2 text-sm text-ink transition-[background-color] duration-[var(--dur-fade)] hover:bg-ink/4 motion-reduce:transition-none">
                   <input
                     type="checkbox"
-                    className="size-4 accent-primary"
+                    className="size-5 shrink-0 cursor-pointer accent-primary"
                     checked={selected?.has(product.id) ?? false}
                     disabled={busy}
                     onChange={() =>
@@ -317,13 +322,15 @@ function BundleProductsDialog({ bundle, onClose, onSaved }: { bundle: BundleDto;
                       })
                     }
                   />
-                  <span className="min-w-0 truncate">{product.name}</span>
+                  <span className="min-w-0 truncate">
+                    <bdi>{product.name}</bdi>
+                  </span>
                 </label>
               </li>
             ))}
           </ul>
         </DataState>
-        {error && <Alert variant="danger">{error}</Alert>}
+        <FormProblem>{error}</FormProblem>
       </div>
     </Modal>
   );

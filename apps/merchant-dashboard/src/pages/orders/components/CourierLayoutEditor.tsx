@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { IconArrowDown, IconArrowUp, IconDelete, IconPlus } from "@/components/icons";
 import { Alert, Button, Input, Label } from "@store-builder/ui";
 import {
   orderExportHeadersFromPaste,
@@ -231,20 +231,20 @@ export function CourierLayoutEditor({
               </div>
               <div className="flex items-start gap-0.5">
                 <Button type="button" size="icon-sm" variant="ghost" aria-label={fmt(t.moveUp, { name: labelOf(row, i) })} disabled={i === 0} onClick={() => move(i, -1)}>
-                  <ArrowUp className="size-4" aria-hidden />
+                  <IconArrowUp className="size-4" aria-hidden />
                 </Button>
                 <Button type="button" size="icon-sm" variant="ghost" aria-label={fmt(t.moveDown, { name: labelOf(row, i) })} disabled={i === rows.length - 1} onClick={() => move(i, 1)}>
-                  <ArrowDown className="size-4" aria-hidden />
+                  <IconArrowDown className="size-4" aria-hidden />
                 </Button>
                 <Button type="button" size="icon-sm" variant="ghost" aria-label={fmt(t.remove, { name: labelOf(row, i) })} onClick={() => setRows((list) => list.filter((_, j) => j !== i))}>
-                  <Trash2 className="size-4 text-danger" aria-hidden />
+                  <IconDelete className="size-4 text-danger" aria-hidden />
                 </Button>
               </div>
             </li>
           ))}
         </ol>
         <Button type="button" size="sm" variant="ghost" disabled={rows.length >= 60} onClick={() => setRows((list) => [...list, { header: "", key: "", fixed: "" }])}>
-          <Plus className="size-4" aria-hidden />
+          <IconPlus className="size-4" aria-hidden />
           {t.add}
         </Button>
       </fieldset>

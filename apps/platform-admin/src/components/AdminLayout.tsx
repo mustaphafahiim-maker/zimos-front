@@ -11,6 +11,7 @@ import type { AdminWorkspaceRow } from "@/lib/adminApi";
 import { initials } from "@/lib/format";
 import { P } from "@/lib/permissions";
 import { useVisibleNav } from "@/lib/nav";
+import { NotificationsBell } from "@/components/NotificationsBell";
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const groups = useVisibleNav();
@@ -321,6 +322,8 @@ export function AdminLayout() {
               {envLabel}
             </span>
             <ThemeToggle />
+            {/* Console notifications: every call needs overview.view. */}
+            {can(P.OVERVIEW_VIEW) && <NotificationsBell />}
             <UserMenu />
           </div>
         </header>

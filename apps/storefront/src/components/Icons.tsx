@@ -1,181 +1,123 @@
-import type { SVGProps } from "react";
+import type { ComponentProps, SVGProps } from "react";
+import { ArrowRightIcon as ArrowRightGlyph } from "@phosphor-icons/react/dist/ssr/ArrowRight";
+import { ArrowUpIcon as ArrowUpGlyph } from "@phosphor-icons/react/dist/ssr/ArrowUp";
+import { ArrowUUpLeftIcon as ArrowUUpLeftGlyph } from "@phosphor-icons/react/dist/ssr/ArrowUUpLeft";
+import { CaretDownIcon as CaretDownGlyph } from "@phosphor-icons/react/dist/ssr/CaretDown";
+import { CheckIcon as CheckGlyph } from "@phosphor-icons/react/dist/ssr/Check";
+import { CopyIcon as CopyGlyph } from "@phosphor-icons/react/dist/ssr/Copy";
+import { CreditCardIcon as CreditCardGlyph } from "@phosphor-icons/react/dist/ssr/CreditCard";
+import { GiftIcon as GiftGlyph } from "@phosphor-icons/react/dist/ssr/Gift";
+import { ListIcon as ListGlyph } from "@phosphor-icons/react/dist/ssr/List";
+import { MagnifyingGlassIcon as MagnifyingGlassGlyph } from "@phosphor-icons/react/dist/ssr/MagnifyingGlass";
+import { MagnifyingGlassPlusIcon as MagnifyingGlassPlusGlyph } from "@phosphor-icons/react/dist/ssr/MagnifyingGlassPlus";
+import { MoneyIcon as MoneyGlyph } from "@phosphor-icons/react/dist/ssr/Money";
+import { PackageIcon as PackageGlyph } from "@phosphor-icons/react/dist/ssr/Package";
+import { PauseIcon as PauseGlyph } from "@phosphor-icons/react/dist/ssr/Pause";
+import { PhoneIcon as PhoneGlyph } from "@phosphor-icons/react/dist/ssr/Phone";
+import { PlayIcon as PlayGlyph } from "@phosphor-icons/react/dist/ssr/Play";
+import { ShareNetworkIcon as ShareNetworkGlyph } from "@phosphor-icons/react/dist/ssr/ShareNetwork";
+import { ShoppingCartSimpleIcon as ShoppingCartSimpleGlyph } from "@phosphor-icons/react/dist/ssr/ShoppingCartSimple";
+import { TruckIcon as TruckGlyph } from "@phosphor-icons/react/dist/ssr/Truck";
+import { WalletIcon as WalletGlyph } from "@phosphor-icons/react/dist/ssr/Wallet";
+import { WhatsappLogoIcon as WhatsappLogoGlyph } from "@phosphor-icons/react/dist/ssr/WhatsappLogo";
+import { XIcon as XGlyph } from "@phosphor-icons/react/dist/ssr/X";
 
-/** Minimal inline icon set — no icon library in the storefront bundle. */
+/**
+ * The storefront's icons, drawn with Phosphor — the family the dashboard uses.
+ *
+ * The names and props are the ones the storefront has always imported from
+ * here, so no caller changes: `size` in pixels (20 unless said), `className`,
+ * and any other svg attribute. Every icon is decorative by default
+ * (`aria-hidden`, not focusable); a caller that needs it read out passes its
+ * own aria attributes.
+ *
+ * The glyphs come from Phosphor's server-safe build, one file each, so this
+ * module works in server and client components alike and a page only carries
+ * the icons it draws. Weight is "regular"; the WhatsApp mark is the filled one,
+ * as the brand draws it, and so are the two small play / pause marks.
+ *
+ * Direction: nothing here flips by itself. `ArrowIcon` points toward the
+ * inline-end of a left-to-right page and callers turn it with
+ * `rtl:rotate-180`, exactly as before; `ChevronIcon` points down and callers
+ * rotate it; the others (truck, return arrow, up arrow) are never mirrored.
+ */
 
-type IconProps = SVGProps<SVGSVGElement> & { size?: number };
+type Glyph = typeof CheckGlyph;
+type Weight = ComponentProps<Glyph>["weight"];
+type IconProps = SVGProps<SVGSVGElement> & { size?: number; weight?: Weight };
 
-function Base({ size = 20, children, ...rest }: IconProps & { children: React.ReactNode }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-      {...rest}
-    >
-      {children}
-    </svg>
-  );
+/**
+ * One storefront icon from one Phosphor glyph. The old set was stroked, so a
+ * caller may still pass stroke attributes; Phosphor's shapes are filled, and
+ * those attributes (and a `fill` meant for the old outline) are dropped here
+ * rather than painted onto the new shape.
+ */
+function draw(Glyph: Glyph, defaultWeight: Weight = "regular") {
+  return function StoreIcon({
+    size = 20,
+    weight = defaultWeight,
+    stroke: _stroke,
+    strokeWidth: _strokeWidth,
+    strokeLinecap: _strokeLinecap,
+    strokeLinejoin: _strokeLinejoin,
+    fill: _fill,
+    ...rest
+  }: IconProps) {
+    return <Glyph size={size} weight={weight} aria-hidden="true" focusable="false" {...rest} />;
+  };
 }
 
-export const CashIcon = (p: IconProps) => (
-  <Base {...p}>
-    <rect x="2.5" y="6" width="19" height="12" rx="2" />
-    <circle cx="12" cy="12" r="2.5" />
-    <path d="M6 9.5v5M18 9.5v5" />
-  </Base>
-);
+export const CashIcon = draw(MoneyGlyph);
 
-export const CardIcon = (p: IconProps) => (
-  <Base {...p}>
-    <rect x="2.5" y="5" width="19" height="14" rx="2" />
-    <path d="M2.5 10h19M6.5 15h4" />
-  </Base>
-);
+export const CardIcon = draw(CreditCardGlyph);
 
-export const WalletIcon = (p: IconProps) => (
-  <Base {...p}>
-    <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
-    <path d="M10.5 18.5h3" />
-  </Base>
-);
+export const WalletIcon = draw(WalletGlyph);
 
-export const TruckIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M3 6.5h11v9H3zM14 9.5h4l3 3v3h-7z" />
-    <circle cx="7" cy="17.5" r="1.7" />
-    <circle cx="17.5" cy="17.5" r="1.7" />
-  </Base>
-);
+export const TruckIcon = draw(TruckGlyph);
 
-export const ReturnIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M9 14 4 9l5-5" />
-    <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
-  </Base>
-);
+export const ReturnIcon = draw(ArrowUUpLeftGlyph);
 
-export const PhoneIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M5 3.5h3.2l1.6 4-2 1.3a11 11 0 0 0 5.4 5.4l1.3-2 4 1.6V17a2 2 0 0 1-2 2A15.5 15.5 0 0 1 3 5.5a2 2 0 0 1 2-2z" />
-  </Base>
-);
+export const PhoneIcon = draw(PhoneGlyph);
 
-export const CheckIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M20 6 9 17l-5-5" />
-  </Base>
-);
+export const CheckIcon = draw(CheckGlyph);
 
 /** The "no" half of a check/cross pair, and the close control of the lightbox. */
-export const CrossIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M18 6 6 18M6 6l12 12" />
-  </Base>
-);
+export const CrossIcon = draw(XGlyph);
 
-export const ChevronIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="m6 9 6 6 6-6" />
-  </Base>
-);
+/** Points down; callers rotate it for the other directions. */
+export const ChevronIcon = draw(CaretDownGlyph);
 
 /** Points toward the inline-end; flip with `rtl:rotate-180`. */
-export const ArrowIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M5 12h14M13 6l6 6-6 6" />
-  </Base>
-);
+export const ArrowIcon = draw(ArrowRightGlyph);
 
 /** Always points up — never flipped, in either direction. */
-export const ArrowUpIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M12 19V5M6 11l6-6 6 6" />
-  </Base>
-);
+export const ArrowUpIcon = draw(ArrowUpGlyph);
 
 /** Shown over the gallery's main image: the photo opens larger. */
-export const ZoomIcon = (p: IconProps) => (
-  <Base {...p}>
-    <circle cx="11" cy="11" r="6.5" />
-    <path d="m20 20-4.2-4.2M8.5 11h5M11 8.5v5" />
-  </Base>
-);
+export const ZoomIcon = draw(MagnifyingGlassPlusGlyph);
 
-export const CartGlyph = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h8.1a2 2 0 0 0 2-1.5L21 8H6.2" />
-    <circle cx="10" cy="20" r="1.2" />
-    <circle cx="17" cy="20" r="1.2" />
-  </Base>
-);
+export const CartGlyph = draw(ShoppingCartSimpleGlyph);
 
-export const BoxIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M21 8 12 3 3 8v8l9 5 9-5z" />
-    <path d="M3 8l9 5 9-5M12 13v8" />
-  </Base>
-);
+export const BoxIcon = draw(PackageGlyph);
 
-export const ShareIcon = (p: IconProps) => (
-  <Base {...p}>
-    <circle cx="18" cy="5" r="2.5" />
-    <circle cx="6" cy="12" r="2.5" />
-    <circle cx="18" cy="19" r="2.5" />
-    <path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4" />
-  </Base>
-);
+export const ShareIcon = draw(ShareNetworkGlyph);
 
-export const CopyIcon = (p: IconProps) => (
-  <Base {...p}>
-    <rect x="8" y="8" width="12" height="12" rx="2" />
-    <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
-  </Base>
-);
+export const CopyIcon = draw(CopyGlyph);
 
-export const GiftIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M3.5 9h17v3.5h-17zM5 12.5h14V20H5zM12 9v11" />
-    <path d="M12 9c-2.5 0-4-1-4-2.4S9.5 4 12 9zM12 9c2.5 0 4-1 4-2.4S14.5 4 12 9z" />
-  </Base>
-);
+export const GiftIcon = draw(GiftGlyph);
 
-export const SearchIcon = (p: IconProps) => (
-  <Base {...p}>
-    <circle cx="11" cy="11" r="6.5" />
-    <path d="m20 20-4.2-4.2" />
-  </Base>
-);
+export const SearchIcon = draw(MagnifyingGlassGlyph);
 
 /** The mobile header's menu control; the sheet it opens closes with CrossIcon. */
-export const MenuIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M4 7h16M4 12h16M4 17h16" />
-  </Base>
-);
+export const MenuIcon = draw(ListGlyph);
 
-/** The gallery slideshow's autoplay toggle, showing when it is running. */
-export const PauseIcon = (p: IconProps) => (
-  <Base {...p}>
-    <path d="M8 5v14M16 5v14" />
-  </Base>
-);
+/**
+ * The gallery slideshow's autoplay toggle, showing when it is running. Solid, like
+ * the play mark beside it: the two swap in one small button and must weigh the same.
+ */
+export const PauseIcon = draw(PauseGlyph, "fill");
 
-/** The gallery slideshow's autoplay toggle, showing when it is stopped. */
-export const PlayIcon = (p: IconProps) => (
-  <Base {...p} fill="currentColor">
-    <path d="M7 4.5v15l13-7.5z" />
-  </Base>
-);
+/** The gallery slideshow's autoplay toggle, showing when it is stopped. Solid, as it always was. */
+export const PlayIcon = draw(PlayGlyph, "fill");
 
-export const WhatsAppIcon = ({ size = 20, ...rest }: IconProps) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true" focusable="false" {...rest}>
-    <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z" />
-  </svg>
-);
+export const WhatsAppIcon = draw(WhatsappLogoGlyph, "fill");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import {
   ApiError,
@@ -22,10 +22,11 @@ import { markAddSource } from "@/lib/addSource";
 import { orderBumpOf, type OrderBumpOffer } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
+import { CircleNotchIcon } from "@phosphor-icons/react/dist/ssr/CircleNotch";
 import { CheckIcon } from "../Icons";
 import { ProductCard } from "../ProductCard";
-import { btnPrimary, btnSecondary, card } from "../ui";
-import { OfferVariantPicker, useOfferProduct } from "./OfferVariantPicker";
+import { btnPrimary, btnSecondary, card, skeleton } from "../ui";
+import { OfferVariantPicker } from "./OfferVariantPicker";
 import { OfferTimer, useOfferCountdown } from "./OfferTimer";
 import { trackOfferView, useOfferView } from "@/lib/offerViews";
 import { pickText } from "@/lib/i18n";
@@ -46,7 +47,7 @@ const TEXT = {
     upsellNo: "No, thanks",
     upsellAdded: (name: string) => `${name} was added to your order.`,
     upsellTotal: (total: string) => `Your new total: ${total}, paid on delivery.`,
-    upsellNewOrder: (name: string, number: string) => `${name} is on its way as a new order, #${number}.`,
+    upsellNewOrder: (name: string, number: string) => `${name} is on its way as a new order, ${number}.`,
     upsellPaidCard: (total: string) => `${total} was charged to your saved card.`,
     upsellCod: (total: string) => `${total}, paid on delivery.`,
     upsellDeclined: "Your card was declined, so this order is waiting for payment. Your first order is not affected.",
@@ -180,10 +181,21 @@ export function CrossSellStrip({
   workspaceId,
   productIds,
   placement,
+  title,
+  reserve = false,
 }: {
   workspaceId: string;
   productIds: string[];
   placement: CrossSellPlacement;
+  /** Said instead of "Goes well with your order" (the product page's «بيتشروا مع بعض», handoff 223). */
+  title?: string;
+  /**
+   * Hold the strip's place while the store is asked (the thank-you page): a
+   * row of card outlines stands in until the answer comes, so the cards
+   * arriving push nothing. With nothing to suggest, the place is given back
+   * once. Off by default — the other pages render the strip exactly as before.
+   */
+  reserve?: boolean;
 }) {
   const { locale, store } = useStore();
   const text = pickText(TEXT, locale);
@@ -191,6 +203,8 @@ export function CrossSellStrip({
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
   // The rule that filled the strip (null: bought together), for its numbers (lib/offerViews).
   const [ruleId, setRuleId] = useState<string | null>(null);
+  // The products the strip last got an answer for — some, none, or a failure.
+  const [answeredKey, setAnsweredKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!key) {
@@ -203,10 +217,14 @@ export function CrossSellStrip({
         if (!cancelled) {
           setProducts(result.products);
           setRuleId((result as { ruleId?: string | null }).ruleId ?? null);
+          setAnsweredKey(key);
         }
       })
       .catch(() => {
-        if (!cancelled) setProducts([]);
+        if (!cancelled) {
+          setProducts([]);
+          setAnsweredKey(key);
+        }
       });
     return () => {
       cancelled = true;
@@ -215,11 +233,28 @@ export function CrossSellStrip({
 
   useOfferView(workspaceId, "cross_sell", products.length > 0 ? ruleId : null);
 
-  if (products.length === 0) return null;
+  if (products.length === 0) {
+    if (!reserve || !key || answeredKey === key) return null;
+    // The strip's own outline: its title, then one row of cards (two on a phone, four on a wide screen).
+    return (
+      <div aria-hidden className="mt-10">
+        <div className={`${skeleton} h-6 w-44 max-w-full`} />
+        <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className={i > 1 ? "hidden lg:block" : undefined}>
+              <div className={`${skeleton} aspect-square w-full`} />
+              <div className={`${skeleton} mt-3 h-4 w-3/4`} />
+              <div className={`${skeleton} mt-2 h-4 w-1/3`} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
   return (
     <section aria-labelledby={`cross-sell-${placement}`} className="mt-10">
       <h2 id={`cross-sell-${placement}`} className="text-lg font-semibold text-ink">
-        {text.crossSell}
+        {title ?? text.crossSell}
       </h2>
       {/* A quick add from here counts as a cross-sell add (lib/addSource.ts). */}
       <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4" onClickCapture={() => markAddSource("cross_sell", ruleId)}>
@@ -233,56 +268,159 @@ export function CrossSellStrip({
 
 // ------------------------------------------------------ post-purchase upsell --
 
+// How long the thank-you page holds the offer's place for an answer, and the card for its variant picker.
+const UPSELL_WAIT_MS = 6000;
+const UPSELL_PICKER_WAIT_MS = 2500;
+// How long the offer's place takes to open or close; matches the duration-200 on the row.
+const FOLD_MS = 200;
+
+/**
+ * A place on the page that can be given back smoothly. Open, it is as tall as
+ * what is in it; closed, it takes no room. Between the two the row slides over
+ * 200ms (at once for a shopper who asked for less motion) and clips what is in
+ * it, which stays drawn until the row has closed. At rest nothing is clipped,
+ * so a theme's card shadow shows whole.
+ */
+function Fold({ open, children }: { open: boolean; children: ReactNode }) {
+  const [moving, setMoving] = useState(false);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    setMoving(true);
+  }
+  useEffect(() => {
+    if (!moving) return;
+    const timer = window.setTimeout(() => setMoving(false), FOLD_MS + 60);
+    return () => window.clearTimeout(timer);
+  }, [moving, open]);
+
+  return (
+    <div
+      className={`grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+    >
+      <div className={open && !moving ? "min-h-0 min-w-0" : "min-h-0 min-w-0 overflow-hidden"} inert={!open} aria-hidden={open ? undefined : true}>
+        {open || moving ? children : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The offer's product, for its variant picker (the same read as
+ * OfferVariantPicker's useOfferProduct), and whether that read has answered —
+ * the card waits for it, so the picker never arrives under a thumb that is
+ * about to press "Add to my order".
+ */
+function useUpsellProduct(workspaceId: string, idOrSlug: string | null): { product: StorefrontProduct | null; settled: boolean } {
+  const [answer, setAnswer] = useState<{ key: string; product: StorefrontProduct | null } | null>(null);
+  useEffect(() => {
+    if (!idOrSlug) return;
+    let cancelled = false;
+    createStorefrontApiClient()
+      .getStorefrontProduct(workspaceId, idOrSlug)
+      .then((p) => {
+        if (!cancelled) setAnswer({ key: idOrSlug, product: p as StorefrontProduct });
+      })
+      .catch(() => {
+        // No picker: the offer's own variant.
+        if (!cancelled) setAnswer({ key: idOrSlug, product: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId, idOrSlug]);
+  const current = answer && answer.key === idOrSlug ? answer : null;
+  return { product: current?.product ?? null, settled: !idOrSlug || current !== null };
+}
+
 /**
  * The thank-you page's offer: one tap adds it to the order just placed (cash
  * on delivery, before anyone has confirmed it). Declining hides it; nothing
  * is added without the tap.
+ *
+ * With `reserve` the offer's place is held from the first paint by an outline
+ * of the card, until the store answers "this offer" or "none": the offer then
+ * takes the outline's place, or the place closes once. Only what is asked for
+ * at the first paint is held — a place that opened later, only to close again,
+ * would move the page twice. An offer that comes with no place held opens its
+ * own, smoothly. Taking the offer answers inside the card, at the card's
+ * height, so the page under it stays put; "No, thanks" folds it away.
  */
 export function ThankYouUpsell({
   workspaceId,
   orderId,
   orderNumber,
   onAccepted,
+  reserve = false,
 }: {
   workspaceId: string;
   orderId: string;
   orderNumber: string | null;
   onAccepted?: (order: StorefrontUpsellAccepted) => void;
+  /** Hold the offer's place with an outline of the card while the store is asked; read once, when the page is first drawn. */
+  reserve?: boolean;
 }) {
   const { locale, money } = useStore();
   const text = pickText(TEXT, locale);
+  const [held] = useState(reserve);
   const [offer, setOffer] = useState<StorefrontUpsell | null>(null);
+  // The store answered about an offer for this order — one, none, or a failure.
+  const [asked, setAsked] = useState(false);
+  // A slow answer is not waited for forever: the place is given back, and a late offer still shows.
+  const [gaveUp, setGaveUp] = useState(false);
   const [state, setState] = useState<"idle" | "busy" | "declined">("idle");
   const [accepted, setAccepted] = useState<StorefrontUpsellAccepted | null>(null);
   const [error, setError] = useState<string | null>(null);
   // The option the shopper takes it in (OfferVariantPicker), for a product with several.
-  const product = useOfferProduct(workspaceId, offer ? (offer.productSlug ?? offer.productId) : null);
+  const picker = useUpsellProduct(workspaceId, offer ? (offer.productSlug ?? offer.productId) : null);
+  const [pickerWaited, setPickerWaited] = useState(false);
   const [chosenId, setChosenId] = useState<string | null>(null);
   // The offer's real countdown from the order (offers/offerCountdown.js).
   const countdown = useOfferCountdown(offer?.expiresAt);
-  useOfferView(workspaceId, "upsell", offer?.ruleId);
+  // The card's height when the offer is taken: the answer keeps it.
+  const cardBox = useRef<HTMLElement>(null);
+  const [heldHeight, setHeldHeight] = useState<number | null>(null);
 
   useEffect(() => {
     if (!orderNumber) return;
     let cancelled = false;
+    const giveUp = window.setTimeout(() => setGaveUp(true), UPSELL_WAIT_MS);
     storefrontOrderUpsell(createStorefrontApiClient(), workspaceId, orderId, orderNumber)
       .then((result) => {
         if (!cancelled) setOffer(result);
       })
       .catch(() => {
         /* no offer is a fine thank-you page */
+      })
+      .finally(() => {
+        if (!cancelled) setAsked(true);
       });
     return () => {
       cancelled = true;
+      window.clearTimeout(giveUp);
     };
   }, [workspaceId, orderId, orderNumber]);
 
+  useEffect(() => {
+    if (!offer) return;
+    const timer = window.setTimeout(() => setPickerWaited(true), UPSELL_PICKER_WAIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [offer]);
+
+  // The card shows once its variant picker is known (or was waited for long enough), so it arrives whole.
+  const cardReady = offer !== null && (picker.settled || pickerWaited);
+  // Nothing left to wait for: the offer is on screen, there is none, or the answer is taking too long.
+  const settled = !orderNumber || gaveUp || (asked && (offer === null || cardReady));
+  // Counted as seen once it is on screen (lib/offerViews).
+  useOfferView(workspaceId, "upsell", cardReady ? offer?.ruleId : null);
+
   async function accept() {
-    if (!offer || !orderNumber || state === "busy") return;
+    if (!offer || !orderNumber || state !== "idle") return;
     setState("busy");
     setError(null);
     try {
       const order = await storefrontAcceptUpsell(createStorefrontApiClient(), workspaceId, orderId, orderNumber, offer.offerId, chosenId ?? undefined);
+      setHeldHeight(cardBox.current?.offsetHeight ?? null);
       setAccepted(order);
       onAccepted?.(order);
     } catch (err) {
@@ -294,14 +432,24 @@ export function ThankYouUpsell({
     }
   }
 
+  const showOffer = offer !== null && cardReady && state !== "declined";
+  const open = accepted !== null || showOffer || (held && !settled);
+
+  let body: ReactNode = null;
   if (accepted) {
-    return (
-      <div className="mt-6 rounded-2xl border border-primary/30 bg-primary-soft px-5 py-4 text-sm" role="status">
-        <p className="flex items-center gap-2 font-semibold text-primary">
-          <CheckIcon size={18} />
+    body = (
+      <div
+        role="status"
+        style={heldHeight ? { minHeight: heldHeight } : undefined}
+        className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-primary/30 bg-primary-soft px-5 py-6 text-center text-sm"
+      >
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-on-primary">
+          <CheckIcon size={22} />
+        </span>
+        <p className="mt-3 text-base font-semibold text-primary">
           {accepted.followOn ? text.upsellNewOrder(accepted.added.productName, accepted.orderNumber) : text.upsellAdded(accepted.added.productName)}
         </p>
-        <p className="mt-0.5 text-ink-soft">
+        <p className="mt-1 text-ink-soft">
           {!accepted.followOn
             ? text.upsellTotal(money(accepted.totalAmount, accepted.currency))
             : accepted.payment?.status === "paid"
@@ -312,52 +460,87 @@ export function ThankYouUpsell({
         </p>
       </div>
     );
-  }
-  if (!offer || state === "declined") {
-    return error ? (
-      <p role="status" className="mt-6 rounded-xl bg-paper px-4 py-3 text-sm text-ink-soft">
-        {error}
-      </p>
-    ) : null;
-  }
-
-  const price = Number(offer.priceAmount);
-  const compareAt = offer.compareAtAmount === null ? null : Number(offer.compareAtAmount);
-  return (
-    <section className={`${card} mt-6 border-2 border-primary/30 p-5 sm:p-6`} aria-labelledby="upsell-title">
-      <p className="text-xs font-semibold uppercase tracking-wide text-primary">{text.upsellEyebrow}</p>
-      <div className="mt-3 flex gap-4">
-        {offer.imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={offer.imageUrl} alt="" className="h-24 w-24 shrink-0 rounded-xl border border-line object-cover" />
-        )}
-        <div className="min-w-0">
-          <h2 id="upsell-title" className="text-lg font-semibold text-ink">
-            {offer.title || offer.productName}
-          </h2>
-          {offer.title && <p className="text-sm text-ink-soft">{offer.productName}</p>}
-          {offer.description && <p className="mt-1 text-sm text-ink-soft">{offer.description}</p>}
-          <p className="mt-2 flex flex-wrap items-baseline gap-2">
-            <span className="text-xl font-bold text-ink">{money(price, offer.currency)}</span>
-            {compareAt && compareAt > price && <span className="text-sm text-ink-soft line-through">{money(compareAt, offer.currency)}</span>}
-          </p>
+  } else if (offer && cardReady) {
+    const price = Number(offer.priceAmount);
+    const compareAt = offer.compareAtAmount === null ? null : Number(offer.compareAtAmount);
+    const busy = state === "busy";
+    body = (
+      <section ref={cardBox} className={`${card} mt-6 border-2 border-primary/30 p-5 sm:p-6`} aria-labelledby="upsell-title">
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary">{text.upsellEyebrow}</p>
+        <div className="mt-3 flex gap-4">
+          {offer.imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={offer.imageUrl} alt="" width={96} height={96} decoding="async" className="h-24 w-24 shrink-0 rounded-xl border border-line object-cover" />
+          )}
+          <div className="min-w-0">
+            <h2 id="upsell-title" className="text-lg font-semibold text-ink">
+              {offer.title || offer.productName}
+            </h2>
+            {offer.title && <p className="text-sm text-ink-soft">{offer.productName}</p>}
+            {offer.description && <p className="mt-1 text-sm text-ink-soft">{offer.description}</p>}
+            <p className="mt-2 flex flex-wrap items-baseline gap-2">
+              <span className="text-xl font-bold text-ink">{money(price, offer.currency)}</span>
+              {compareAt && compareAt > price && <span className="text-sm text-ink-soft line-through">{money(compareAt, offer.currency)}</span>}
+            </p>
+          </div>
+        </div>
+        <OfferVariantPicker product={picker.product} value={chosenId ?? offer.variantId} onChange={setChosenId} disabled={busy} />
+        {/* The countdown starts a tick after the card is drawn: its line is held, so the buttons under it stay put. */}
+        <div className={offer.expiresAt ? "flex min-h-11 flex-col items-start" : undefined}>
+          <OfferTimer {...countdown} />
+        </div>
+        {offer.followOn && <p className="mt-2 text-xs text-ink-soft">{text.upsellFollowOnHint}</p>}
+        <p role="alert" className="mt-3 text-sm font-medium text-danger empty:hidden">
+          {error}
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
+          {/* The tap answers at once — pressed, then "Adding…" — and the result takes the card's place. */}
+          <button
+            type="button"
+            className={`${btnPrimary} min-h-12 touch-manipulation active:translate-y-px`}
+            disabled={busy || countdown.ended}
+            aria-busy={busy}
+            onClick={() => void accept()}
+          >
+            {busy && <CircleNotchIcon size={18} aria-hidden className="animate-spin motion-reduce:animate-none" />}
+            {busy ? text.upsellAdding : text.upsellAdd(money(price, offer.currency))}
+          </button>
+          <button type="button" className={`${btnSecondary} touch-manipulation`} disabled={busy} onClick={() => setState("declined")}>
+            {text.upsellNo}
+          </button>
+        </div>
+      </section>
+    );
+  } else if (held && !error) {
+    // The card's own outline: eyebrow, photo beside three lines, the two buttons.
+    body = (
+      <div aria-hidden className={`${card} mt-6 border-2 p-5 sm:p-6`}>
+        <div className={`${skeleton} h-4 w-36 max-w-full`} />
+        <div className="mt-3 flex gap-4">
+          <div className={`${skeleton} h-24 w-24 shrink-0`} />
+          <div className="min-w-0 flex-1 space-y-2.5 pt-1">
+            <div className={`${skeleton} h-5 w-4/5`} />
+            <div className={`${skeleton} h-4 w-1/2`} />
+            <div className={`${skeleton} h-6 w-24`} />
+          </div>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
+          <div className={`${skeleton} h-12 w-full`} />
+          <div className={`${skeleton} h-11 w-full sm:w-28`} />
         </div>
       </div>
-      <OfferVariantPicker product={product} value={chosenId ?? offer.variantId} onChange={setChosenId} disabled={state === "busy"} />
-      <OfferTimer {...countdown} />
-      {offer.followOn && <p className="mt-2 text-xs text-ink-soft">{text.upsellFollowOnHint}</p>}
-      <p role="alert" className="mt-3 text-sm font-medium text-danger empty:hidden">
-        {error}
-      </p>
-      <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
-        <button type="button" className={btnPrimary} disabled={state === "busy" || countdown.ended} onClick={() => void accept()}>
-          {state === "busy" ? text.upsellAdding : text.upsellAdd(money(price, offer.currency))}
-        </button>
-        <button type="button" className={btnSecondary} disabled={state === "busy"} onClick={() => setState("declined")}>
-          {text.upsellNo}
-        </button>
-      </div>
-    </section>
+    );
+  }
+
+  return (
+    <>
+      <Fold open={open}>{body}</Fold>
+      {!accepted && !showOffer && error && (
+        <p role="status" className="mt-6 rounded-xl bg-paper px-4 py-3 text-sm text-ink-soft">
+          {error}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -365,8 +548,11 @@ export function ThankYouUpsell({
 
 const SEEN_KEY = (workspaceId: string) => `zimos.exit-offer.${workspaceId}`;
 
+// The pages the popup never shows on: the order form, everything after the order, and funnels.
+const NEVER_ON = /\/(checkout|orders|pay|offer|track|f)(\/|$)/;
+
 function pageMatches(pages: StorefrontExitDownsell["pages"], pathname: string): boolean {
-  if (/\/(checkout|orders|pay|offer|track|f)(\/|$)/.test(pathname)) return false;
+  if (NEVER_ON.test(pathname)) return false;
   if (pages === "product") return /\/products\/[^/]+/.test(pathname);
   if (pages === "cart") return /\/cart(\/|$)/.test(pathname);
   return true;
@@ -386,25 +572,27 @@ export function ExitDownsell({ workspaceId }: { workspaceId: string }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
+  // The store is asked for its popup once per visit, on the first page the popup could show on —
+  // not on the order form or the pages after the order, where it never shows.
+  const quiet = NEVER_ON.test(pathname);
+  const askedFor = useRef<string | null>(null);
 
   useEffect(() => {
+    if (quiet || askedFor.current === workspaceId) return;
     try {
       if (localStorage.getItem(SEEN_KEY(workspaceId))) return;
     } catch {
       return;
     }
-    let cancelled = false;
+    askedFor.current = workspaceId;
     storefrontExitDownsell(createStorefrontApiClient(), workspaceId)
       .then((result) => {
-        if (!cancelled) setConfig(result);
+        if (askedFor.current === workspaceId) setConfig(result);
       })
       .catch(() => {
         /* no popup */
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceId]);
+  }, [workspaceId, quiet]);
 
   const eligible = config !== null && !open && pageMatches(config.pages, pathname);
 

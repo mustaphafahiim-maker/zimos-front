@@ -10,6 +10,37 @@ import type { OrderFormErrors, OrderFormFieldModes } from "./orderForm";
 import { useStore } from "./StoreContext";
 
 /**
+ * One read of the store for everything on a page that asks through this
+ * client. The checkout re-reads the store when it opens for three things —
+ * its form settings (below), the holiday in force (lib/storeHoliday) and the
+ * gift options (components/gifts/GiftOptionsField) — and each asked on its
+ * own: three identical GET /store/:ws at the same moment. With this, the
+ * first asks and the others join it.
+ *
+ * Nothing about the request changes, and it is still read fresh each time the
+ * page opens: the answer is kept on this one client, and the page makes its
+ * client when it mounts. A failed read is not kept — the next caller asks
+ * again. The client is changed in place and handed back (as lib/funnelGate
+ * does), so `shareStoreMeta(createStorefrontApiClient())` reads as one line.
+ */
+export function shareStoreMeta<T extends ApiClient>(client: T): T {
+  const shared: ApiClient = client;
+  const read = shared.getStorefrontMeta.bind(shared);
+  const asked = new Map<string, ReturnType<ApiClient["getStorefrontMeta"]>>();
+  shared.getStorefrontMeta = (workspaceId: string) => {
+    const known = asked.get(workspaceId);
+    if (known) return known;
+    const request = read(workspaceId);
+    asked.set(workspaceId, request);
+    request.catch(() => {
+      if (asked.get(workspaceId) === request) asked.delete(workspaceId);
+    });
+    return request;
+  };
+  return client;
+}
+
+/**
  * The store's checkout settings, re-read when a client page mounts.
  *
  * The store layout resolves them once, but App Router keeps a layout (and its

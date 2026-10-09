@@ -1,18 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import {
-  ArrowDown,
-  ArrowUp,
-  ChevronDown,
-  Heading,
-  Image as ImageIcon,
-  Images,
-  MousePointerClick,
-  Pilcrow,
-  Plus,
-  SeparatorHorizontal,
-  Sheet,
-  Trash2,
-} from "lucide-react";
+import { IconArrowDown, IconArrowUp, IconCaretDown, IconClick, IconDelete, IconDivider, IconHeading, IconImage, IconMedia, IconParagraph, IconPlus, IconTable } from "@/components/icons";
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Input, Label, Spinner, cn } from "@store-builder/ui";
 import { EMAIL_BLOCKS_MAX, type EmailBlockType, type MediaAsset } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -66,6 +53,7 @@ export const DESIGNER_STRINGS = {
     link_order_link: "Order page",
     link_recovery_link: "Finish-the-order link (cart recovery)",
     link_tracking_url: "Tracking link",
+    link_confirm_link: "Order confirmation link",
     link_review_link: "Review link",
     link_payment_link: "Payment link",
     link_subscription_link: "Subscription page",
@@ -128,6 +116,7 @@ export const DESIGNER_STRINGS = {
     link_order_link: "صفحة الأوردر",
     link_recovery_link: "لينك إكمال الأوردر (السلة المتروكة)",
     link_tracking_url: "لينك التتبع",
+    link_confirm_link: "لينك تأكيد الطلب",
     link_review_link: "لينك التقييم",
     link_payment_link: "لينك الدفع",
     link_subscription_link: "صفحة الاشتراك",
@@ -166,13 +155,13 @@ type T = Record<keyof (typeof DESIGNER_STRINGS)["en"], string>;
 
 export const BLOCK_TYPES: EmailBlockType[] = ["heading", "text", "button", "image", "order_table", "divider"];
 
-const BLOCK_ICON: Record<EmailBlockType, typeof Heading> = {
-  heading: Heading,
-  text: Pilcrow,
-  button: MousePointerClick,
-  image: ImageIcon,
-  order_table: Sheet,
-  divider: SeparatorHorizontal,
+const BLOCK_ICON: Record<EmailBlockType, typeof IconHeading> = {
+  heading: IconHeading,
+  text: IconParagraph,
+  button: IconClick,
+  image: IconImage,
+  order_table: IconTable,
+  divider: IconDivider,
 };
 
 const problemText = (t: T, p: BlockProblem | undefined) => (p ? (t as Record<string, string>)[`p_${p}`] : undefined);
@@ -266,7 +255,7 @@ export function EmailBlockDesigner({
             <Button type="button" variant="outline" className="min-h-11 w-full border-dashed sm:min-h-10" />
           }
         >
-          <Plus className="size-4" aria-hidden />
+          <IconPlus className="size-4" aria-hidden />
           {t.addBlock}
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" className="min-w-56">
@@ -348,16 +337,16 @@ function BlockCard({
               {summaryOf(t, block)}
             </span>
           </span>
-          {hasForm && <ChevronDown className={cn("size-4 shrink-0 text-ink-soft transition-transform motion-reduce:transition-none", open && "rotate-180")} aria-hidden />}
+          {hasForm && <IconCaretDown className={cn("size-4 shrink-0 text-ink-soft transition-transform motion-reduce:transition-none", open && "rotate-180")} aria-hidden />}
         </button>
         <IconAction label={fmt(t.moveUp, { name })} disabled={index === 0} onClick={() => onMove(-1)}>
-          <ArrowUp className="size-4" aria-hidden />
+          <IconArrowUp className="size-4" aria-hidden />
         </IconAction>
         <IconAction label={fmt(t.moveDown, { name })} disabled={index === count - 1} onClick={() => onMove(1)}>
-          <ArrowDown className="size-4" aria-hidden />
+          <IconArrowDown className="size-4" aria-hidden />
         </IconAction>
         <IconAction label={fmt(t.remove, { name })} danger onClick={onRemove}>
-          <Trash2 className="size-4" aria-hidden />
+          <IconDelete className="size-4" aria-hidden />
         </IconAction>
       </div>
 
@@ -494,8 +483,11 @@ export function TokenField({
   error,
   multiline,
   maxLength = 5000,
+  dir = "auto",
   onChange,
 }: {
+  /** The box's direction; by what is typed unless the caller knows the language (handoff 383). */
+  dir?: "auto" | "rtl" | "ltr";
   t: { insert: string };
   label: string;
   hint?: string;
@@ -526,7 +518,7 @@ export function TokenField({
   };
   const common = {
     ref,
-    dir: "auto" as const,
+    dir,
     value,
     maxLength,
     onSelect: remember,
@@ -695,7 +687,7 @@ export function ImageSource({ t, value, error, onChange }: { t: T; value: string
       <ImageUrlInput id={id} value={value} onChange={onChange} />
       {error && <p className="text-xs font-medium text-danger">{error}</p>}
       <Button type="button" size="sm" variant="ghost" className="min-h-11 sm:min-h-8" aria-expanded={library} onClick={() => setLibrary((v) => !v)}>
-        <Images className="size-4" aria-hidden />
+        <IconMedia className="size-4" aria-hidden />
         {library ? t.hideLibrary : t.fromLibrary}
       </Button>
       {library && (

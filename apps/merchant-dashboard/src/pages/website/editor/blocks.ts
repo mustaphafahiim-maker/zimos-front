@@ -1,70 +1,4 @@
-import {
-  AlarmClock,
-  AlignLeft,
-  BadgeCheck,
-  Coins,
-  BarChart3,
-  Box,
-  Building2,
-  Camera,
-  ChevronDown,
-  CircleDot,
-  Clapperboard,
-  Code2,
-  Columns3,
-  Contrast,
-  FileText,
-  FormInput,
-  Frame,
-  GalleryHorizontal,
-  Gift,
-  Grid2x2,
-  Grid3x3,
-  Heading1,
-  Heart,
-  HelpCircle,
-  Image,
-  Images,
-  Layers,
-  LayoutDashboard,
-  LayoutGrid,
-  LayoutPanelLeft,
-  List,
-  ListOrdered,
-  Mail,
-  Map,
-  MapPin,
-  Megaphone,
-  MessageSquareQuote,
-  Milestone,
-  Minus,
-  MousePointerClick,
-  MoveVertical,
-  Orbit,
-  Package,
-  PanelBottom,
-  PanelLeft,
-  PanelRight,
-  PlaySquare,
-  Quote,
-  Rows3,
-  Scale,
-  Share2,
-  ShieldCheck,
-  ShoppingBag,
-  ShoppingCart,
-  Sparkles,
-  Table2,
-  Tag,
-  Timer,
-  Truck,
-  Type,
-  Users,
-  Video,
-  Waves,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+import { IconAlarm, IconAlignStart, IconAnnounce, IconBuilding, IconCamera, IconCaretDown, IconCarousel, IconCart, IconChart, IconClick, IconCode, IconCoins, IconColumns, IconContrast, IconCourier, IconDashboard, IconDocument, IconEmail, IconField, IconFrame, IconGift, IconGridDense, IconGridView, IconHeadingOne, IconHeart, IconImage, IconLayers, IconLayoutSplit, IconLightning, IconListNumbers, IconListView, IconMap, IconMedia, IconMilestone, IconMinus, IconMoveVertical, IconOrbit, IconOrders, IconPackage, IconPanelBottom, IconPeople, IconPlace, IconProduct, IconQuestions, IconQuote, IconRadio, IconRows, IconScale, IconShare, IconShield, IconSidebar, IconSparkle, IconTable, IconTag, IconText, IconTimer, IconVerified, IconVideo, IconVideoBlock, IconVideoClip, IconWaves, type IconComponent } from "@/components/icons";
 import type {
   PageColumn,
   PageElement,
@@ -144,7 +78,7 @@ export type FieldSpec =
 
 interface ElementSpec {
   label: string;
-  icon: LucideIcon;
+  icon: IconComponent;
   defaultProps: Record<string, unknown>;
   fields: FieldSpec[];
 }
@@ -174,7 +108,7 @@ export const IMAGE_SIZES = [
 export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   heading: {
     label: "Heading",
-    icon: Heading1,
+    icon: IconHeadingOne,
     defaultProps: { text: "New heading", level: 2 },
     fields: [
       { key: "text", label: "Text", kind: "text" },
@@ -183,13 +117,13 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   text: {
     label: "Text",
-    icon: AlignLeft,
+    icon: IconAlignStart,
     defaultProps: { text: "Write something about your store." },
     fields: [{ key: "text", label: "Text", kind: "textarea" }],
   },
   rich_text: {
     label: "Long text",
-    icon: Type,
+    icon: IconText,
     defaultProps: { text: "" },
     fields: [
       {
@@ -202,7 +136,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   image: {
     label: "Image",
-    icon: Image,
+    icon: IconImage,
     // No `size` here on purpose: an image that never chose one renders exactly
     // as it always did (the full width of its column).
     defaultProps: { src: "", alt: "" },
@@ -229,7 +163,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   gallery: {
     label: "Gallery",
-    icon: Images,
+    icon: IconMedia,
     defaultProps: { title: "Gallery", images: [], columns: 3 },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -259,7 +193,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   button: {
     label: "Button",
-    icon: MousePointerClick,
+    icon: IconClick,
     defaultProps: { label: "Shop now", href: "/products", variant: "primary" },
     fields: [
       { key: "label", label: "Button text", kind: "text" },
@@ -278,7 +212,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   video: {
     label: "Video",
-    icon: Video,
+    icon: IconVideo,
     defaultProps: { url: "", title: "" },
     fields: [
       { key: "url", label: "Video URL", kind: "text", placeholder: "https://youtube.com/watch?v=…" },
@@ -287,7 +221,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   embed: {
     label: "Embed",
-    icon: Code2,
+    icon: IconCode,
     defaultProps: { url: "", title: "" },
     fields: [
       {
@@ -302,19 +236,19 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   // SPEC §8.2 "HTML code": the tree holds only blockId; the HTML lives outside it.
   html_block: {
     label: "HTML code",
-    icon: Code2,
+    icon: IconCode,
     defaultProps: {},
     fields: [{ key: "blockId", label: "HTML", kind: "htmlBlockCode", hint: "Scripts and styles are allowed. Test it on your live store." }],
   },
   spacer: {
     label: "Spacer",
-    icon: MoveVertical,
+    icon: IconMoveVertical,
     defaultProps: { height: 48 },
     fields: [{ key: "height", label: "Height (px)", kind: "number", min: 4, max: 400 }],
   },
   divider: {
     label: "Divider",
-    icon: Minus,
+    icon: IconMinus,
     defaultProps: {},
     fields: [
       {
@@ -330,7 +264,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   icon: {
     label: "Icon",
-    icon: CircleDot,
+    icon: IconRadio,
     defaultProps: { name: "star", size: 32 },
     fields: [
       { key: "name", label: "Icon name", kind: "text", placeholder: "star" },
@@ -339,7 +273,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   list: {
     label: "List",
-    icon: List,
+    icon: IconListView,
     defaultProps: { title: "", items: [] },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -348,7 +282,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   accordion: {
     label: "Accordion",
-    icon: ChevronDown,
+    icon: IconCaretDown,
     defaultProps: { title: "", items: [] },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -357,7 +291,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   faq: {
     label: "FAQ",
-    icon: HelpCircle,
+    icon: IconQuestions,
     defaultProps: { title: "الأسئلة الشائعة", items: [] },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -366,7 +300,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   testimonial: {
     label: "Testimonial",
-    icon: Quote,
+    icon: IconQuote,
     defaultProps: { quote: "", author: "", rating: 5 },
     fields: [
       { key: "quote", label: "Quote", kind: "textarea" },
@@ -376,7 +310,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   countdown: {
     label: "Countdown",
-    icon: Timer,
+    icon: IconTimer,
     defaultProps: { label: "ينتهي العرض خلال", endsInHours: 24 },
     fields: [
       { key: "label", label: "Label", kind: "text" },
@@ -394,7 +328,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   form: {
     label: "Form",
-    icon: FormInput,
+    icon: IconField,
     defaultProps: { title: "", submitLabel: "Send" },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -409,7 +343,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   map: {
     label: "Map",
-    icon: Map,
+    icon: IconMap,
     defaultProps: { address: "", zoom: 14 },
     fields: [
       { key: "address", label: "Address", kind: "text" },
@@ -418,13 +352,13 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   social_icons: {
     label: "Social links",
-    icon: Share2,
+    icon: IconShare,
     defaultProps: { links: [] },
     fields: [{ key: "links", label: "Links", kind: "linkList" }],
   },
   shoppable_image: {
     label: "Shoppable image",
-    icon: ShoppingBag,
+    icon: IconOrders,
     defaultProps: { title: "", imageId: "" },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -433,7 +367,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   product_card: {
     label: "Single product",
-    icon: ShoppingBag,
+    icon: IconOrders,
     defaultProps: { title: "", showPrice: true, showBuyButton: true },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -444,7 +378,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   product_list: {
     label: "Product grid",
-    icon: LayoutGrid,
+    icon: IconGridView,
     defaultProps: { title: "Featured products", source: "newest", limit: 8, columns: 4 },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -464,7 +398,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   collection_list: {
     label: "Collections",
-    icon: Grid3x3,
+    icon: IconGridDense,
     defaultProps: { title: "Shop by collection", limit: 6, columns: 3 },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -474,7 +408,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   cart: {
     label: "Cart",
-    icon: ShoppingCart,
+    icon: IconCart,
     defaultProps: { title: "Your cart" },
     fields: [{ key: "title", label: "Title", kind: "text" }],
   },
@@ -484,7 +418,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   // so they are safe to put on a live store.
   shader_hero: {
     label: "Living hero",
-    icon: Waves,
+    icon: IconWaves,
     defaultProps: { title: "", subtitle: "", ctaLabel: "", ctaHref: "/products", height: 460 },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -503,7 +437,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   product_3d: {
     label: "3D product",
-    icon: Box,
+    icon: IconProduct,
     defaultProps: { title: "", productId: "", modelUrl: "" },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -523,7 +457,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   orbit_gallery: {
     label: "Turning carousel",
-    icon: Orbit,
+    icon: IconOrbit,
     defaultProps: { title: "", limit: 8, collectionId: "" },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -533,7 +467,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   scroll_story: {
     label: "Scroll story",
-    icon: Layers,
+    icon: IconLayers,
     defaultProps: { title: "", steps: [] },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -545,7 +479,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   // canvas — so they cost a shopper nothing and work on any phone.
   marquee: {
     label: "Claims strip",
-    icon: Megaphone,
+    icon: IconAnnounce,
     defaultProps: { items: [], speed: "normal", tone: "line" },
     fields: [
       {
@@ -578,7 +512,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   comparison: {
     label: "Comparison table",
-    icon: Table2,
+    icon: IconTable,
     defaultProps: { title: "", usLabel: "", themLabel: "", rows: [] },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -596,7 +530,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   // --- Builder elements of SPEC §9.3 (backend rules: ELEMENT_PROP_RULES) ------
   text_link: {
     label: "Text link",
-    icon: MousePointerClick,
+    icon: IconClick,
     defaultProps: { text: "", href: "", newTab: false },
     fields: [
       { key: "text", label: "Text", kind: "text" },
@@ -606,7 +540,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   tabs: {
     label: "Tabs",
-    icon: PanelBottom,
+    icon: IconPanelBottom,
     defaultProps: { title: "", items: [] },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -615,7 +549,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   toggle: {
     label: "Toggle",
-    icon: ChevronDown,
+    icon: IconCaretDown,
     defaultProps: { title: "", body: "", open: false },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -625,7 +559,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   carousel: {
     label: "Carousel",
-    icon: GalleryHorizontal,
+    icon: IconCarousel,
     defaultProps: { title: "", images: [], autoplay: true },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -634,13 +568,13 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   currency_converter: {
     label: "Currency converter",
-    icon: Coins,
+    icon: IconCoins,
     defaultProps: { label: "" },
     fields: [{ key: "label", label: "Label", kind: "text", hint: "Empty shows \"Currency\". Shoppers see prices approximately in the currency they pick; they pay in the price's own." }],
   },
   stars_display: {
     label: "Star rating",
-    icon: BadgeCheck,
+    icon: IconVerified,
     defaultProps: { rating: 5, label: "" },
     fields: [
       { key: "rating", label: "Stars", kind: "number", min: 1, max: 5 },
@@ -649,7 +583,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   price: {
     label: "Product price",
-    icon: Tag,
+    icon: IconTag,
     defaultProps: { productId: "", showCompareAt: true, size: "medium" },
     fields: [
       { key: "productId", label: "Product", kind: "product", hint: "Leave empty to use the newest product." },
@@ -668,7 +602,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   reviews_list: {
     label: "Customer reviews",
-    icon: MessageSquareQuote,
+    icon: IconQuote,
     defaultProps: { title: "", productId: "", limit: 6 },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -678,7 +612,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   cod_form: {
     label: "Order form (cash on delivery)",
-    icon: FormInput,
+    icon: IconField,
     defaultProps: { title: "", productId: "" },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -693,7 +627,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   checkout_summary: {
     label: "Cart summary",
-    icon: ShoppingCart,
+    icon: IconCart,
     defaultProps: { title: "", buttonLabel: "" },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -702,13 +636,13 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   order_summary: {
     label: "Order summary",
-    icon: FileText,
+    icon: IconDocument,
     defaultProps: { title: "" },
     fields: [{ key: "title", label: "Title", kind: "text" }],
   },
   upsell_accept_button: {
     label: "Accept offer button",
-    icon: Zap,
+    icon: IconLightning,
     defaultProps: { label: "" },
     fields: [
       { key: "label", label: "Button text", kind: "text", hint: "Works on a funnel's upsell or downsell page." },
@@ -717,7 +651,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   repeater: {
     label: "Repeater",
-    icon: Rows3,
+    icon: IconRows,
     defaultProps: { title: "", source: "product.cms.features", layout: "grid", limit: 6, productId: "" },
     fields: [
       { key: "title", label: "Title", kind: "text" },
@@ -748,7 +682,7 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   upsell_decline_link: {
     label: "Decline offer link",
-    icon: Minus,
+    icon: IconMinus,
     defaultProps: { label: "" },
     fields: [
       { key: "label", label: "Link text", kind: "text", hint: "Works on a funnel's upsell or downsell page." },
@@ -792,7 +726,7 @@ export interface BlockPreset {
   key: string;
   label: string;
   description: string;
-  icon: LucideIcon;
+  icon: IconComponent;
   group: "store" | "hero" | "trust" | "commerce" | "story" | "convert" | "basics";
   /**
    * The element types this preset drops into one full-width column — or, for
@@ -1072,7 +1006,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "announcement-bar",
     label: "Announcement bar",
     description: "One line in your brand colour across the top — an offer, a shipping note, a date.",
-    icon: Megaphone,
+    icon: IconAnnounce,
     group: "hero",
     settings: { background: "primary", padding: "tight" },
     rows: [
@@ -1092,7 +1026,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "hero",
     label: "Hero",
     description: "Big heading, a line of text and a call-to-action button.",
-    icon: Sparkles,
+    icon: IconSparkle,
     group: "hero",
     elements: ["heading", "text", "button"],
   },
@@ -1100,7 +1034,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "hero-trust",
     label: "Hero with trust line",
     description: "An opening screen plus the few reasons a first-time shopper should trust you.",
-    icon: ShieldCheck,
+    icon: IconShield,
     group: "hero",
     elements: ["heading", "text", "button", "list"],
     settings: { padding: "roomy" },
@@ -1122,7 +1056,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "hero-split",
     label: "Hero with picture",
     description: "Title, a line of text and a button on one side, your picture on the other.",
-    icon: LayoutPanelLeft,
+    icon: IconLayoutSplit,
     group: "hero",
     settings: { padding: "roomy" },
     rows: [
@@ -1147,7 +1081,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "hero-gallery",
     label: "Hero with photo row",
     description: "A centred opening line and button, with three of your photos underneath.",
-    icon: GalleryHorizontal,
+    icon: IconCarousel,
     group: "hero",
     settings: { padding: "roomy" },
     rows: [
@@ -1174,7 +1108,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "hero-slideshow",
     label: "Autoplay slideshow",
     description: "Your photos, full-bleed, playing on their own — a pause button and dots to skip ahead.",
-    icon: PlaySquare,
+    icon: IconVideoBlock,
     group: "hero",
     elements: ["gallery"],
     content: [{ title: "", images: [], layout: "slideshow" }],
@@ -1183,7 +1117,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "living-hero",
     label: "Living hero",
     description: "An opening screen that moves slowly in your store's colours.",
-    icon: Waves,
+    icon: IconWaves,
     group: "hero",
     elements: ["shader_hero"],
   },
@@ -1191,7 +1125,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "living-hero-intro",
     label: "Living hero with copy",
     description: "The moving opening screen, with a title, a line of text and a button already in it.",
-    icon: Waves,
+    icon: IconWaves,
     group: "hero",
     elements: ["shader_hero"],
     content: [
@@ -1208,7 +1142,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "video-hero",
     label: "Video opener",
     description: "Your video first, then a centred title, a line and a button.",
-    icon: Clapperboard,
+    icon: IconVideoClip,
     group: "hero",
     settings: { padding: "roomy" },
     rows: [
@@ -1235,7 +1169,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "logo-strip",
     label: "Logo strip",
     description: "A quiet row of six small images — partners, stockists, press — on a paper band.",
-    icon: Building2,
+    icon: IconBuilding,
     group: "trust",
     settings: { background: "paper", padding: "compact" },
     rows: [{ columns: [{ span: 12, elements: ["gallery"], content: [{ title: "", images: [], columns: 6 }] }] }],
@@ -1244,7 +1178,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "claims-strip",
     label: "Claims strip",
     description: "A line of short claims that slides across the page and stops when the shopper looks at it.",
-    icon: Megaphone,
+    icon: IconAnnounce,
     group: "trust",
     elements: ["marquee"],
     settings: { background: "paper", padding: "compact" },
@@ -1264,7 +1198,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "claims-band",
     label: "Claims band",
     description: "A centred title over the sliding strip of short claims.",
-    icon: Megaphone,
+    icon: IconAnnounce,
     group: "trust",
     settings: { background: "paper", padding: "compact" },
     rows: [
@@ -1291,7 +1225,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "trust-badges",
     label: "Trust badges",
     description: "Four small reassurances in a compact row — delivery, returns, payment, support.",
-    icon: ShieldCheck,
+    icon: IconShield,
     group: "trust",
     settings: { background: "paper", padding: "compact" },
     rows: [
@@ -1309,7 +1243,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "testimonial",
     label: "Testimonial",
     description: "A customer quote with a rating.",
-    icon: Quote,
+    icon: IconQuote,
     group: "trust",
     elements: ["testimonial"],
   },
@@ -1317,7 +1251,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "testimonials",
     label: "Testimonials",
     description: "Three empty quote cards — fill them in from real customers of yours.",
-    icon: MessageSquareQuote,
+    icon: IconQuote,
     group: "trust",
     elements: ["heading", "testimonial", "testimonial", "testimonial"],
     settings: { background: "paper", padding: "roomy" },
@@ -1334,7 +1268,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "testimonial-wall",
     label: "Testimonial wall",
     description: "A title and three empty quote cards side by side — fill them from real customers.",
-    icon: MessageSquareQuote,
+    icon: IconQuote,
     group: "trust",
     settings: { background: "paper", padding: "roomy" },
     rows: [
@@ -1363,7 +1297,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "testimonial-spotlight",
     label: "Testimonial spotlight",
     description: "One customer's words, large and centred on a brand tint. Empty until you add them.",
-    icon: Quote,
+    icon: IconQuote,
     group: "trust",
     settings: { background: "primary-soft", padding: "roomy" },
     rows: [
@@ -1383,7 +1317,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "comparison",
     label: "Comparison table",
     description: "Your column next to the alternative, row by row — in your own words, no names.",
-    icon: Table2,
+    icon: IconTable,
     group: "trust",
     elements: ["heading", "comparison"],
     settings: { background: "paper" },
@@ -1407,7 +1341,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "comparison-pitch",
     label: "Comparison with a pitch",
     description: "A title and a button beside the us-versus-them table.",
-    icon: Table2,
+    icon: IconTable,
     group: "trust",
     settings: { background: "paper" },
     rows: [
@@ -1449,7 +1383,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "products",
     label: "Product grid",
     description: "A grid of products from your catalog.",
-    icon: LayoutGrid,
+    icon: IconGridView,
     group: "commerce",
     elements: ["product_list"],
   },
@@ -1457,7 +1391,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "related-products",
     label: "Related products",
     description: "A short row under the main content — 'you may also like'.",
-    icon: Heart,
+    icon: IconHeart,
     group: "commerce",
     elements: ["product_list"],
     content: [{ title: "منتجات أخرى قد تعجبك", source: "featured", limit: 4, columns: 4 }],
@@ -1466,7 +1400,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "collections",
     label: "Collections",
     description: "Let shoppers browse by collection.",
-    icon: Grid3x3,
+    icon: IconGridDense,
     group: "commerce",
     elements: ["collection_list"],
   },
@@ -1474,7 +1408,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "collection-tiles",
     label: "Collection tiles",
     description: "A title and a line over your collections, wide.",
-    icon: Grid3x3,
+    icon: IconGridDense,
     group: "commerce",
     settings: { width: "wide" },
     rows: [
@@ -1497,7 +1431,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "featured-product",
     label: "Featured product",
     description: "One product beside the reasons to buy it and a button.",
-    icon: ShoppingBag,
+    icon: IconOrders,
     group: "commerce",
     settings: { background: "paper" },
     rows: [
@@ -1522,7 +1456,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "product-grid-intro",
     label: "Product grid with intro",
     description: "A title and a line, then a grid of your products.",
-    icon: LayoutGrid,
+    icon: IconGridView,
     group: "commerce",
     rows: [
       {
@@ -1544,7 +1478,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "offer",
     label: "Single product",
     description: "Spotlight one product with a buy button.",
-    icon: ShoppingBag,
+    icon: IconOrders,
     group: "commerce",
     elements: ["product_card"],
   },
@@ -1552,7 +1486,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "bundle-offer",
     label: "Bundles & offers",
     description: "A line about the bundle, the products in it and a button to the rest.",
-    icon: Gift,
+    icon: IconGift,
     group: "commerce",
     elements: ["heading", "text", "product_list", "button"],
     settings: { background: "paper" },
@@ -1567,7 +1501,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "bundle-tiers",
     label: "Three offers",
     description: "Three products side by side, each with its own buy button — pick one per column.",
-    icon: Package,
+    icon: IconPackage,
     group: "commerce",
     settings: { background: "paper", padding: "roomy" },
     rows: [
@@ -1594,7 +1528,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "product-3d",
     label: "3D product",
     description: "The shopper turns the product with a finger. Needs a .glb file.",
-    icon: Box,
+    icon: IconProduct,
     group: "commerce",
     elements: ["product_3d"],
   },
@@ -1602,7 +1536,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "product-showcase-3d",
     label: "3D product showcase",
     description: "A title, a line of copy and the product the shopper turns with a finger.",
-    icon: Box,
+    icon: IconProduct,
     group: "commerce",
     elements: ["heading", "text", "product_3d"],
     settings: { background: "paper", padding: "roomy" },
@@ -1616,7 +1550,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "orbit-gallery",
     label: "Turning carousel",
     description: "Products on a drum that turns, instead of a flat grid.",
-    icon: Orbit,
+    icon: IconOrbit,
     group: "commerce",
     elements: ["orbit_gallery"],
   },
@@ -1624,7 +1558,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "orbit-showcase",
     label: "Turning showcase",
     description: "A titled carousel of products on a drum that turns.",
-    icon: Orbit,
+    icon: IconOrbit,
     group: "commerce",
     elements: ["heading", "orbit_gallery"],
     settings: { width: "wide" },
@@ -1637,7 +1571,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "cart",
     label: "Cart",
     description: "The shopper's cart contents.",
-    icon: ShoppingCart,
+    icon: IconCart,
     group: "commerce",
     elements: ["cart"],
   },
@@ -1647,7 +1581,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "features",
     label: "Features row",
     description: "A short title and the benefits you want the shopper to remember.",
-    icon: BadgeCheck,
+    icon: IconVerified,
     group: "story",
     elements: ["heading", "text", "list"],
     settings: { background: "paper" },
@@ -1664,7 +1598,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "why-us",
     label: "Why buy from us",
     description: "Answers to what stops a shopper buying — one row per worry.",
-    icon: Scale,
+    icon: IconScale,
     group: "story",
     elements: ["heading", "accordion"],
     settings: { background: "primary-soft", padding: "roomy" },
@@ -1687,7 +1621,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "feature-grid-3",
     label: "Three feature cards",
     description: "Three cards, each with an icon, a short title and a line — the classic features row.",
-    icon: Columns3,
+    icon: IconColumns,
     group: "story",
     settings: { background: "paper" },
     rows: [
@@ -1709,7 +1643,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "feature-grid-4",
     label: "Four features",
     description: "Four short points across the page, each with an icon, centred.",
-    icon: Grid2x2,
+    icon: IconGridView,
     group: "story",
     rows: [
       {
@@ -1730,7 +1664,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "image-text",
     label: "Picture with text",
     description: "Your picture on one side, a title, text and a button on the other.",
-    icon: PanelLeft,
+    icon: IconSidebar,
     group: "story",
     rows: [
       {
@@ -1754,7 +1688,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "text-image",
     label: "Text with picture",
     description: "The same pair mirrored: text first, picture after — alternate the two down a page.",
-    icon: PanelRight,
+    icon: IconSidebar,
     group: "story",
     rows: [
       {
@@ -1778,7 +1712,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "multirow",
     label: "Alternating story",
     description: "Two or three picture-and-text rows in one section, mirrored one to the next — how it's made, how it works, step by step.",
-    icon: Rows3,
+    icon: IconRows,
     group: "story",
     rows: [
       {
@@ -1815,7 +1749,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "before-after",
     label: "Before & after",
     description: "Two scroll steps — the state before, then after. Add a picture to each.",
-    icon: Contrast,
+    icon: IconContrast,
     group: "story",
     elements: ["scroll_story"],
     settings: { padding: "roomy" },
@@ -1833,7 +1767,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "scroll-story",
     label: "Scroll story",
     description: "Before and after, or how it's made — step by step as the page scrolls.",
-    icon: Layers,
+    icon: IconLayers,
     group: "story",
     elements: ["scroll_story"],
   },
@@ -1841,7 +1775,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "process-story",
     label: "How it's made",
     description: "A title and a line, then three scroll steps — add a picture to each.",
-    icon: Layers,
+    icon: IconLayers,
     group: "story",
     settings: { padding: "roomy" },
     rows: [
@@ -1871,7 +1805,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "stats-row",
     label: "Numbers row",
     description: "Four big numbers with a word under each — orders, years, cities. You write the numbers.",
-    icon: BarChart3,
+    icon: IconChart,
     group: "story",
     settings: { background: "paper" },
     rows: [
@@ -1891,7 +1825,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "steps",
     label: "How it works",
     description: "A title, then three numbered steps across the page.",
-    icon: ListOrdered,
+    icon: IconListNumbers,
     group: "story",
     rows: [
       {
@@ -1921,7 +1855,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "timeline",
     label: "Timeline",
     description: "A title, then your milestones as two lists side by side — earlier ones first.",
-    icon: Milestone,
+    icon: IconMilestone,
     group: "story",
     settings: { background: "paper" },
     rows: [
@@ -1954,7 +1888,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "team",
     label: "Team",
     description: "Three people — a photo, a name and a line each. Fill them in from your own team.",
-    icon: Users,
+    icon: IconPeople,
     group: "story",
     rows: [
       {
@@ -1981,7 +1915,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "lookbook",
     label: "Lookbook",
     description: "A titled grid of photos for a collection or a season.",
-    icon: Camera,
+    icon: IconCamera,
     group: "story",
     elements: ["heading", "text", "gallery"],
     settings: { width: "wide" },
@@ -1995,7 +1929,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "collage",
     label: "Photo collage",
     description: "Four pictures in two rows of unequal widths — a wide one beside a narrow one, then swapped.",
-    icon: Frame,
+    icon: IconFrame,
     group: "story",
     settings: { width: "wide" },
     rows: [
@@ -2007,7 +1941,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "bento",
     label: "Bento grid",
     description: "Four cards of two sizes — a picture and a line in each, the way app sites show features.",
-    icon: LayoutDashboard,
+    icon: IconDashboard,
     group: "story",
     // The picture goes in the narrow card and the words in the wide one: a
     // picture sets the row's height, and a wide card of text fills that
@@ -2057,7 +1991,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "rich-text-band",
     label: "Rich text band",
     description: "A title over a longer piece of writing — your story, your method, your promise.",
-    icon: FileText,
+    icon: IconDocument,
     group: "story",
     settings: { background: "paper", padding: "roomy" },
     rows: [
@@ -2081,7 +2015,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "cod-form",
     label: "Order form",
     description: "Your product's options and the purchase form — the shopper orders without leaving the page.",
-    icon: FormInput,
+    icon: IconField,
     group: "commerce",
     elements: ["cod_form"],
   },
@@ -2089,7 +2023,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "product-price",
     label: "Product price",
     description: "The product's real price, with the price before discount.",
-    icon: Tag,
+    icon: IconTag,
     group: "commerce",
     elements: ["price"],
   },
@@ -2097,7 +2031,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "reviews-list",
     label: "Customer reviews",
     description: "The approved reviews of a product, with their stars.",
-    icon: MessageSquareQuote,
+    icon: IconQuote,
     group: "trust",
     elements: ["reviews_list"],
   },
@@ -2105,7 +2039,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "currency-converter",
     label: "Currency converter",
     description: "Lets shoppers view prices in another of your currencies (Settings → Currencies).",
-    icon: Coins,
+    icon: IconCoins,
     group: "trust",
     elements: ["currency_converter"],
   },
@@ -2113,7 +2047,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "stars-display",
     label: "Star rating",
     description: "A row of stars with a short line beside it.",
-    icon: BadgeCheck,
+    icon: IconVerified,
     group: "trust",
     elements: ["stars_display"],
   },
@@ -2121,7 +2055,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "cart-summary",
     label: "Cart summary",
     description: "What is in the shopper's cart and the way to checkout.",
-    icon: ShoppingCart,
+    icon: IconCart,
     group: "commerce",
     elements: ["checkout_summary"],
   },
@@ -2129,7 +2063,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "order-summary",
     label: "Order summary",
     description: "The order the shopper just placed — for a thank-you page.",
-    icon: FileText,
+    icon: IconDocument,
     group: "convert",
     elements: ["order_summary"],
   },
@@ -2137,7 +2071,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "upsell-actions",
     label: "Offer buttons",
     description: "\"Yes, add it\" and \"No, thanks\" for a funnel's offer page.",
-    icon: Zap,
+    icon: IconLightning,
     group: "convert",
     elements: ["upsell_accept_button", "upsell_decline_link"],
   },
@@ -2145,7 +2079,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "tabs",
     label: "Tabs",
     description: "Several panels of text behind a row of titles.",
-    icon: PanelBottom,
+    icon: IconPanelBottom,
     group: "story",
     elements: ["tabs"],
   },
@@ -2153,7 +2087,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "toggle",
     label: "Toggle",
     description: "One title that opens to show more text.",
-    icon: ChevronDown,
+    icon: IconCaretDown,
     group: "story",
     elements: ["toggle"],
   },
@@ -2161,7 +2095,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "carousel",
     label: "Carousel",
     description: "Images that slide one after another.",
-    icon: GalleryHorizontal,
+    icon: IconCarousel,
     group: "story",
     elements: ["carousel"],
   },
@@ -2169,7 +2103,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "repeater",
     label: "Repeater",
     description: "One card per feature, testimonial, question or review of the page's product.",
-    icon: Rows3,
+    icon: IconRows,
     group: "story",
     elements: ["repeater"],
   },
@@ -2177,7 +2111,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "text-link",
     label: "Text link",
     description: "A plain link to a page or an outside address.",
-    icon: MousePointerClick,
+    icon: IconClick,
     group: "basics",
     elements: ["text_link"],
   },
@@ -2187,7 +2121,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "faq",
     label: "FAQ",
     description: "Question-and-answer pairs.",
-    icon: HelpCircle,
+    icon: IconQuestions,
     group: "convert",
     elements: ["faq"],
   },
@@ -2195,7 +2129,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "faq-split",
     label: "FAQ in two columns",
     description: "A title and a line on one side, the questions and answers on the other.",
-    icon: HelpCircle,
+    icon: IconQuestions,
     group: "convert",
     settings: { background: "paper" },
     rows: [
@@ -2231,7 +2165,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "faq-cta",
     label: "FAQ with a next step",
     description: "Questions and answers, then a way to reach you for the rest.",
-    icon: HelpCircle,
+    icon: IconQuestions,
     group: "convert",
     elements: ["faq", "text", "button"],
     settings: { background: "paper" },
@@ -2252,7 +2186,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "accordion",
     label: "Accordion",
     description: "Collapsible rows of content.",
-    icon: ChevronDown,
+    icon: IconCaretDown,
     group: "convert",
     elements: ["accordion"],
   },
@@ -2260,7 +2194,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "shipping-returns",
     label: "Delivery & returns",
     description: "Where you ship, how you swap and what you accept — in your own words.",
-    icon: Truck,
+    icon: IconCourier,
     group: "convert",
     elements: ["heading", "accordion", "text"],
     settings: { background: "paper" },
@@ -2281,7 +2215,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "contact-map",
     label: "Contact with map",
     description: "Your contact form beside your address and a link to it on the map.",
-    icon: MapPin,
+    icon: IconPlace,
     group: "convert",
     rows: [
       {
@@ -2304,7 +2238,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "form",
     label: "Form",
     description: "A contact or sign-up form.",
-    icon: FormInput,
+    icon: IconField,
     group: "convert",
     elements: ["form"],
   },
@@ -2312,7 +2246,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "newsletter",
     label: "Newsletter",
     description: "A centred invitation to stay in touch, with the sign-up form under it.",
-    icon: Mail,
+    icon: IconEmail,
     group: "convert",
     settings: { background: "primary-soft" },
     rows: [
@@ -2336,7 +2270,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "newsletter-banner",
     label: "Newsletter with a picture",
     description: "The same invitation, beside a picture instead of centred on its own.",
-    icon: Mail,
+    icon: IconEmail,
     group: "convert",
     settings: { background: "paper" },
     rows: [
@@ -2361,7 +2295,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "cta-band",
     label: "Call-to-action band",
     description: "A band in your brand colour: one line, one reason, one button.",
-    icon: MousePointerClick,
+    icon: IconClick,
     group: "convert",
     settings: { background: "primary", padding: "roomy" },
     rows: [
@@ -2385,7 +2319,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "flash-offer",
     label: "Limited-time offer",
     description: "A countdown over the offer's own terms and a buy button.",
-    icon: Zap,
+    icon: IconLightning,
     group: "convert",
     elements: ["heading", "countdown", "text", "button"],
     settings: { background: "primary-soft", padding: "compact" },
@@ -2400,7 +2334,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "countdown-band",
     label: "Countdown band",
     description: "A dark band with the offer's title, the timer and a buy button.",
-    icon: AlarmClock,
+    icon: IconAlarm,
     group: "convert",
     settings: { background: "ink", padding: "compact" },
     rows: [
@@ -2424,7 +2358,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "pricing-tiers",
     label: "Plans",
     description: "Three cards — a name, a line, what's included and a button. You fill in the prices.",
-    icon: Tag,
+    icon: IconTag,
     group: "convert",
     settings: { background: "paper", padding: "roomy" },
     rows: [
@@ -2449,7 +2383,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "heading",
     label: "Heading",
     description: "A standalone section title.",
-    icon: Heading1,
+    icon: IconHeadingOne,
     group: "basics",
     elements: ["heading"],
   },
@@ -2457,7 +2391,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "text",
     label: "Text",
     description: "A paragraph of copy.",
-    icon: AlignLeft,
+    icon: IconAlignStart,
     group: "basics",
     elements: ["text"],
   },
@@ -2465,7 +2399,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "rich-text",
     label: "Long text",
     description: "A longer block of copy.",
-    icon: Type,
+    icon: IconText,
     group: "basics",
     elements: ["rich_text"],
   },
@@ -2473,7 +2407,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "list",
     label: "List",
     description: "A bulleted list of points.",
-    icon: List,
+    icon: IconListView,
     group: "basics",
     elements: ["list"],
   },
@@ -2481,7 +2415,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "button",
     label: "Button",
     description: "A single call-to-action button.",
-    icon: MousePointerClick,
+    icon: IconClick,
     group: "basics",
     elements: ["button"],
   },
@@ -2489,7 +2423,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "image",
     label: "Image",
     description: "One image, optionally linked.",
-    icon: Image,
+    icon: IconImage,
     group: "basics",
     elements: ["image"],
   },
@@ -2497,7 +2431,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "gallery",
     label: "Gallery",
     description: "A grid of images.",
-    icon: Images,
+    icon: IconMedia,
     group: "basics",
     elements: ["gallery"],
   },
@@ -2505,7 +2439,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "video",
     label: "Video",
     description: "An embedded video.",
-    icon: Video,
+    icon: IconVideo,
     group: "basics",
     elements: ["video"],
   },
@@ -2513,7 +2447,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "embed",
     label: "Embed",
     description: "Embed an external page by URL.",
-    icon: Code2,
+    icon: IconCode,
     group: "basics",
     elements: ["embed"],
   },
@@ -2521,7 +2455,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "html-code",
     label: "HTML code",
     description: "Your own HTML at this place on the page — runs on your store's domain only.",
-    icon: Code2,
+    icon: IconCode,
     group: "basics",
     elements: ["html_block"],
   },
@@ -2529,7 +2463,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "map",
     label: "Map",
     description: "Show your address on a map.",
-    icon: Map,
+    icon: IconMap,
     group: "basics",
     elements: ["map"],
   },
@@ -2537,7 +2471,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "icon",
     label: "Icon",
     description: "A single decorative icon.",
-    icon: CircleDot,
+    icon: IconRadio,
     group: "basics",
     elements: ["icon"],
   },
@@ -2545,7 +2479,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "social",
     label: "Social links",
     description: "Links to your social profiles.",
-    icon: Share2,
+    icon: IconShare,
     group: "basics",
     elements: ["social_icons"],
   },
@@ -2553,7 +2487,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "divider",
     label: "Divider",
     description: "A horizontal rule between sections.",
-    icon: Minus,
+    icon: IconMinus,
     group: "basics",
     elements: ["divider"],
   },
@@ -2561,7 +2495,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "spacer",
     label: "Spacer",
     description: "Vertical breathing room.",
-    icon: MoveVertical,
+    icon: IconMoveVertical,
     group: "basics",
     elements: ["spacer"],
   },
@@ -2569,7 +2503,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "footer-links",
     label: "Footer links",
     description: "Two lists of links and your social profiles, side by side, for the bottom of a page.",
-    icon: PanelBottom,
+    icon: IconPanelBottom,
     group: "basics",
     settings: { background: "paper", padding: "compact" },
     rows: [
@@ -2594,7 +2528,7 @@ const CORE_PRESETS: BlockPreset[] = [
     key: "countdown",
     label: "Countdown",
     description: "An urgency timer for a limited offer.",
-    icon: Timer,
+    icon: IconTimer,
     group: "basics",
     elements: ["countdown"],
   },
@@ -2635,7 +2569,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-hero-slideshow",
     label: "Store opening slideshow",
     description: "A scrolling offer line, a full-width slideshow and the first call to action.",
-    icon: GalleryHorizontal,
+    icon: IconCarousel,
     group: "store",
     settings: { width: "full", padding: "tight" },
     rows: [
@@ -2694,7 +2628,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-departments",
     label: "Shop by department",
     description: "A row of department pictures with a caption under each — where browsing starts.",
-    icon: Grid2x2,
+    icon: IconGridView,
     group: "store",
     settings: { padding: "roomy" },
     rows: [
@@ -2776,7 +2710,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-product-floor",
     label: "Product floor",
     description: "A titled floor of products from your catalogue, the way a shop front opens its catalogue.",
-    icon: Rows3,
+    icon: IconRows,
     group: "store",
     settings: { padding: "roomy" },
     rows: [
@@ -2800,7 +2734,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-promo-duo",
     label: "Two promo banners",
     description: "Two wide banners side by side, each with its own line and link.",
-    icon: Columns3,
+    icon: IconColumns,
     group: "store",
     settings: { padding: "normal" },
     rows: [
@@ -2834,7 +2768,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-feature-banner",
     label: "Picture with a pitch",
     description: "One big picture beside a heading, a paragraph and a button.",
-    icon: LayoutPanelLeft,
+    icon: IconLayoutSplit,
     group: "store",
     settings: { padding: "roomy", background: "paper" },
     rows: [
@@ -2866,7 +2800,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-brand-strip",
     label: "Brand strip",
     description: "A row of the brand marks you carry, under one title.",
-    icon: BadgeCheck,
+    icon: IconVerified,
     group: "store",
     settings: { padding: "normal", background: "paper" },
     rows: [
@@ -2895,7 +2829,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-journal",
     label: "Journal row",
     description: "Four article cards — a picture, a title and a line each.",
-    icon: FileText,
+    icon: IconDocument,
     group: "store",
     settings: { padding: "roomy" },
     rows: [
@@ -2958,7 +2892,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-service-row",
     label: "Service row",
     description: "The four things a shopper checks before buying — shipping, support, returns, payment.",
-    icon: Truck,
+    icon: IconCourier,
     group: "store",
     settings: { padding: "compact", background: "paper" },
     rows: [
@@ -3012,7 +2946,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-banner-wide",
     label: "Full-width banner",
     description: "One picture across the whole page — a season, a drop, a sale.",
-    icon: Frame,
+    icon: IconFrame,
     group: "store",
     settings: { width: "full", padding: "tight" },
     rows: [
@@ -3031,7 +2965,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-banner-duo",
     label: "Two banners",
     description: "Two pictures side by side, each linking somewhere of its own.",
-    icon: Images,
+    icon: IconMedia,
     group: "store",
     settings: { padding: "normal" },
     rows: [
@@ -3055,7 +2989,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-banner-trio",
     label: "Three banners",
     description: "Three equal pictures in a row.",
-    icon: Grid3x3,
+    icon: IconGridDense,
     group: "store",
     settings: { padding: "normal" },
     rows: [
@@ -3084,7 +3018,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-lookbook-quad",
     label: "Four picture tiles",
     description: "A title over four picture tiles, each with its own caption.",
-    icon: LayoutDashboard,
+    icon: IconDashboard,
     group: "store",
     settings: { padding: "roomy" },
     rows: [
@@ -3147,7 +3081,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-mosaic",
     label: "Picture mosaic",
     description: "One tall picture beside two stacked ones — a lookbook without a slideshow.",
-    icon: Layers,
+    icon: IconLayers,
     group: "store",
     settings: { padding: "normal" },
     rows: [
@@ -3174,7 +3108,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
     key: "store-footer",
     label: "Store footer",
     description: "The closing floor — a word about the store, three link columns and the payment marks.",
-    icon: PanelBottom,
+    icon: IconPanelBottom,
     group: "store",
     settings: { background: "paper", padding: "roomy" },
     rows: [
@@ -3447,11 +3381,11 @@ export function sectionLabel(section: PageSection, locale: EditorLocale = "en"):
   return types.length === 1 ? first : ui.andMore(first, types.length - 1);
 }
 
-export function sectionIcon(section: PageSection): LucideIcon {
+export function sectionIcon(section: PageSection): IconComponent {
   const match = matchPreset(section);
   if (match) return match.icon;
   const types = sectionElements(section).map((el) => el.type);
-  return types.length > 0 ? ELEMENT_SPECS[types[0]].icon : Columns3;
+  return types.length > 0 ? ELEMENT_SPECS[types[0]].icon : IconColumns;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BookOpen, LifeBuoy, MessageCircle, PlayCircle, Send } from "lucide-react";
+import { IconChat, IconGuide, IconPlayCircle, IconSend, IconSupport } from "@/components/icons";
 import { Card, CardDescription, CardHeader, CardTitle } from "@store-builder/ui";
 import { educationLinksGet, type EducationLinks, type TutorialTopic } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -61,7 +61,7 @@ export function TutorialLink({ topic }: { topic: TutorialTopic }) {
   if (!url) return null;
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
-      <PlayCircle className="size-4" aria-hidden />
+      <IconPlayCircle className="size-4" aria-hidden />
       {t.tutorial}
     </a>
   );
@@ -72,10 +72,10 @@ export function HelpCards() {
   const t = useT(STRINGS);
   const links = useEducationLinks();
   const cards = [
-    links?.helpCenterUrl && { url: links.helpCenterUrl, title: t.helpTitle, desc: t.helpDesc, Icon: BookOpen },
-    links?.telegramUrl && { url: links.telegramUrl, title: t.telegramTitle, desc: t.telegramDesc, Icon: Send },
-    links?.supportChatUrl && { url: links.supportChatUrl, title: t.chatTitle, desc: t.chatDesc, Icon: MessageCircle },
-  ].filter(Boolean) as Array<{ url: string; title: string; desc: string; Icon: typeof LifeBuoy }>;
+    links?.helpCenterUrl && { url: links.helpCenterUrl, title: t.helpTitle, desc: t.helpDesc, Icon: IconGuide },
+    links?.telegramUrl && { url: links.telegramUrl, title: t.telegramTitle, desc: t.telegramDesc, Icon: IconSend },
+    links?.supportChatUrl && { url: links.supportChatUrl, title: t.chatTitle, desc: t.chatDesc, Icon: IconChat },
+  ].filter(Boolean) as Array<{ url: string; title: string; desc: string; Icon: typeof IconSupport }>;
   if (cards.length === 0) return null;
   return (
     <section aria-label={t.learn} className="mt-8">

@@ -1,0 +1,52 @@
+/* The money pages of the sweep: real profit and its costs, courier settlements, the side
+   reports and the survey results — pages/profit/*, pages/settlements/*,
+   pages/analytics/storeReports/*, pages/survey/SurveyResultsPage.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): with data-glass="off" none of it
+   applies and every piece stands on its own solid Tailwind classes. Nothing here is
+   blurred: every piece lies in the page flow or inside a sheet that is already frosted.
+   The wells below are small panes inside a card or a sheet; ink on --lg-control is the
+   same pair as the segmented track (4.5:1 or better in both themes). */
+:root:not([data-glass="off"]) {
+  /* Small wells: the three figures of a settlement, the counts of a matched statement,
+     the track under a ranked profit row. */
+  [data-slot="settlement-figure"],
+  [data-slot="statement-stat"] {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  [data-slot="profit-rank-track"] {
+    background-color: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  }
+
+  /* An age band on a courier's card: a quiet bead; the late one is tinted from the danger colour. */
+  [data-slot="held-band"] {
+    background-color: var(--lg-control);
+    box-shadow: inset 0 0 0 1px var(--lg-edge);
+    color: var(--lg-ink-soft);
+  }
+  [data-slot="held-band"][data-late] {
+    background-color: color-mix(in srgb, var(--color-danger-soft) 88%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 18%, transparent);
+    color: var(--lg-text-danger);
+  }
+  &.dark [data-slot="held-band"][data-late] {
+    background-color: color-mix(in srgb, var(--color-danger) 18%, var(--lg-control-lit));
+  }
+
+  /* The amber note of a side report (products without a cost): the takeaway's "watch this" tint. */
+  [data-slot="store-report-note"] {
+    background-color: color-mix(in srgb, var(--color-accent-soft) 88%, transparent);
+    background-image: var(--lg-sheen);
+    box-shadow:
+      var(--lg-rim-line),
+      0 0 0 1px color-mix(in srgb, var(--color-accent) 20%, transparent),
+      var(--shadow-card);
+  }
+  &.dark [data-slot="store-report-note"] {
+    background-color: color-mix(in srgb, var(--color-accent) 15%, var(--lg-control-lit));
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.1),
+      0 0 0 1px color-mix(in srgb, var(--color-accent) 30%, transparent),
+      var(--shadow-card);
+  }
+}

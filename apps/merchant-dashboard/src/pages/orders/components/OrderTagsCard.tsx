@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from "react";
-import { X } from "lucide-react";
+import { IconClose } from "@/components/icons";
 import { Button, Input } from "@store-builder/ui";
 import { ordersListTags, ordersMeta, ordersUpdateMeta, type Order } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -7,7 +7,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
-import { Section } from "@/components/Section";
+import { CardFrame } from "@/pages/orders/detail/CardFrame";
 import { useOrderErrorMessage } from "../orderErrors";
 
 const STRINGS = {
@@ -33,7 +33,7 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-export function OrderTagsCard({ order, onChanged }: { order: Order; onChanged: () => void }) {
+export function OrderTagsCard({ order, onChanged, frameless }: { order: Order; onChanged: () => void; /** Inside a folding section of the order page: no card and no title of its own. */ frameless?: boolean }) {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const toast = useToast();
@@ -68,7 +68,7 @@ export function OrderTagsCard({ order, onChanged }: { order: Order; onChanged: (
   }
 
   return (
-    <Section title={t.title} description={t.description}>
+    <CardFrame frameless={frameless} title={t.title} description={t.description}>
       {tags.length === 0 ? (
         <p className="text-sm text-ink-soft">{t.empty}</p>
       ) : (
@@ -86,7 +86,7 @@ export function OrderTagsCard({ order, onChanged }: { order: Order; onChanged: (
                 aria-label={fmt(t.remove, { tag })}
                 className="inline-flex size-6 cursor-pointer items-center justify-center rounded-full hover:bg-paper-raised focus-visible:outline-2 focus-visible:outline-primary"
               >
-                <X className="size-3.5" aria-hidden />
+                <IconClose className="size-3.5" aria-hidden />
               </button>
             </li>
           ))}
@@ -126,6 +126,6 @@ export function OrderTagsCard({ order, onChanged }: { order: Order; onChanged: (
           ))}
         </div>
       )}
-    </Section>
+    </CardFrame>
   );
 }

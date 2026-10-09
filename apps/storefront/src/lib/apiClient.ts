@@ -2,6 +2,7 @@ import { ApiClient, createMemoryTokenStorage } from "@store-builder/api-client";
 import { LOCALE_COOKIE, parseLocale, type Locale } from "./i18n";
 import { readStorePreviewCookie } from "./storePreview";
 import { readStoreGateCookie } from "./storeGate";
+import { funnelAware } from "./funnelGate";
 
 /** The shopper's chosen language from its cookie, for the API's X-Store-Locale. */
 function chosenLocale(): string | null {
@@ -36,9 +37,10 @@ export function createStorefrontApiClient(opts: { locale?: Locale | null } = {})
     ...(locale ? { "X-Store-Locale": locale } : {}),
     ...(gate ? { "X-Store-Gate": gate } : {}),
   };
-  return new ApiClient({
+  // On a funnel's pages its checkout calls name the funnel, so a locked store that keeps funnels open answers them (lib/funnelGate, handoff 312).
+  return funnelAware(new ApiClient({
     baseUrl,
     tokenStorage: createMemoryTokenStorage(),
     ...(Object.keys(defaultHeaders).length > 0 ? { defaultHeaders } : {}),
-  });
+  }));
 }

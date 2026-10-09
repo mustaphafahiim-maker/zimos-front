@@ -4,32 +4,25 @@ import type { StorefrontPreorder } from "@store-builder/api-client";
 import { useStore } from "@/lib/StoreContext";
 import { formatShopDay, limitLines } from "@/lib/buyInfo";
 import { BoxIcon } from "../Icons";
-import { DeliveryEstimateLine, useDeliveryEstimate, type DeliveryTarget } from "../DeliveryEstimateLine";
+import { HolidayNote } from "../holiday/HolidayNote";
 
 /**
- * Under the product page's price: what buying the chosen variant means —
- * when it arrives (handoff 199; `delivery: null` for a variant that can't be
- * bought now), a pre-order with its ship date and the merchant's message
- * (195), and the product's purchase limits (198). Each line shows only when
- * the API says so.
+ * Under the product page's price: what buying the chosen variant means — a
+ * pre-order with its ship date and the merchant's message (handoff 195), and
+ * the product's purchase limits (198). Each line shows only when the API says
+ * so, and all of them are known when the page arrives.
+ *
+ * When it arrives (handoff 199) is asked for in the browser, so it is not
+ * here: that line sits with the trust lines under the buy buttons
+ * (BuyAssurances), where landing late moves neither the price, the options
+ * nor the buttons.
  */
-export function ProductBuyNotes({
-  product,
-  preorder,
-  delivery = null,
-}: {
-  product: unknown;
-  preorder: StorefrontPreorder | null;
-  delivery?: DeliveryTarget | null;
-}) {
+export function ProductBuyNotes({ product, preorder }: { product: unknown; preorder: StorefrontPreorder | null }) {
   const { t, intlLocale } = useStore();
   const limits = limitLines(product, t.buyInfo);
   const date = preorder ? formatShopDay(preorder.shipsAt, intlLocale) : "";
-  // A pre-order ships on its own date, never on the usual window.
-  const estimate = useDeliveryEstimate(preorder ? null : delivery);
   return (
     <>
-      {!preorder && <DeliveryEstimateLine estimate={estimate} className="mt-2" />}
       {preorder && (
         <div className="mt-2 rounded-xl border border-primary/25 bg-primary-soft px-3.5 py-2.5 text-sm" role="status">
           <p className="flex items-center gap-1.5 font-semibold text-primary">
@@ -40,6 +33,8 @@ export function ProductBuyNotes({
         </div>
       )}
       {limits.length > 0 && <p className="mt-2 text-sm text-ink-soft">{limits.join(" · ")}</p>}
+      {/* A store on holiday: «الطلبات هتتشحن من …», or «الطلبات موقوفة مؤقتًا» while orders are paused (handoff 216). */}
+      <HolidayNote className="mt-2" />
     </>
   );
 }

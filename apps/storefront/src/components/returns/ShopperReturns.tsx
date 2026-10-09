@@ -12,6 +12,7 @@ import {
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
 import { ShopperReturnForm } from "./ShopperReturnForm";
+import { ShopperReturnCase, returnCaseStatusText, useReturnCaseCopy } from "./ShopperReturnCase";
 import { btnGhost, btnSecondary, skeleton } from "../ui";
 
 export type ShopperReturnsProps = (
@@ -45,6 +46,8 @@ const STATUS_CLASS: Record<ReturnStatus, string> = {
 export function ShopperReturns(props: ShopperReturnsProps) {
   const { t, store, intlLocale } = useStore();
   const r = t.returns;
+  // Exchanges, the decision of the store and the courier pickup (handoff 372, 396).
+  const caseCopy = useReturnCaseCopy();
   const uid = useId();
   const workspaceId = props.workspaceId ?? store?.workspaceId ?? "";
   const orderRef: ShopperReturnOrderRef | null = props.token
@@ -240,7 +243,7 @@ export function ShopperReturns(props: ShopperReturnsProps) {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs text-ink-soft">{r.requestedOn(date(ret.createdAt))}</span>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_CLASS[ret.status] ?? STATUS_CLASS.requested}`}>
-                      {typeof statusText === "string" ? statusText : ret.status}
+                      {returnCaseStatusText(caseCopy, ret.status) ?? (typeof statusText === "string" ? statusText : ret.status)}
                     </span>
                   </div>
                   <ul className="mt-1.5 space-y-0.5 text-ink">
@@ -252,6 +255,7 @@ export function ShopperReturns(props: ShopperReturnsProps) {
                     ))}
                   </ul>
                   {label && <p className="mt-1 text-xs text-ink-soft">{label}</p>}
+                  <ShopperReturnCase ret={ret} lines={data.items} />
                 </li>
               );
             })}

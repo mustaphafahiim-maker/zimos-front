@@ -1,0 +1,64 @@
+/* Inventory — pages/inventory (the tabs of /inventory, a location's stock, a purchase
+   order, a stock count). Part of the liquid-glass layer (../liquid-glass.css): everything
+   here is under the same switch, so with data-glass="off" none of it applies and each
+   piece stands on its own solid Tailwind classes.
+
+   The lists themselves take their material from the list kit (list.css) and the sheet of
+   rows from returns-protection.css; this file only covers the hooks the inventory kit
+   adds (pages/inventory/kit.tsx). Nothing here is blurred: all of it lies in the page
+   flow or inside a pane that is already frosted (a sheet, Quick Look). */
+:root:not([data-glass="off"]) {
+  --inv-well: color-mix(in srgb, var(--color-primary-dark) 5%, transparent);
+  --inv-track: color-mix(in srgb, var(--color-ink) 10%, transparent);
+
+  &.dark {
+    --inv-well: rgb(255 255 255 / 0.05);
+    --inv-track: rgb(255 255 255 / 0.12);
+  }
+
+  /* A well inside a pane: the facts of a preview, a note, the lines of a form. */
+  .zimos-inv-well {
+    background-color: var(--inv-well);
+    box-shadow: inset 0 0 0 1px var(--lg-edge);
+  }
+  .zimos-inv-well.divide-y > * {
+    border-color: var(--lg-edge);
+  }
+  .zimos-inv-lines {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line);
+  }
+
+  /* A quiet fact of a row: a bead of the pane, no tone. */
+  [data-slot="inv-fact"] {
+    background-color: color-mix(in srgb, var(--color-ink) 7%, transparent);
+    color: var(--lg-ink-soft);
+  }
+  &.dark [data-slot="inv-fact"] {
+    background-color: rgb(255 255 255 / 0.09);
+  }
+
+  /* The meter: a track cut into the pane, and the selection fill running along it. */
+  [data-slot="inv-meter"] {
+    background-color: var(--inv-track);
+  }
+  .zimos-inv-meter-fill[data-tone="primary"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+  }
+
+  /* «…» in a page header: a small pane, as the other header tools. */
+  .zimos-inv-more[data-size="header"] {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line);
+  }
+  .zimos-inv-more[data-size="header"]:is(:hover, [aria-expanded="true"]) {
+    background-color: var(--lg-control-lit);
+  }
+
+  /* The "needs a transfer" strip: a wash of the danger tone over the pane, the deeper ink for its words. */
+  [data-slot="inv-alert"] {
+    background-color: color-mix(in srgb, var(--color-danger) 10%, var(--lg-fill));
+    color: var(--lg-text-danger);
+  }
+}

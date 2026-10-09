@@ -1,0 +1,113 @@
+/* Spotlight (⌘K) — components/CommandPalette.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   Hooks: .zimos-spotlight-trigger (the field in the toolbar), [data-slot="spotlight"]
+   (the pane, portalled to <body> — so nothing here is written under .glass-app) and its
+   parts: -backdrop, -head, -field, -row[data-active], -chip, -verb, -contact, -keycap,
+   -notice, -footer. Structure and motion are Tailwind in the component; this file is
+   material only. */
+:root:not([data-glass="off"]) {
+  /* ---------------------------------------------------------------- *
+   * The trigger: a small pane in the top bar — a round button below
+   * lg, a search field with its keycap from lg up.
+   * ---------------------------------------------------------------- */
+  .zimos-spotlight-trigger {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 1px 2px rgb(20 22 26 / 0.05);
+  }
+  .zimos-spotlight-trigger[aria-expanded="true"] {
+    background-color: var(--lg-control-lit);
+  }
+  @media (hover: hover) {
+    .zimos-spotlight-trigger:hover {
+      background-color: var(--lg-control-lit);
+      box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 8px 16px -10px rgb(18 44 110 / 0.32);
+    }
+    &.dark .zimos-spotlight-trigger:hover {
+      box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 8px 16px -10px rgb(0 0 0 / 0.7);
+    }
+  }
+
+  /* A key, in the trigger and in the pane's footer: a lit cap with a lip under it. */
+  [data-slot="spotlight-keycap"] {
+    background-color: var(--lg-control-lit);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 1px 0 1px var(--lg-edge);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The pane: an overlay — the page passes beneath it, so it is the
+   * one place here that blurs. Near solid (--lg-overlay), so a row
+   * reads the same over a product photo as over the plain backdrop.
+   * ---------------------------------------------------------------- */
+  [data-slot="spotlight-backdrop"] {
+    background-color: rgb(14 20 44 / 0.28);
+  }
+  &.dark [data-slot="spotlight-backdrop"] {
+    background-color: rgb(2 4 10 / 0.6);
+  }
+  .zimos-spotlight[data-slot="spotlight"] {
+    /* Secondary text takes the deeper shade the frame uses (the pane is outside .glass-app). */
+    --color-ink-soft: var(--lg-ink-soft);
+    background-color: var(--lg-overlay);
+    background-image: var(--lg-sheen);
+    -webkit-backdrop-filter: var(--lg-blur-overlay);
+    backdrop-filter: var(--lg-blur-overlay);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), var(--shadow-pop);
+  }
+  /* On a phone it covers the screen over a page that is dimmed and still: nothing
+     passes beneath it, so it is solid and costs no blur while the keyboard slides. */
+  @media (max-width: 39.99rem) {
+    .zimos-spotlight[data-slot="spotlight"] {
+      background-color: var(--color-paper-raised);
+      background-image: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      box-shadow: none;
+    }
+  }
+  [data-slot="spotlight-head"],
+  [data-slot="spotlight-footer"] {
+    border-color: var(--lg-hairline);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Rows. The active one is a soft brand pill; its chip takes the
+   * fill that selection and the main action share everywhere else.
+   * ---------------------------------------------------------------- */
+  [data-slot="spotlight-row"][data-active] {
+    background-color: color-mix(in srgb, var(--color-primary) 11%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 10%, transparent), inset 0 1px 0 0 rgb(255 255 255 / 0.55);
+  }
+  &.dark [data-slot="spotlight-row"][data-active] {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 16%, transparent), inset 0 1px 0 0 rgb(255 255 255 / 0.07);
+  }
+  [data-slot="spotlight-chip"] {
+    background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--lg-text-primary);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 8%, transparent);
+  }
+  &.dark [data-slot="spotlight-chip"] {
+    background-color: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  }
+  [data-slot="spotlight-row"][data-active] [data-slot="spotlight-chip"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28), var(--lg-brand-glow);
+  }
+  [data-slot="spotlight-verb"] {
+    color: var(--lg-text-primary);
+  }
+  /* Call and WhatsApp on a customer's row: two small lit panes inside the pill. */
+  [data-slot="spotlight-contact"] {
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 1px 2px rgb(20 22 26 / 0.06);
+  }
+  /* "The search did not go through": a tinted tile that lets a little of the pane through. */
+  [data-slot="spotlight-notice"] {
+    background-color: color-mix(in srgb, var(--color-accent-soft) 82%, transparent);
+    box-shadow: var(--lg-rim-line);
+  }
+}

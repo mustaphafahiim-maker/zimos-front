@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useImperativeHandle, useState, type Ref } from "react";
 import { Alert, Button } from "@store-builder/ui";
 import {
   funnelsList,
@@ -6,6 +6,7 @@ import {
   webhooksResendDelivery,
   webhooksResendOrders,
   developersListWebhooks,
+  webhookAppRemoved,
   type WebhookEndpointFull,
   type WebhookFilter,
   type WebhookLogEntry,
@@ -172,7 +173,7 @@ export function WebhookEndpointNotes({ endpoint }: { endpoint: WebhookEndpointFu
             .join(" · ")}
         </p>
       )}
-      {endpoint.disabledAt ? (
+      {endpoint.disabledAt && !webhookAppRemoved(endpoint) ? (
         <Alert variant="danger">{t.disabledNote}</Alert>
       ) : endpoint.failingSince && endpoint.isActive ? (
         <Alert variant="info">{fmt(t.failingNote, { when: when(endpoint.failingSince) })}</Alert>
@@ -295,8 +296,20 @@ export function WebhookDeliveryLog() {
 /**
  * "Resend to webhook" on the order page. Shown only when the store has an
  * active endpoint and the viewer may manage webhooks (the list call tells).
+ * A caller that lists it in a menu instead passes `hideTrigger`, learns
+ * whether it is offered through `onAvailable` and fires it through `actionRef`.
  */
-export function ResendToWebhookButton({ orderId }: { orderId: string }) {
+export function ResendToWebhookButton({
+  orderId,
+  actionRef,
+  onAvailable,
+  hideTrigger,
+}: {
+  orderId: string;
+  actionRef?: Ref<{ resend: () => void }>;
+  onAvailable?: (available: boolean) => void;
+  hideTrigger?: boolean;
+}) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -314,7 +327,18 @@ export function ResendToWebhookButton({ orderId }: { orderId: string }) {
     };
   }, [workspaceId]);
 
-  if (!available) return null;
+  useEffect(() => {
+    onAvailable?.(available);
+    // Reports the answer of the list call; the callback itself is not a trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [available]);
+  useImperativeHandle(actionRef, () => ({
+    resend: () => {
+      if (available && !busy) void resend();
+    },
+  }));
+
+  if (!available || hideTrigger) return null;
 
   async function resend() {
     setBusy(true);

@@ -427,6 +427,27 @@ function randomKey(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+/**
+ * What a silent refresh came to. "failed" is the old `false`: the server
+ * refused the session, or there was nothing to refresh with. "unavailable" is
+ * a refresh that got no answer about the session at all — the rate limiter,
+ * a server error, a dropped connection — and carries the error to rethrow.
+ */
+type RefreshOutcome = { outcome: "ok" } | { outcome: "failed" } | { outcome: "unavailable"; error: unknown };
+
+/**
+ * Whether a failed refresh means the session is over. Only the server saying
+ * so counts (a 4xx about the token). A rate limit, a server error or a lost
+ * connection says nothing about the session: signing the merchant out for one
+ * throws away their place because the phone lost signal for a second, or
+ * because a team behind one office address reloaded ten times in a minute.
+ */
+function refreshRefused(err: unknown): boolean {
+  if (!(err instanceof ApiError)) return false; // fetch itself threw: offline, DNS, aborted
+  if (err.status === 408 || err.status === 425 || err.status === 429) return false;
+  return err.status >= 400 && err.status < 500;
+}
+
 /** Runs `fn` under a lock shared by every tab of this origin, where the browser has one. */
 function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
   const locks = typeof navigator !== "undefined" ? (navigator as Navigator & { locks?: LockManager }).locks : undefined;
@@ -439,7 +460,10 @@ export class ApiClient {
   private tokenStorage: TokenStorage;
   private onSessionExpired?: () => void;
   private defaultHeaders: Record<string, string>;
-  private refreshPromise: Promise<boolean> | null = null;
+  private refreshPromise: Promise<RefreshOutcome> | null = null;
+  /** After the rate limiter refused a refresh: no new attempt before this time, and the error to answer with meanwhile. */
+  private refreshRetryAt = 0;
+  private refreshRetryError: unknown = null;
   private appName?: string;
   private addressTrees = new Map<string, { at: number; value: Promise<CarrierAddressTree> }>();
 
@@ -520,15 +544,20 @@ export class ApiClient {
     // (refresh cookie) is not: fetch a token first instead of sending a
     // request that can only come back 401.
     if (auth && !this.tokenStorage.get().accessToken && this.tokenStorage.hasSession?.()) {
-      await this.tryRefresh();
+      const refresh = await this.tryRefresh();
+      // No token and no way to get one right now: fail this call with the real
+      // reason (rate limit, offline) and leave the session alone.
+      if (refresh.outcome === "unavailable") throw refresh.error;
     }
 
     let res = await doFetch();
 
     if (res.status === 401 && auth) {
-      const refreshed = await this.tryRefresh();
-      if (refreshed) {
+      const refresh = await this.tryRefresh();
+      if (refresh.outcome === "ok") {
         res = await doFetch();
+      } else if (refresh.outcome === "unavailable") {
+        throw refresh.error;
       }
     }
 
@@ -558,13 +587,16 @@ export class ApiClient {
     return payload as T;
   }
 
-  private async tryRefresh(): Promise<boolean> {
+  private async tryRefresh(): Promise<RefreshOutcome> {
     const cookieSession = Boolean(this.tokenStorage.hasSession?.());
-    if (!this.tokenStorage.get().refreshToken && !cookieSession) return false;
+    if (!this.tokenStorage.get().refreshToken && !cookieSession) return { outcome: "failed" };
+
+    // The rate limiter said to wait: every screen asking again would only keep it shut.
+    if (Date.now() < this.refreshRetryAt) return { outcome: "unavailable", error: this.refreshRetryError };
 
     // Coalesce concurrent 401s into a single refresh call.
     if (!this.refreshPromise) {
-      this.refreshPromise = (async () => {
+      this.refreshPromise = (async (): Promise<RefreshOutcome> => {
         try {
           // One refresh at a time across tabs: the token rotates on use, and a
           // second tab sending the old one would look like a stolen token.
@@ -577,11 +609,19 @@ export class ApiClient {
             });
           });
           this.setTokens(result);
-          return true;
-        } catch {
-          this.clearSession();
-          this.onSessionExpired?.();
-          return false;
+          return { outcome: "ok" };
+        } catch (err) {
+          if (refreshRefused(err)) {
+            this.clearSession();
+            this.onSessionExpired?.();
+            return { outcome: "failed" };
+          }
+          if (err instanceof ApiError && err.status === 429) {
+            // `Retry-After` is hidden cross-origin (see ApiError.retryAfter): a short wait then.
+            this.refreshRetryAt = Date.now() + Math.min(err.retryAfter ?? 5, 60) * 1000;
+            this.refreshRetryError = err;
+          }
+          return { outcome: "unavailable", error: err };
         } finally {
           this.refreshPromise = null;
         }
@@ -2854,8 +2894,9 @@ export class ApiClient {
 
     let res = await doFetch();
     if (res.status === 401) {
-      const refreshed = await this.tryRefresh();
-      if (refreshed) res = await doFetch();
+      const refresh = await this.tryRefresh();
+      if (refresh.outcome === "ok") res = await doFetch();
+      else if (refresh.outcome === "unavailable") throw refresh.error;
     }
     if (!res.ok) {
       const payload = await res.json().catch(() => null);

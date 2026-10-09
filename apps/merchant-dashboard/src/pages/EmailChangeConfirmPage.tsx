@@ -1,34 +1,39 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Alert, Spinner } from "@store-builder/ui";
+import { Button } from "@store-builder/ui";
 import { emailChangeConfirm, isApiErrorCode } from "@store-builder/api-client";
+import { IconLinkOff, IconVerified } from "@/components/icons";
 import { apiClient } from "@/lib/apiClient";
 import { useAuth } from "@/context/AuthContext";
-import { BrandPanel } from "@/components/BrandPanel";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+import { AUTH_SUBMIT, AuthBusy, AuthHeading, AuthShell } from "./AuthShell";
 
 const STRINGS = {
   en: {
-    title: "Confirm your new email",
-    confirming: "Confirming your new email…",
-    success: "Your sign-in email is now {email}.",
+    title: "Confirming your new email",
+    confirming: "One moment…",
+    successTitle: "Your email is changed",
+    success: "You now sign in with {email}.",
     openSettings: "Back to your account",
     signIn: "Sign in",
+    failedTitle: "We couldn't change your email",
     badLink: "This link isn't valid. It may be incomplete or copied wrongly.",
     expired: "This link isn't valid or has expired. Ask for the change again from your account settings.",
     taken: "Another account started using that email in the meantime.",
     failed: "Couldn't confirm the email. Try again in a moment.",
   },
   ar: {
-    title: "تأكيد بريدك الجديد",
-    confirming: "بنأكد إيميلك الجديد…",
-    success: "أصبح بريد الدخول الخاص بك {email}.",
-    openSettings: "العودة إلى حسابك",
-    signIn: "تسجيل الدخول",
-    badLink: "الرابط غير صالح. قد يكون ناقصًا أو نُسخ بشكل خاطئ.",
-    expired: "الرابط غير صالح أو انتهت صلاحيته. اطلب التغيير مرة أخرى من إعدادات حسابك.",
-    taken: "بدأ حساب آخر باستخدام هذا البريد في الأثناء.",
-    failed: "تعذّر تأكيد البريد. حاول مرة أخرى بعد قليل.",
+    title: "بنأكد إيميلك الجديد",
+    confirming: "لحظة واحدة…",
+    successTitle: "إيميلك اتغيّر",
+    success: "دلوقتي بتدخل بـ {email}.",
+    openSettings: "ارجع لحسابك",
+    signIn: "ادخل",
+    failedTitle: "معرفناش نغيّر إيميلك",
+    badLink: "اللينك ده مش شغّال. ممكن يكون ناقص أو اتنسخ غلط.",
+    expired: "اللينك ده مش شغّال أو مدته خلصت. اطلب التغيير تاني من إعدادات حسابك.",
+    taken: "في حساب تاني بدأ يستخدم الإيميل ده في الوقت ده.",
+    failed: "معرفناش نأكد الإيميل. جرّب تاني بعد شوية.",
   },
 } satisfies Messages;
 
@@ -63,39 +68,41 @@ export function EmailChangeConfirmPage() {
   }, [token, user, refreshUser, t]);
 
   const shown = token ? state : "error";
+  // The sentence with the address kept left to right inside it.
+  const [before, after = ""] = t.success.split("{email}");
+
+  const wayOut = (
+    <Button asChild className={`mt-6 ${AUTH_SUBMIT}`}>
+      <Link to={user ? "/settings" : "/login"}>{user ? t.openSettings : t.signIn}</Link>
+    </Button>
+  );
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
-        <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
-          {shown === "confirming" ? (
-            <div className="mt-8 flex items-center justify-center gap-3 text-sm text-ink-soft">
-              <Spinner className="size-5" />
-              <span>{t.confirming}</span>
-            </div>
-          ) : shown === "success" ? (
-            <>
-              <Alert variant="success" className="mt-6">
-                {fmt(t.success, { email })}
-              </Alert>
-              <Link to={user ? "/settings" : "/login"} className="mt-6 inline-block text-sm font-medium text-primary hover:underline">
-                {user ? t.openSettings : t.signIn}
-              </Link>
-            </>
-          ) : (
-            <>
-              <Alert variant="danger" className="mt-6">
-                {token ? message : t.badLink}
-              </Alert>
-              <Link to={user ? "/settings" : "/login"} className="mt-6 inline-block text-sm font-medium text-primary hover:underline">
-                {user ? t.openSettings : t.signIn}
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+    <AuthShell>
+      {shown === "confirming" ? (
+        <>
+          <AuthHeading title={t.title} center />
+          <AuthBusy className="mt-4">{t.confirming}</AuthBusy>
+        </>
+      ) : shown === "success" ? (
+        <>
+          <AuthHeading title={t.successTitle} icon={<IconVerified aria-hidden />} tone="success">
+            {before}
+            <bdi dir="ltr" className="font-medium break-all text-ink">
+              {email}
+            </bdi>
+            {after}
+          </AuthHeading>
+          {wayOut}
+        </>
+      ) : (
+        <>
+          <AuthHeading title={t.failedTitle} icon={<IconLinkOff aria-hidden />} tone="danger">
+            <span role="alert">{token ? message : t.badLink}</span>
+          </AuthHeading>
+          {wayOut}
+        </>
+      )}
+    </AuthShell>
   );
 }

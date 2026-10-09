@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { Alert, Button } from "@store-builder/ui";
 import { ApiError, aiApplyPolicies } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -8,6 +7,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { GoLink } from "./AiStudioPage";
 
 const STRINGS = {
   en: {
@@ -79,9 +79,7 @@ export function ApplyPoliciesButton({ jobId }: { jobId: string }) {
 
   if (done) {
     return (
-      <Link to="/store-settings" className="inline-block text-sm font-medium text-primary hover:underline">
-        {t.open} →
-      </Link>
+      <GoLink to="/store-settings">{t.open}</GoLink>
     );
   }
 
@@ -92,16 +90,16 @@ export function ApplyPoliciesButton({ jobId }: { jobId: string }) {
         <>
           <Alert>{t.replaceNote.replace("{list}", existing.map((k) => t[k]).join(t.and))}</Alert>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" className="min-h-11" disabled={busy} onClick={() => void apply()}>
+            <Button type="button" className="min-h-11 rounded-full px-5" disabled={busy} onClick={() => void apply()}>
               {busy ? t.using : t.confirm}
             </Button>
-            <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={() => setAsking(false)}>
+            <Button type="button" variant="outline" className="min-h-11 rounded-full px-5" disabled={busy} onClick={() => setAsking(false)}>
               {t.cancel}
             </Button>
           </div>
         </>
       ) : (
-        <Button type="button" className="min-h-11" disabled={busy} onClick={() => (existing.length ? setAsking(true) : void apply())}>
+        <Button type="button" className="min-h-11 rounded-full px-5" disabled={busy} onClick={() => (existing.length ? setAsking(true) : void apply())}>
           {busy ? t.using : t.use}
         </Button>
       )}

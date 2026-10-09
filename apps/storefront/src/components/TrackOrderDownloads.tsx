@@ -3,6 +3,7 @@
 import type { TrackDownload, TrackResult } from "@store-builder/api-client";
 import { useStore } from "@/lib/StoreContext";
 import { StoreLink } from "./StoreRoute";
+import { focusRing } from "./ui";
 
 const STRINGS = {
   en: { title: "Your digital products", open: "Open" },
@@ -21,9 +22,13 @@ export function TrackOrderDownloads({ result }: { result: TrackResult }) {
       <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
       <ul className="mt-2 space-y-2">
         {downloads.map((download) => (
-          <li key={download.token} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink">
+          <li key={download.token} className="flex items-center justify-between gap-2 rounded-xl border border-line bg-paper py-0.5 ps-3 pe-1 text-sm text-ink">
             <bdi className="min-w-0 truncate">{download.productName}</bdi>
-            <StoreLink href={`/downloads/${download.token}`} className="shrink-0 font-semibold text-primary hover:underline">
+            {/* A full thumb-sized target, not a word of text. */}
+            <StoreLink
+              href={`/downloads/${download.token}`}
+              className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg px-3 font-semibold text-primary hover:underline ${focusRing}`}
+            >
               {t.open}
             </StoreLink>
           </li>

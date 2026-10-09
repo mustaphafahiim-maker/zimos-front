@@ -12,6 +12,8 @@ import type { StorefrontPageResult } from "@store-builder/api-client";
 import { getStoreBasePath } from "@/lib/storeRoute";
 import { HtmlBlocksProvider } from "@/components/HtmlBlock";
 import { htmlBlocksOf } from "@/lib/htmlBlocks";
+import { decodeSegment, type RedirectQuery } from "@/lib/urlRedirects";
+import { redirectIfMoved } from "@/lib/urlRedirectsServer";
 
 export const revalidate = 60;
 
@@ -72,7 +74,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
  * `/offer/…`, `/track`), so those keep their commerce logic and only paths the
  * app doesn't claim reach the page builder. An unpublished path is a plain 404.
  */
-export default async function CustomStorePage({ params }: { params: Params }) {
+export default async function CustomStorePage({ params, searchParams }: { params: Params; searchParams?: Promise<RedirectQuery> }) {
   const { workspaceId, path } = await params;
   const [store, result, basePath] = await Promise.all([
     getStoreMeta(workspaceId),
@@ -93,7 +95,11 @@ export default async function CustomStorePage({ params }: { params: Params }) {
     redirect(target);
   }
 
-  if (result.kind === "notFound") notFound();
+  if (result.kind === "notFound") {
+    // An address the merchant moved (Store settings → URL redirects, handoff 232) goes on to its new one; anything else is a 404.
+    await redirectIfMoved(workspaceId, `/${(path ?? []).map(decodeSegment).join("/")}`, await searchParams);
+    notFound();
+  }
 
   const { page } = result.data;
   if ((page.tree?.sections?.length ?? 0) === 0) notFound();

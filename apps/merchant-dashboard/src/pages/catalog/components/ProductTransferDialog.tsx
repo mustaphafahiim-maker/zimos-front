@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Download, FileUp, Link2 } from "lucide-react";
+import { IconDownload, IconFileUp, IconLink } from "@/components/icons";
 import { Alert, Button, Input, Label, Spinner } from "@store-builder/ui";
 import {
   catalogExportProducts,
@@ -251,7 +251,7 @@ export function ProductTransferDialog({ onClose, onImported }: { onClose: () => 
               />
               <div className="flex flex-wrap gap-2">
                 <Button type="button" disabled={busy} onClick={() => fileInput.current?.click()}>
-                  {busy ? <Spinner className="size-4" /> : <FileUp className="size-4" aria-hidden />}
+                  {busy ? <Spinner className="size-4" /> : <IconFileUp className="size-4" aria-hidden />}
                   {t.chooseFile}
                 </Button>
                 <Button
@@ -260,7 +260,7 @@ export function ProductTransferDialog({ onClose, onImported }: { onClose: () => 
                   disabled={busy}
                   onClick={() => void download(() => catalogImportTemplate(apiClient, workspaceId), "products-template.csv")}
                 >
-                  <Download className="size-4" aria-hidden />
+                  <IconDownload className="size-4" aria-hidden />
                   {t.template}
                 </Button>
               </div>
@@ -293,7 +293,7 @@ export function ProductTransferDialog({ onClose, onImported }: { onClose: () => 
                 </p>
               </div>
               <Button type="submit" disabled={busy || !link.trim()}>
-                {busy ? <Spinner className="size-4" /> : <Link2 className="size-4" aria-hidden />}
+                {busy ? <Spinner className="size-4" /> : <IconLink className="size-4" aria-hidden />}
                 {t.importLink}
               </Button>
             </form>
@@ -312,7 +312,7 @@ export function ProductTransferDialog({ onClose, onImported }: { onClose: () => 
                   )
                 }
               >
-                {busy ? <Spinner className="size-4" /> : <Download className="size-4" aria-hidden />}
+                {busy ? <Spinner className="size-4" /> : <IconDownload className="size-4" aria-hidden />}
                 {busy ? t.exporting : t.exportButton}
               </Button>
             </div>

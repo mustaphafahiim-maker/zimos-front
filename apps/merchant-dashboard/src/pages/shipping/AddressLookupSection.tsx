@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
-import { AlertTriangle, Info, MapPin, MapPinOff, Search } from "lucide-react";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { IconInfo, IconPlace, IconPlaceOff, IconSearch, IconWarning } from "@/components/icons";
 import { Alert, Button, Input, cn } from "@store-builder/ui";
 import {
   addressLookupSettings,
@@ -104,18 +105,19 @@ function AddressLookupForm({ data, onSaved }: { data: AddressLookupSettings; onS
 
   const key = apiKey.trim();
   const dirty = provider !== data.provider || (provider === "google" && key !== "");
+  useReportDirty(dirty);
 
-  const known: Record<string, { label: string; hint: string; icon: typeof MapPin }> = {
-    builtin: { label: t.builtin, hint: t.builtinHint, icon: MapPin },
-    google: { label: t.google, hint: t.googleHint, icon: Search },
+  const known: Record<string, { label: string; hint: string; icon: typeof IconPlace }> = {
+    builtin: { label: t.builtin, hint: t.builtinHint, icon: IconPlace },
+    google: { label: t.google, hint: t.googleHint, icon: IconSearch },
   };
-  const choices: Array<{ code: Choice; label: string; hint: string; icon: typeof MapPin }> = [
-    { code: "off", label: t.off, hint: t.offHint, icon: MapPinOff },
+  const choices: Array<{ code: Choice; label: string; hint: string; icon: typeof IconPlace }> = [
+    { code: "off", label: t.off, hint: t.offHint, icon: IconPlaceOff },
     ...data.providers.map((p) => ({
       code: p.code,
       label: known[p.code]?.label ?? (locale === "ar" ? p.name.ar : p.name.en),
       hint: known[p.code]?.hint ?? "",
-      icon: known[p.code]?.icon ?? MapPin,
+      icon: known[p.code]?.icon ?? IconPlace,
     })),
   ];
 
@@ -149,7 +151,7 @@ function AddressLookupForm({ data, onSaved }: { data: AddressLookupSettings; onS
     <form onSubmit={save} className="space-y-4">
       {data.lastError && data.provider === "google" && (
         <div role="status" className="flex items-start gap-2.5 rounded-[var(--radius)] border border-accent/40 bg-accent-soft px-3.5 py-3 text-sm text-accent-dark">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <IconWarning className="mt-0.5 size-4 shrink-0" aria-hidden />
           <p>{t.lastError}</p>
         </div>
       )}
@@ -228,7 +230,7 @@ function AddressLookupForm({ data, onSaved }: { data: AddressLookupSettings; onS
             </p>
           </div>
           <p className="flex items-start gap-2 text-xs text-ink-soft">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
+            <IconInfo className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
             {t.billing}
           </p>
         </div>

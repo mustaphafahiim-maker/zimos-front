@@ -24,6 +24,11 @@ export interface Touch {
   ttclid?: string;
   gclid?: string;
   scCid?: string;
+  /** The click ids X, Reddit, Microsoft Ads and Taboola add to their ad links (handoff 254). */
+  twclid?: string;
+  rdt_cid?: string;
+  msclkid?: string;
+  tblci?: string;
   ref?: string;
   referrer?: string;
   landingPage?: string;
@@ -72,6 +77,10 @@ export function touchFrom(input: { search: string; pathname: string; referrer: s
     ttclid: clip(params.get("ttclid")),
     gclid: clip(params.get("gclid")),
     scCid: clip(params.get("ScCid")),
+    twclid: clip(params.get("twclid")),
+    rdt_cid: clip(params.get("rdt_cid")),
+    msclkid: clip(params.get("msclkid")),
+    tblci: clip(params.get("tblci")),
     ref: clip(params.get("ref")),
     referrer,
   };

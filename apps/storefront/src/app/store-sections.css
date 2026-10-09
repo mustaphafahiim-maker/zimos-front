@@ -2509,12 +2509,14 @@ section[data-zt-section]:has(.zs),
   color: #fff;
 }
 @media (max-width: 767px) {
+  /* Above a page's own bar while one is pinned to the bottom (globals.css,
+     "The bottom of the screen on a store page"); 22px and 82px as before when none is. */
   .zs-float {
-    bottom: 22px;
+    bottom: calc(22px + var(--sf-bottom-bar-h, 0px));
     left: 12px;
   }
   .zs-float[data-toolbar] {
-    bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(27px + var(--sf-bars-h, calc(55px + env(safe-area-inset-bottom, 0px))));
   }
 }
 

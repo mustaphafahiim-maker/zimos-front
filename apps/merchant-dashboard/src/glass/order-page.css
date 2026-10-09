@@ -1,0 +1,203 @@
+/* The order page — pages/orders/OrderDetailPage.tsx and its cards.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   Nothing here is blurred: the hero, its strip and the header's round tools all lie in the
+   page flow, with only the still backdrop behind them. What floats on this page — the
+   stage popover, the «…» menu, the dialogs, the toast with Undo — is drawn by the shared
+   components and takes its frost from controls.css, sheet.css and liquid-glass.css.
+
+   Hooks: .zimos-order-hero (the pane), [data-slot="order-fact"] (who / how much / where),
+   .zimos-order-step[data-tone] (the next-step strip), .zimos-order-next (the one button),
+   .zimos-order-tool (previous / next / «…»), [data-slot="order-stage"] (the stage chip). */
+:root:not([data-glass="off"]) {
+  /* How much of the next-step strip is its tint; the rest lets the pane through.
+     One number, so the block at the end of this file can turn the strip solid. */
+  --op-step-alpha: 82%;
+  /* The line of light along the top of the strip, and of the stage chip. */
+  --op-lit: inset 0 1px 0 0 rgb(255 255 255 / 0.62);
+
+  &.dark {
+    --op-step-alpha: 74%;
+    --op-lit: inset 0 1px 0 0 rgb(255 255 255 / 0.08);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The hero: one large pane. The radius of the page pane (1.75rem,
+   * set in the component) and its rim — the bright top line and the
+   * inner glows of --lg-rim — so it reads as a smaller sheet of the
+   * same glass the page lies on. The hairline outside is a shadow, not
+   * a border: the pane keeps the exact size it has without this layer.
+   * The skeleton of the page wears the same class, so the pane that
+   * loads is the pane that arrives.
+   * ---------------------------------------------------------------- */
+  .zimos-order-hero {
+    background-color: var(--lg-fill);
+    background-image: var(--lg-sheen);
+    box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-edge), var(--shadow-card);
+  }
+
+  /* Who / how much / where: three columns from lg up, three rows on a phone
+     (the component draws the lines; here they take the pane's own hairline,
+     as the lines of a table do). The same for the line over the state chips
+     and the one over the strip. */
+  .zimos-order-hero [data-slot="order-fact"],
+  .zimos-order-hero > [role="group"],
+  .zimos-order-hero > .zimos-order-step,
+  .zimos-order-hero[data-slot="skeleton-card"] :where(div) {
+    border-color: var(--lg-hairline);
+  }
+
+  /* Captions, the phone number, the street, the payment method: secondary ink
+     one step deeper than on a white card, so each holds 4.5:1 on the pane over
+     the strongest part of the backdrop (the same shade the shell gives every
+     text-ink-soft inside .glass-app; said here so the hero does not lean on it). */
+  .zimos-order-hero :where(.zimos-order-caption, .text-ink-soft) {
+    color: var(--lg-ink-soft);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The next-step strip at the foot of the hero. A tint of how urgent
+   * the step is — amber for a call or a payment that is waited for, the
+   * store's colour for "book the courier", red for a failed delivery,
+   * green once delivered — over the pane, lit along its top edge. The
+   * sentence on it is full ink and the caption the deeper secondary
+   * ink: both above 4.5:1 on every tint, in both themes.
+   * ---------------------------------------------------------------- */
+  .zimos-order-step {
+    box-shadow: var(--op-lit);
+  }
+  .zimos-order-step[data-tone="attention"] {
+    background-color: color-mix(in srgb, var(--color-accent-soft) var(--op-step-alpha), transparent);
+  }
+  .zimos-order-step[data-tone="primary"] {
+    background-color: color-mix(in srgb, var(--color-primary-soft) var(--op-step-alpha), transparent);
+  }
+  .zimos-order-step[data-tone="danger"] {
+    background-color: color-mix(in srgb, var(--color-danger-soft) var(--op-step-alpha), transparent);
+  }
+  .zimos-order-step[data-tone="success"] {
+    background-color: color-mix(in srgb, var(--color-success-soft) var(--op-step-alpha), transparent);
+  }
+  .zimos-order-step[data-tone="neutral"] {
+    background-color: color-mix(in srgb, var(--color-paper-sunken) var(--op-step-alpha), transparent);
+  }
+  .zimos-order-step :where(.zimos-order-caption, .text-ink-soft) {
+    color: var(--lg-ink-soft);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The one button. It is the shared main action (liquid-glass.css
+   * gives every primary button the brand fill, the gloss and the sheen
+   * that crosses it under the pointer); the fill is said again here so
+   * the button does not depend on that rule when it is a link (the
+   * courier's tracking page). On this page it also gets a deeper glow,
+   * and the sheen crosses it once by itself when the step appears — on
+   * a phone there is no pointer to bring it. In the bar above the dock
+   * it floats over the page, so it keeps the raised shadow as well.
+   * ---------------------------------------------------------------- */
+  .zimos-order-next[data-slot="button"] {
+    background-color: var(--lg-brand-solid);
+    background-image: linear-gradient(112deg, transparent 38%, rgb(255 255 255 / 0.34) 50%, transparent 62%), var(--lg-gloss), var(--lg-brand-grad);
+    background-size: 260% 100%, auto, auto;
+    background-position: 160% 0, 0 0, 0 0;
+    background-repeat: no-repeat;
+    color: var(--lg-on-brand);
+    --tw-inset-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28);
+    --tw-shadow: 0 14px 28px -12px color-mix(in srgb, var(--lg-brand-solid) 76%, transparent);
+  }
+  [data-page-action] > .zimos-order-next[data-slot="button"] {
+    --tw-shadow: var(--shadow-raised), 0 14px 28px -12px color-mix(in srgb, var(--lg-brand-solid) 76%, transparent);
+  }
+  .zimos-order-next[data-slot="button"]:is(:disabled, [aria-disabled="true"]) {
+    --tw-shadow: 0 0 #0000;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .zimos-order-next[data-slot="button"]:not(:disabled, [aria-disabled="true"]) {
+      animation: order-page-sheen 1100ms cubic-bezier(0.2, 0.7, 0.2, 1) 400ms 1 backwards;
+    }
+  }
+  /* Forced colours while this layer is still on: system colours, no gradient. */
+  @media (forced-colors: active) {
+    .zimos-order-next[data-slot="button"] {
+      background-color: Highlight;
+      background-image: none;
+      color: HighlightText;
+      animation: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The header's round tools — previous, next and «…»: small panes in
+   * the page flow, translucent, lit along the rim, a hairline outside.
+   * ---------------------------------------------------------------- */
+  .zimos-order-tool {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  @media (hover: hover) {
+    :is(a, button).zimos-order-tool:hover {
+      background-color: var(--lg-control-lit);
+    }
+  }
+  .zimos-order-tool:is([aria-expanded="true"], [data-popup-open]) {
+    background-color: var(--lg-control-lit);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The stage chip. The pill keeps the tint of its stage (the tokens of
+   * StatusBadge); as a control it is lit along its top edge, and under
+   * the pointer, the keyboard or while its list is open it gains a halo
+   * of its own colour — a shadow, so nothing in the title line moves.
+   * ---------------------------------------------------------------- */
+  .zimos-order-stage [data-slot="order-stage"] {
+    box-shadow: var(--op-lit);
+    transition: box-shadow var(--dur-fade) var(--ease-out);
+  }
+  @media (hover: hover) {
+    .zimos-order-stage:hover:not(:disabled) [data-slot="order-stage"] {
+      box-shadow: var(--op-lit), 0 0 0 3px color-mix(in srgb, currentColor 16%, transparent);
+    }
+  }
+  .zimos-order-stage:is(:focus-visible, [aria-expanded="true"], [data-popup-open]) [data-slot="order-stage"] {
+    box-shadow: var(--op-lit), 0 0 0 3px color-mix(in srgb, currentColor 16%, transparent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .zimos-order-stage [data-slot="order-stage"] {
+      transition: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Folded sections. The one line under a section's title says what is
+   * inside: secondary ink at the deeper shade, 4.5:1 on the card pane.
+   * A line the page marks as a warning (risk flags on the customer)
+   * keeps the deeper red.
+   * ---------------------------------------------------------------- */
+  .zimos-order-page .zimos-accordion [aria-expanded] > span > span + span {
+    color: var(--lg-ink-soft);
+  }
+  .zimos-order-page .zimos-accordion [aria-expanded] > span > span + span .text-danger {
+    color: var(--lg-text-danger);
+  }
+}
+
+/* The sheen of the next-step button: the white band of the main action crosses it once. */
+@keyframes order-page-sheen {
+  from {
+    background-position: 160% 0, 0 0, 0 0;
+  }
+  to {
+    background-position: -60% 0, 0 0, 0 0;
+  }
+}
+
+/* The same preferences the off switch follows (liquid-glass.css turns its fills solid
+   under them): the strip's tint goes solid with them. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root:not([data-glass="off"]),
+  :root:not([data-glass="off"]).dark {
+    --op-step-alpha: 100%;
+  }
+}

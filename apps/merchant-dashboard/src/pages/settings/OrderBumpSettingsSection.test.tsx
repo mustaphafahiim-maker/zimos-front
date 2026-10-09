@@ -35,7 +35,7 @@ describe("OrderBumpSettingsSection", () => {
     const mug = await screen.findByRole("option", { name: /Engraved mug.*asks the customer for details/ });
     expect(mug).toBeDisabled();
 
-    await user.click(screen.getByRole("checkbox", { name: /Offer an add-on at checkout/ }));
+    await user.click(screen.getByRole("switch", { name: /Offer an add-on at checkout/ }));
     await user.selectOptions(screen.getByLabelText("The offer"), "of_1");
     await user.type(screen.getByLabelText("Heading (optional)"), "Complete the look");
     await user.click(screen.getByRole("button", { name: "Save add-on offer" }));
@@ -54,7 +54,7 @@ describe("OrderBumpSettingsSection", () => {
     const { user } = renderWithProviders(<OrderBumpSettingsSection />);
     await screen.findByRole("option", { name: /Two pairs/ });
 
-    await user.click(screen.getByRole("checkbox", { name: /Offer an add-on at checkout/ }));
+    await user.click(screen.getByRole("switch", { name: /Offer an add-on at checkout/ }));
     await user.click(screen.getByRole("button", { name: "Save add-on offer" }));
     expect(await screen.findByText("Choose the offer to show.")).toBeInTheDocument();
     expect(api.updateWorkspace).not.toHaveBeenCalled();

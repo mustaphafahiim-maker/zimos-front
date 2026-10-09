@@ -24,7 +24,9 @@ export type AutomationStepType =
   | "webhook"
   | "add_tag"
   | "set_status"
-  | "notify_team";
+  | "notify_team"
+  // A message to one of the store's Telegram / Slack / Discord channels (handoff 378).
+  | "notify_channel";
 
 export type AutomationWaitUnit = "minutes" | "hours" | "days";
 
@@ -36,7 +38,8 @@ export type AutomationStep =
   | { type: "webhook"; url: string }
   | { type: "add_tag"; tag: string }
   | { type: "set_status"; status: "confirmed" | "cancelled" }
-  | { type: "notify_team"; message: string };
+  | { type: "notify_team"; message: string }
+  | { type: "notify_channel"; teamChannelId: string; message: string };
 
 export interface AutomationFlowConditions {
   paymentMethod?: PaymentMethod | null;

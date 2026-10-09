@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Filter, Pencil, Plus, Trash2 } from "lucide-react";
-import { Alert, Button, Card } from "@store-builder/ui";
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { IconDelete, IconEdit, IconFilter, IconPeople, IconPlus } from "@/components/icons";
+import { Alert, Button, cn } from "@store-builder/ui";
 import {
   segmentsCreate,
   segmentsDelete,
@@ -19,14 +19,16 @@ import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
 import { useT, fmt, useCommon, type Messages } from "@/i18n/LocaleContext";
+import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
-import { Field, TextField } from "@/components/Field";
-import { Modal } from "@/components/Modal";
-import { Select } from "@/components/Select";
+import { TextField } from "@/components/Field";
+import { PageActionBar } from "@/components/PageHeader";
+import { Segmented } from "@/components/Segmented";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { CONTACT_STRINGS, contactErrorCode, parseTagInput } from "./contactStrings";
+import { FormSheet } from "./list/FormSheet";
 
 const STRINGS = {
   en: {
@@ -87,9 +89,14 @@ const STRINGS = {
     sum_maxRate: "delivery rate up to {n}%",
     sum_consentYes: "accepts marketing",
     sum_consentNo: "does not accept marketing",
+    editNamed: "Edit “{name}”",
+    deleteNamed: "Delete “{name}”",
+    anyShort: "Everyone",
+    otherProducts: "+{n} other products chosen",
+    productsPickHint: "Tap a product to add it or take it off. The first 100 products are listed.",
   },
   ar: {
-    intro: "الشريحة فلتر محفوظ. تُحسب من جديد في كل مرة تستخدمها، فتعكس دائمًا طلبات اليوم.",
+    intro: "الشريحة فلتر محفوظ. تُحسب من جديد في كل مرة تستخدمها، فتعكس دائمًا أوردرات اليوم.",
     add: "شريحة جديدة",
     emptyTitle: "مفيش شرائح لسه",
     emptyDescription: "قسّم جهات الاتصال حسب ما اشتروه أو ما دفعوه أو الوسوم التي يحملونها، ثم راسل الأشخاص المناسبين.",
@@ -113,14 +120,14 @@ const STRINGS = {
     includeTags: "يحمل كل هذه الوسوم",
     excludeTags: "لا يحمل أيًا من هذه الوسوم",
     tagsHint: "افصل بفاصلة.",
-    minOrders: "عدد الطلبات على الأقل",
-    maxOrders: "عدد الطلبات على الأكثر",
+    minOrders: "عدد الأوردرات على الأقل",
+    maxOrders: "عدد الأوردرات على الأكثر",
     minSpent: "دفع على الأقل ({currency})",
     maxSpent: "دفع على الأكثر ({currency})",
-    olderThan: "آخر طلب منذ أكثر من … يوم",
-    within: "آخر طلب خلال … يوم",
+    olderThan: "آخر أوردر منذ أكثر من … يوم",
+    within: "آخر أوردر خلال … يوم",
     governorates: "المحافظات",
-    governoratesHint: "كما هي مكتوبة في الطلبات، مفصولة بفاصلة.",
+    governoratesHint: "كما هي مكتوبة في الأوردرات، مفصولة بفاصلة.",
     products: "اشترى أيًا من هذه المنتجات",
     productsHint: "اضغط Ctrl (أو ⌘ على ماك) لاختيار أكثر من منتج.",
     minRate: "نسبة الاستلام على الأقل (%)",
@@ -134,8 +141,8 @@ const STRINGS = {
     sum_type: "{type} فقط",
     sum_include: "يحمل وسم {tags}",
     sum_exclude: "لا يحمل وسم {tags}",
-    sum_minOrders: "{n} طلبات فأكثر",
-    sum_maxOrders: "حتى {n} طلبات",
+    sum_minOrders: "{n} أوردرات فأكثر",
+    sum_maxOrders: "حتى {n} أوردرات",
     sum_minSpent: "دفع {amount} فأكثر",
     sum_maxSpent: "دفع حتى {amount}",
     sum_older: "لم يطلب منذ {n} يوم",
@@ -146,6 +153,11 @@ const STRINGS = {
     sum_maxRate: "نسبة استلام حتى {n}%",
     sum_consentYes: "موافق على التسويق",
     sum_consentNo: "غير موافق على التسويق",
+    editNamed: "عدّل «{name}»",
+    deleteNamed: "امسح «{name}»",
+    anyShort: "الكل",
+    otherProducts: "+{n} منتجات تانية مختارة",
+    productsPickHint: "دوس على المنتج عشان تضيفه أو تشيله. بيظهر أول ١٠٠ منتج.",
   },
 } satisfies Messages;
 
@@ -172,7 +184,18 @@ function summarize(rules: SegmentRules, t: Record<keyof T, string>, typeLabel: (
   return out;
 }
 
-/** Contacts → Segments: saved filters, each with its live count. */
+/** The round icon button of a segment card: 44px under a finger, 40px with a mouse. */
+const ICON_BUTTON =
+  "flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-[scale,background-color,color] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-ink/8 hover:text-ink focus-visible:outline-2 focus-visible:outline-primary active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:size-11";
+
+/**
+ * Contacts → Segments: saved filters, each a card with its live count, what it
+ * filters by as small chips, and its actions — «عرض جهات الاتصال» (the list
+ * under «الكل», filtered to it), edit and delete (also in the card's menu:
+ * right-click or a long press). «شريحة جديدة» is the tab's one main action: in
+ * the row from md up, in the bar above the dock on a phone. The editor is a
+ * sheet over the cards.
+ */
 export function SegmentsTab({ onView }: { onView: (segmentId: string) => void }) {
   const t = useT(STRINGS);
   const c = useT(CONTACT_STRINGS);
@@ -199,70 +222,108 @@ export function SegmentsTab({ onView }: { onView: (segmentId: string) => void })
     void list.refresh({ silent: true });
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-ink-soft">{t.intro}</p>
-        <Button className="min-h-10" onClick={() => setEditing("new")}>
-          <Plus className="size-4" aria-hidden />
-          {t.add}
-        </Button>
-      </div>
+  const addButton = (
+    <Button className="min-h-11 rounded-full px-5" onClick={() => setEditing("new")}>
+      <IconPlus className="size-4" weight="bold" aria-hidden />
+      {t.add}
+    </Button>
+  );
 
-      <DataState loading={list.loading} error={list.error} onRetry={() => void list.refresh()}>
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-sm leading-6 text-ink-soft">{t.intro}</p>
+        {/* Only one of the two is displayed at any width. */}
+        <div className="hidden md:block">{addButton}</div>
+      </div>
+      <PageActionBar>{addButton}</PageActionBar>
+
+      <DataState loading={list.loading} error={list.error} onRetry={() => void list.refresh()} skeleton="tiles">
         {segments.length === 0 ? (
           <EmptyState
-            icon={<Filter className="size-6" aria-hidden />}
+            icon={<IconFilter aria-hidden />}
             title={t.emptyTitle}
             description={t.emptyDescription}
-            action={<Button onClick={() => setEditing("new")}>{t.add}</Button>}
+            action={
+              <Button className="min-h-11 rounded-full px-5" onClick={() => setEditing("new")}>
+                <IconPlus className="size-4" weight="bold" aria-hidden />
+                {t.add}
+              </Button>
+            }
           />
         ) : (
-          <div className="grid gap-3 md:grid-cols-2">
+          <ul className="grid gap-3 md:grid-cols-2">
             {segments.map((segment) => {
               const phrases = summarize(segment.rules, t, (type) => c[`type_${type}`], currency);
+              const menu: ContextMenuItem[] = [
+                { id: "view", label: t.view, icon: IconPeople, onSelect: () => onView(segment.id) },
+                { id: "edit", label: common.edit, icon: IconEdit, onSelect: () => setEditing(segment) },
+                { id: "delete", label: common.delete, icon: IconDelete, destructive: true, separatorBefore: true, onSelect: () => setRemoving(segment) },
+              ];
               return (
-                <Card key={segment.id} className="gap-0 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 dir="auto" className="truncate text-base font-semibold text-ink">
-                        {segment.name}
-                      </h3>
-                      {segment.description && (
-                        <p dir="auto" className="mt-0.5 text-sm text-ink-soft">
-                          {segment.description}
+                <ContextMenu key={segment.id} items={menu} label={segment.name}>
+                  <li className="zimos-crm-card flex flex-col rounded-[var(--radius-card)] bg-paper-raised p-4 shadow-[var(--shadow-card)] ring-1 ring-line">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 dir="auto" className="truncate text-base leading-6 font-semibold text-ink">
+                          {segment.name}
+                        </h3>
+                        {segment.description && (
+                          <p dir="auto" className="mt-0.5 text-sm leading-6 text-ink-soft">
+                            {segment.description}
+                          </p>
+                        )}
+                      </div>
+                      {/* The live count: how many contacts match right now. */}
+                      <div className="shrink-0 text-end">
+                        <p className="zimos-segment-count inline-flex h-9 min-w-9 items-center justify-center rounded-full bg-primary-soft px-3 text-lg leading-none font-semibold text-primary-dark tabular-nums dark:text-primary">
+                          {fmt("{n}", { n: segment.contactsCount ?? 0 })}
                         </p>
-                      )}
+                        <p className="mt-1 text-xs leading-4 text-ink-soft">{fmt(t.consenting, { count: segment.consentingCount ?? 0 })}</p>
+                      </div>
                     </div>
-                    <div className="text-end">
-                      <p className="tabular-nums text-2xl font-semibold text-ink">{segment.contactsCount ?? 0}</p>
-                      <p className="text-xs text-ink-soft">{fmt(t.consenting, { count: segment.consentingCount ?? 0 })}</p>
+                    <div className="mt-3 flex flex-1 flex-wrap content-start gap-1.5">
+                      {(phrases.length ? phrases : [t.everyone]).map((phrase) => (
+                        <span
+                          key={phrase}
+                          dir="auto"
+                          className="zimos-contact-tag inline-flex min-h-6 items-center rounded-full bg-paper px-2.5 py-0.5 text-xs leading-5 text-ink ring-1 ring-line"
+                        >
+                          {phrase}
+                        </span>
+                      ))}
                     </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {(phrases.length ? phrases : [t.everyone]).map((phrase) => (
-                      <span key={phrase} dir="auto" className="rounded-full border border-line bg-paper px-2 py-0.5 text-xs text-ink">
-                        {phrase}
+                    <div className="mt-4 flex items-center gap-2">
+                      <Button variant="outline" className="min-h-11 flex-1 rounded-full px-4 sm:flex-none" onClick={() => onView(segment.id)}>
+                        <IconPeople className="size-4" aria-hidden />
+                        {t.view}
+                      </Button>
+                      <span className="ms-auto flex items-center gap-2">
+                        <button
+                          type="button"
+                          aria-label={fmt(t.editNamed, { name: segment.name })}
+                          title={common.edit}
+                          onClick={() => setEditing(segment)}
+                          className={ICON_BUTTON}
+                        >
+                          <IconEdit className="size-5" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={fmt(t.deleteNamed, { name: segment.name })}
+                          title={common.delete}
+                          onClick={() => setRemoving(segment)}
+                          className={cn(ICON_BUTTON, "hover:bg-danger-soft hover:text-danger")}
+                        >
+                          <IconDelete className="size-5" aria-hidden />
+                        </button>
                       </span>
-                    ))}
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" className="min-h-9" onClick={() => onView(segment.id)}>
-                      {t.view}
-                    </Button>
-                    <Button size="sm" variant="outline" className="min-h-9" onClick={() => setEditing(segment)}>
-                      <Pencil className="size-4" aria-hidden />
-                      {common.edit}
-                    </Button>
-                    <Button size="sm" variant="outline" className="min-h-9" onClick={() => setRemoving(segment)}>
-                      <Trash2 className="size-4" aria-hidden />
-                      {common.delete}
-                    </Button>
-                  </div>
-                </Card>
+                    </div>
+                  </li>
+                </ContextMenu>
               );
             })}
-          </div>
+          </ul>
         )}
       </DataState>
 
@@ -289,6 +350,17 @@ export function SegmentsTab({ onView }: { onView: (segmentId: string) => void })
     </div>
   );
 }
+
+type TypeChoice = "any" | "lead" | "customer";
+type ConsentChoice = "any" | "yes" | "no";
+
+// The same pill as a chip of the row over a list (components/list/ChipRow.tsx): glass/list.css styles `.zimos-chip` once.
+const PICK =
+  "zimos-chip inline-flex h-10 max-w-full cursor-pointer items-center rounded-full px-3.5 text-sm font-medium select-none pointer-coarse:h-11 " +
+  "transition-[scale,background-color,color] duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] motion-reduce:active:scale-100";
+const PICK_ON = "bg-primary text-primary-foreground";
+const PICK_OFF = "bg-paper-raised text-ink ring-1 ring-line hover:bg-paper-sunken";
 
 interface RuleForm {
   type: "" | "lead" | "customer";
@@ -367,6 +439,11 @@ function toRules(form: RuleForm): SegmentRules {
   return Object.fromEntries(Object.entries(rules).filter(([, value]) => value !== undefined)) as SegmentRules;
 }
 
+/**
+ * The segment editor, in a sheet: the name and a note, then the rules — every
+ * field the modal had, saved by the same calls with the same payload. The line
+ * that says how many contacts match now stays in sight while the rules change.
+ */
 function SegmentEditor({
   segment,
   currency,
@@ -394,6 +471,9 @@ function SegmentEditor({
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<SegmentPreview | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const formId = useId();
+  // Something was typed or chosen: a stray tap outside then asks before the sheet closes.
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -402,6 +482,7 @@ function SegmentEditor({
     setForm(toForm(existing?.rules ?? {}));
     setError(null);
     setPreview(null);
+    setDirty(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, existing?.id]);
 
@@ -457,43 +538,104 @@ function SegmentEditor({
     }
   }
 
-  const set = <K extends keyof RuleForm>(key: K, value: RuleForm[K]) => setForm((prev) => ({ ...prev, [key]: value }));
+  const set = <K extends keyof RuleForm>(key: K, value: RuleForm[K]) => {
+    setDirty(true);
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
   const number = (key: "minOrders" | "maxOrders" | "olderThan" | "within" | "minRate" | "maxRate", label: string, max?: number) => (
     <TextField label={label} type="number" inputMode="numeric" min={0} max={max} value={form[key]} onChange={(e) => set(key, e.target.value)} />
   );
+  const toggleProduct = (id: string) =>
+    set("productIds", form.productIds.includes(id) ? form.productIds.filter((other) => other !== id) : [...form.productIds, id]);
+  // A product chosen earlier that is not among the first hundred still counts, and can still be let go of.
+  const unknownProducts = form.productIds.filter((id) => !products.some((product) => product.id === id));
 
   return (
-    <Modal open={open} onClose={onClose} title={existing ? t.editTitle : t.createTitle} className="max-w-2xl">
-      <form onSubmit={submit} className="space-y-4">
+    <FormSheet
+      open={open}
+      onClose={onClose}
+      title={existing ? t.editTitle : t.createTitle}
+      size="lg"
+      dirty={dirty}
+      busy={busy}
+      footer={
+        <>
+          <Button type="button" variant="outline" className="rounded-full px-5" disabled={busy} onClick={onClose}>
+            {common.cancel}
+          </Button>
+          <Button type="submit" form={formId} className="rounded-full px-5" disabled={busy || !name.trim()}>
+            {busy ? common.saving : common.save}
+          </Button>
+        </>
+      }
+    >
+      <form id={formId} onSubmit={submit} className="space-y-4">
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField label={t.name} required value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
-          <TextField label={t.description} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={300} />
+          <TextField
+            label={t.name}
+            required
+            value={name}
+            onChange={(e) => {
+              setDirty(true);
+              setName(e.target.value);
+            }}
+            maxLength={120}
+          />
+          <TextField
+            label={t.description}
+            value={description}
+            onChange={(e) => {
+              setDirty(true);
+              setDescription(e.target.value);
+            }}
+            maxLength={300}
+          />
         </div>
 
+        {/* How many match right now: it stays in sight while the rules below change. */}
+        <p
+          role="status"
+          className="zimos-segment-count sticky top-0 z-10 rounded-[0.875rem] bg-primary-soft px-3.5 py-2.5 text-sm leading-5 font-medium text-primary-dark tabular-nums dark:text-primary"
+        >
+          {preview ? fmt(t.matches, { total: preview.total, consenting: preview.consenting }) : t.counting}
+        </p>
+
         <div>
-          <h3 className="text-sm font-semibold text-ink">{t.rules}</h3>
-          <p className="mt-0.5 text-xs text-ink-soft">{t.rulesHint}</p>
+          <h3 className="text-sm leading-5 font-semibold text-ink">{t.rules}</h3>
+          <p className="mt-0.5 text-xs leading-5 text-ink-soft">{t.rulesHint}</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t.type}>
-            {(props) => (
-              <Select {...props} value={form.type} onChange={(e) => set("type", e.target.value as RuleForm["type"])}>
-                <option value="">{t.anyType}</option>
-                <option value="customer">{c.type_customer}</option>
-                <option value="lead">{c.type_lead}</option>
-              </Select>
-            )}
-          </Field>
-          <Field label={t.consent}>
-            {(props) => (
-              <Select {...props} value={form.consent} onChange={(e) => set("consent", e.target.value as RuleForm["consent"])}>
-                <option value="">{t.consentAny}</option>
-                <option value="yes">{t.consentYes}</option>
-                <option value="no">{t.consentNo}</option>
-              </Select>
-            )}
-          </Field>
+          <div className="space-y-1.5">
+            <p className="text-sm leading-5 font-medium text-ink">{t.type}</p>
+            <Segmented<TypeChoice>
+              label={t.type}
+              size="sm"
+              className="w-full"
+              value={form.type || "any"}
+              onChange={(next) => set("type", next === "any" ? "" : next)}
+              options={[
+                { value: "any", label: t.anyShort },
+                { value: "customer", label: c.type_customer },
+                { value: "lead", label: c.type_lead },
+              ]}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-sm leading-5 font-medium text-ink">{t.consent}</p>
+            <Segmented<ConsentChoice>
+              label={t.consent}
+              size="sm"
+              className="w-full"
+              value={form.consent || "any"}
+              onChange={(next) => set("consent", next === "any" ? "" : next)}
+              options={[
+                { value: "any", label: t.consentAny },
+                { value: "yes", label: t.consentYes },
+                { value: "no", label: t.consentNo },
+              ]}
+            />
+          </div>
           <TextField label={t.includeTags} hint={t.tagsHint} value={form.includeTags} onChange={(e) => set("includeTags", e.target.value)} />
           <TextField label={t.excludeTags} hint={t.tagsHint} value={form.excludeTags} onChange={(e) => set("excludeTags", e.target.value)} />
           {number("minOrders", t.minOrders)}
@@ -511,41 +653,40 @@ function SegmentEditor({
             value={form.governorates}
             onChange={(e) => set("governorates", e.target.value)}
           />
-          {products.length > 0 && (
-            <Field className="sm:col-span-2" label={t.products} hint={t.productsHint}>
-              {(props) => (
-                <select
-                  {...props}
-                  multiple
-                  size={Math.min(6, products.length)}
-                  value={form.productIds}
-                  onChange={(e) => set("productIds", Array.from(e.target.selectedOptions, (option) => option.value))}
-                  className="w-full rounded-[0.5rem] border border-line bg-paper-raised px-2 py-1 text-sm text-ink"
-                >
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Field>
+          {(products.length > 0 || unknownProducts.length > 0) && (
+            <div className="space-y-1.5 sm:col-span-2">
+              <p className="text-sm leading-5 font-medium text-ink">{t.products}</p>
+              {/* Pills to tap, instead of a list that needs Ctrl held down: the same ids are sent. */}
+              <div role="group" aria-label={t.products} className="-m-1 flex max-h-48 flex-wrap gap-2 overflow-y-auto overscroll-contain p-1">
+                {products.map((product) => {
+                  const on = form.productIds.includes(product.id);
+                  return (
+                    <button key={product.id} type="button" aria-pressed={on} onClick={() => toggleProduct(product.id)} className={cn(PICK, on ? PICK_ON : PICK_OFF)}>
+                      <bdi className="min-w-0 truncate">{product.name}</bdi>
+                    </button>
+                  );
+                })}
+                {unknownProducts.length > 0 && (
+                  <button
+                    type="button"
+                    aria-pressed
+                    onClick={() =>
+                      set(
+                        "productIds",
+                        form.productIds.filter((id) => !unknownProducts.includes(id))
+                      )
+                    }
+                    className={cn(PICK, PICK_ON)}
+                  >
+                    {fmt(t.otherProducts, { n: unknownProducts.length })}
+                  </button>
+                )}
+              </div>
+              <p className="text-xs leading-5 text-ink-soft">{t.productsPickHint}</p>
+            </div>
           )}
         </div>
-
-        <p role="status" className="rounded-[0.5rem] bg-primary-soft px-3 py-2 text-sm font-medium text-primary-dark dark:text-primary">
-          {preview ? fmt(t.matches, { total: preview.total, consenting: preview.consenting }) : t.counting}
-        </p>
-
-        <div className="flex justify-end gap-3 pt-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy || !name.trim()}>
-            {busy ? common.saving : common.save}
-          </Button>
-        </div>
       </form>
-    </Modal>
+    </FormSheet>
   );
 }

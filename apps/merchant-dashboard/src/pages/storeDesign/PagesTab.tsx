@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { FileText } from "lucide-react";
-import { Alert, Badge, Button } from "@store-builder/ui";
+import { IconCheck, IconDocument, IconEdit, IconLock } from "@/components/icons";
+import { Badge, Button, cn } from "@store-builder/ui";
 import {
   storeDesignListPages,
   storeDesignUpdatePageFlags,
@@ -11,12 +11,12 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
-import { DataTable, type Column } from "@/components/DataTable";
 import { EmptyState } from "@/components/EmptyState";
-import { Section } from "@/components/Section";
+import { SettingsGroup } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+import { GroupBlock, SettingsSkeleton } from "./sections/parts";
 
 const STRINGS = {
   en: {
@@ -36,6 +36,9 @@ const STRINGS = {
     emptyBody: "Create your website first; its pages will be listed here.",
     openWebsite: "Open Website",
     saved: "Page updated.",
+    homeLocked: "Always linked and always open",
+    flagFor: "{flag} — {page}",
+    emptyPages: "This website has no pages yet.",
   },
   ar: {
     title: "الصفحات",
@@ -53,7 +56,10 @@ const STRINGS = {
     emptyTitle: "مفيش موقع لسه",
     emptyBody: "أنشئ موقعك أولًا وستظهر صفحاته هنا.",
     openWebsite: "فتح الموقع",
-    saved: "تم تحديث الصفحة.",
+    saved: "اتحدّثت الصفحة.",
+    homeLocked: "دايمًا ظاهرة ومفتوحة",
+    flagFor: "{flag} — {page}",
+    emptyPages: "الموقع ده لسه مفيهوش صفحات.",
   },
 } satisfies Messages;
 
@@ -74,7 +80,8 @@ export function PagesTab() {
     return { website, pages: await storeDesignListPages(apiClient, workspaceId, website.id) };
   }, [workspaceId]);
 
-  async function toggle(page: StoreDesignPageRow, flag: Flag, value: boolean) {
+  /** Saves at once, as it always did; `undoable` offers to take it back (the same call with the other value). */
+  async function toggle(page: StoreDesignPageRow, flag: Flag, value: boolean, undoable = true) {
     setBusy(`${page.id}:${flag}`);
     // Shown at once; put back if the server refuses.
     const patch = (v: boolean) =>
@@ -86,7 +93,8 @@ export function PagesTab() {
     patch(value);
     try {
       await storeDesignUpdatePageFlags(apiClient, workspaceId, page.websiteId, page.id, { [flag]: value });
-      toast.success(t.saved);
+      if (undoable) toast.undo(t.saved, () => toggle(page, flag, !value, false));
+      else toast.success(t.saved);
     } catch (err) {
       patch(!value);
       toast.error(errorMessage(err));
@@ -95,77 +103,98 @@ export function PagesTab() {
     }
   }
 
-  const check = (page: StoreDesignPageRow, flag: Flag, label: string, disabled = false) => (
-    <input
-      type="checkbox"
-      aria-label={`${label} — ${page.title}`}
-      className="size-5 cursor-pointer accent-primary disabled:cursor-default"
-      checked={page[flag]}
-      disabled={disabled || busy === `${page.id}:${flag}`}
-      onChange={(e) => void toggle(page, flag, e.target.checked)}
-    />
-  );
-
-  const columns: Column<StoreDesignPageRow>[] = [
-    {
-      key: "title",
-      header: t.page,
-      cell: (p) => (
-        <div className="min-w-0">
-          <p className="truncate font-medium text-ink">{p.path === "/" ? t.home : p.title}</p>
-          {!p.isLive && (
-            <Badge variant="secondary" title={t.draftHint}>
-              {t.draft}
-            </Badge>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "path",
-      header: t.link,
-      cell: (p) => (
-        <bdi dir="ltr" className="text-sm text-ink-soft">
-          {p.path}
-        </bdi>
-      ),
-    },
-    // The home page is always linked and always served.
-    { key: "header", header: t.header, cell: (p) => check(p, "showInHeader", t.header, p.path === "/") },
-    { key: "footer", header: t.footer, cell: (p) => check(p, "showInFooter", t.footer, p.path === "/") },
-    { key: "active", header: t.active, cell: (p) => check(p, "isActive", t.active, p.path === "/") },
-    {
-      key: "edit",
-      header: "",
-      align: "end",
-      cell: (p) => (
-        <Button asChild variant="outline" size="sm">
-          <Link to={`/website/${p.websiteId}/edit`}>{t.edit}</Link>
-        </Button>
-      ),
-    },
+  const FLAGS: ReadonlyArray<{ flag: Flag; label: string }> = [
+    { flag: "showInHeader", label: t.header },
+    { flag: "showInFooter", label: t.footer },
+    { flag: "isActive", label: t.active },
   ];
 
+  const pages = state.data?.pages ?? [];
+
   return (
-    <DataState loading={state.loading} error={state.error} onRetry={() => void state.refresh()}>
+    <DataState loading={state.loading} error={state.error} onRetry={() => void state.refresh()} skeleton={<SettingsSkeleton groups={1} rows={5} />}>
       {state.data && !state.data.website ? (
         <EmptyState
-          icon={<FileText />}
+          icon={<IconDocument />}
           title={t.emptyTitle}
           description={t.emptyBody}
           action={
-            <Button asChild>
+            <Button asChild className="min-h-11 rounded-full px-5">
               <Link to="/website">{t.openWebsite}</Link>
             </Button>
           }
         />
       ) : (
-        <div className="space-y-5">
-          <Alert>{t.tip}</Alert>
-          <Section title={t.title} description={t.description} flush>
-            <DataTable columns={columns} rows={state.data?.pages ?? []} rowKey={(p) => p.id} minWidth="40rem" />
-          </Section>
-        </div>
+        <SettingsGroup description={t.description} footer={t.tip}>
+          {pages.length === 0 && (
+            <GroupBlock>
+              <p className="py-3 text-center text-sm text-ink-soft">{t.emptyPages}</p>
+            </GroupBlock>
+          )}
+          {pages.map((page) => {
+            // The home page is always linked and always served.
+            const home = page.path === "/";
+            const name = home ? t.home : page.title;
+            return (
+              <GroupBlock key={page.id}>
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-5 font-medium text-ink">
+                      <span className="truncate" dir="auto">
+                        {name}
+                      </span>
+                      {!page.isLive && (
+                        <Badge variant="secondary" title={t.draftHint}>
+                          {t.draft}
+                        </Badge>
+                      )}
+                    </p>
+                    <bdi dir="ltr" className="mt-0.5 block truncate text-[13px] leading-5 text-ink-soft">
+                      {page.path}
+                    </bdi>
+                  </div>
+                  <Button asChild variant="outline" className="min-h-11 shrink-0 rounded-full px-4 sm:min-h-9">
+                    <Link to={`/website/${page.websiteId}/edit`}>
+                      <IconEdit className="size-4" aria-hidden />
+                      {t.edit}
+                    </Link>
+                  </Button>
+                </div>
+                {home ? (
+                  <p className="mt-2 flex items-center gap-1.5 text-[13px] leading-5 text-ink-soft">
+                    <IconLock className="size-3.5 shrink-0" aria-hidden />
+                    {t.homeLocked}
+                  </p>
+                ) : (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {FLAGS.map(({ flag, label }) => {
+                      const on = page[flag];
+                      return (
+                        <button
+                          key={flag}
+                          type="button"
+                          role="switch"
+                          aria-checked={on}
+                          aria-label={fmt(t.flagFor, { flag: label, page: name })}
+                          disabled={busy === `${page.id}:${flag}`}
+                          onClick={() => void toggle(page, flag, !on)}
+                          className={cn(
+                            "inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full px-3.5 text-sm font-medium ring-1 transition-[background-color,color,scale] duration-[var(--dur-fade)] ease-[var(--ease-out)] select-none",
+                            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] disabled:cursor-progress disabled:opacity-60 motion-reduce:transition-none motion-reduce:active:scale-100",
+                            on ? "bg-primary-soft text-primary-dark ring-primary/30 dark:text-primary" : "bg-transparent text-ink-soft ring-line hover:bg-ink/4 hover:text-ink"
+                          )}
+                        >
+                          {on && <IconCheck className="size-4 shrink-0" weight="bold" aria-hidden />}
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </GroupBlock>
+            );
+          })}
+        </SettingsGroup>
       )}
     </DataState>
   );

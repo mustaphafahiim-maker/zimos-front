@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Check, PackageOpen, Star } from "lucide-react";
+import { IconCheck, IconPackageOpen, IconStar } from "@/components/icons";
 import { Alert, buttonVariants, cn, Spinner } from "@store-builder/ui";
 import {
   importedPagePrice,
@@ -84,7 +84,7 @@ export function ImportSourceBadges({ detected, id }: { detected: ProductImportSo
                 on ? "bg-primary-soft text-primary-dark ring-1 ring-primary/40" : "bg-paper-sunken text-ink-soft"
               )}
             >
-              {on && <Check className="size-3.5" aria-hidden />}
+              {on && <IconCheck className="size-3.5" aria-hidden />}
               {t[`source_${source}`]}
             </li>
           );
@@ -181,7 +181,7 @@ export function LinkImportResult({
           <div className="flex flex-wrap gap-2">
             {product && (
               <Link to={`/catalog/${product.id}`} onClick={onLeave} className={cn(buttonVariants(), "min-h-11")}>
-                <PackageOpen className="size-4" aria-hidden />
+                <IconPackageOpen className="size-4" aria-hidden />
                 {t.openProduct}
               </Link>
             )}
@@ -191,7 +191,7 @@ export function LinkImportResult({
                 onClick={onLeave}
                 className={cn(buttonVariants({ variant: "outline" }), "min-h-11")}
               >
-                <Star className="size-4" aria-hidden />
+                <IconStar className="size-4" aria-hidden />
                 {pluralOf(t, "reviewsWaiting", waiting)}
               </Link>
             )}

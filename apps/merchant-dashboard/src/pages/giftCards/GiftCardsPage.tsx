@@ -1,48 +1,55 @@
-import { useEffect, useId, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Plus, Search, Ticket, X } from "lucide-react";
-import { Button, Input } from "@store-builder/ui";
+import { useEffect, useState } from "react";
+import { Alert, Button } from "@store-builder/ui";
 import { giftCardsList, type GiftCard, type GiftCardIssued, type GiftCardState } from "@store-builder/api-client";
+import { IconLink, IconPlus, IconSearch, IconTicket } from "@/components/icons";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useCursorList } from "@/lib/useCursorList";
-import { formatDate, formatMoney } from "@/lib/format";
+import { useErrorMessage } from "@/lib/errorMessages";
 import { storeUrl } from "@/lib/storeAddress";
 import { isPermissionError } from "@/lib/errors";
-import { fmt, useT } from "@/i18n/LocaleContext";
+import { useViewNavigate } from "@/lib/viewTransition";
+import { useT } from "@/i18n/LocaleContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { PageHeader } from "@/components/PageHeader";
-import { DataState } from "@/components/DataState";
-import { DataTable, type Column } from "@/components/DataTable";
-import { EmptyState } from "@/components/EmptyState";
-import { FilterTabs, type FilterTab } from "@/components/FilterTabs";
-import { LoadMore } from "@/components/LoadMore";
-import { StatusBadge } from "@/components/StatusBadge";
+import { AccordionGroup, AccordionSection } from "@/components/Accordion";
 import { CopyButton } from "@/components/CopyButton";
+import { DataState } from "@/components/DataState";
+import { EmptyState } from "@/components/EmptyState";
+import { LoadMore } from "@/components/LoadMore";
+import { ChipRow, ListSkeleton, ListToolbar, type ChipItem } from "@/components/list";
+import { useIsDesktop } from "@/pages/orders/list/useIsDesktop";
+import { OffersHub } from "@/pages/offers/hub/OffersHub";
+import { GiftCardCards, GiftCardsTable } from "@/pages/offers/hub/GiftCardsList";
 import { IssueGiftCardDialog, IssuedCodeDialog } from "./IssueGiftCardDialog";
 import { GiftCardSettingsCard } from "./GiftCardSettingsCard";
-import { GIFT_CARD_STRINGS, STATE_KEY, STATE_TONE } from "./giftCardStrings";
+import { GIFT_CARD_STRINGS } from "./giftCardStrings";
 
 type Filter = "all" | GiftCardState;
 
 /**
- * Marketing → Gift cards (handoff 189, discounts.manage): every card with its
- * balance, filtered by what it can do now and searched by code, last 4 or
- * email; "Issue gift card" shows the new code once. Below: the products sold
- * as gift cards, and the storefront page where shoppers check a balance.
+ * The gift cards tab of «العروض والخصومات» (/gift-cards; handoff 189,
+ * discounts.manage): every card with its balance — searched by code, last 4 or
+ * email, and narrowed by what it can do now through the chips — as a table
+ * from md up and cards on a phone. A row opens the card's own page. «اعمل
+ * كارت هدية» opens a sheet with the card as the recipient gets it, then shows
+ * the new code once.
+ *
+ * Under the list, folded: the products sold as gift cards, and the storefront
+ * page where shoppers check a balance (its link copies without opening).
  */
 export function GiftCardsPage() {
   const t = useT(GIFT_CARD_STRINGS);
   const workspaceId = useWorkspaceId();
-  const navigate = useNavigate();
+  const navigate = useViewNavigate();
+  const errorMessage = useErrorMessage();
+  const desktop = useIsDesktop();
   const { currentWorkspace } = useWorkspace();
   const currency = currentWorkspace?.defaultCurrency ?? "EGP";
-  const searchId = useId();
 
   const [filter, setFilter] = useState<Filter>("all");
   const [draft, setDraft] = useState("");
   const [q, setQ] = useState("");
-  // The search runs once typing pauses.
+  // The field never waits; the request runs once typing pauses.
   useEffect(() => {
     const timer = window.setTimeout(() => setQ(draft.trim()), 350);
     return () => window.clearTimeout(timer);
@@ -65,7 +72,8 @@ export function GiftCardsPage() {
   const [issued, setIssued] = useState<{ card: GiftCardIssued; emailedTo: string | null } | null>(null);
 
   const filtered = filter !== "all" || q !== "";
-  const tabs: FilterTab<Filter>[] = [
+  // No counts: the list is filtered by the server, a page at a time.
+  const chips: ChipItem<Filter>[] = [
     { value: "all", label: t.filterAll },
     { value: "active", label: t.state_active },
     { value: "empty", label: t.state_empty },
@@ -73,53 +81,9 @@ export function GiftCardsPage() {
     { value: "disabled", label: t.state_disabled },
   ];
 
-  const stateBadge = (card: GiftCard) => (
-    <StatusBadge value={card.state} tone={STATE_TONE[card.state]} text={t[STATE_KEY[card.state]]} />
-  );
-
-  const columns: Column<GiftCard>[] = [
-    {
-      key: "card",
-      header: t.colCard,
-      cell: (card) => (
-        <span className="flex min-w-0 flex-col">
-          <bdi dir="ltr" className="font-mono font-semibold text-ink">
-            {fmt(t.cardName, { last4: card.last4 })}
-          </bdi>
-          <span className="truncate text-xs font-normal text-ink-soft">
-            <bdi>{card.recipientName || card.recipientEmail || (card.source === "order" ? t.sourceOrder : t.noRecipient)}</bdi>
-          </span>
-        </span>
-      ),
-    },
-    {
-      key: "balance",
-      header: t.colBalance,
-      align: "end",
-      cell: (card) => (
-        <span className="whitespace-nowrap tabular-nums">
-          <span className="font-semibold text-ink">{formatMoney(card.balanceAmount, card.currency)}</span>{" "}
-          <span className="text-xs text-ink-soft">{fmt(t.ofInitial, { initial: formatMoney(card.initialAmount, card.currency) })}</span>
-        </span>
-      ),
-    },
-    { key: "state", header: t.colState, cell: stateBadge },
-    {
-      key: "expires",
-      header: t.colExpires,
-      cell: (card) => <span className="whitespace-nowrap text-ink-soft">{card.expiresAt ? formatDate(card.expiresAt) : t.noExpiry}</span>,
-    },
-    {
-      key: "created",
-      header: t.colCreated,
-      phoneHidden: true,
-      cell: (card) => <span className="whitespace-nowrap text-ink-soft">{formatDate(card.createdAt)}</span>,
-    },
-  ];
-
   const issueButton = (
-    <Button type="button" className="min-h-11" onClick={() => setIssueOpen(true)}>
-      <Plus className="size-4" aria-hidden />
+    <Button type="button" className="min-h-11 rounded-full px-5 md:min-h-9" onClick={() => setIssueOpen(true)}>
+      <IconPlus className="size-4" weight="bold" aria-hidden />
       {t.issue}
     </Button>
   );
@@ -127,110 +91,77 @@ export function GiftCardsPage() {
   // No discounts.manage: the page says so, and offers nothing it would refuse.
   const denied = isPermissionError(list.error);
   const balancePage = currentWorkspace?.slug ? `${storeUrl(currentWorkspace.slug)}/gift-card` : null;
+  const open = (card: GiftCard) => navigate(`/gift-cards/${card.id}`);
 
   return (
-    <div>
-      <PageHeader title={t.title} description={t.description} actions={denied ? undefined : issueButton} />
-
+    <OffersHub tab="giftCards" primaryAction={denied ? undefined : issueButton}>
       <DataState loading={false} error={list.error && list.items.length === 0 ? list.error : null} onRetry={list.reload}>
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative min-w-0 flex-1 basis-64">
-              <label htmlFor={searchId} className="sr-only">
-                {t.searchLabel}
-              </label>
-              <Search aria-hidden className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" />
-              <Input
-                id={searchId}
-                // Text, not "search": the browser would add a second clear button beside ours.
-                type="text"
-                enterKeyHint="search"
-                dir="auto"
-                autoComplete="off"
-                maxLength={100}
-                value={draft}
-                placeholder={t.searchPlaceholder}
-                onChange={(e) => setDraft(e.target.value)}
-                className="h-11 ps-9 pe-11"
-              />
-              {draft && (
-                <button
-                  type="button"
-                  aria-label={t.clearSearch}
-                  onClick={() => setDraft("")}
-                  className="absolute end-0 top-0 flex size-11 cursor-pointer items-center justify-center rounded-md text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
-                >
-                  <X className="size-4" aria-hidden />
-                </button>
-              )}
-            </div>
-            <div className="max-w-full overflow-x-auto">
-              <FilterTabs
-                tabs={tabs}
-                value={filter}
-                onChange={setFilter}
-                label={t.filterLabel}
-                className="flex-nowrap"
-                buttonClassName="min-h-11 whitespace-nowrap sm:min-h-0"
-              />
-            </div>
+        <div className="flex flex-col gap-3">
+          <ListToolbar search={{ value: draft, onChange: setDraft, placeholder: t.searchPlaceholder, label: t.searchLabel }} />
+          <ChipRow items={chips} value={filter} onChange={setFilter} label={t.filterLabel} />
+
+          <div className="min-w-0">
+            {list.loading ? (
+              <ListSkeleton rows={5} />
+            ) : list.items.length === 0 ? (
+              filtered ? (
+                <EmptyState
+                  icon={<IconSearch aria-hidden />}
+                  title={t.noMatchTitle}
+                  description={t.noMatchHint}
+                  action={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 rounded-full px-5"
+                      onClick={() => {
+                        setDraft("");
+                        setQ("");
+                        setFilter("all");
+                      }}
+                    >
+                      {t.showAll}
+                    </Button>
+                  }
+                />
+              ) : (
+                <EmptyState icon={<IconTicket aria-hidden />} title={t.emptyTitle} description={t.emptyHint} action={issueButton} />
+              )
+            ) : (
+              <>
+                {/* A later page that failed: what is on screen stays, with the reason and the way to try again. */}
+                {list.error != null && (
+                  <Alert variant="danger" className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <span>{errorMessage(list.error)}</span>
+                  </Alert>
+                )}
+                {desktop ? <GiftCardsTable rows={list.items} onOpen={open} /> : <GiftCardCards rows={list.items} onOpen={open} />}
+              </>
+            )}
+            <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
           </div>
 
-          {list.loading ? (
-            <DataState loading error={null}>
-              {null}
-            </DataState>
-          ) : list.items.length === 0 ? (
-            filtered ? (
-              <EmptyState
-                icon={<Search aria-hidden />}
-                title={t.noMatchTitle}
-                description={t.noMatchHint}
-                action={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="min-h-11"
-                    onClick={() => {
-                      setDraft("");
-                      setQ("");
-                      setFilter("all");
-                    }}
-                  >
-                    {t.showAll}
-                  </Button>
-                }
-              />
-            ) : (
-              <EmptyState icon={<Ticket aria-hidden />} title={t.emptyTitle} description={t.emptyHint} action={issueButton} />
-            )
-          ) : (
-            <div className="md:overflow-hidden md:rounded-[var(--radius-card)] md:bg-paper-raised md:shadow-[var(--shadow-card)] md:ring-1 md:ring-line">
-              <DataTable
-                columns={columns}
-                rows={list.items}
-                rowKey={(card) => card.id}
-                onRowClick={(card) => navigate(`/gift-cards/${card.id}`)}
-                minWidth="40rem"
-              />
-            </div>
-          )}
-          <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
-
-          <GiftCardSettingsCard />
-
-          {balancePage && (
-            <section className="rounded-[var(--radius-card)] bg-paper-raised p-4 shadow-[var(--shadow-card)] ring-1 ring-line">
-              <h2 className="text-sm font-semibold text-ink">{t.balanceLinkTitle}</h2>
-              <p className="mt-0.5 text-xs text-ink-soft">{t.balanceLinkHint}</p>
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius)] bg-paper-sunken px-3 py-1.5">
-                <bdi dir="ltr" className="min-w-0 truncate text-sm text-ink">
-                  {balancePage}
-                </bdi>
-                <CopyButton value={balancePage} className="min-h-11" />
-              </div>
-            </section>
-          )}
+          {/* Used rarely: one row each until opened. */}
+          <AccordionGroup className="mt-3">
+            <GiftCardSettingsCard />
+            {balancePage && (
+              <AccordionSection
+                title={t.balanceLinkTitle}
+                icon={IconLink}
+                persistKey="gift-cards:balance-link"
+                summary={<bdi dir="ltr">{balancePage}</bdi>}
+                actions={<CopyButton value={balancePage} iconOnly className="size-9" />}
+              >
+                <p className="text-[13px] leading-5 text-ink-soft">{t.balanceLinkHint}</p>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-[1rem] bg-paper-sunken px-3.5 py-1.5">
+                  <bdi dir="ltr" className="min-w-0 truncate text-sm text-ink">
+                    {balancePage}
+                  </bdi>
+                  <CopyButton value={balancePage} className="min-h-11" />
+                </div>
+              </AccordionSection>
+            )}
+          </AccordionGroup>
         </div>
       </DataState>
 
@@ -246,6 +177,6 @@ export function GiftCardsPage() {
         }}
       />
       <IssuedCodeDialog issued={issued?.card ?? null} emailedTo={issued?.emailedTo ?? null} onClose={() => setIssued(null)} />
-    </div>
+    </OffersHub>
   );
 }

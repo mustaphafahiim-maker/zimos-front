@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { DoorOpen, Eye, EyeOff, Hourglass, LockKeyhole, MonitorSmartphone, ShieldCheck } from "lucide-react";
-import { Alert, Button, Input, cn } from "@store-builder/ui";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { IconDevices, IconDoor, IconEye, IconEyeOff, IconHourglass, IconLock, IconShield } from "@/components/icons";
+import { Button, Input, cn } from "@store-builder/ui";
 import {
   storeGateGet,
   storeGateSave,
@@ -12,20 +13,24 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
+import { isPermissionError } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import { storeUrl } from "@/lib/storeAddress";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { AccordionSection } from "@/components/Accordion";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataState } from "@/components/DataState";
 import { Field } from "@/components/Field";
-import { Section } from "@/components/Section";
+import { SaveBar } from "@/components/SaveBar";
 import { Select } from "@/components/Select";
+import { SettingsGroup, SettingsRow, SettingsSwitch } from "@/components/settings";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
+import { ToggleRow } from "./SettingsFormFooter";
 import { StoreGateSignups } from "./StoreGateSignups";
+import { GroupBlock, STACK, SettingsSkeleton, TOUCH_FIELDS, TextareaRow } from "./sections/parts";
 
 const STRINGS = {
   en: {
@@ -65,6 +70,9 @@ const STRINGS = {
     ageMessage: "Note under the question",
     ageMessageHint: "Optional, up to 300 characters.",
     ageYears: "{n} years",
+    ageOn: "On · {age} and over",
+    ageOff: "Off",
+    now: "Right now:",
     seeTitle: "What shoppers will see",
     seeOff: "Your store as usual: every page, the cart and checkout.",
     seePassword:
@@ -126,6 +134,9 @@ const STRINGS = {
     ageMessage: "ملاحظة تحت السؤال",
     ageMessageHint: "اختياري، لحد ٣٠٠ حرف.",
     ageYears: "{n} سنة",
+    ageOn: "شغّال · من {age}",
+    ageOff: "مقفول",
+    now: "دلوقتي:",
     seeTitle: "العميل هيشوف إيه",
     seeOff: "متجرك عادي: كل الصفحات والسلة والدفع.",
     seePassword:
@@ -152,7 +163,7 @@ const STRINGS = {
 } satisfies Messages;
 
 const MODES: readonly StoreGateMode[] = ["off", "password", "coming_soon"];
-const MODE_ICON = { off: DoorOpen, password: LockKeyhole, coming_soon: Hourglass } as const;
+const MODE_ICON = { off: IconDoor, password: IconLock, coming_soon: IconHourglass } as const;
 const AGES = Array.from({ length: 13 }, (_, i) => 13 + i);
 const MESSAGE_MAX = 500;
 const AGE_MESSAGE_MAX = 300;
@@ -215,33 +226,18 @@ function sameDraft(a: Draft, b: Draft): boolean {
  * no-permission card. The sign-ups list sits under it.
  */
 export function StoreAccessTab() {
-  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const loaded = useAsync(() => storeGateGet(apiClient, workspaceId), [workspaceId]);
   const saved = loaded.data;
-  const state = saved?.mode ?? null;
 
   return (
-    <div className="space-y-6">
-      <Section
-        title={t.title}
-        description={t.description}
-        actions={
-          state && (
-            <StatusBadge
-              value={state}
-              tone={state === "off" ? "success" : state === "password" ? "warning" : "info"}
-              text={state === "off" ? t.stateOff : state === "password" ? t.statePassword : t.stateComingSoon}
-            />
-          )
-        }
-      >
-        <DataState loading={loaded.loading && !saved} error={loaded.error} onRetry={() => void loaded.refresh()}>
-          {saved && <StoreAccessForm data={saved} onSaved={loaded.setData} />}
-        </DataState>
-      </Section>
-      <StoreGateSignups />
-    </div>
+    <>
+      <DataState loading={loaded.loading && !saved} error={loaded.error} onRetry={() => void loaded.refresh()} skeleton={<SettingsSkeleton />}>
+        {saved && <StoreAccessForm data={saved} onSaved={loaded.setData} />}
+      </DataState>
+      {/* The sign-ups read their own list; without the permission the lock above already says so. */}
+      {!isPermissionError(loaded.error) && <StoreGateSignups />}
+    </>
   );
 }
 
@@ -265,6 +261,7 @@ function StoreAccessForm({ data, onSaved }: { data: StoreGateSettings; onSaved: 
 
   const base = draftOf(data);
   const dirty = !sameDraft(draft, base);
+  useReportDirty(dirty);
   const locked = draft.mode !== "off";
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((prev) => ({ ...prev, [key]: value }));
 
@@ -328,219 +325,221 @@ function StoreAccessForm({ data, onSaved }: { data: StoreGateSettings; onSaved: 
   const opensAtPast = opensAtIso !== null && Date.parse(opensAtIso) <= Date.now();
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-5">
-      <fieldset className="space-y-2" disabled={saving}>
-        <legend className="mb-1.5 text-sm font-medium text-ink">{t.modeLegend}</legend>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {MODES.map((mode) => {
-            const checked = draft.mode === mode;
-            const Icon = MODE_ICON[mode];
-            const hint = mode === "off" ? t.offHint : mode === "password" ? t.passwordHint : t.comingSoonHint;
-            return (
-              <label
-                key={mode}
-                className={cn(
-                  "flex min-h-11 cursor-pointer items-start gap-2.5 rounded-[var(--radius)] border p-3 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary",
-                  checked ? "border-primary bg-primary-soft/60" : "border-line hover:border-line-strong"
-                )}
-              >
-                <input
-                  type="radio"
-                  name={`${ids}-mode`}
-                  className="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary"
-                  checked={checked}
-                  aria-labelledby={`${ids}-${mode}`}
-                  aria-describedby={`${ids}-${mode}-hint`}
-                  onChange={() => {
-                    set("mode", mode);
-                    setPasswordError(null);
-                  }}
-                />
-                <span className="min-w-0">
-                  <span id={`${ids}-${mode}`} className={cn("flex items-center gap-1.5 text-sm font-medium", checked ? "text-primary-dark" : "text-ink")}>
-                    <Icon className="size-4 shrink-0" aria-hidden />
-                    {t[mode]}
-                  </span>
-                  <span id={`${ids}-${mode}-hint`} className="mt-0.5 block text-xs text-ink-soft">
-                    {hint}
-                  </span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      {draft.mode === "password" && (
-        <div className="max-w-md space-y-1.5">
-          <label htmlFor={`${ids}-password`} className="block text-sm font-medium text-ink">
-            {t.passwordLabel}
-            {!data.hasPassword && <span className="text-danger"> *</span>}
-          </label>
-          {/* Left to right like the password itself, so the eye sits at the end of the typed text. */}
-          <div className="relative" dir="ltr">
-            <Input
-              id={`${ids}-password`}
-              type={showPassword ? "text" : "password"}
-              dir="ltr"
-              autoComplete="new-password"
-              spellCheck={false}
-              maxLength={100}
-              value={draft.password}
-              placeholder={data.hasPassword ? "••••••••" : undefined}
-              onChange={(e) => {
-                set("password", e.target.value);
-                setPasswordError(null);
-              }}
-              aria-invalid={passwordError ? true : undefined}
-              aria-describedby={`${ids}-password-note`}
-              className={cn("min-h-11 pe-12 text-start", passwordError && "border-danger focus-visible:ring-danger/30")}
-              disabled={saving}
+    <form onSubmit={submit} noValidate className={STACK}>
+      <SettingsGroup
+        title={t.modeLegend}
+        description={t.description}
+        footer={
+          <span className="flex flex-wrap items-center gap-2">
+            {t.now}
+            <StatusBadge
+              value={data.mode}
+              tone={data.mode === "off" ? "success" : data.mode === "password" ? "warning" : "info"}
+              text={data.mode === "off" ? t.stateOff : data.mode === "password" ? t.statePassword : t.stateComingSoon}
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? t.hidePassword : t.showPassword}
-              aria-pressed={showPassword}
-              className="absolute inset-y-0 end-0 flex w-11 cursor-pointer items-center justify-center rounded-e-[var(--radius)] text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
-            >
-              {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-            </button>
-          </div>
-          <p id={`${ids}-password-note`} className={cn("text-xs", passwordError ? "font-medium text-danger" : "text-ink-soft")}>
-            {passwordError ?? (data.hasPassword ? t.passwordKeep : t.passwordNewHint)}
-          </p>
-          {data.hasPassword && draft.password && <p className="text-xs text-accent-dark">{t.passwordChange}</p>}
-        </div>
-      )}
+          </span>
+        }
+      >
+        <GroupBlock>
+          <fieldset disabled={saving}>
+            <legend className="sr-only">{t.modeLegend}</legend>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {MODES.map((mode) => {
+                const checked = draft.mode === mode;
+                const Icon = MODE_ICON[mode];
+                const hint = mode === "off" ? t.offHint : mode === "password" ? t.passwordHint : t.comingSoonHint;
+                return (
+                  <label
+                    key={mode}
+                    className={cn(
+                      "flex min-h-11 cursor-pointer items-start gap-2.5 rounded-[1rem] border p-3 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary motion-reduce:transition-none",
+                      checked ? "border-primary bg-primary-soft/60" : "border-line hover:border-line-strong"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name={`${ids}-mode`}
+                      className="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary"
+                      checked={checked}
+                      aria-labelledby={`${ids}-${mode}`}
+                      aria-describedby={`${ids}-${mode}-hint`}
+                      onChange={() => {
+                        set("mode", mode);
+                        setPasswordError(null);
+                      }}
+                    />
+                    <span className="min-w-0">
+                      <span id={`${ids}-${mode}`} className={cn("flex items-center gap-1.5 text-sm font-medium", checked ? "text-primary-dark dark:text-primary" : "text-ink")}>
+                        <Icon className="size-4 shrink-0" weight={checked ? "fill" : "regular"} aria-hidden />
+                        {t[mode]}
+                      </span>
+                      <span id={`${ids}-${mode}-hint`} className="mt-0.5 block text-[13px] leading-5 text-ink-soft">
+                        {hint}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        </GroupBlock>
 
-      {locked && (
-        <div className="space-y-4">
-          <Field label={t.messageLabel} hint={`${t.messageHint} (${fmt("{n}/{max}", { n: draft.message.length, max: MESSAGE_MAX })})`}>
-            {(props) => (
-              <Textarea
-                {...props}
-                rows={3}
-                dir="auto"
-                maxLength={MESSAGE_MAX}
-                value={draft.message}
-                onChange={(e) => set("message", e.target.value)}
-                disabled={saving}
-                className="text-base sm:text-sm"
-              />
-            )}
-          </Field>
-
-          {draft.mode === "coming_soon" && (
-            <Field label={t.opensAtLabel} hint={opensAtPast ? t.opensAtPast : t.opensAtHint} className="max-w-md">
-              {(props) => (
-                <div className="flex flex-wrap items-center gap-2">
+        {draft.mode === "password" && (
+          <SettingsRow
+            label={data.hasPassword ? t.passwordLabel : `${t.passwordLabel} *`}
+            hint={data.hasPassword ? t.passwordKeep : t.passwordNewHint}
+            htmlFor={`${ids}-password`}
+            error={passwordError ?? undefined}
+            control={
+              <>
+                {/* Left to right like the password itself, so the eye sits at the end of the typed text. */}
+                <div className="relative w-full" dir="ltr">
                   <Input
-                    {...props}
-                    type="datetime-local"
+                    id={`${ids}-password`}
+                    type={showPassword ? "text" : "password"}
                     dir="ltr"
-                    value={draft.opensAt}
-                    onChange={(e) => set("opensAt", e.target.value)}
+                    autoComplete="new-password"
+                    spellCheck={false}
+                    maxLength={100}
+                    value={draft.password}
+                    placeholder={data.hasPassword ? "••••••••" : undefined}
+                    onChange={(e) => {
+                      set("password", e.target.value);
+                      setPasswordError(null);
+                    }}
+                    aria-invalid={passwordError ? true : undefined}
+                    className={cn("min-h-11 pe-12 text-start", passwordError && "border-danger focus-visible:ring-danger/30")}
                     disabled={saving}
-                    className="min-h-11 w-auto min-w-0 flex-1"
                   />
-                  {draft.opensAt && (
-                    <Button type="button" variant="outline" className="min-h-11" onClick={() => set("opensAt", "")} disabled={saving}>
-                      {t.clearDate}
-                    </Button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? t.hidePassword : t.showPassword}
+                    aria-pressed={showPassword}
+                    className="absolute inset-y-0 end-0 flex w-11 cursor-pointer items-center justify-center rounded-e-[var(--radius)] text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
+                  >
+                    {showPassword ? <IconEyeOff className="size-4" aria-hidden /> : <IconEye className="size-4" aria-hidden />}
+                  </button>
                 </div>
-              )}
-            </Field>
-          )}
-
-          <div className="space-y-1">
-            <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium text-ink">
-              <input
-                type="checkbox"
-                role="switch"
-                className="size-5 shrink-0 cursor-pointer accent-primary"
-                checked={draft.lockFunnels}
-                aria-describedby={`${ids}-funnels-hint`}
-                onChange={(e) => set("lockFunnels", e.target.checked)}
-                disabled={saving}
-              />
-              {t.lockFunnels}
-            </label>
-            <p id={`${ids}-funnels-hint`} className="text-xs text-ink-soft">
-              {t.lockFunnelsHint}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div role="group" aria-labelledby={`${ids}-age-title`} className="space-y-3 rounded-[var(--radius)] bg-paper-sunken p-3">
-        <p id={`${ids}-age-title`} className="flex items-center gap-1.5 text-sm font-semibold text-ink">
-          <ShieldCheck className="size-4 shrink-0 text-ink-soft" aria-hidden />
-          {t.ageTitle}
-        </p>
-        <div className="space-y-1">
-          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium text-ink">
-            <input
-              type="checkbox"
-              role="switch"
-              className="size-5 shrink-0 cursor-pointer accent-primary"
-              checked={draft.ageEnabled}
-              aria-describedby={`${ids}-age-hint`}
-              onChange={(e) => set("ageEnabled", e.target.checked)}
-              disabled={saving}
-            />
-            {t.ageEnabled}
-          </label>
-          <p id={`${ids}-age-hint`} className="text-xs text-ink-soft">
-            {t.ageHint}
-          </p>
-        </div>
-        {draft.ageEnabled && (
-          <div className="grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
-            <Field label={t.minAge}>
-              {(props) => (
-                <Select
-                  {...props}
-                  value={draft.minAge}
-                  onChange={(e) => set("minAge", Number(e.target.value))}
-                  disabled={saving}
-                  className="min-h-11"
-                >
-                  {AGES.map((n) => (
-                    <option key={n} value={n}>
-                      {fmt(t.ageYears, { n })}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </Field>
-            <Field label={t.ageMessage} hint={`${t.ageMessageHint} (${fmt("{n}/{max}", { n: draft.ageMessage.length, max: AGE_MESSAGE_MAX })})`}>
-              {(props) => (
-                <Input
-                  {...props}
-                  dir="auto"
-                  maxLength={AGE_MESSAGE_MAX}
-                  value={draft.ageMessage}
-                  onChange={(e) => set("ageMessage", e.target.value)}
-                  disabled={saving}
-                  className="min-h-11"
-                />
-              )}
-            </Field>
-          </div>
+                {data.hasPassword && draft.password && <p className="self-stretch text-[13px] leading-5 text-accent-dark">{t.passwordChange}</p>}
+              </>
+            }
+          />
         )}
-      </div>
+
+        {locked && (
+          <TextareaRow
+            label={t.messageLabel}
+            hint={`${t.messageHint} (${fmt("{n}/{max}", { n: draft.message.length, max: MESSAGE_MAX })})`}
+            rows={3}
+            dir="auto"
+            maxLength={MESSAGE_MAX}
+            value={draft.message}
+            onChange={(e) => set("message", e.target.value)}
+            disabled={saving}
+          />
+        )}
+
+        {draft.mode === "coming_soon" && (
+          <SettingsRow
+            label={t.opensAtLabel}
+            hint={opensAtPast ? t.opensAtPast : t.opensAtHint}
+            htmlFor={`${ids}-opens`}
+            stacked
+            control={
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  id={`${ids}-opens`}
+                  type="datetime-local"
+                  dir="ltr"
+                  value={draft.opensAt}
+                  onChange={(e) => set("opensAt", e.target.value)}
+                  disabled={saving}
+                  className="min-h-11 w-auto min-w-0 flex-1"
+                />
+                {draft.opensAt && (
+                  <Button type="button" variant="outline" className="min-h-11 rounded-full px-4" onClick={() => set("opensAt", "")} disabled={saving}>
+                    {t.clearDate}
+                  </Button>
+                )}
+              </div>
+            }
+          />
+        )}
+
+        {locked && (
+          <SettingsSwitch
+            label={t.lockFunnels}
+            hint={t.lockFunnelsHint}
+            checked={draft.lockFunnels}
+            disabled={saving}
+            onChange={(next) => set("lockFunnels", next)}
+          />
+        )}
+      </SettingsGroup>
 
       <ShopperView draft={draft} opensAtIso={opensAtPast ? null : opensAtIso} />
 
-      {error && <Alert variant="danger">{error}</Alert>}
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        {dirty && <p className="text-xs text-ink-soft">{t.unsaved}</p>}
-        <Button type="submit" className="min-h-11 w-full sm:w-auto" disabled={!dirty || saving}>
-          {saving ? t.saving : t.save}
-        </Button>
-      </div>
+      {/* Used by few stores: folded, with what it is set to. Kept mounted, so a fold never drops an edit. */}
+      <AccordionSection
+        title={t.ageTitle}
+        icon={IconShield}
+        summary={draft.ageEnabled ? fmt(t.ageOn, { age: fmt(t.ageYears, { n: draft.minAge }) }) : t.ageOff}
+        persistKey="store-settings:access:age"
+        keepMounted
+      >
+        <div className={`space-y-3 ${TOUCH_FIELDS}`}>
+          <ToggleRow label={t.ageEnabled} hint={t.ageHint} checked={draft.ageEnabled} disabled={saving} onChange={(next) => set("ageEnabled", next)} />
+          {draft.ageEnabled && (
+            <div className="grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+              <Field label={t.minAge}>
+                {(props) => (
+                  <Select {...props} value={draft.minAge} onChange={(e) => set("minAge", Number(e.target.value))} disabled={saving}>
+                    {AGES.map((n) => (
+                      <option key={n} value={n}>
+                        {fmt(t.ageYears, { n })}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+              <Field label={t.ageMessage} hint={`${t.ageMessageHint} (${fmt("{n}/{max}", { n: draft.ageMessage.length, max: AGE_MESSAGE_MAX })})`}>
+                {(props) => (
+                  <Input
+                    {...props}
+                    dir="auto"
+                    maxLength={AGE_MESSAGE_MAX}
+                    value={draft.ageMessage}
+                    onChange={(e) => set("ageMessage", e.target.value)}
+                    disabled={saving}
+                  />
+                )}
+              </Field>
+            </div>
+          )}
+        </div>
+      </AccordionSection>
+
+      {/* No onSave: inside the form the bar's button submits it — through the checks and the lock question above. */}
+      <SaveBar
+        dirty={dirty}
+        saving={saving}
+        onDiscard={() => {
+          setDraft(draftOf(data));
+          setPasswordError(null);
+          setError(null);
+          setShowPassword(false);
+        }}
+        saveLabel={t.save}
+        savingLabel={t.saving}
+        message={
+          error ? (
+            <span role="alert" className="text-danger">
+              {error}
+            </span>
+          ) : undefined
+        }
+      />
 
       <ConfirmDialog
         open={confirming}
@@ -591,9 +590,9 @@ function ShopperView({ draft, opensAtIso }: { draft: Draft; opensAtIso: string |
   }
 
   return (
-    <div className="space-y-3 rounded-[var(--radius)] bg-primary-soft px-3.5 py-3 text-sm text-primary-dark" aria-live="polite">
+    <div className="space-y-3 rounded-[1.25rem] bg-primary-soft px-4 py-3.5 text-sm text-primary-dark dark:text-primary" aria-live="polite">
       <p className="flex items-center gap-2 font-semibold">
-        <MonitorSmartphone className="size-4 shrink-0" aria-hidden />
+        <IconDevices className="size-4 shrink-0" aria-hidden />
         {t.seeTitle}
       </p>
       <ul className="list-disc space-y-1 ps-5">
@@ -605,8 +604,8 @@ function ShopperView({ draft, opensAtIso }: { draft: Draft; opensAtIso: string |
         <div className="space-y-2 border-t border-primary/15 pt-3">
           <p>{t.seeYou}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="outline" className="min-h-11 bg-paper-raised" onClick={openPreview}>
-              <Eye className="size-4" aria-hidden />
+            <Button type="button" variant="outline" className="min-h-11 rounded-full bg-paper-raised px-4" onClick={openPreview}>
+              <IconEye className="size-4" aria-hidden />
               {t.preview}
             </Button>
             {slug && (

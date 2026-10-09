@@ -22,6 +22,19 @@ import { Modal } from "./Modal";
 import { Panel, Td, Th } from "./Panel";
 import { Status, StatusBadge } from "./StatusBadge";
 import { useToast } from "./Toast";
+import {
+  PAID_PRICING,
+  PricingFields,
+  PricingSummaryRows,
+  pricedAmount,
+  pricingBody,
+  pricingProblem,
+  pricingServerProblem,
+  type PricingChoice,
+  type PricingProblem,
+} from "./billingExtras";
+import { apiFieldProblems } from "@store-builder/api-client";
+import { formatMinorMoneyExact } from "@/lib/format";
 
 const DAY_MS = 86_400_000;
 const QUICK_MONTHS = [1, 3, 6, 12];
@@ -190,6 +203,7 @@ function SubscriptionSummary({ data }: { data: AdminManualSubscription }) {
     <div className="space-y-4">
       <dl>
         <DetailRow label="Plan">{s.plan?.name ?? "—"}</DetailRow>
+        <PricingSummaryRows subscription={s} />
         <DetailRow label="Status">
           {s.draft ? (
             <StatusBadge tone="info" dot>
@@ -326,7 +340,9 @@ function useAction(workspaceId: string) {
       await apiClient.adminManualSubscriptionAction(workspaceId, action, body, key);
       await onOk();
     } catch (err) {
-      setError(getErrorMessage(err));
+      // A pricing field the server refused (handoff 336) reads in the form's own words.
+      const refused = apiFieldProblems(err).map((p) => pricingServerProblem(p.field)).find(Boolean);
+      setError(refused ? refused.message : getErrorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -359,8 +375,14 @@ function ActivateDialog({
   const [note, setNote] = useState("");
   const [step, setStep] = useState<"form" | "review">("form");
   const { run, busy, error, setError } = useAction(workspaceId);
+  // handoff 336: what the period costs the merchant — the plan's price, nothing, or a discount.
+  const [pricing, setPricing] = useState<PricingChoice>(PAID_PRICING);
+  const [pricingError, setPricingError] = useState<PricingProblem | null>(null);
 
   const plan = active.find((p) => p.id === planId);
+  const cycle = data.subscription.billingCycle;
+  const planPrice = plan ? (cycle === "yearly" ? plan.yearlyPrice : plan.monthlyPrice) : 0;
+  const planCurrency = plan?.currency ?? "EGP";
   const startDate = start === today ? new Date(now) : new Date(`${start}T00:00:00`);
   const end = keepDates
     ? new Date(data.subscription.currentPeriodEnd)
@@ -379,6 +401,9 @@ function ActivateDialog({
     if (note.trim().length < 3) return setError("Write a note: why, and what was agreed.");
     if (!keepDates && (!end || end.getTime() <= now)) return setError("The period must end in the future.");
     if (keepDates && plan.id === data.subscription.plan?.id) return setError("The store is already on this plan.");
+    const refused = keepDates ? null : pricingProblem(pricing, planPrice, planCurrency);
+    setPricingError(refused);
+    if (refused) return setError(null);
     setError(null);
     setStep("review");
   }
@@ -391,6 +416,11 @@ function ActivateDialog({
       ]
     : [
         `Plan: ${plan?.name}, active from ${formatDate(startDate.toISOString())} to ${end ? formatDate(end.toISOString()) : "—"}.`,
+        ...(pricing.kind === "paid"
+          ? []
+          : [
+              `Pricing: ${pricing.kind === "free" ? "free (gift)" : "discounted"} — the merchant pays ${formatMinorMoneyExact(pricedAmount(pricing, planPrice, planCurrency) ?? 0, planCurrency)} a ${cycle === "yearly" ? "year" : "month"}. No charges are made; when the period ends it becomes past due.`,
+            ]),
         "Any expired banner or restriction is lifted now; after the end date the usual warning, grace day and restriction apply.",
         "No charge is created; no commission is recorded.",
       ];
@@ -400,7 +430,7 @@ function ActivateDialog({
       await run("change-plan", { planId, note: note.trim() }, () => onDone("Plan changed."));
       return;
     }
-    const body: Record<string, unknown> = { planId, note: note.trim() };
+    const body: Record<string, unknown> = { planId, note: note.trim(), ...pricingBody(pricing, planCurrency) };
     if (start !== today) body.startsAt = startDate.toISOString();
     if (duration === null) body.endsAt = end?.toISOString();
     else body.duration = duration;
@@ -446,6 +476,7 @@ function ActivateDialog({
             <>
               <TextField label="Starts on" type="date" value={start} max={today} onChange={(e) => setStart(e.target.value)} hint="Today by default; may be in the past." />
               <DurationPicker value={duration} onChange={setDuration} allowEndDate endDate={endDate} onEndDate={setEndDate} />
+              <PricingFields value={pricing} onChange={setPricing} planPrice={planPrice} currency={planCurrency} cycle={cycle} problem={pricingError} />
             </>
           )}
           <TextAreaField label="Note" required value={note} onChange={(e) => setNote(e.target.value)} rows={3} hint="Why, and what was agreed (kept with the change and in the audit log)." />
@@ -633,7 +664,12 @@ export function FeatureOverridesPanel({ workspaceId, canManage, onChanged }: { w
               {data.features.map((f) => (
                 <TableRow key={f.key}>
                   <Td className="whitespace-normal">
-                    <span className="font-medium text-ink">{featureLabel(f.key)}</span>
+                    <span className="font-medium text-ink">{(f as { label?: { en?: string } }).label?.en ?? featureLabel(f.key)}</span>
+                    {(f as { available?: boolean }).available === false && (
+                      <StatusBadge tone="neutral" className="ms-2">
+                        Not available yet
+                      </StatusBadge>
+                    )}
                     <span className="mt-0.5 block text-xs text-ink-soft">
                       {f.override ? (
                         <>

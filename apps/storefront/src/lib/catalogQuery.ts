@@ -26,6 +26,8 @@ export interface CatalogState {
   /** Null: the store's default (or best match while searching). */
   sort: StorefrontSort | null;
   page: number;
+  /** "In stock only" (handoff 390): `available=true` in the URL; left out when off. */
+  available?: boolean;
 }
 
 export type SearchParams = Record<string, string | string[] | undefined>;
@@ -67,6 +69,7 @@ export function readCatalogState(params: SearchParams): CatalogState {
     options,
     sort: (SORTS as readonly string[]).includes(sort) ? (sort as StorefrontSort) : null,
     page: Number.isInteger(page) && page >= 1 && page <= 1000 ? page : 1,
+    ...(first(params.available) === "true" ? { available: true } : {}),
   };
 }
 
@@ -84,6 +87,7 @@ export function catalogHref(state: CatalogState, change: Partial<CatalogState> =
     for (const value of values) qs.append(`option[${name}]`, value);
   }
   if (next.sort) qs.set("sort", next.sort);
+  if (next.available) qs.set("available", "true");
   if (next.page > 1) qs.set("page", String(next.page));
   const query = qs.toString();
   return query ? `${path}?${query}` : path;
@@ -107,6 +111,7 @@ export function activeFilterCount(state: CatalogState): number {
     (state.collection ? 1 : 0) +
     state.tags.length +
     (state.min !== null || state.max !== null ? 1 : 0) +
+    (state.available ? 1 : 0) +
     Object.values(state.options).reduce((n, values) => n + values.length, 0)
   );
 }

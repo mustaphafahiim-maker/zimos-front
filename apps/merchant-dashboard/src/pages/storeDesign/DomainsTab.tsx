@@ -1,11 +1,12 @@
-import { useState, type FormEvent } from "react";
-import { CheckCircle2, Globe, Star, Trash2 } from "lucide-react";
-import { Alert, Badge, Button, Input, cn } from "@store-builder/ui";
+import { useEffect, useState } from "react";
+import { IconDelete, IconGlobe, IconStar, IconSuccess } from "@/components/icons";
+import { Alert, Badge, Button, cn } from "@store-builder/ui";
 import {
   domainCounterpartDnsManaged,
+  domainDeploymentRules,
   domainSetRedirectToPrimary,
   funnelsList,
-  storeDesignAddDomain,
+  isDomainsSectionClosed,
   storeDesignCheckDomainSsl,
   storeDesignDeleteDomain,
   storeDesignDomainDnsCheck,
@@ -18,19 +19,35 @@ import {
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
-import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { AccordionSection } from "@/components/Accordion";
 import { DataState } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CopyButton } from "@/components/CopyButton";
 import { EmptyState } from "@/components/EmptyState";
-import { Section } from "@/components/Section";
 import { Field } from "@/components/Field";
+import { SettingsGroup } from "@/components/settings";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { DomainRedirectSwitch } from "./DomainRedirectSwitch";
 import { BuyDomainSection } from "./BuyDomainSection";
+// Handoff 341: the verification TXT's own name, the server's rules, certificate states, a suspended domain, the closed section.
+import {
+  DomainAddForm,
+  DomainCertificateState,
+  DomainCertificateSummary,
+  DomainRecordName,
+  DomainRecordPurpose,
+  DomainSuspendedNotice,
+  DomainVerificationNotes,
+  DomainsClosedNotice,
+  noteCustomDomains,
+  useDomainCertificateLabel,
+  useDomainErrorMessage,
+} from "./domainRules";
 import { BoughtDomainsSection } from "./BoughtDomainsSection";
+import { ToggleRow } from "./SettingsFormFooter";
+import { GroupBlock, STACK, SettingsSkeleton, TOUCH_FIELDS } from "./sections/parts";
 
 const STRINGS = {
   en: {
@@ -143,13 +160,14 @@ export function DomainsTab() {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
-  const errorMessage = useErrorMessage();
   const state = useAsync(() => storeDesignDomainsOverview(apiClient, workspaceId), [workspaceId]);
+  const rules = domainDeploymentRules(state.data);
+  const errorMessage = useDomainErrorMessage(rules.maxPerStore);
+  const certificateLabel = useDomainCertificateLabel();
+  // The settings menu and the setup guide hide "Domains" once the server says the section is closed.
+  useEffect(() => noteCustomDomains(state.error, Boolean(state.data)), [state.error, state.data]);
   // Funnels are optional here: a role without funnel access still manages domains.
   const funnels = useAsync(() => funnelsList(apiClient, workspaceId).catch(() => []), [workspaceId]);
-  const [hostname, setHostname] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [dns, setDns] = useState<Record<string, StoreDomainDnsCheck>>({});
   const [removing, setRemoving] = useState<StoreDomain | null>(null);
@@ -159,22 +177,6 @@ export function DomainsTab() {
   const [boughtDomainIds, setBoughtDomainIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const publishedFunnels = (funnels.data ?? []).filter((f) => f.status === "published");
-
-  async function add(e: FormEvent) {
-    e.preventDefault();
-    if (!hostname.trim() || adding) return;
-    setAdding(true);
-    setAddError(null);
-    try {
-      await storeDesignAddDomain(apiClient, workspaceId, hostname.trim());
-      setHostname("");
-      await state.refresh({ silent: true });
-    } catch (err) {
-      setAddError(errorMessage(err));
-    } finally {
-      setAdding(false);
-    }
-  }
 
   /** Runs one action on a domain, then re-reads the list. */
   async function run(domain: StoreDomain, key: string, action: () => Promise<string | void>) {
@@ -201,47 +203,24 @@ export function DomainsTab() {
   const statusTone = (status: StoreDomain["status"]) =>
     status === "active" ? "text-success" : status === "failed" ? "text-danger" : "text-ink-soft";
 
+  // CUSTOM_DOMAINS_ENABLED closed the section on this server: said plainly, not as a failed load.
+  if (isDomainsSectionClosed(state.error)) return <DomainsClosedNotice />;
+
   return (
-    <DataState loading={state.loading} error={state.error} onRetry={() => void state.refresh()}>
-      <div className="space-y-5">
+    <DataState loading={state.loading} error={state.error} onRetry={() => void state.refresh()} skeleton={<SettingsSkeleton groups={2} rows={2} />}>
+      <div className={STACK}>
         {state.data?.certificateProvider === "sandbox" && <Alert>{t.testProvider}</Alert>}
         {state.data && state.data.certificateProvider === null && <Alert variant="danger">{t.noProvider}</Alert>}
 
-        <BuyDomainSection
-          onBought={() => {
-            setBoughtVersion((v) => v + 1);
-            void state.refresh({ silent: true });
-          }}
-          onPurchaseFailed={() => {
-            setBoughtVersion((v) => v + 1);
-            // Bought but not connected (DOMAIN_CONNECT_FAILED) may still have added the domain.
-            void state.refresh({ silent: true });
-          }}
-        />
-
-        <Section title={t.addTitle} description={t.addDescription}>
-          <form onSubmit={add} className="flex flex-wrap items-start gap-2">
-            <Field label={t.hostname} error={addError ?? undefined} labelHidden className="min-w-0 flex-1">
-              {({ id, ...aria }) => (
-                <Input
-                  id={id}
-                  {...aria}
-                  dir="ltr"
-                  placeholder="shop.example.com"
-                  value={hostname}
-                  disabled={adding}
-                  onChange={(e) => setHostname(e.target.value)}
-                />
-              )}
-            </Field>
-            <Button type="submit" disabled={adding || !hostname.trim()}>
-              {adding ? t.adding : t.add}
-            </Button>
-          </form>
-        </Section>
+        {/* The section's one action first: connect a domain you own. Buying one is under the list. */}
+        <SettingsGroup title={t.addTitle} description={t.addDescription}>
+          <GroupBlock>
+            <DomainAddForm rules={rules} count={state.data?.domains.length ?? 0} onAdded={() => state.refresh({ silent: true })} />
+          </GroupBlock>
+        </SettingsGroup>
 
         {state.data && state.data.domains.length === 0 ? (
-          <EmptyState icon={<Globe />} title={t.emptyTitle} description={t.emptyBody} />
+          <EmptyState icon={<IconGlobe />} title={t.emptyTitle} description={t.emptyBody} />
         ) : (
           (state.data?.domains ?? []).map((domain) => {
             const usable = domain.status === "verified" || domain.status === "active";
@@ -253,7 +232,9 @@ export function DomainsTab() {
             const counterpartManaged = Boolean(counterpart?.redirect) && domainCounterpartDnsManaged(domain);
             const dnsHeldByUs = boughtDomainIds.has(domain.id);
             const recordsToAdd = counterpartManaged ? domain.records.filter((r) => r.purpose !== "redirect") : domain.records;
-            const showSteps = !dnsHeldByUs && (domain.status !== "active" || (counterpartPending && !counterpartManaged));
+            // A certificate that "moved" means the records no longer point here: they are shown again.
+            const moved = (domain.sslStatus as string) === "moved";
+            const showSteps = !dnsHeldByUs && (domain.status !== "active" || moved || (counterpartPending && !counterpartManaged));
             const recordFound = (record: StoreDomain["records"][number]) =>
               !check
                 ? null
@@ -264,25 +245,33 @@ export function DomainsTab() {
                     : (check.routing?.found ?? check.cname.found);
             const isBusy = (key: string) => busy === `${domain.id}:${key}`;
             return (
-              <Section
+              // One domain, folded to a row once it is live; a domain that still needs something opens by itself.
+              <AccordionSection
                 key={domain.id}
                 title={domain.hostname}
-                actions={
-                  <>
-                    {domain.isPrimary && (
-                      <Badge>
-                        <Star className="size-3" />
-                        {t.primary}
-                      </Badge>
-                    )}
-                    <span className={cn("text-xs font-medium", statusTone(domain.status))}>{t[domain.status]}</span>
-                    <span className="text-xs text-ink-soft">
-                      {t.ssl}: {t[`ssl_${domain.sslStatus}`]}
-                    </span>
-                  </>
+                icon={IconGlobe}
+                summary={
+                  <span className={statusTone(domain.status)}>
+                    {t[domain.status]} · <DomainCertificateSummary domain={domain} />
+                  </span>
                 }
+                badge={
+                  domain.isPrimary ? (
+                    <Badge>
+                      <IconStar className="size-3" aria-hidden />
+                      {t.primary}
+                    </Badge>
+                  ) : undefined
+                }
+                defaultOpen={showSteps || !usable}
+                persistKey={`store-settings:domains:${domain.id}`}
               >
-                <div className="space-y-4">
+                <div className={`space-y-4 ${TOUCH_FIELDS}`}>
+                  <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-5">
+                    <span className={cn("font-medium", statusTone(domain.status))}>{t[domain.status]}</span>
+                    <DomainCertificateState domain={domain} />
+                  </p>
+                  <DomainSuspendedNotice domain={domain} />
                   {dnsHeldByUs && <p className="text-sm text-ink-soft">{t.boughtDns}</p>}
                   {showSteps && (
                     <div>
@@ -305,9 +294,12 @@ export function DomainsTab() {
                               const result = recordFound(record);
                               return (
                                 <tr key={`${record.type}-${record.name}-${record.value}`}>
-                                  <td className="py-2 pe-3 font-medium text-ink">{record.type}</td>
+                                  <td className="py-2 pe-3 font-medium text-ink">
+                                    {record.type}
+                                    <DomainRecordPurpose record={record} />
+                                  </td>
                                   <td className="py-2 pe-3">
-                                    <bdi dir="ltr">{record.name}</bdi>
+                                    <DomainRecordName record={record} domain={domain} />
                                   </td>
                                   <td className="py-2 pe-3">
                                     <bdi dir="ltr" className="break-all font-mono text-xs">
@@ -329,6 +321,7 @@ export function DomainsTab() {
                           </tbody>
                         </table>
                       </div>
+                      <DomainVerificationNotes domain={domain} />
                       {(domain.alternatives ?? []).length > 0 && (
                         <div className="mt-3 rounded-lg bg-muted px-3 py-2">
                           <p className="text-xs text-ink-soft">{t.alternativesTitle}</p>
@@ -350,34 +343,30 @@ export function DomainsTab() {
 
                   {counterpart && (
                     <div className="space-y-1">
-                      <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink">
-                        <input
-                          type="checkbox"
-                          className="size-4 accent-[var(--color-primary)]"
-                          checked={counterpart.redirect}
-                          disabled={isBusy("counterpart")}
-                          onChange={(e) =>
-                            void run(domain, "counterpart", async () => {
-                              await storeDesignUpdateDomain(apiClient, workspaceId, domain.id, { redirectCounterpart: e.target.checked });
-                              return t.savedToast;
-                            })
-                          }
-                        />
-                        <bdi>{fmt(t.counterpart, { host: counterpart.hostname })}</bdi>
-                      </label>
+                      <ToggleRow
+                        label={fmt(t.counterpart, { host: counterpart.hostname })}
+                        checked={counterpart.redirect}
+                        disabled={isBusy("counterpart")}
+                        onChange={(redirectCounterpart) =>
+                          void run(domain, "counterpart", async () => {
+                            await storeDesignUpdateDomain(apiClient, workspaceId, domain.id, { redirectCounterpart });
+                            return t.savedToast;
+                          })
+                        }
+                      />
                       <p className="text-xs text-ink-soft">
                         {fmt(t.counterpartHint, { host: counterpart.hostname, domain: domain.hostname })}
                         {counterpart.redirect && showSteps && !counterpartManaged && <> {t.counterpartAddRecord}</>}
                       </p>
                       {counterpartManaged && (
                         <p className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
-                          <CheckCircle2 className="size-4 shrink-0" aria-hidden />
+                          <IconSuccess className="size-4 shrink-0" aria-hidden />
                           {t.counterpartManaged}
                         </p>
                       )}
                       {counterpart.redirect && usable && (
                         <p className="text-xs text-ink-soft">
-                          {fmt(t.counterpartSsl, { host: counterpart.hostname, status: t[`ssl_${counterpart.sslStatus}`] })}
+                          {fmt(t.counterpartSsl, { host: counterpart.hostname, status: certificateLabel(counterpart.sslStatus) })}
                         </p>
                       )}
                     </div>
@@ -429,13 +418,14 @@ export function DomainsTab() {
 
                   <div className="flex flex-wrap gap-2">
                     {!usable && (
-                      <Button size="sm" disabled={isBusy("verify")} onClick={() => void verify(domain)}>
+                      <Button size="sm" className="min-h-11 rounded-full px-4 sm:min-h-8" disabled={isBusy("verify")} onClick={() => void verify(domain)}>
                         {t.verify}
                       </Button>
                     )}
                     <Button
                       variant="outline"
                       size="sm"
+                      className="min-h-11 rounded-full px-4 sm:min-h-8"
                       disabled={isBusy("dns")}
                       onClick={() =>
                         void run(domain, "dns", async () => {
@@ -450,6 +440,7 @@ export function DomainsTab() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="min-h-11 rounded-full px-4 sm:min-h-8"
                         disabled={isBusy("ssl")}
                         onClick={() =>
                           void run(domain, "ssl", async () => {
@@ -465,6 +456,7 @@ export function DomainsTab() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="min-h-11 rounded-full px-4 sm:min-h-8"
                         disabled={isBusy("primary")}
                         onClick={() =>
                           void run(domain, "primary", async () => {
@@ -476,16 +468,29 @@ export function DomainsTab() {
                         {t.makePrimary}
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => setRemoving(domain)}>
-                      <Trash2 className="size-4 text-danger" />
+                    <Button variant="ghost" size="sm" className="min-h-11 rounded-full px-4 sm:min-h-8" onClick={() => setRemoving(domain)}>
+                      <IconDelete className="size-4 text-danger" />
                       {t.remove}
                     </Button>
                   </div>
                 </div>
-              </Section>
+              </AccordionSection>
             );
           })
         )}
+
+        {/* A subdomains-only server sells no domains (search and purchase answer APEX_NOT_SUPPORTED). */}
+        {rules.subdomainsOnly ? null : <BuyDomainSection
+          onBought={() => {
+            setBoughtVersion((v) => v + 1);
+            void state.refresh({ silent: true });
+          }}
+          onPurchaseFailed={() => {
+            setBoughtVersion((v) => v + 1);
+            // Bought but not connected (DOMAIN_CONNECT_FAILED) may still have added the domain.
+            void state.refresh({ silent: true });
+          }}
+        />}
 
         <BoughtDomainsSection
           version={boughtVersion}

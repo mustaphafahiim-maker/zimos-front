@@ -14,9 +14,10 @@
  *
  * Storefront (public): POST /store/:ws/gift-cards/check { code } → { giftCard: GiftCardBalance }
  *   404 GIFT_CARD_NOT_FOUND; rate-limited like order tracking (429).
- * Checkout: `giftCardCode` with paymentMethod "cod" only. 422 GIFT_CARD_NOT_FOUND /
- *   GIFT_CARD_UNUSABLE on field `giftCardCode`; the 201 answer adds `giftCard` (GiftCardRedemption)
- *   and the order's amountPaid / financialState.
+ * Checkout: `giftCardCode` with cash on delivery or an online payment (handoff 201), never bank
+ *   transfer. 422 GIFT_CARD_NOT_FOUND / GIFT_CARD_UNUSABLE on field `giftCardCode`; the 201 answer
+ *   adds `giftCard` (GiftCardRedemption) and the order's amountPaid / financialState. Online, the
+ *   card's part is held and the gateway charges the rest (endpoints/checkoutTenders.ts).
  *
  * Every amount is integer minor units, sent as a string.
  */
@@ -53,7 +54,12 @@ export interface GiftCard {
   createdAt: string;
 }
 
-export type GiftCardTransactionKind = "issue" | "redeem" | "refund" | "adjust";
+/**
+ * With an online payment (handoff 201) the card's part is first a `hold` for the unpaid order;
+ * paid, it reads `redeem`; an order that expires or is cancelled turns it `hold_released` and
+ * gives it back with a `release` line.
+ */
+export type GiftCardTransactionKind = "issue" | "redeem" | "refund" | "adjust" | "hold" | "hold_released" | "release";
 
 /** One change of the balance; `amount` is signed ("-25000" for a redemption). */
 export interface GiftCardTransaction {
@@ -202,11 +208,17 @@ export async function giftCardCheck(client: ApiClient, workspaceId: string, code
 /** What the checkout's 201 adds when a card came with the order. */
 export interface GiftCardRedemption {
   applied: boolean;
+  /** True with an online payment (handoff 201): held until the gateway is paid, given back if it never is. */
+  held?: boolean;
   amount?: string;
   last4?: string;
   balanceAmount?: string;
   currency?: string;
-  /** When not applied: "unusable" (spent meanwhile), "nothing_due" or "error". */
+  /**
+   * When not applied: "unusable" (spent meanwhile), "nothing_due", "error", or
+   * "covers_order_cod_unavailable" (it covered the whole order but the store has cash on
+   * delivery off, so the gateway charges the full total).
+   */
   reason?: string;
 }
 
@@ -229,8 +241,8 @@ export function prettyGiftCardCode(raw: string): string {
 /**
  * Why a checkout or a balance check refused the card, when it did:
  * "not_found", "expired", "empty", "disabled", "currency" (another currency),
- * "cod_only" (sent with a method that is not cash on delivery), or null for
- * any other error.
+ * "cod_only" (sent with a bank transfer: a card goes with cash on delivery or an
+ * online payment, handoff 201), or null for any other error.
  */
 export type GiftCardRefusal = "not_found" | "expired" | "empty" | "disabled" | "currency" | "cod_only";
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type RefObject } from "react";
 import { Link } from "react-router-dom";
-import { CloudOff, Globe2, Maximize2 } from "lucide-react";
+import { IconExpand, IconGlobe, IconOffline } from "@/components/icons";
 import { Button, Card, Spinner } from "@store-builder/ui";
 import { LIVE_MAP_WINDOWS, liveMapGet, type LiveMapCounts, type LiveMapPlace } from "@store-builder/api-client";
 import { DataState } from "@/components/DataState";
@@ -65,11 +65,11 @@ const STRINGS = {
     lastN: "آخر {n} دقيقة",
     every: "بيتحدّث كل {s} ثانية طول ما الصفحة مفتوحة · {time}",
     visitors: "زوار دلوقتي",
-    checkouts: "بيكملوا الطلب",
-    orders: "طلبات",
+    checkouts: "بيكملوا الأوردر",
+    orders: "أوردرات",
     colVisitors: "زوار",
-    colCheckouts: "بيكملوا الطلب",
-    colOrders: "طلبات",
+    colCheckouts: "بيكملوا الأوردر",
+    colOrders: "أوردرات",
     place: "المكان",
     country: "الدولة",
     topPlaces: "أكتر الأماكن",
@@ -336,7 +336,7 @@ export function LiveMapView({
           className="h-11 w-full max-w-none sm:h-9 sm:w-auto sm:max-w-[14rem]"
         />
         <Button variant="outline" size="sm" className="ms-auto hidden sm:inline-flex" onClick={fullscreen}>
-          <Maximize2 className="size-4" aria-hidden />
+          <IconExpand className="size-4" aria-hidden />
           {t.fullscreen}
         </Button>
       </div>
@@ -345,7 +345,7 @@ export function LiveMapView({
         {d &&
           (empty ? (
             <EmptyState
-              icon={<Globe2 />}
+              icon={<IconGlobe />}
               title={fmt(t.emptyTitle, { n: formatCount(shownMinutes) })}
               description={t.emptyBody}
               action={
@@ -394,7 +394,7 @@ export function LiveMapView({
 
               {!!q.error && !blockingError && (
                 <p role="status" className="flex flex-wrap items-center gap-2 rounded-[var(--radius)] bg-paper-raised px-3 py-2 text-sm text-ink-soft ring-1 ring-line">
-                  <CloudOff className="size-4 shrink-0 text-danger" aria-hidden />
+                  <IconOffline className="size-4 shrink-0 text-danger" aria-hidden />
                   <span className="min-w-0 flex-1">{t.refreshFailed}</span>
                   <Button variant="outline" size="sm" className="min-h-11 sm:min-h-8" onClick={() => void q.refresh({ silent: true })}>
                     {t.retry}

@@ -13,8 +13,7 @@ import {
 import { CollectionSeoFields, collectionSeoOf, collectionSeoPayload, downloadCollectionsCsv } from "./components/CollectionSeoFields";
 import { storeUrl } from "@/lib/storeAddress";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { useMemo, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { useId, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -29,36 +28,42 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  ArrowDown,
-  ArrowUp,
-  Download,
-  ExternalLink,
-  Folder,
-  GripVertical,
-  IndentDecrease,
-  IndentIncrease,
-  ListOrdered,
-  Pencil,
-  Trash2,
-} from "lucide-react";
-import { Alert, Button, Spinner, cn } from "@store-builder/ui";
+  IconArrowDown,
+  IconArrowUp,
+  IconDelete,
+  IconDownload,
+  IconDragHandle,
+  IconEdit,
+  IconExternal,
+  IconFolder,
+  IconIndent,
+  IconListNumbers,
+  IconOutdent,
+  IconPlus,
+} from "@/components/icons";
+import { Alert, Button, cn } from "@store-builder/ui";
 import type { CollectionDetail, CollectionSummary, CreateCollectionPayload } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { getFieldErrors } from "@/lib/errors";
 import { useErrorMessage } from "@/lib/errorMessages";
+import { pluralOf } from "@/lib/plural";
 import { useLocale, useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { useCatalogLabels } from "./catalogLabels";
 import { PageHeader } from "@/components/PageHeader";
-import { DataState } from "@/components/DataState";
+import { DataState, SkeletonBar } from "@/components/DataState";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
+import { ViewLink } from "@/components/ViewLink";
+import { ListSkeleton } from "@/components/list";
 import { TextField, Field } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { ImageField } from "@/pages/website/editor/ImageField";
+import { ItemMenu } from "./media/ItemMenu";
 import {
   MAX_DEPTH,
   canIndent,
@@ -83,13 +88,12 @@ const STRINGS = {
   en: {
     title: "Collections",
     products: "Products",
-    description:
-      "How your storefront groups products, up to three levels deep. Drag a collection to reorder it — pull it sideways to put it inside the one above — or use the arrows.",
+    description: "How your store groups products, up to three levels deep. Drag a collection to reorder it; pull it sideways to put it inside the one above.",
     newCollection: "New collection",
     empty: "No collections yet. Create your first one.",
     noProducts: "No products in this collection yet.",
-    productCountOne: "1 product",
-    productCountOther: "{n} products",
+    productCount_one: "1 product",
+    productCount_other: "{n} products",
     reorder: "Reorder {name}",
     moveUp: "Move {name} up",
     moveDown: "Move {name} down",
@@ -97,13 +101,22 @@ const STRINGS = {
     outdent: "Move {name} out one level",
     orderProducts: "Order the products in {name}",
     preview: "Open {name} in the store",
-    subcategories: "{n} subcategories",
-    subcategory: "1 subcategory",
+    sub_one: "1 subcategory",
+    sub_other: "{n} subcategories",
     inHeader: "In header",
     hiddenBadge: "Hidden",
-    exportCsv: "Export",
+    exportCsv: "Export as a sheet",
+    more: "More",
+    rowMenu: "Actions for {name}",
+    menuEdit: "Edit",
+    menuOrder: "Order its products",
+    menuPreview: "Open in the store",
+    menuUp: "Move up",
+    menuDown: "Move down",
+    menuIndent: "Put inside the one above",
+    menuOutdent: "Move out one level",
+    menuDelete: "Delete",
     edit: "Edit {name}",
-    delete: "Delete {name}",
     editTitle: "Edit collection",
     deleteTitle: "Delete “{name}”?",
     deleteDescription:
@@ -113,6 +126,7 @@ const STRINGS = {
     deletedToast: "“{name}” deleted. Products themselves are untouched.",
     name: "Name",
     namePlaceholder: "Summer",
+    nameRequired: "Give the collection a name.",
     descriptionLabel: "Description",
     descriptionPlaceholder: "Warm-weather picks",
     parent: "Inside",
@@ -132,6 +146,7 @@ const STRINGS = {
     moveProductDown: "Move {name} down",
     reorderProduct: "Reorder {name}",
     saveOrder: "Save order",
+    loadingProducts: "Loading the products…",
     dragStart: "Picked up {name}. Use the arrow keys to move it, Space to drop, Escape to cancel.",
     dragOver: "{name} is over {over}.",
     dragEnd: "{name} dropped.",
@@ -142,72 +157,87 @@ const STRINGS = {
   ar: {
     title: "المجموعات",
     products: "المنتجات",
-    description:
-      "طريقة تجميع المنتجات في متجرك، حتى ثلاثة مستويات. اسحب المجموعة لإعادة ترتيبها — واسحبها جانبًا لوضعها داخل المجموعة التي فوقها — أو استخدم الأسهم.",
+    description: "طريقة تقسيم المنتجات في متجرك، لحد تلات مستويات. اسحب المجموعة عشان ترتّبها، واسحبها على الجنب عشان تحطها جوه اللي فوقها.",
     newCollection: "مجموعة جديدة",
-    empty: "مفيش مجموعات لسه. أنشئ أول مجموعة.",
-    noProducts: "مفيش منتجات في هذه المجموعة لسه.",
-    productCountOne: "منتج واحد",
-    productCountOther: "عدد المنتجات: {n}",
-    reorder: "إعادة ترتيب {name}",
-    moveUp: "تحريك {name} لأعلى",
-    moveDown: "تحريك {name} لأسفل",
-    indent: "وضع {name} داخل المجموعة التي فوقها",
-    outdent: "إخراج {name} مستوى واحدًا",
-    orderProducts: "ترتيب منتجات {name}",
-    preview: "فتح {name} في المتجر",
-    subcategories: "{n} تصنيف فرعي",
-    subcategory: "تصنيف فرعي واحد",
+    empty: "مفيش مجموعات لسه. اعمل أول مجموعة.",
+    noProducts: "مفيش منتجات في المجموعة دي لسه.",
+    productCount_one: "منتج واحد",
+    productCount_two: "منتجين",
+    productCount_few: "{n} منتجات",
+    productCount_other: "{n} منتج",
+    reorder: "رتّب {name}",
+    moveUp: "طلّع {name} لفوق",
+    moveDown: "نزّل {name} لتحت",
+    indent: "حط {name} جوه المجموعة اللي فوقها",
+    outdent: "طلّع {name} مستوى لبرّه",
+    orderProducts: "رتّب منتجات {name}",
+    preview: "افتح {name} في المتجر",
+    sub_one: "مجموعة فرعية واحدة",
+    sub_two: "مجموعتين فرعيتين",
+    sub_few: "{n} مجموعات فرعية",
+    sub_other: "{n} مجموعة فرعية",
     inHeader: "في الهيدر",
-    hiddenBadge: "مخفي",
-    exportCsv: "تصدير",
-    edit: "تعديل {name}",
-    delete: "حذف {name}",
+    hiddenBadge: "مخفية",
+    exportCsv: "نزّلها شيت",
+    more: "كمان",
+    rowMenu: "إجراءات {name}",
+    menuEdit: "عدّل",
+    menuOrder: "رتّب منتجاتها",
+    menuPreview: "افتحها في المتجر",
+    menuUp: "طلّعها لفوق",
+    menuDown: "نزّلها لتحت",
+    menuIndent: "حطها جوه اللي فوقها",
+    menuOutdent: "طلّعها مستوى لبرّه",
+    menuDelete: "امسح",
+    edit: "عدّل {name}",
     editTitle: "تعديل المجموعة",
-    deleteTitle: "حذف «{name}»؟",
+    deleteTitle: "تمسح «{name}»؟",
     deleteDescription:
-      "المجموعة مجرد تجميع في المتجر — حذفها نهائي، لكن المنتجات التي بداخلها لن تتأثر. وتنتقل المجموعات التي بداخلها إلى المستوى الأعلى.",
-    deleteConfirm: "حذف المجموعة",
+      "المجموعة مجرد تقسيمة في المتجر — المسح نهائي، بس المنتجات اللي جواها مش هتتأثر. والمجموعات اللي جواها هتطلع للمستوى الأول.",
+    deleteConfirm: "امسح المجموعة",
     deleting: "بنمسح…",
-    deletedToast: "تم حذف «{name}». المنتجات نفسها لم تتغير.",
+    deletedToast: "اتمسحت «{name}». المنتجات نفسها زي ما هي.",
     name: "الاسم",
     namePlaceholder: "الصيف",
+    nameRequired: "اكتب اسم للمجموعة.",
     descriptionLabel: "الوصف",
-    descriptionPlaceholder: "اختيارات للجو الحار",
-    parent: "داخل",
-    topLevel: "المستوى الأعلى",
-    parentHint: "يمكن وضع المجموعات بعضها داخل بعض حتى ثلاثة مستويات.",
+    descriptionPlaceholder: "اختيارات للجو الحر",
+    parent: "جوه",
+    topLevel: "المستوى الأول",
+    parentHint: "تقدر تحط المجموعات جوه بعض لحد تلات مستويات.",
     image: "الصورة",
     cancel: "إلغاء",
     saving: "بنحفظ…",
     save: "حفظ",
-    create: "إنشاء",
-    savedToast: "تم حفظ المجموعة.",
-    createdToast: "اتعمل «{name}».",
-    orderSaved: "تم حفظ الترتيب الجديد.",
+    create: "اعمل المجموعة",
+    savedToast: "المجموعة اتحفظت.",
+    createdToast: "اتعملت «{name}».",
+    orderSaved: "الترتيب الجديد اتحفظ.",
     orderTitle: "ترتيب المنتجات في «{name}»",
-    orderDescription: "يعرض المتجر منتجات هذه المجموعة بهذا الترتيب عند الترتيب حسب «المميزة».",
-    moveProductUp: "تحريك {name} لأعلى",
-    moveProductDown: "تحريك {name} لأسفل",
-    reorderProduct: "إعادة ترتيب {name}",
-    saveOrder: "حفظ الترتيب",
-    dragStart: "تم التقاط {name}. استخدم مفاتيح الأسهم لتحريكها، والمسافة لإفلاتها، وEscape للإلغاء.",
+    orderDescription: "المتجر بيعرض منتجات المجموعة دي بالترتيب ده لما العميل يرتّب بـ «المميزة».",
+    moveProductUp: "طلّع {name} لفوق",
+    moveProductDown: "نزّل {name} لتحت",
+    reorderProduct: "رتّب {name}",
+    saveOrder: "احفظ الترتيب",
+    loadingProducts: "بنحمّل المنتجات…",
+    dragStart: "مسكت {name}. حرّكها بالأسهم، ودوس مسافة عشان تسيبها، أو Escape عشان تلغي.",
     dragOver: "{name} فوق {over}.",
-    dragEnd: "تم إفلات {name}.",
-    dragCancel: "أُلغي النقل.",
+    dragEnd: "سبت {name}.",
+    dragCancel: "النقل اتلغى.",
     instructions:
-      "لالتقاط مجموعة، اضغط المسافة أو Enter. حرّكها بمفتاحي السهم لأعلى ولأسفل، ثم اضغط المسافة أو Enter لإفلاتها، أو Escape للإلغاء.",
+      "عشان تمسك مجموعة دوس مسافة أو Enter. حرّكها بسهم فوق وتحت، ودوس مسافة أو Enter تاني عشان تسيبها، أو Escape عشان تلغي.",
   },
 } satisfies Messages;
 
 type Strings = Record<keyof typeof STRINGS.en, string>;
 
+// A tool of a row: 44px under a thumb, 40px with a mouse, round like every other small control.
 const iconButton =
-  "inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-[0.5rem] text-ink-soft transition-colors hover:bg-paper hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
+  "inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-[color,background-color,scale] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-paper-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100 pointer-fine:size-10";
 
 function productCount(t: Strings, n: number | undefined) {
   if (n === undefined) return null;
-  return n === 1 ? t.productCountOne : fmt(t.productCountOther, { n });
+  return pluralOf(t, "productCount", n);
 }
 
 /** The parents a collection may move under: not itself, not inside itself, and within three levels. */
@@ -225,21 +255,37 @@ function parentChoices(flat: FlatNode<CollectionSummary>[], editingId: string | 
   return flat.filter((n) => !blocked.has(n.item.id) && n.depth + 1 + height <= MAX_DEPTH - 1);
 }
 
-function CollectionForm({
+/** The tree as it stands once a move is saved: every row's own record takes the parent and place it is drawn at. */
+function settled(flat: FlatNode<CollectionSummary>[]): FlatNode<CollectionSummary>[] {
+  const counters = new Map<string | null, number>();
+  return flat.map((node) => {
+    const position = counters.get(node.parentId) ?? 0;
+    counters.set(node.parentId, position + 1);
+    if (node.item.parentId === node.parentId && node.item.position === position) return node;
+    return { ...node, item: { ...node.item, parentId: node.parentId, position } };
+  });
+}
+
+/** Create or edit one collection, in the dashboard's sheet: the fields scroll, the two buttons stay under a thumb. */
+function CollectionDialog({
+  open,
   collection,
   flat,
   onDone,
-  onCancel,
+  onClose,
 }: {
+  open: boolean;
   collection?: CollectionSummary;
   flat: FlatNode<CollectionSummary>[];
   onDone: () => void;
-  onCancel: () => void;
+  onClose: () => void;
 }) {
   const t = useT(STRINGS);
   const errorMessage = useErrorMessage();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const formId = useId();
+  const nameBox = useRef<HTMLDivElement>(null);
   const [name, setName] = useState(collection?.name ?? "");
   const [description, setDescription] = useState(collection?.description ?? "");
   const [parentId, setParentId] = useState(collection?.parentId ?? "");
@@ -255,11 +301,22 @@ function CollectionForm({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const choices = useMemo(() => parentChoices(flat, collection?.id ?? null), [flat, collection?.id]);
 
+  function focusName() {
+    const input = nameBox.current?.querySelector("input");
+    nameBox.current?.scrollIntoView({ block: "center" });
+    input?.focus({ preventScroll: true });
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (saving) return;
-    setSaving(true);
     setFormError(null);
+    if (name.trim().length === 0) {
+      setFieldErrors({ name: t.nameRequired });
+      focusName();
+      return;
+    }
+    setSaving(true);
     setFieldErrors({});
     const payload: CreateCollectionPayload = {
       name: name.trim(),
@@ -285,61 +342,82 @@ function CollectionForm({
       const fields = getFieldErrors(err);
       setFieldErrors(fields);
       if (Object.keys(fields).length === 0 || fields.parentId) setFormError(errorMessage(err));
+      if (fields.name) focusName();
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      {formError && <Alert variant="danger">{formError}</Alert>}
-      <TextField
-        label={t.name}
-        required
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        error={fieldErrors.name}
-        placeholder={t.namePlaceholder}
-      />
-      <Field label={t.parent} hint={t.parentHint} error={fieldErrors.parentId}>
-        {({ id }) => (
-          <Select id={id} value={parentId} onChange={(e) => setParentId(e.target.value)} className="h-11">
-            <option value="">{t.topLevel}</option>
-            {choices.map((n) => (
-              <option key={n.item.id} value={n.item.id}>
-                {`${"— ".repeat(n.depth)}${n.item.name}`}
-              </option>
-            ))}
-          </Select>
-        )}
-      </Field>
-      <SmartCollectionFields value={smart} onChange={setSmart} disabled={saving} error={fieldErrors.rules} />
-      <Field label={t.descriptionLabel} error={fieldErrors.description}>
-        {({ id }) => (
-          <Textarea
-            id={id}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder={t.descriptionPlaceholder}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={collection ? t.editTitle : t.newCollection}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose} disabled={saving} className="min-h-11 rounded-full px-5">
+            {t.cancel}
+          </Button>
+          <Button type="submit" form={formId} disabled={saving || !smartDraftReady(smart)} className="min-h-11 rounded-full px-5">
+            {saving ? t.saving : collection ? t.save : t.create}
+          </Button>
+        </>
+      }
+    >
+      <form id={formId} onSubmit={submit} noValidate className="space-y-4">
+        {formError && <Alert variant="danger">{formError}</Alert>}
+        <div ref={nameBox}>
+          <TextField
+            label={t.name}
+            required
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: "" }));
+            }}
+            error={fieldErrors.name || undefined}
+            placeholder={t.namePlaceholder}
+            className="[&_input]:h-11"
           />
-        )}
-      </Field>
-      <ImageField label={t.image} value={imageUrl} onChange={setImageUrl} />
-      <CollectionVisibilityFields value={flags} onChange={setFlags} disabled={saving} />
-      <CollectionSeoFields value={seo} onChange={setSeo} placeholderTitle={name || t.namePlaceholder} disabled={saving} />
-      <div className="flex justify-end gap-3">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving} className="min-h-11">
-          {t.cancel}
-        </Button>
-        <Button type="submit" disabled={saving || name.trim().length === 0 || !smartDraftReady(smart)} className="min-h-11">
-          {saving ? t.saving : collection ? t.save : t.create}
-        </Button>
-      </div>
-    </form>
+        </div>
+        <Field label={t.parent} hint={t.parentHint} error={fieldErrors.parentId}>
+          {({ id }) => (
+            <Select id={id} value={parentId} onChange={(e) => setParentId(e.target.value)} className="h-11">
+              <option value="">{t.topLevel}</option>
+              {choices.map((n) => (
+                <option key={n.item.id} value={n.item.id}>
+                  {`${"— ".repeat(n.depth)}${n.item.name}`}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+        <SmartCollectionFields value={smart} onChange={setSmart} disabled={saving} error={fieldErrors.rules} />
+        <Field label={t.descriptionLabel} error={fieldErrors.description}>
+          {({ id }) => (
+            <Textarea
+              id={id}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t.descriptionPlaceholder}
+            />
+          )}
+        </Field>
+        <ImageField label={t.image} value={imageUrl} onChange={setImageUrl} />
+        <CollectionVisibilityFields value={flags} onChange={setFlags} disabled={saving} />
+        <CollectionSeoFields value={seo} onChange={setSeo} placeholderTitle={name || t.namePlaceholder} disabled={saving} />
+      </form>
+    </Modal>
   );
 }
 
-/** One row of the tree: drag handle, picture, name, and the moves beside it. */
+/**
+ * One row of the tree: the drag handle, then the collection itself — a press
+ * on it opens the edit sheet — and its tools. With a mouse the four moves and
+ * "order its products" stand in the row; on a phone the row keeps to one line
+ * and everything is in its «…» menu, which is also what a right-click or a
+ * long press gives.
+ */
 function CollectionRow({
   node,
   depth,
@@ -373,6 +451,33 @@ function CollectionRow({
   const { currentWorkspace } = useWorkspace();
   const previewHref = currentWorkspace?.slug ? `${storeUrl(currentWorkspace.slug)}/products?collection=${encodeURIComponent(c.slug)}` : null;
 
+  const up = !busy && canMoveUp(flat, index);
+  const down = !busy && canMoveDown(flat, index);
+  const inside = !busy && canIndent(flat, index);
+  const outside = !busy && canOutdent(flat, index);
+
+  const menu: ContextMenuItem[] = [
+    { id: "edit", label: t.menuEdit, icon: IconEdit, onSelect: onEdit },
+    { id: "order", label: t.menuOrder, icon: IconListNumbers, onSelect: onOrderProducts },
+    ...(previewHref
+      ? [
+          {
+            id: "preview",
+            label: t.menuPreview,
+            icon: IconExternal,
+            onSelect: () => {
+              window.open(previewHref, "_blank", "noopener,noreferrer");
+            },
+          },
+        ]
+      : []),
+    { id: "up", label: t.menuUp, icon: IconArrowUp, separatorBefore: true, disabled: !up, onSelect: () => onMove(moveAmongSiblings(flat, index, -1)) },
+    { id: "down", label: t.menuDown, icon: IconArrowDown, disabled: !down, onSelect: () => onMove(moveAmongSiblings(flat, index, 1)) },
+    { id: "indent", label: t.menuIndent, icon: IconIndent, disabled: !inside, onSelect: () => onMove(indent(flat, index)) },
+    { id: "outdent", label: t.menuOutdent, icon: IconOutdent, disabled: !outside, onSelect: () => onMove(outdent(flat, index)) },
+    { id: "delete", label: t.menuDelete, icon: IconDelete, destructive: true, separatorBefore: true, onSelect: onDelete },
+  ];
+
   return (
     <li
       ref={setNodeRef}
@@ -380,80 +485,83 @@ function CollectionRow({
       style={{ transform: CSS.Translate.toString(transform ? { ...transform, x: 0 } : null), transition }}
       className={cn("list-none", isDragging && "relative z-10")}
     >
-      <div
-        className={cn(
-          "flex flex-wrap items-center gap-x-1 gap-y-1 rounded-[0.5rem] border bg-paper-raised py-1.5 pe-1.5",
-          isDragging ? "border-primary shadow-lg" : "border-line"
-        )}
-        style={{ marginInlineStart: depth * INDENT }}
-      >
-        <button
-          type="button"
-          ref={setActivatorNodeRef}
-          {...attributes}
-          {...listeners}
-          aria-label={label("reorder")}
-          className={cn(iconButton, "cursor-grab active:cursor-grabbing")}
+      <ContextMenu items={menu} label={label("rowMenu")}>
+        <div
+          data-slot="collection-row"
+          data-dragging={isDragging ? "" : undefined}
+          className={cn(
+            "zimos-collection-row flex min-h-[3.75rem] items-center gap-0.5 rounded-[1.125rem] bg-paper-raised py-1 ps-0.5 pe-1 ring-1",
+            isDragging ? "shadow-[var(--shadow-raised)] ring-2 ring-primary" : "ring-line"
+          )}
+          style={{ marginInlineStart: depth * INDENT }}
         >
-          <GripVertical className="size-4" aria-hidden />
-        </button>
-        {c.imageUrl ? (
-          <img src={c.imageUrl} alt="" className="size-10 shrink-0 rounded-[0.375rem] border border-line object-cover" />
-        ) : (
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-[0.375rem] bg-paper text-ink-soft" aria-hidden>
-            <Folder className="size-4" />
-          </span>
-        )}
-        <div className="min-w-0 flex-1 px-2">
-          <p className="truncate font-medium text-ink">{c.name}</p>
-          <p className="truncate text-xs text-ink-soft">
-            <bdi dir="ltr">{c.slug}</bdi>
-            {count && <> · {count}</>}
-            {children > 0 && <> · {children === 1 ? t.subcategory : fmt(t.subcategories, { n: children })}</>}
-          </p>
-          {(rowFlags.showInHeader || rowFlags.hidden || isSmartCollection(c)) && (
-            <p className="mt-0.5 flex flex-wrap gap-1">
-              {isSmartCollection(c) && <SmartCollectionBadge />}
-              {rowFlags.showInHeader && <span className="rounded-full bg-primary-soft px-2 text-xs text-primary">{t.inHeader}</span>}
-              {rowFlags.hidden && <span className="rounded-full bg-paper px-2 text-xs text-ink-soft">{t.hiddenBadge}</span>}
-            </p>
-          )}
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            aria-label={label("reorder")}
+            className={cn(iconButton, "cursor-grab touch-none active:cursor-grabbing")}
+          >
+            <IconDragHandle className="size-5" aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={label("edit")}
+            className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-[0.875rem] py-1 pe-2 text-start transition-[scale] duration-[var(--dur-fade)] ease-[var(--ease-out)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
+          >
+            {c.imageUrl ? (
+              <img src={c.imageUrl} alt="" loading="lazy" className="size-10 shrink-0 rounded-[0.625rem] object-cover ring-1 ring-line" />
+            ) : (
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-[0.625rem] bg-primary-soft text-primary" aria-hidden>
+                <IconFolder className="size-5" weight="duotone" />
+              </span>
+            )}
+            <span className="block min-w-0 flex-1">
+              <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+                <span className="min-w-0 truncate font-medium text-ink">{c.name}</span>
+                {isSmartCollection(c) && <SmartCollectionBadge />}
+                {rowFlags.showInHeader && (
+                  <span className="shrink-0 rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary">{t.inHeader}</span>
+                )}
+                {rowFlags.hidden && (
+                  <span className="shrink-0 rounded-full bg-paper-sunken px-2 py-0.5 text-[11px] font-medium text-ink-soft">{t.hiddenBadge}</span>
+                )}
+              </span>
+              <span className="block truncate text-xs text-ink-soft tabular-nums">
+                <bdi dir="ltr">{c.slug}</bdi>
+                {count && <> · {count}</>}
+                {children > 0 && <> · {pluralOf(t, "sub", children)}</>}
+              </span>
+            </span>
+          </button>
+          {/* From md up: the moves stand in the row. On a phone they are in the menu, so the row keeps to one line. */}
+          <div className="flex shrink-0 items-center max-md:hidden">
+            <button type="button" className={iconButton} aria-label={label("moveUp")} title={label("moveUp")}
+              disabled={!up} onClick={() => onMove(moveAmongSiblings(flat, index, -1))}>
+              <IconArrowUp className="size-4" aria-hidden />
+            </button>
+            <button type="button" className={iconButton} aria-label={label("moveDown")} title={label("moveDown")}
+              disabled={!down} onClick={() => onMove(moveAmongSiblings(flat, index, 1))}>
+              <IconArrowDown className="size-4" aria-hidden />
+            </button>
+            <button type="button" className={iconButton} aria-label={label("indent")} title={label("indent")}
+              disabled={!inside} onClick={() => onMove(indent(flat, index))}>
+              <IconIndent className="size-4 rtl:-scale-x-100" aria-hidden />
+            </button>
+            <button type="button" className={iconButton} aria-label={label("outdent")} title={label("outdent")}
+              disabled={!outside} onClick={() => onMove(outdent(flat, index))}>
+              <IconOutdent className="size-4 rtl:-scale-x-100" aria-hidden />
+            </button>
+            <button type="button" className={iconButton} aria-label={label("orderProducts")} title={label("orderProducts")}
+              onClick={onOrderProducts}>
+              <IconListNumbers className="size-4" aria-hidden />
+            </button>
+          </div>
+          <ItemMenu items={menu} label={label("rowMenu")} />
         </div>
-        <div className="flex flex-wrap items-center">
-          <button type="button" className={iconButton} aria-label={label("moveUp")} title={label("moveUp")}
-            disabled={busy || !canMoveUp(flat, index)} onClick={() => onMove(moveAmongSiblings(flat, index, -1))}>
-            <ArrowUp className="size-4" aria-hidden />
-          </button>
-          <button type="button" className={iconButton} aria-label={label("moveDown")} title={label("moveDown")}
-            disabled={busy || !canMoveDown(flat, index)} onClick={() => onMove(moveAmongSiblings(flat, index, 1))}>
-            <ArrowDown className="size-4" aria-hidden />
-          </button>
-          <button type="button" className={iconButton} aria-label={label("indent")} title={label("indent")}
-            disabled={busy || !canIndent(flat, index)} onClick={() => onMove(indent(flat, index))}>
-            <IndentIncrease className="size-4 rtl:-scale-x-100" aria-hidden />
-          </button>
-          <button type="button" className={iconButton} aria-label={label("outdent")} title={label("outdent")}
-            disabled={busy || !canOutdent(flat, index)} onClick={() => onMove(outdent(flat, index))}>
-            <IndentDecrease className="size-4 rtl:-scale-x-100" aria-hidden />
-          </button>
-          <button type="button" className={iconButton} aria-label={label("orderProducts")} title={label("orderProducts")}
-            onClick={onOrderProducts}>
-            <ListOrdered className="size-4" aria-hidden />
-          </button>
-          {previewHref && (
-            <a href={previewHref} target="_blank" rel="noreferrer" className={iconButton} aria-label={label("preview")} title={label("preview")}>
-              <ExternalLink className="size-4" aria-hidden />
-            </a>
-          )}
-          <button type="button" className={iconButton} aria-label={label("edit")} title={label("edit")} onClick={onEdit}>
-            <Pencil className="size-4" aria-hidden />
-          </button>
-          <button type="button" className={cn(iconButton, "hover:bg-danger-soft hover:text-danger")}
-            aria-label={label("delete")} title={label("delete")} onClick={onDelete}>
-            <Trash2 className="size-4" aria-hidden />
-          </button>
-        </div>
-      </div>
+      </ContextMenu>
     </li>
   );
 }
@@ -480,31 +588,53 @@ function ProductOrderRow({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform ? { ...transform, x: 0 } : null), transition }}
+      data-slot="collection-row"
       className={cn(
-        "flex items-center gap-1 rounded-[0.5rem] border bg-paper-raised py-1 pe-1",
-        isDragging ? "relative z-10 border-primary shadow-lg" : "border-line"
+        "zimos-collection-row flex items-center gap-0.5 rounded-[1rem] bg-paper-raised py-1 ps-0.5 pe-1 ring-1",
+        isDragging ? "relative z-10 shadow-[var(--shadow-raised)] ring-2 ring-primary" : "ring-line"
       )}
     >
       <button type="button" ref={setActivatorNodeRef} {...attributes} {...listeners} aria-label={label("reorderProduct")}
-        className={cn(iconButton, "cursor-grab active:cursor-grabbing")}>
-        <GripVertical className="size-4" aria-hidden />
+        className={cn(iconButton, "cursor-grab touch-none active:cursor-grabbing")}>
+        <IconDragHandle className="size-5" aria-hidden />
       </button>
-      <span className="w-6 shrink-0 text-center text-xs tabular-nums text-ink-soft">{index + 1}</span>
-      <div className="min-w-0 flex-1">
-        <Link to={`/catalog/${product.id}`} className="block truncate text-sm font-medium text-ink hover:text-primary">
+      <span className="w-6 shrink-0 text-center text-xs tabular-nums text-ink-soft">
+        <bdi dir="ltr">{fmt("{n}", { n: index + 1 })}</bdi>
+      </span>
+      <div className="min-w-0 flex-1 px-1">
+        <ViewLink
+          to={`/catalog/${product.id}`}
+          className="block truncate rounded-sm text-sm font-medium text-ink hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+        >
           {product.name}
-        </Link>
+        </ViewLink>
         <p className="text-xs text-ink-soft">{labels.status(product.status)}</p>
       </div>
       <button type="button" className={iconButton} aria-label={label("moveProductUp")} disabled={index === 0}
         onClick={() => onMove(index, index - 1)}>
-        <ArrowUp className="size-4" aria-hidden />
+        <IconArrowUp className="size-4" aria-hidden />
       </button>
       <button type="button" className={iconButton} aria-label={label("moveProductDown")} disabled={index === total - 1}
         onClick={() => onMove(index, index + 1)}>
-        <ArrowDown className="size-4" aria-hidden />
+        <IconArrowDown className="size-4" aria-hidden />
       </button>
     </li>
+  );
+}
+
+/** The rows of the ordering dialog while its products load: the same height, so nothing jumps. */
+function ProductOrderSkeleton() {
+  const t = useT(STRINGS);
+  return (
+    <div role="status" aria-busy="true" className="space-y-1.5">
+      <span className="sr-only">{t.loadingProducts}</span>
+      {["w-2/5", "w-1/2", "w-1/3", "w-3/5"].map((width) => (
+        <div key={width} aria-hidden className="flex h-[3.25rem] items-center gap-3 rounded-[1rem] bg-paper-raised px-4 ring-1 ring-line">
+          <SkeletonBar className="size-4 shrink-0" />
+          <SkeletonBar className={cn("h-3", width)} />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -565,10 +695,10 @@ function ProductOrderDialog({ collection, onClose }: { collection: CollectionSum
       description={t.orderDescription}
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={saving} className="min-h-11">
+          <Button variant="outline" onClick={onClose} disabled={saving} className="min-h-11 rounded-full px-5">
             {t.cancel}
           </Button>
-          <Button onClick={save} disabled={saving || order === null || products.length === 0} className="min-h-11">
+          <Button onClick={save} disabled={saving || order === null || products.length === 0} className="min-h-11 rounded-full px-5">
             {saving ? t.saving : t.saveOrder}
           </Button>
         </>
@@ -583,15 +713,17 @@ function ProductOrderDialog({ collection, onClose }: { collection: CollectionSum
         }}
       />
       {detail.loading ? (
-        <Spinner className="size-5" />
+        <ProductOrderSkeleton />
       ) : detail.error ? (
-        <Alert variant="danger">{errorMessage(detail.error)}</Alert>
+        <Alert variant="danger">
+          <p>{errorMessage(detail.error)}</p>
+        </Alert>
       ) : products.length === 0 ? (
-        <p className="text-sm text-ink-soft">{t.noProducts}</p>
+        <p className="rounded-[1rem] bg-paper-sunken/60 px-4 py-6 text-center text-sm text-ink-soft">{t.noProducts}</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={products.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-            <ol className="max-h-[60vh] space-y-1.5 overflow-y-auto">
+            <ol className="space-y-1.5">
               {products.map((product, index) => (
                 <ProductOrderRow key={product.id} product={product} index={index} total={products.length} onMove={move} />
               ))}
@@ -614,8 +746,8 @@ export function CollectionsPage() {
   const [flat, setFlat] = useState<FlatNode<CollectionSummary>[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<CollectionSummary | null>(null);
+  // The create / edit sheet. `key` starts each opening with fresh fields; the sheet stays mounted while it closes.
+  const [sheet, setSheet] = useState<{ key: number; collection: CollectionSummary | null; open: boolean } | null>(null);
   const [deleting, setDeleting] = useState<CollectionSummary | null>(null);
   const [ordering, setOrdering] = useState<CollectionSummary | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -627,20 +759,40 @@ export function CollectionsPage() {
     setShown(list.data);
     setFlat(flattenTree(list.data));
   }
+  // What is on screen now, for an Undo pressed a few seconds after the move it takes back.
+  const flatNow = useRef(flat);
+  flatNow.current = flat;
 
   const reload = () => list.refresh({ silent: true });
   const rtl = locale === "ar";
 
-  async function commit(next: FlatNode<CollectionSummary>[]) {
+  const openSheet = (collection: CollectionSummary | null) => setSheet((current) => ({ key: (current?.key ?? 0) + 1, collection, open: true }));
+  const closeSheet = () => setSheet((current) => (current ? { ...current, open: false } : current));
+
+  async function commit(next: FlatNode<CollectionSummary>[], undoable = true) {
     const items = reorderItems(next);
     if (items.length === 0) return;
-    const previous = flat;
+    const previous = flatNow.current;
     setFlat(next);
     setSaving(true);
     setError(null);
     try {
       await apiClient.reorderCollections(workspaceId, items);
-      toast.success(t.orderSaved);
+      // The rows now hold what was saved, so a second move (or an Undo) made before the list is read again starts from it.
+      setFlat(settled(next));
+      if (undoable) {
+        toast.undo(t.orderSaved, () => {
+          // The same shape as before the move, over what the server holds now: only what differs is sent back.
+          const current = new Map(flatNow.current.map((n) => [n.item.id, n.item]));
+          const back = previous.flatMap((n) => {
+            const item = current.get(n.item.id);
+            return item ? [{ ...n, item }] : [];
+          });
+          return commit(back, false);
+        });
+      } else {
+        toast.success(t.orderSaved);
+      }
       await reload();
     } catch (err) {
       setFlat(previous);
@@ -704,22 +856,22 @@ export function CollectionsPage() {
     return moved.find((n) => n.item.id === activeId)?.depth ?? node.depth;
   };
 
+  const headerMenu: ContextMenuItem[] = [
+    { id: "export", label: t.exportCsv, icon: IconDownload, disabled: flat.length === 0, onSelect: () => downloadCollectionsCsv(flat) },
+  ];
+
   return (
     <div className="max-w-3xl">
       <PageHeader
         title={t.title}
         back={{ to: "/catalog", label: t.products }}
         description={t.description}
-        actions={
-          <>
-            <Button variant="outline" className="min-h-11" disabled={flat.length === 0} onClick={() => downloadCollectionsCsv(flat)}>
-              <Download className="size-4" aria-hidden />
-              {t.exportCsv}
-            </Button>
-            <Button onClick={() => setCreating(true)} className="min-h-11">
-              {t.newCollection}
-            </Button>
-          </>
+        actions={<ItemMenu items={headerMenu} label={t.more} />}
+        primaryAction={
+          <Button onClick={() => openSheet(null)} className="min-h-11 gap-2 rounded-full px-5">
+            <IconPlus className="size-4" weight="bold" aria-hidden />
+            {t.newCollection}
+          </Button>
         }
       />
 
@@ -731,9 +883,9 @@ export function CollectionsPage() {
 
       {/* No collections: start one, or make "All products" in one tap (components/SmartCollectionFields). */}
       {!list.loading && !list.error && flat.length === 0 && (
-        <CollectionsEmpty title={t.empty} createLabel={t.newCollection} onCreate={() => setCreating(true)} onCreated={reload} />
+        <CollectionsEmpty title={t.empty} createLabel={t.newCollection} onCreate={() => openSheet(null)} onCreated={reload} />
       )}
-      <DataState loading={list.loading} error={list.error} onRetry={() => list.refresh()}>
+      <DataState loading={list.loading} error={list.error} onRetry={() => list.refresh()} skeleton={<ListSkeleton variant="card" rows={6} />}>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -755,7 +907,7 @@ export function CollectionsPage() {
           }}
         >
           <SortableContext items={visible.map((n) => n.item.id)} strategy={verticalListSortingStrategy}>
-            <ul className="space-y-1.5" aria-busy={saving}>
+            <ul className="space-y-2 empty:hidden" aria-busy={saving}>
               {visible.map((node) => {
                 const index = flat.findIndex((n) => n.item.id === node.item.id);
                 return (
@@ -768,7 +920,7 @@ export function CollectionsPage() {
                     busy={saving}
                     onMove={(next) => void commit(next)}
                     onOrderProducts={() => setOrdering(node.item)}
-                    onEdit={() => setEditing(node.item)}
+                    onEdit={() => openSheet(node.item)}
                     onDelete={() => setDeleting(node.item)}
                   />
                 );
@@ -778,30 +930,19 @@ export function CollectionsPage() {
         </DndContext>
       </DataState>
 
-      <Modal open={creating} onClose={() => setCreating(false)} title={t.newCollection}>
-        <CollectionForm
+      {sheet && (
+        <CollectionDialog
+          key={sheet.key}
+          open={sheet.open}
+          collection={sheet.collection ?? undefined}
           flat={flat}
-          onCancel={() => setCreating(false)}
+          onClose={closeSheet}
           onDone={() => {
-            setCreating(false);
+            closeSheet();
             reload();
           }}
         />
-      </Modal>
-
-      <Modal open={editing !== null} onClose={() => setEditing(null)} title={t.editTitle}>
-        {editing && (
-          <CollectionForm
-            collection={editing}
-            flat={flat}
-            onCancel={() => setEditing(null)}
-            onDone={() => {
-              setEditing(null);
-              reload();
-            }}
-          />
-        )}
-      </Modal>
+      )}
 
       {ordering && (
         <ProductOrderDialog

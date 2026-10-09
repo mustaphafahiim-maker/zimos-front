@@ -1,0 +1,109 @@
+/* Segmented control, toasts with Undo, popovers and edit-in-place — components/Segmented.tsx, Toast.tsx, Popover.tsx, EditInPlace.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables. */
+:root:not([data-glass="off"]) {
+  /* ---------------------------------------------------------------- *
+   * Segmented control. The track is a small pane in the page flow:
+   * translucent, lit along its rim, no blur (nothing passes beneath it).
+   * The hairline is a shadow, not a border, so the track keeps the exact
+   * size it has without the glass layer.
+   * ---------------------------------------------------------------- */
+  .zimos-segmented {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  /* The thumb is the shared selection fill — the same one as the main button,
+     the current side-menu row and the chosen tab. It is drawn in two parts that
+     slide together: the fill, clipped to the track, and the glow under it, which
+     is not clipped and falls a little below the track. */
+  .zimos-segmented-thumb {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28);
+  }
+  .zimos-segmented-glow {
+    box-shadow: var(--lg-brand-glow);
+  }
+  .zimos-segmented > [role="radio"][aria-checked="true"] {
+    color: var(--lg-on-brand);
+  }
+  /* If forced colours are on while this layer still is: system colours, no gradient. */
+  @media (forced-colors: active) {
+    .zimos-segmented-thumb {
+      background-color: Highlight;
+      background-image: none;
+    }
+    .zimos-segmented > [role="radio"][aria-checked="true"] {
+      color: HighlightText;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Popover: an overlay pane. It floats over the page — a table, a
+   * photo, another pane — so it is frosted and near solid, with the
+   * small rim, a hairline and the pop shadow.
+   * ---------------------------------------------------------------- */
+  .zimos-popover {
+    background-color: var(--lg-overlay);
+    -webkit-backdrop-filter: var(--lg-blur-overlay);
+    backdrop-filter: var(--lg-blur-overlay);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), var(--shadow-pop);
+  }
+  /* The field inside (edit in place) is a lit well, like a field on a card;
+     the page rule for fields does not reach a pane drawn outside the page. */
+  .zimos-popover [data-slot="input"] {
+    background-color: var(--lg-control-lit);
+  }
+  .zimos-popover [data-slot="input"]:focus-visible {
+    background-color: var(--color-paper-raised);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Toasts. The card is the same overlay pane (liquid-glass.css frosts
+   * the bg-paper-raised + shadow-pop pair; said again here so the toast
+   * does not depend on that selector). Toasts are drawn outside the app
+   * shell, so the deeper text shades are given by hand: the status glyph
+   * and the action pill hold 4.5:1 on the frosted card in both themes
+   * (the three --lg-text-* shades flip by themselves in dark).
+   * ---------------------------------------------------------------- */
+  [data-slot="toast"] {
+    background-color: var(--lg-overlay);
+    -webkit-backdrop-filter: var(--lg-blur-overlay);
+    backdrop-filter: var(--lg-blur-overlay);
+    --tw-inset-shadow: var(--lg-rim-line);
+  }
+  /* Success and error keep their tinted hairline; an Undo is neutral. */
+  [data-slot="toast"][data-kind="undo"] {
+    --tw-ring-color: var(--lg-edge);
+  }
+  [data-slot="toast"][data-kind="success"] [data-slot="toast-icon"] {
+    color: var(--lg-text-success);
+  }
+  [data-slot="toast"][data-kind="error"] [data-slot="toast-icon"] {
+    color: var(--lg-text-danger);
+  }
+  [data-slot="toast"][data-kind="undo"] [data-slot="toast-icon"] {
+    color: var(--lg-text-primary);
+  }
+  /* «تراجع»: a small tinted pane in the store's colour, lit along its top edge. */
+  [data-slot="toast-action"] {
+    color: var(--lg-text-primary);
+    background-color: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.6),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  }
+  [data-slot="toast-action"]:hover {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  }
+  &.dark [data-slot="toast-action"] {
+    background-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.12),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 26%, transparent);
+  }
+  &.dark [data-slot="toast-action"]:hover {
+    background-color: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  }
+}

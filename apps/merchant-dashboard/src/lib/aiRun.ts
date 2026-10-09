@@ -13,8 +13,6 @@ const STRINGS = {
   en: {
     failed: "The AI couldn't write this: {error}",
     timeout: "The AI is taking too long. Try again in a moment.",
-    limitHour: "Too many AI requests in the last hour. Try again later.",
-    limitMonth: "This month's AI requests on your plan are used up.",
     dialect_egyptian: "Egyptian Arabic",
     dialect_gulf: "Gulf Arabic",
     dialect_msa: "Standard Arabic",
@@ -24,8 +22,6 @@ const STRINGS = {
   ar: {
     failed: "الذكاء الاصطناعي لم يستطع الكتابة: {error}",
     timeout: "الذكاء الاصطناعي يأخذ وقتًا طويلًا. حاول بعد قليل.",
-    limitHour: "طلبات ذكاء اصطناعي كثيرة في الساعة الأخيرة. حاول لاحقًا.",
-    limitMonth: "استُهلكت طلبات الذكاء الاصطناعي في باقتك لهذا الشهر.",
     dialect_egyptian: "عامية مصرية",
     dialect_gulf: "لهجة خليجية",
     dialect_msa: "عربية فصحى",
@@ -49,12 +45,29 @@ export async function runAiJob<F extends AiFeature>(workspaceId: string, feature
 export function useAiErrorText() {
   const t = useT(STRINGS);
   const errorMessage = useErrorMessage();
+  const jobFailure = useAiJobFailure();
   return (err: unknown): string => {
-    if (err instanceof AiRunError) return err.message === "timeout" ? t.timeout : fmt(t.failed, { error: err.message });
-    if (err instanceof ApiError && err.code === "AI_LIMIT_REACHED") {
-      return (err.details as { scope?: string } | undefined)?.scope === "hour" ? t.limitHour : t.limitMonth;
-    }
+    if (err instanceof AiRunError) return err.message === "timeout" ? t.timeout : (jobFailure(err.message) ?? fmt(t.failed, { error: err.message }));
+    // AI_LIMIT_REACHED (by its scope), AI_PROVIDER_UNAVAILABLE and AI_NOT_CONFIGURED are worded in lib/errorMessages.
     return errorMessage(err);
+  };
+}
+
+/**
+ * A failed job keeps only the provider's English sentence, not its code
+ * (ai/providers/anthropic.js): the ones that mean "busy" or "not available"
+ * get the same wording as the live errors. null for any other failure.
+ */
+const JOB_FAILURES: Array<[RegExp, string, number]> = [
+  [/provider is busy|took too long|not answering|AI request failed/i, "AI_PROVIDER_UNAVAILABLE", 503],
+  [/AI is not available|not available yet|could not take this request/i, "AI_NOT_CONFIGURED", 503],
+];
+
+export function useAiJobFailure() {
+  const errorMessage = useErrorMessage();
+  return (error: string | null | undefined): string | null => {
+    const known = JOB_FAILURES.find(([pattern]) => pattern.test(error ?? ""));
+    return known ? errorMessage(new ApiError(error ?? "", known[2], known[1], null)) : null;
   };
 }
 

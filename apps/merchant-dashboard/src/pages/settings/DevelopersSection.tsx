@@ -31,6 +31,7 @@ import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataState } from "@/components/DataState";
+import { SettingsCard } from "./sections/SettingsCard";
 import { WebhookDeliveryLog, WebhookEndpointNotes, WebhookFilterField } from "./WebhookExtras";
 import { EditWebhookEndpointModal, WebhookHeadersField, WebhookHeadersNote, WebhookTopicsField, useWebhookHeaders } from "./WebhookEndpointFields";
 import { AiAssistantsPanel } from "./AiAssistantsPanel";
@@ -38,6 +39,7 @@ import { ApiKeyAccessPicker, EMPTY_ACCESS, countExtraResources, scopesForAccess,
 import { TextField } from "@/components/Field";
 import { StatusBadge } from "@/components/StatusBadge";
 import { AutomationBadge } from "./AutomationBadge";
+import { WebhookAppBadge, WebhookAppRemovedNote, webhookAppRemoved } from "./WebhookAppBits";
 
 /**
  * Settings → Developers: the API keys and webhook endpoints a merchant hands
@@ -55,6 +57,11 @@ import { AutomationBadge } from "./AutomationBadge";
  * here stores them or can show them again.
  */
 const MANAGER_ROLES: ReadonlySet<string> = new Set(["owner", "workspace_manager"]);
+
+/** Whether this role manages the keys, the webhooks and the AI assistants (the same set the section itself checks). */
+export function canManageDevelopers(role: string | null | undefined): boolean {
+  return MANAGER_ROLES.has(role ?? "");
+}
 
 const STRINGS = {
   en: {
@@ -245,7 +252,12 @@ const when = (iso: string) => new Date(iso).toLocaleString();
 
 const DELIVERY_TONE = { pending: "warning", delivered: "success", failed: "warning", exhausted: "danger" } as const;
 
-export function DevelopersSection() {
+/**
+ * `part`: "all" is the whole block as it always was (keys, AI assistants,
+ * webhooks); "api" is the keys and the webhooks; "ai" is the AI assistants
+ * alone. The role gate is the same for every part.
+ */
+export function DevelopersSection({ part = "all" }: { part?: "all" | "api" | "ai" }) {
   const t = useT(STRINGS);
   const { currentWorkspace } = useWorkspace();
   const [forbidden, setForbidden] = useState(false);
@@ -254,23 +266,35 @@ export function DevelopersSection() {
   const canManage = MANAGER_ROLES.has(currentWorkspace?.role ?? "") && !forbidden;
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-      <div className="mt-3">
-        <AppOffNotice app="public_api" />
-        <AppOffNotice app="webhooks" />
-      </div>
-      {canManage ? (
-        <div className="mt-6 space-y-8">
-          <ApiKeysPanel t={t} reload={keysReload} onForbidden={() => setForbidden(true)} />
-          <AiAssistantsPanel onKeyCreated={() => setKeysReload((n) => n + 1)} />
-          <WebhooksPanel t={t} onForbidden={() => setForbidden(true)} />
+    <>
+      {part !== "ai" && (
+        <div className="empty:hidden">
+          <AppOffNotice app="public_api" />
+          <AppOffNotice app="webhooks" />
         </div>
-      ) : (
-        <Alert className="mt-4">{t.readOnly}</Alert>
       )}
-    </section>
+      {canManage ? (
+        <>
+          {part !== "ai" && (
+            <SettingsCard>
+              <ApiKeysPanel t={t} reload={keysReload} onForbidden={() => setForbidden(true)} />
+            </SettingsCard>
+          )}
+          {part !== "api" && (
+            <SettingsCard>
+              <AiAssistantsPanel onKeyCreated={() => setKeysReload((n) => n + 1)} />
+            </SettingsCard>
+          )}
+          {part !== "ai" && (
+            <SettingsCard>
+              <WebhooksPanel t={t} onForbidden={() => setForbidden(true)} />
+            </SettingsCard>
+          )}
+        </>
+      ) : (
+        <Alert>{t.readOnly}</Alert>
+      )}
+    </>
   );
 }
 
@@ -290,7 +314,7 @@ function SecretBox({ t, value }: { t: T; value: string }) {
       <code dir="ltr" className="min-w-0 flex-1 select-all break-all font-mono text-xs text-ink" data-testid="secret-value">
         {value}
       </code>
-      <Button size="sm" variant="outline" onClick={copy}>
+      <Button size="sm" variant="outline" className="min-h-11 sm:min-h-8" onClick={copy}>
         {copied ? t.copied : t.copy}
       </Button>
     </div>
@@ -337,7 +361,7 @@ function ApiKeysPanel({ t, reload, onForbidden }: { t: T; reload: number; onForb
             </a>
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>{t.newKey}</Button>
+        <Button className="min-h-11 sm:min-h-9" onClick={() => setCreating(true)}>{t.newKey}</Button>
       </div>
 
       <div className="mt-3">
@@ -370,7 +394,7 @@ function ApiKeysPanel({ t, reload, onForbidden }: { t: T; reload: number; onForb
                 {key.revokedAt ? (
                   <StatusBadge value="revoked" tone="neutral" label={t.revoked} text={t.badge_revoked} />
                 ) : (
-                  <Button size="sm" variant="outline" onClick={() => setRevoking(key)}>
+                  <Button size="sm" variant="outline" className="min-h-11 sm:min-h-8" onClick={() => setRevoking(key)}>
                     {t.revoke}
                   </Button>
                 )}
@@ -562,7 +586,7 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
           <h3 className="font-medium text-ink">{t.hooksTitle}</h3>
           <p className="text-sm text-ink-soft">{t.hooksHint}</p>
         </div>
-        <Button onClick={() => setAdding(true)}>{t.addEndpoint}</Button>
+        <Button className="min-h-11 sm:min-h-9" onClick={() => setAdding(true)}>{t.addEndpoint}</Button>
       </div>
 
       <div className="mt-3">
@@ -581,6 +605,7 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
                     {endpoint.url}
                   </code>
                   <AutomationBadge url={endpoint.url} />
+                  <WebhookAppBadge endpoint={endpoint} />
                   <StatusBadge
                     value={endpoint.isActive ? "active" : "inactive"}
                     label={endpoint.isActive ? t.active : t.paused}
@@ -595,23 +620,27 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
                 </p>
                 <WebhookHeadersNote endpoint={endpoint} />
                 <WebhookEndpointNotes endpoint={endpoint} />
+                <WebhookAppRemovedNote endpoint={endpoint} />
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setEditing(endpoint)}>
+                  <Button size="sm" variant="outline" className="min-h-11 sm:min-h-8" onClick={() => setEditing(endpoint)}>
                     {t.edit}
                   </Button>
-                  <Button size="sm" variant="outline" disabled={testing === endpoint.id} onClick={() => sendTest(endpoint)}>
+                  <Button size="sm" variant="outline" className="min-h-11 sm:min-h-8" disabled={testing === endpoint.id} onClick={() => sendTest(endpoint)}>
                     {testing === endpoint.id ? t.testing : t.sendTest}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setHistory(endpoint)}>
+                  <Button size="sm" variant="outline" className="min-h-11 sm:min-h-8" onClick={() => setHistory(endpoint)}>
                     {t.deliveries}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setActive(endpoint, !endpoint.isActive)}>
-                    {endpoint.isActive ? t.pause : t.resume}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setRotating(endpoint)}>
+                  {/* An endpoint whose app was removed can't be switched back on (handoff 266). */}
+                  {!webhookAppRemoved(endpoint) && (
+                    <Button size="sm" variant="outline" className="min-h-11 sm:min-h-8" onClick={() => setActive(endpoint, !endpoint.isActive)}>
+                      {endpoint.isActive ? t.pause : t.resume}
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" className="min-h-11 sm:min-h-8" onClick={() => setRotating(endpoint)}>
                     {t.rotate}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setRemoving(endpoint)}>
+                  <Button size="sm" variant="ghost" className="min-h-11 sm:min-h-8" onClick={() => setRemoving(endpoint)}>
                     {t.remove}
                   </Button>
                 </div>
@@ -883,7 +912,7 @@ function DeliveriesModal({ t, endpoint, onClose }: { t: T; endpoint: WebhookEndp
                   </pre>
                 </details>
                 {delivery.status !== "delivered" && (
-                  <Button size="sm" variant="outline" disabled={sending === delivery.id} onClick={() => redeliver(delivery)}>
+                  <Button size="sm" variant="outline" className="min-h-11 sm:min-h-8" disabled={sending === delivery.id} onClick={() => redeliver(delivery)}>
                     {sending === delivery.id ? t.redelivering : t.redeliver}
                   </Button>
                 )}

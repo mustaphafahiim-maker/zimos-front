@@ -1,0 +1,87 @@
+/* Reviews, Questions, Shoppable images and the Blog — pages/reviews, pages/questions,
+   pages/shoppable, pages/blog.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the same
+   switch, so with data-glass="off" none of it applies and the components stand on their own
+   solid Tailwind classes. Fills and rims come from the --lg-* variables.
+
+   Nothing here is blurred: the cards and the wells lie in the page flow or inside a pane
+   that is already frosted (Quick Look, a sheet). The rows of these lists are the list kit's
+   own (list.css) and the sheet of rows of returns-protection.css; this file only adds what
+   is theirs alone. Text stays var(--color-ink) / var(--lg-ink-soft) on every pane. */
+:root:not([data-glass="off"]) {
+  /* A well inside a pane: the shopper's own words in a preview or over an answer box. */
+  --sc-well: color-mix(in srgb, var(--color-primary-dark) 5%, transparent);
+  --sc-bead: color-mix(in srgb, var(--color-ink) 7%, transparent);
+
+  &.dark {
+    --sc-well: rgb(255 255 255 / 0.05);
+    --sc-bead: rgb(255 255 255 / 0.09);
+  }
+
+  /* The words of a shopper — a review's comment, a question — as a quiet well with a hairline. */
+  [data-slot="review-note"],
+  [data-slot="question-note"] {
+    background-color: var(--sc-well);
+    box-shadow: inset 0 0 0 1px var(--lg-edge);
+  }
+  [data-slot="review-peek-rule"],
+  [data-slot="question-peek-rule"] {
+    background-color: var(--lg-hairline, var(--lg-edge));
+  }
+
+  /* A quiet fact of a row (how many photos): a bead of the pane, no tone. */
+  [data-slot="review-fact"] {
+    background-color: var(--sc-bead);
+    color: var(--lg-ink-soft);
+  }
+
+  /* A lit star carries a little of its own light; an unlit one is a hairline. */
+  .zimos-review-star[data-lit] {
+    filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--color-accent) 35%, transparent));
+  }
+
+  /* A review's photo: a small lit pane with the picture in it. */
+  .zimos-review-photo {
+    background-color: var(--lg-control);
+    box-shadow:
+      0 0 0 1px var(--lg-edge),
+      var(--shadow-card);
+  }
+  @media (hover: hover) {
+    .zimos-review-photo:hover {
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--color-primary) 40%, transparent),
+        var(--shadow-raised);
+    }
+  }
+
+  /* A shoppable image in the gallery: a card pane, no blur (a gallery is many of these). */
+  .zimos-look-card {
+    background-color: var(--lg-fill);
+    box-shadow:
+      var(--lg-rim-line),
+      var(--shadow-card);
+  }
+  @media (hover: hover) {
+    .zimos-look-card:hover {
+      box-shadow:
+        var(--lg-rim-line),
+        var(--shadow-raised);
+    }
+  }
+  /* The picture a point is tapped onto, in the editor. */
+  .zimos-look-canvas {
+    box-shadow:
+      0 0 0 1px var(--lg-edge),
+      var(--shadow-card);
+  }
+  /* A point on a picture: the selection fill, so it reads as "the store's" on any photo. */
+  .zimos-look-dot,
+  .zimos-look-point:not([data-missing]) {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+  }
+  .zimos-look-point:not([data-missing]) {
+    color: var(--lg-on-brand);
+  }
+}

@@ -1,6 +1,6 @@
 import { lazy, useEffect, useState, type ReactNode, type RefObject, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Activity, Eye, Globe, Map as MapIcon, MousePointerClick, Users } from "lucide-react";
+import { IconClick, IconEye, IconGlobe, IconMap, IconPeople, IconRealtime } from "@/components/icons";
 import { Card, Tabs, TabsContent, TabsList, TabsTrigger, cn } from "@store-builder/ui";
 import type { WebAnalyticsRealtimeActivity } from "@store-builder/api-client";
 import { PageHeader } from "@/components/PageHeader";
@@ -49,7 +49,7 @@ const STRINGS = {
   ar: {
     title: "مباشر الآن",
     description: "آخر ٣٠ دقيقة، وبيتحدّث كل ١٠ ثواني.",
-    descriptionMap: "زوارك واللي بيكملوا الطلب والطلبات دلوقتي فين، وبيتحدّث كل ١٥ ثانية.",
+    descriptionMap: "زوارك واللي بيكملوا الأوردر والأوردرات دلوقتي فين، وبيتحدّث كل ١٥ ثانية.",
     back: "زيارات الموقع",
     active: "المتصفحون الآن",
     activeHint: "الزوار خلال آخر 5 دقائق",
@@ -153,11 +153,11 @@ export function RealtimePage() {
       <Tabs value={tab} onValueChange={selectTab}>
         <TabsList aria-label={t.tabs} className="mb-2 w-full max-w-full overflow-x-auto sm:w-fit group-data-horizontal/tabs:h-auto">
           <TabsTrigger value="activity" className="min-h-11 px-4">
-            <Activity aria-hidden />
+            <IconRealtime aria-hidden />
             {t.tabActivity}
           </TabsTrigger>
           <TabsTrigger value="map" className="min-h-11 px-4">
-            <MapIcon aria-hidden />
+            <IconMap aria-hidden />
             {t.tabMap}
           </TabsTrigger>
         </TabsList>
@@ -240,11 +240,11 @@ function RealtimeActivity({
         {d && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-              <Tile icon={<Activity />} label={t.active} value={<bdi dir="ltr">{formatCount(d.activeVisitors)}</bdi>} hint={t.activeHint} />
-              <Tile icon={<Eye />} label={t.views} value={<bdi dir="ltr">{formatCount(d.totals.views)}</bdi>} />
-              <Tile icon={<Users />} label={t.visitors} value={<bdi dir="ltr">{formatCount(d.totals.visitors)}</bdi>} />
-              <Tile icon={<MousePointerClick />} label={t.events} value={<bdi dir="ltr">{formatCount(d.totals.events)}</bdi>} />
-              <Tile icon={<Globe />} label={t.countries} value={<bdi dir="ltr">{formatCount(d.totals.countries)}</bdi>} />
+              <Tile icon={<IconRealtime />} label={t.active} value={<bdi dir="ltr">{formatCount(d.activeVisitors)}</bdi>} hint={t.activeHint} />
+              <Tile icon={<IconEye />} label={t.views} value={<bdi dir="ltr">{formatCount(d.totals.views)}</bdi>} />
+              <Tile icon={<IconPeople />} label={t.visitors} value={<bdi dir="ltr">{formatCount(d.totals.visitors)}</bdi>} />
+              <Tile icon={<IconClick />} label={t.events} value={<bdi dir="ltr">{formatCount(d.totals.events)}</bdi>} />
+              <Tile icon={<IconGlobe />} label={t.countries} value={<bdi dir="ltr">{formatCount(d.totals.countries)}</bdi>} />
             </div>
 
             <Card className="gap-0 p-4">
@@ -280,7 +280,7 @@ function RealtimeActivity({
                     {activity.map((a, i) => (
                       <li key={`${a.sessionId}-${a.createdAt}-${i}`} className="flex items-center gap-3 py-2 text-sm">
                         <span className={cn("rounded-md p-1.5 [&>svg]:size-3.5", a.type === "event" ? "bg-accent-soft text-accent-dark" : "bg-primary-soft text-primary-dark dark:text-primary")}>
-                          {a.type === "event" ? <MousePointerClick /> : <Eye />}
+                          {a.type === "event" ? <IconClick /> : <IconEye />}
                         </span>
                         <span className="min-w-0 flex-1 truncate text-ink" dir="auto">
                           {describe(a)}

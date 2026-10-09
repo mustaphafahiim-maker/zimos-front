@@ -94,6 +94,8 @@ export function TemplatesPage() {
                   <Th>Price</Th>
                   <Th>Gallery</Th>
                   <Th>Version</Th>
+                  {/* The websites and funnels made from it, not counting the trash (handoff 401). */}
+                  <Th>Uses</Th>
                   <Th className="text-end">
                     <span className="sr-only">Actions</span>
                   </Th>
@@ -150,6 +152,9 @@ export function TemplatesPage() {
                       <span className="block text-xs text-ink-soft">
                         {t.versionCount} version{t.versionCount === 1 ? "" : "s"}
                       </span>
+                    </Td>
+                    <Td className="text-sm tabular-nums" data-slot="template-uses">
+                      {(t as { usesCount?: number }).usesCount ?? 0}
                     </Td>
                     <Td className="text-end whitespace-nowrap">
                       <Button
@@ -467,7 +472,8 @@ function VersionsDrawer({
                   </div>
                   <p className="mt-0.5 text-xs text-ink-soft">
                     {v.pageCount} page{v.pageCount === 1 ? "" : "s"} ({v.pagePaths.join(", ")}) · {v.websiteCount} site
-                    {v.websiteCount === 1 ? "" : "s"} built from it · added {formatRelative(v.createdAt)}
+                    {v.websiteCount === 1 ? "" : "s"} and {(v as { funnelCount?: number }).funnelCount ?? 0} funnel
+                    {((v as { funnelCount?: number }).funnelCount ?? 0) === 1 ? "" : "s"} built from it · added {formatRelative(v.createdAt)}
                   </p>
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => void view(v.id)}>

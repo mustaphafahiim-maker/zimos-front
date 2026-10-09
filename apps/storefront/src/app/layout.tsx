@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { BASE_FONT_CSS } from "./themeFonts";
 import { CartProvider } from "@/lib/CartProvider";
 import { documentLocale } from "@/lib/documentLocale";
 import { serverHeadCode } from "@/lib/headCode";
@@ -20,19 +21,18 @@ const themeScript = `(function(){try{var e=document.documentElement,s=null;try{s
  * <html> when the shopper switches language (see DocumentLocale).
  */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { lang, dir } = await documentLocale();
-  // The store's own head code (custom code), in the first response: domain checks read it there.
-  const headCode = await serverHeadCode();
+  // The store's language for <html>, and its own head code (custom code) for the first response
+  // — domain checks read it there. Read together: each is a call to the API on a store's page,
+  // and neither waits on the other.
+  const [{ lang, dir }, headCode] = await Promise.all([documentLocale(), serverHeadCode()]);
   return (
     <html lang={lang} dir={dir} suppressHydrationWarning className="h-full antialiased">
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap"
-          rel="stylesheet"
-        />
+        {/* The default type stacks with their metric-matched fallbacks (app/themeFonts.ts).
+            The families themselves are served from this origin: no font stylesheet
+            from another host stands between the shopper and the first paint. */}
+        <style dangerouslySetInnerHTML={{ __html: BASE_FONT_CSS }} />
         {headCode && <HeadCode head={headCode.head} css={headCode.css} />}
       </head>
       <body className="min-h-full flex flex-col">

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ApiClient, CaptureCheckoutSessionPayload } from "@store-builder/api-client";
 import { botGuardAutosaveFields } from "./botGuard";
+import { checkoutPlace } from "./checkoutPlace";
 import { isEgyptianMobile, normalizePhone } from "./egypt";
 import { isEgyptForm, type OrderFormValues } from "./orderForm";
 import { currentTouches } from "./touches";
@@ -44,6 +45,7 @@ export function useCheckoutAutosave({
   values,
   lines,
   source = "store",
+  funnelId,
 }: {
   client: ApiClient;
   workspaceId: string;
@@ -51,7 +53,13 @@ export function useCheckoutAutosave({
   lines: AutosaveLine[];
   /** Where the checkout is happening — a funnel's checkout step reports "funnel". */
   source?: CaptureCheckoutSessionPayload["source"];
+  /** The funnel this checkout belongs to (handoff 302); the page's own address is read when unset. */
+  funnelId?: string;
 }) {
+  const funnelRef = useRef(funnelId);
+  useEffect(() => {
+    funnelRef.current = funnelId;
+  }, [funnelId]);
   const stopped = useRef(false);
   const sessionId = useRef<string | undefined>(undefined);
   const lastSaved = useRef<string | null>(null);
@@ -103,7 +111,8 @@ export function useCheckoutAutosave({
           if (stopped.current) return;
           // How the shopper came (first / last touch, lib/touches.ts): kept on the lost order and the order it becomes.
           const attribution = currentTouches();
-          const session = await client.captureCheckoutSession(workspaceId, { ...payload, ...guard, ...(attribution ? { attribution } : {}) });
+          // Where the checkout is, on every save — a save without them clears them (handoff 302, 322; lib/checkoutPlace).
+          const session = await client.captureCheckoutSession(workspaceId, { ...payload, ...guard, ...(attribution ? { attribution } : {}), ...checkoutPlace(funnelRef.current) });
           sessionId.current = session.id;
           lastSaved.current = payloadKey;
         } catch (err) {

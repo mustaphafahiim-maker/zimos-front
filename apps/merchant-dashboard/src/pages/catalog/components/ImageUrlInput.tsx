@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Upload, X } from "lucide-react";
+import { IconClose, IconUpload } from "@/components/icons";
 import { Button, Input, Spinner } from "@store-builder/ui";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -9,7 +9,7 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
   en: { upload: "Upload", remove: "Remove image", placeholder: "Image link, or upload one" },
-  ar: { upload: "رفع", remove: "حذف الصورة", placeholder: "رابط الصورة، أو ارفع صورة" },
+  ar: { upload: "ارفع", remove: "شيل الصورة", placeholder: "لينك الصورة، أو ارفع صورة" },
 } satisfies Messages;
 
 /**
@@ -57,7 +57,14 @@ export function ImageUrlInput({
     <div className="space-y-1">
       <div className="flex items-center gap-2">
         {value ? (
-          <img src={value} alt="" className="size-10 shrink-0 rounded-[0.5rem] border border-line object-cover" />
+          // A fixed box, so the row does not move when the picture arrives.
+          <img
+            src={value}
+            alt=""
+            width={40}
+            height={40}
+            className="size-10 shrink-0 rounded-[0.625rem] bg-paper-sunken object-cover ring-1 ring-line"
+          />
         ) : null}
         <Input
           id={id}
@@ -82,26 +89,32 @@ export function ImageUrlInput({
         <Button
           type="button"
           variant="outline"
-          className="min-h-10 shrink-0"
+          className="min-h-10 shrink-0 pointer-coarse:min-h-11"
           disabled={disabled || busy}
+          aria-busy={busy || undefined}
           onClick={() => input.current?.click()}
         >
-          {busy ? <Spinner className="size-4" /> : <Upload className="size-4" aria-hidden />}
+          {busy ? <Spinner className="size-4" /> : <IconUpload className="size-4" aria-hidden />}
           {t.upload}
         </Button>
         {value && (
           <button
             type="button"
             aria-label={t.remove}
+            title={t.remove}
             disabled={disabled || busy}
             onClick={() => onChange("")}
-            className="inline-flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-[0.5rem] text-ink-soft hover:bg-danger-soft hover:text-danger"
+            className="inline-flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-[scale,background-color,color] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-danger-soft hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none pointer-coarse:size-11"
           >
-            <X className="size-4" aria-hidden />
+            <IconClose className="size-4" aria-hidden />
           </button>
         )}
       </div>
-      {error && <p className="text-xs font-medium text-danger">{error}</p>}
+      {error && (
+        <p role="alert" className="text-xs font-medium text-danger">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

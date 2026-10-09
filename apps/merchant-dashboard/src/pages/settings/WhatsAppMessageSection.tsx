@@ -7,7 +7,11 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Textarea } from "@/components/Textarea";
+import { SaveBar } from "@/components/SaveBar";
+import { SettingsGroup, SettingsRow } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { SettingsCard } from "./sections/SettingsCard";
 import {
   DEFAULT_WHATSAPP_TEMPLATE,
   WHATSAPP_PLACEHOLDERS,
@@ -44,6 +48,8 @@ const STRINGS = {
     save: "Save message",
     saving: "Saving…",
     restore: "Use the default message",
+    restoreHint: "Your own wording is dropped and the store follows the standard message.",
+    restoreAction: "Use the default",
     saved: "WhatsApp message saved.",
     restored: "The default message is back.",
     sampleCustomer: "Mona Ali",
@@ -53,24 +59,26 @@ const STRINGS = {
   ar: {
     title: "رسالة التأكيد عبر واتساب",
     description:
-      "النص الذي يُفتح به واتساب عندما يضغط الموظف زر واتساب في قائمة التأكيد. يرسلها الموظف من حسابه على واتساب.",
-    placeholders: "أدرج بيانًا:",
+      "الكلام اللي واتساب بيفتح بيه لما الموظف يدوس واتساب في قايمة التأكيد. الموظف بيبعتها من واتساب بتاعه.",
+    placeholders: "ضيف بيان في الرسالة:",
     placeholder_store: "اسم المتجر",
-    placeholder_orderNumber: "رقم الطلب",
+    placeholder_orderNumber: "رقم الأوردر",
     placeholder_items: "المنتجات",
     placeholder_total: "الإجمالي",
     placeholder_customerName: "اسم العميل",
     message: "الرسالة",
-    count: "{n} / {max} حرفًا",
-    preview: "معاينة على طلب تجريبي",
-    usingDefault: "يستخدم هذا المتجر الرسالة الافتراضية.",
-    readOnlyTitle: "عرض فقط",
-    readOnly: "يمكن لمالك المتجر أو مدير مساحة العمل فقط تغيير هذه الرسالة.",
-    save: "حفظ الرسالة",
+    count: "{n} / {max} حرف",
+    preview: "معاينة على أوردر تجريبي",
+    usingDefault: "المتجر ماشي على الرسالة الأساسية.",
+    readOnlyTitle: "للعرض بس",
+    readOnly: "صاحب المتجر أو المدير بس اللي يقدروا يغيّروا الرسالة دي.",
+    save: "احفظ الرسالة",
     saving: "بنحفظ…",
-    restore: "استخدام الرسالة الافتراضية",
-    saved: "تم حفظ رسالة واتساب.",
-    restored: "عادت الرسالة الافتراضية.",
+    restore: "ارجع للرسالة الأساسية",
+    restoreHint: "كلامك هيتشال والمتجر هيمشي على الرسالة الأساسية.",
+    restoreAction: "رجّع الأساسية",
+    saved: "رسالة واتساب اتحفظت.",
+    restored: "رجعنا للرسالة الأساسية.",
     sampleCustomer: "منى علي",
     sampleItems: "2 × قميص كتان (أزرق، L)",
     sampleTotal: "‏850٫00 ج.م.‏",
@@ -97,6 +105,7 @@ export function WhatsAppMessageSection() {
   const editable = EDITOR_ROLES.has(currentWorkspace?.role ?? "") && !forbidden;
   const current = saved ?? DEFAULT_WHATSAPP_TEMPLATE;
   const dirty = draft.trim() !== current.trim();
+  useReportDirty(dirty && editable);
   const preview = useMemo(
     () =>
       fillWhatsAppTemplate(draft, {
@@ -154,37 +163,15 @@ export function WhatsAppMessageSection() {
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
+    <>
+      {!editable && (
+        <Alert>
+          <p className="font-medium">{t.readOnlyTitle}</p>
+          <p>{t.readOnly}</p>
+        </Alert>
+      )}
 
-      <div className="mt-4 space-y-4">
-        {!editable && (
-          <Alert>
-            <p className="font-medium">{t.readOnlyTitle}</p>
-            <p>{t.readOnly}</p>
-          </Alert>
-        )}
-
-        {editable && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-ink-soft">{t.placeholders}</span>
-            {WHATSAPP_PLACEHOLDERS.map((key) => (
-              <Button
-                key={key}
-                type="button"
-                variant="outline"
-                size="sm"
-                className="min-h-11"
-                onClick={() => insert(key)}
-                disabled={saving}
-              >
-                {t[`placeholder_${key}`]}
-              </Button>
-            ))}
-          </div>
-        )}
-
+      <SettingsCard description={t.description}>
         <div className="space-y-1.5">
           <label htmlFor={textareaId} className="text-sm font-medium text-ink">
             {t.message}
@@ -199,6 +186,7 @@ export function WhatsAppMessageSection() {
             readOnly={!editable}
             aria-describedby={countId}
             onChange={(e) => setDraft(e.target.value)}
+            className="rounded-[0.875rem] text-base sm:text-sm"
           />
           <p id={countId} className="text-xs text-ink-soft">
             {fmt(t.count, { n: draft.length, max: WHATSAPP_TEMPLATE_MAX })}
@@ -206,32 +194,65 @@ export function WhatsAppMessageSection() {
           </p>
         </div>
 
-        <div className="space-y-1.5">
-          <p className="text-sm font-medium text-ink">{t.preview}</p>
-          <p dir="auto" className="whitespace-pre-line rounded-[0.5rem] bg-paper px-4 py-3 text-sm text-ink">
-            {preview}
-          </p>
-        </div>
-
-        {error && <Alert variant="danger">{error}</Alert>}
-
         {editable && (
-          <div className="flex flex-wrap justify-end gap-2">
-            {saved !== null && (
-              <Button variant="outline" className="min-h-11" disabled={saving} onClick={() => void save(null)}>
-                {t.restore}
-              </Button>
-            )}
-            <Button
-              className="min-h-11"
-              disabled={saving || !dirty || draft.trim() === ""}
-              onClick={() => void save(draft)}
-            >
-              {saving ? t.saving : t.save}
-            </Button>
+          <div className="mt-3">
+            <p className="text-[13px] leading-5 text-ink-soft">{t.placeholders}</p>
+            {/* One row that scrolls sideways on a phone, so five chips do not push the preview off the first screen. */}
+            <div className="-mx-4 mt-1.5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+              {WHATSAPP_PLACEHOLDERS.map((key) => (
+                <Button
+                  key={key}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="min-h-11 shrink-0 rounded-full sm:min-h-9"
+                  onClick={() => insert(key)}
+                  disabled={saving}
+                >
+                  {t[`placeholder_${key}`]}
+                </Button>
+              ))}
+            </div>
           </div>
         )}
-      </div>
-    </section>
+      </SettingsCard>
+
+      <SettingsCard title={t.preview}>
+        <p dir="auto" className="rounded-[0.875rem] bg-paper-sunken px-4 py-3 text-sm leading-6 whitespace-pre-line text-ink">
+          {preview}
+        </p>
+      </SettingsCard>
+
+      {editable && saved !== null && (
+        <SettingsGroup>
+          <SettingsRow
+            label={t.restore}
+            hint={t.restoreHint}
+            control={
+              <Button variant="outline" className="min-h-11" disabled={saving} onClick={() => void save(null)}>
+                {t.restoreAction}
+              </Button>
+            }
+          />
+        </SettingsGroup>
+      )}
+
+      {error && <Alert variant="danger">{error}</Alert>}
+
+      {editable && (
+        <SaveBar
+          dirty={dirty}
+          saving={saving}
+          disabled={draft.trim() === ""}
+          saveLabel={t.save}
+          savingLabel={t.saving}
+          onSave={() => void save(draft)}
+          onDiscard={() => {
+            setDraft(current);
+            setError(null);
+          }}
+        />
+      )}
+    </>
   );
 }

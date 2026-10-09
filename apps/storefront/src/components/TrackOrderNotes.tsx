@@ -2,6 +2,7 @@
 
 import type { TrackResult } from "@store-builder/api-client";
 import { useStore } from "@/lib/StoreContext";
+import { useWhenInWords } from "./StatusTimeline";
 
 /** What the store wrote for the customer on this order (order notes marked public). */
 export interface TrackNote {
@@ -17,19 +18,21 @@ export function trackNotes(result: TrackResult): TrackNote[] {
 
 export function TrackOrderNotes({ result }: { result: TrackResult }) {
   const { intlLocale } = useStore();
+  const when = useWhenInWords();
   const notes = trackNotes(result);
   if (notes.length === 0) return null;
   const title = intlLocale.startsWith("ar") ? TITLE.ar : TITLE.en;
-  const when = new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium", timeStyle: "short" });
 
   return (
     <div className="mt-6">
       <h3 className="text-sm font-semibold text-ink">{title}</h3>
       <ul className="mt-2 space-y-2">
         {notes.map((note, i) => (
-          <li key={i} className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink">
-            <p className="whitespace-pre-line">{note.body}</p>
-            <p className="mt-1 text-xs text-ink-soft">{when.format(new Date(note.createdAt))}</p>
+          <li key={i} className="rounded-xl border border-line bg-primary-soft px-3.5 py-3 text-sm text-ink">
+            <p className="whitespace-pre-line leading-relaxed" dir="auto">
+              {note.body}
+            </p>
+            <p className="mt-1 text-xs text-ink-soft">{when(note.createdAt)}</p>
           </li>
         ))}
       </ul>

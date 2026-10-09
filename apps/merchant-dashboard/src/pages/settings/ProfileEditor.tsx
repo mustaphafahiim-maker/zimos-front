@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { Alert, Button } from "@store-builder/ui";
 import { profileAvatarOf, profileUpdate } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -7,8 +7,8 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
 import { useT, type Messages } from "@/i18n/LocaleContext";
-import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
+import { SettingsCard } from "./sections/SettingsCard";
 
 const STRINGS = {
   en: {
@@ -19,27 +19,24 @@ const STRINGS = {
     removePicture: "Remove",
     pictureSaved: "Your picture was updated.",
     pictureRemoved: "Your picture was removed.",
-    name: "Your name",
-    saveName: "Save name",
-    saving: "Saving…",
-    nameSaved: "Your name was saved.",
   },
   ar: {
     picture: "صورتك",
-    upload: "رفع صورة",
-    change: "تغيير الصورة",
+    upload: "ارفع صورة",
+    change: "غيّر الصورة",
     uploading: "بنرفع…",
-    removePicture: "إزالة",
-    pictureSaved: "تم تحديث صورتك.",
-    pictureRemoved: "تمت إزالة صورتك.",
-    name: "اسمك",
-    saveName: "حفظ الاسم",
-    saving: "بنحفظ…",
-    nameSaved: "تم حفظ اسمك.",
+    removePicture: "شيلها",
+    pictureSaved: "صورتك اتغيّرت.",
+    pictureRemoved: "صورتك اتشالت.",
   },
 } satisfies Messages;
 
-/** The owner's own picture and name (SPEC §17.3), in "Your account". */
+/**
+ * The person's own picture (SPEC §17.3), at the top of «الملف الشخصي»: who is
+ * signed in, and the picture changed or removed at once (upload, then
+ * PATCH /auth/me/profile { avatarUrl }). The name is saved with the rest of
+ * the profile, from the section's save bar (AccountSection.tsx).
+ */
 export function ProfileEditor() {
   const t = useT(STRINGS);
   const { user, refreshUser } = useAuth();
@@ -47,8 +44,7 @@ export function ProfileEditor() {
   const toast = useToast();
   const errorMessage = useErrorMessage();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [name, setName] = useState(user?.fullName ?? "");
-  const [busy, setBusy] = useState<"picture" | "name" | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (!user) return null;
   const avatar = profileAvatarOf(user);
@@ -58,7 +54,7 @@ export function ProfileEditor() {
     e.target.value = "";
     if (!file) return;
     setError(null);
-    setBusy("picture");
+    setBusy(true);
     try {
       const prepared = await compressImageIfNeeded(file);
       const problem = validateImageFile(prepared);
@@ -73,12 +69,12 @@ export function ProfileEditor() {
     } catch (err) {
       setError(errorMessage(err));
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
   async function removePicture() {
-    setBusy("picture");
+    setBusy(true);
     setError(null);
     try {
       await profileUpdate(apiClient, { avatarUrl: null });
@@ -87,54 +83,45 @@ export function ProfileEditor() {
     } catch (err) {
       setError(errorMessage(err));
     } finally {
-      setBusy(null);
-    }
-  }
-
-  async function saveName(e: FormEvent) {
-    e.preventDefault();
-    setBusy("name");
-    setError(null);
-    try {
-      await profileUpdate(apiClient, { fullName: name.trim() });
-      await refreshUser();
-      toast.success(t.nameSaved);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
   return (
-    <div className="mt-4 space-y-4">
-      <div className="flex flex-wrap items-center gap-4">
+    <SettingsCard>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         {avatar ? (
-          <img src={avatar} alt={t.picture} className="size-16 rounded-full border border-line object-cover" />
+          <img src={avatar} alt={t.picture} className="size-16 shrink-0 rounded-full object-cover ring-1 ring-line" />
         ) : (
-          <div aria-hidden className="flex size-16 items-center justify-center rounded-full bg-primary-soft text-xl font-semibold text-primary">
+          <div aria-hidden className="flex size-16 shrink-0 items-center justify-center rounded-full bg-primary-soft text-2xl font-semibold text-primary">
             {(user.fullName || user.email || "?").charAt(0).toUpperCase()}
           </div>
         )}
+        <div className="min-w-0 flex-[1_1_10rem]">
+          <p className="truncate text-[17px] leading-6 font-semibold text-ink">
+            <bdi>{user.fullName || user.email}</bdi>
+          </p>
+          <p className="truncate text-sm text-ink-soft">
+            <bdi dir="ltr">{user.email}</bdi>
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2">
-          <input ref={fileRef} type="file" accept={ACCEPTED_IMAGE_ACCEPT} className="sr-only" aria-label={t.picture} onChange={pick} />
-          <Button type="button" variant="outline" className="min-h-11" disabled={busy !== null} onClick={() => fileRef.current?.click()}>
-            {busy === "picture" ? t.uploading : avatar ? t.change : t.upload}
+          <input ref={fileRef} type="file" accept={ACCEPTED_IMAGE_ACCEPT} className="sr-only" tabIndex={-1} aria-label={t.picture} onChange={pick} />
+          <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={() => fileRef.current?.click()}>
+            {busy ? t.uploading : avatar ? t.change : t.upload}
           </Button>
           {avatar && (
-            <Button type="button" variant="ghost" className="min-h-11" disabled={busy !== null} onClick={() => void removePicture()}>
+            <Button type="button" variant="ghost" className="min-h-11" disabled={busy} onClick={() => void removePicture()}>
               {t.removePicture}
             </Button>
           )}
         </div>
       </div>
-      <form onSubmit={saveName} className="flex max-w-md flex-wrap items-end gap-2">
-        <TextField className="min-w-0 flex-1" label={t.name} required maxLength={200} value={name} onChange={(e) => setName(e.target.value)} />
-        <Button type="submit" className="min-h-11" disabled={busy !== null || !name.trim() || name.trim() === user.fullName}>
-          {busy === "name" ? t.saving : t.saveName}
-        </Button>
-      </form>
-      {error && <Alert variant="danger">{error}</Alert>}
-    </div>
+      {error && (
+        <Alert variant="danger" className="mt-3">
+          {error}
+        </Alert>
+      )}
+    </SettingsCard>
   );
 }

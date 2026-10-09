@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Alert, Button, Card } from "@store-builder/ui";
-import { Check, Plug } from "lucide-react";
+import { IconCheck, IconPlug } from "@/components/icons";
 import { ApiError, appsInstallExternal, appsPreviewExternal, type AppInstallLink } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -9,7 +9,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
-import { DataState } from "@/components/DataState";
+import { CardSkeleton, DataState } from "@/components/DataState";
 
 /**
  * Where an app install link lands (SPEC §16.3):
@@ -58,27 +58,27 @@ const STRINGS = {
     "scope.analytics:read": "See your sales reports",
   },
   ar: {
-    badLinkTitle: "رابط التثبيت ده مش صحيح",
-    badLinkBody: "اطلب رابط جديد من الخدمة اللي بعتتك هنا.",
+    badLinkTitle: "لينك الربط ده مش صحيح",
+    badLinkBody: "اطلب لينك جديد من الخدمة اللي بعتتك هنا.",
     heading: "{app} عايز يتربط بـ {store}",
     intro: "وافق بس لو عارف الخدمة دي وإنت اللي طلبت تربطها.",
     willBeAble: "هيقدر",
     willReceive: "هيتبلّغ لما",
     sendsTo: "بيتصل بـ {host}",
-    approve: "موافقة وربط",
+    approve: "وافق واربط",
     approving: "بنربط…",
     decline: "مش دلوقتي",
     doneTitle: "اتربط {app}",
     doneBody: "تقدر تشيله في أي وقت من التطبيقات ← المثبّتة.",
-    backToApp: "الرجوع إلى {app}",
+    backToApp: "ارجع لـ {app}",
     toApps: "روح للتطبيقات",
-    "event.order.created": "يتعمل طلب جديد",
-    "event.order.status_changed": "حالة طلب تتغير",
-    "scope.orders:read": "يشوف طلباتك",
-    "scope.orders:write": "ينشئ ويعدّل ويلغي الطلبات",
-    "scope.orders:create": "ينشئ طلبات",
-    "scope.orders:update": "يعدّل الطلبات: الحالة والتأكيد والملاحظات والتتبع",
-    "scope.orders:delete": "يلغي طلبات",
+    "event.order.created": "يتعمل أوردر جديد",
+    "event.order.status_changed": "حالة أوردر تتغيّر",
+    "scope.orders:read": "يشوف أوردراتك",
+    "scope.orders:write": "يعمل ويعدّل ويلغي الأوردرات",
+    "scope.orders:create": "يعمل أوردرات",
+    "scope.orders:update": "يعدّل الأوردرات: الحالة والتأكيد والملاحظات والتتبع",
+    "scope.orders:delete": "يلغي أوردرات",
     "scope.products:read": "يشوف منتجاتك والمخزون",
     "scope.products:create": "يضيف منتجات",
     "scope.products:update": "يعدّل المنتجات والمخزون",
@@ -89,7 +89,7 @@ const STRINGS = {
     "scope.categories:delete": "يحذف تصنيفات",
     "scope.customers:read": "يشوف عملاءك",
     "scope.discounts:read": "يشوف أكواد الخصم",
-    "scope.discounts:write": "ينشئ ويعدّل أكواد الخصم",
+    "scope.discounts:write": "يعمل ويعدّل أكواد الخصم",
     "scope.shipping_areas:read": "يشوف مناطق وأسعار الشحن",
     "scope.shipping_areas:write": "يغيّر أسعار الشحن",
     "scope.webhooks:write": "يسجّل webhooks",
@@ -146,9 +146,9 @@ export function InstallAppPage() {
   const appName = data?.app.name ?? link.app_name ?? "";
 
   return (
-    <div className="mx-auto max-w-xl py-6">
+    <div className="mx-auto max-w-xl sm:py-6">
       {linkProblems ? (
-        <Card className="gap-3 p-6">
+        <Card className="gap-3 p-5 sm:p-6">
           <h1 className="font-display text-xl font-medium text-ink">{t.badLinkTitle}</h1>
           <p className="text-sm text-ink-soft">{t.badLinkBody}</p>
           <ul className="space-y-1 text-sm text-danger" dir="ltr">
@@ -158,22 +158,22 @@ export function InstallAppPage() {
               </li>
             ))}
           </ul>
-          <div className="flex justify-end">
-            <Button variant="outline" asChild>
+          <div className="flex justify-end max-sm:[&>*]:w-full">
+            <Button className="min-h-11 rounded-full px-5" variant="outline" asChild>
               <Link to="/apps">{t.toApps}</Link>
             </Button>
           </div>
         </Card>
       ) : (
-      <DataState loading={preview.loading} error={preview.error} onRetry={() => void preview.refresh()}>
+      <DataState loading={preview.loading} error={preview.error} onRetry={() => void preview.refresh()} skeleton={<CardSkeleton lines={6} className="p-6" />}>
         {data && (
-          <Card className="gap-5 p-6">
+          <Card className="gap-5 p-5 sm:p-6">
             <div className="flex items-center gap-3">
               {data.app.icon ? (
                 <img src={data.app.icon} alt="" className="size-12 rounded-2xl border border-line object-cover" />
               ) : (
                 <div className="flex size-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">
-                  <Plug className="size-6" aria-hidden />
+                  <IconPlug className="size-6" aria-hidden />
                 </div>
               )}
               <div className="min-w-0">
@@ -189,12 +189,13 @@ export function InstallAppPage() {
             {done ? (
               <>
                 <p className="text-sm text-ink-soft">{t.doneBody}</p>
-                <div className="flex flex-wrap justify-end gap-2">
-                  <Button variant="outline" asChild>
+                {/* On a phone the two are full-width rows, the way on first — as in a sheet's footer. */}
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+                  <Button className="min-h-11 rounded-full px-5" variant="outline" asChild>
                     <Link to="/apps">{t.toApps}</Link>
                   </Button>
                   {done.redirectUrl && (
-                    <Button asChild>
+                    <Button className="min-h-11 rounded-full px-5" asChild>
                       <a href={done.redirectUrl}>{fmt(t.backToApp, { app: appName })}</a>
                     </Button>
                   )}
@@ -210,7 +211,7 @@ export function InstallAppPage() {
                   <ul className="mt-2 space-y-1.5">
                     {data.scopes.map((scope) => (
                       <li key={scope} className="flex items-start gap-2 text-sm text-ink">
-                        <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
+                        <IconCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
                         <span>{labels[`scope.${scope}`] ?? scope}</span>
                       </li>
                     ))}
@@ -223,7 +224,7 @@ export function InstallAppPage() {
                     <ul className="mt-2 space-y-1.5">
                       {data.webhooks.map((hook) => (
                         <li key={hook.event} className="flex items-start gap-2 text-sm text-ink">
-                          <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
+                          <IconCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
                           <span>{labels[`event.${hook.event}`] ?? hook.event}</span>
                         </li>
                       ))}
@@ -233,11 +234,11 @@ export function InstallAppPage() {
 
                 {error && <Alert variant="danger">{error}</Alert>}
 
-                <div className="flex flex-wrap justify-end gap-2">
-                  <Button variant="outline" asChild>
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+                  <Button className="min-h-11 rounded-full px-5" variant="outline" asChild>
                     <Link to="/apps">{t.decline}</Link>
                   </Button>
-                  <Button onClick={approve} disabled={busy}>
+                  <Button className="min-h-11 rounded-full px-5" onClick={approve} disabled={busy}>
                     {busy ? t.approving : t.approve}
                   </Button>
                 </div>

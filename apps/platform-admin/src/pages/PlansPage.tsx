@@ -15,6 +15,9 @@ import * as adminApi from "@/lib/adminApi";
 import { ANNUAL_PRICE_MONTHS } from "@/lib/billing";
 import { PLAN_FEATURES } from "@/lib/planFeatures";
 import { FeaturePicker } from "@/components/FeaturePicker";
+import { CatalogFeaturePicker } from "@/components/billingExtras";
+import { apiClient } from "@/lib/apiClient";
+import { adminPlansCatalog, apiErrorCode, apiErrorDetails, type AdminPlanWithFee } from "@store-builder/api-client";
 import type { AdminPlan as Plan, PlanFeatureKey } from "@store-builder/api-client";
 import {
   PLATFORM_CURRENCY,
@@ -174,6 +177,14 @@ export function PlansPage() {
                   <dd className="text-end text-ink">{formatBp(p.transactionFeeBp)}</dd>
                   <dt className="text-ink-soft">COD fee</dt>
                   <dd className="text-end text-ink">{formatBp(p.codFeeBp)}</dd>
+                  {((p as AdminPlanWithFee).perOrderFee ?? 0) > 0 && (
+                    <>
+                      <dt className="text-ink-soft">Pay per order</dt>
+                      <dd className="tabular text-end font-medium text-ink">
+                        {formatMinorMoney((p as AdminPlanWithFee).perOrderFee ?? 0, p.currency)} / order
+                      </dd>
+                    </>
+                  )}
                 </dl>
                 <ul className="space-y-1">
                   {PLAN_FEATURES.map((f) => {
@@ -239,6 +250,13 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = <K extends keyof PlanForm>(key: K, value: PlanForm[K]) => setForm((f) => ({ ...f, [key]: value }));
+  // handoff 333, 335: the feature catalogue as the server lists it, and the plan's fee per order (piastres).
+  const catalog = useAsync(() => adminPlansCatalog(apiClient), []);
+  const storedFee = catalog.data?.plans.find((p) => p.id === initial.id)?.perOrderFee ?? 0;
+  const [feeTyped, setFeeTyped] = useState<string | null>(null);
+  const fee = feeTyped ?? String(storedFee);
+  const [feeError, setFeeError] = useState<string | null>(null);
+  const [featureProblems, setFeatureProblems] = useState<string[]>([]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -273,8 +291,15 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
       setError("Display order must be a whole number from 0 to 10000.");
       return;
     }
+    const perOrderFee = wholeNumber(fee, 0, 100000);
+    if (perOrderFee === null) {
+      setFeeError("The fee per order must be a whole number of piastres from 0 to 100000.");
+      return;
+    }
     setBusy(true);
     setError(null);
+    setFeeError(null);
+    setFeatureProblems([]);
     try {
       const monthlyMinor = toMinorAmount(nums[0], form.currency);
       const saved = await adminApi.savePlan({
@@ -294,10 +319,17 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
         maxFunnelsPerMonth: maxFunnels,
         isPublic: form.isPublic,
         displayOrder,
+        // Left out = kept: sent only when it was changed.
+        ...((perOrderFee !== storedFee ? { perOrderFee } : {}) as object),
       });
       onSaved(saved);
     } catch (err) {
-      setError(getErrorMessage(err));
+      const code = apiErrorCode(err);
+      const details = apiErrorDetails<Array<{ field?: string; message?: string }>>(err);
+      if (code === "PER_ORDER_FEE_NOT_ALLOWED") setFeeError("A fee per order is only for a plan priced 0 a month, in EGP.");
+      else if (code === "PLAN_FEATURE_NOT_AVAILABLE")
+        setFeatureProblems((Array.isArray(details) ? details : []).map((d) => d.message ?? "").filter(Boolean).concat(getErrorMessage(err)).slice(0, 5));
+      else setError(getErrorMessage(err));
       setBusy(false);
     }
   }
@@ -406,7 +438,29 @@ function PlanEditor({ initial, onClose, onSaved }: { initial: PlanForm; onClose:
           </p>
         </fieldset>
 
-        <FeaturePicker value={form.features} onChange={(next) => set("features", next)} />
+        <TextField
+          label="Fee per order (piastres)"
+          type="number"
+          min={0}
+          max={100000}
+          step={1}
+          value={fee}
+          error={feeError ?? undefined}
+          hint={`${Number.isFinite(Number(fee)) ? `= ${formatMinorMoney(Number(fee), "EGP")} per order. ` : ""}Only for a plan at 0 a month, in EGP. 0 = no fee.`}
+          onChange={(e) => setFeeTyped(e.target.value)}
+        />
+
+        {catalog.data && catalog.data.featureCatalog.length > 0 ? (
+          <CatalogFeaturePicker
+            catalog={catalog.data.featureCatalog}
+            value={form.features}
+            listed={initial.features}
+            onChange={(next) => set("features", next)}
+            problems={featureProblems}
+          />
+        ) : (
+          <FeaturePicker value={form.features} onChange={(next) => set("features", next)} />
+        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Toggle

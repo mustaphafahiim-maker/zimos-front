@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { IconWarning } from "@/components/icons";
 import { Alert, Button, Spinner, cn } from "@store-builder/ui";
 import {
   apiErrorDetails,
@@ -12,7 +12,8 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useErrorMessage } from "@/lib/errorMessages";
+// Handoff 325 / 326: the price's and the registrar's refusals, in the merchant's words.
+import { useDomainPurchaseErrorMessage } from "./DomainOwnerStep";
 import { formatDate } from "@/lib/format";
 import { fmt, useLocale, useT } from "@/i18n/LocaleContext";
 import { Modal } from "@/components/Modal";
@@ -48,7 +49,7 @@ export function RenewDomainDialog({ purchase, onClose, onRenewed, onStale }: Ren
   const t = useT(PURCHASE_STRINGS);
   const { intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
-  const errorMessage = useErrorMessage();
+  const errorMessage = useDomainPurchaseErrorMessage();
   const [years, setYears] = useState(1);
   const [quote, setQuote] = useState<QuoteState>({ state: "loading" });
   const [quoteRun, setQuoteRun] = useState(0);
@@ -159,7 +160,7 @@ export function RenewDomainDialog({ purchase, onClose, onRenewed, onStale }: Ren
 
         {priceChanged && (
           <Alert className="border-accent/40 bg-accent-soft text-accent-dark">
-            <AlertTriangle aria-hidden />
+            <IconWarning aria-hidden />
             <p className="font-medium">{t.priceChanged}</p>
           </Alert>
         )}

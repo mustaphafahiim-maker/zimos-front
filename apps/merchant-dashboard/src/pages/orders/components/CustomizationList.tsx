@@ -1,4 +1,4 @@
-import { ImageOff } from "lucide-react";
+import { IconImageMissing } from "@/components/icons";
 import { cn } from "@store-builder/ui";
 import { customizationPrice, type Customization } from "@store-builder/api-client";
 import { formatMoney } from "@/lib/format";
@@ -80,7 +80,7 @@ export function CustomizationList({
                   </a>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 text-xs text-ink-soft">
-                    <ImageOff className="size-4" aria-hidden />
+                    <IconImageMissing className="size-4" aria-hidden />
                     {t.missing}
                   </span>
                 )

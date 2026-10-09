@@ -1,22 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { useEffect, useImperativeHandle, useMemo, useState, type Ref } from "react";
+import { IconDelete } from "@/components/icons";
 import { Alert, Button, Input } from "@store-builder/ui";
 import {
-  ordersPreviewItems,
-  ordersUpdateItems,
+  orderStaffDiscount,
+  orderStaffPreviewItems,
+  orderStaffPriceOverride,
+  orderStaffUpdateItems,
   type Offer,
   type Order,
-  type OrderItemsPreview,
+  type OrderStaffItemsPreview,
 } from "@store-builder/api-client";
+import { useWorkspace } from "@/context/WorkspaceContext";
+// Handoff 382: staff prices, custom lines and the staff discount on the edit.
+import { CustomLineAdder, CustomLineBadge, LinePriceField, StaffDiscountField, StaffDiscountRows } from "../staffPricing/StaffPricingFields";
+import { STAFF_PRICING_STRINGS, canOverridePrices, type StaffDiscountForm } from "../staffPricing/staffPricing";
+import { discountFormOf, editLinesOf, pricedEditLine, staffEditBlocked, staffEditOf, staffPricingError, type StaffEditLine } from "../staffPricing/editLines";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
-import { formatMoney, formatOptions, variantLabel } from "@/lib/format";
+import { formatMoney, variantLabel } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { useOrderErrorMessage } from "../orderErrors";
+import { BookingLockLink } from "./courierBookingLock";
 
 const STRINGS = {
   en: {
@@ -67,13 +75,8 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-interface Line {
-  key: string;
-  variantId: string;
-  offerId: string | null;
-  quantity: number;
-  label: string;
-}
+/** Handoff 382: a line may carry the staff's own price, or be a custom line (staffPricing/editLines.ts). */
+type Line = StaffEditLine;
 
 const SHIPPED = ["fulfilled", "partially_fulfilled", "returned"];
 
@@ -85,15 +88,33 @@ export function canEditItems(order: Order): boolean {
   return !(order.shipments ?? []).some((s) => !["created", "cancelled", "failed"].includes(s.status));
 }
 
-export function EditItemsButton({ order, onChanged }: { order: Order; onChanged: () => void }) {
+/** `hideTrigger` leaves only the dialog, opened through `actionRef` (the order page's «…» menu). */
+export function EditItemsButton({
+  order,
+  onChanged,
+  actionRef,
+  hideTrigger,
+}: {
+  order: Order;
+  onChanged: () => void;
+  actionRef?: Ref<{ open: () => void }>;
+  hideTrigger?: boolean;
+}) {
   const t = useT(STRINGS);
   const [open, setOpen] = useState(false);
+  useImperativeHandle(actionRef, () => ({
+    open: () => {
+      if (canEditItems(order)) setOpen(true);
+    },
+  }));
   if (!canEditItems(order)) return null;
   return (
     <>
-      <Button variant="outline" size="sm" className="min-h-11" onClick={() => setOpen(true)}>
-        {t.button}
-      </Button>
+      {!hideTrigger && (
+        <Button variant="outline" size="sm" className="min-h-11" onClick={() => setOpen(true)}>
+          {t.button}
+        </Button>
+      )}
       {open && (
         <EditItemsDialog
           order={order}
@@ -115,21 +136,18 @@ function EditItemsDialog({ order, onClose, onSaved }: { order: Order; onClose: (
   const orderError = useOrderErrorMessage();
   const errorMessage = (err: unknown) => {
     const code = err && typeof err === "object" && "code" in err ? String((err as { code?: string }).code) : "";
-    return code === "ORDER_ALREADY_PAID" ? t.ORDER_ALREADY_PAID : orderError(err);
+    return code === "ORDER_ALREADY_PAID" ? t.ORDER_ALREADY_PAID : (staffPricingError(err, staffText) ?? orderError(err));
   };
 
-  const [lines, setLines] = useState<Line[]>(() =>
-    order.items
-      .filter((i) => i.variantId)
-      .map((i) => ({
-        key: i.id,
-        variantId: i.variantId as string,
-        offerId: i.offerId ?? null,
-        quantity: i.quantity,
-        label: [i.productNameSnapshot, formatOptions(i.variantOptionsSnapshot), i.offerNameSnapshot].filter(Boolean).join(" · "),
-      }))
-  );
-  const [preview, setPreview] = useState<OrderItemsPreview | null>(null);
+  // The order's catalogue lines, and (handoff 382) its custom lines, which go back by their id so they are kept.
+  const [lines, setLines] = useState<Line[]>(() => editLinesOf(order));
+  const staffText = useT(STAFF_PRICING_STRINGS);
+  const { currentWorkspace } = useWorkspace();
+  const canPrice = canOverridePrices(currentWorkspace?.role);
+  // The staff discount: the order's own until it is touched; then what is typed, or null for «إزالة الخصم اليدوي».
+  const [discount, setDiscount] = useState<StaffDiscountForm | null>(() => discountFormOf(order));
+  const [discountTouched, setDiscountTouched] = useState(false);
+  const [preview, setPreview] = useState<OrderStaffItemsPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pricing, setPricing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -162,14 +180,12 @@ function EditItemsDialog({ order, onClose, onSaved }: { order: Order; onClose: (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
-  const payload = useMemo(
-    () => lines.map((l) => ({ variantId: l.variantId, ...(l.offerId ? { offerId: l.offerId } : {}), quantity: l.quantity })),
-    [lines]
-  );
+  const payload = useMemo(() => staffEditOf(lines, discount, discountTouched), [lines, discount, discountTouched]);
+  const blocked = staffEditBlocked(discount, discountTouched);
 
   // The server prices every change; the dialog only shows its answer.
   useEffect(() => {
-    if (payload.length === 0) {
+    if (payload.items.length === 0) {
       setPreview(null);
       setError(null);
       return;
@@ -177,7 +193,7 @@ function EditItemsDialog({ order, onClose, onSaved }: { order: Order; onClose: (
     let cancelled = false;
     setPricing(true);
     const timer = window.setTimeout(() => {
-      ordersPreviewItems(apiClient, workspaceId, order.id, payload)
+      orderStaffPreviewItems(apiClient, workspaceId, order.id, payload)
         .then((p) => {
           if (cancelled) return;
           setPreview(p);
@@ -222,7 +238,7 @@ function EditItemsDialog({ order, onClose, onSaved }: { order: Order; onClose: (
     setSaving(true);
     setError(null);
     try {
-      await ordersUpdateItems(apiClient, workspaceId, order.id, payload);
+      await orderStaffUpdateItems(apiClient, workspaceId, order.id, payload);
       toast.success(t.saved);
       onSaved();
     } catch (err) {
@@ -247,7 +263,7 @@ function EditItemsDialog({ order, onClose, onSaved }: { order: Order; onClose: (
           <Button variant="outline" className="min-h-11" onClick={onClose} disabled={saving}>
             {t.cancel}
           </Button>
-          <Button className="min-h-11" onClick={save} disabled={saving || pricing || !preview || lines.length === 0}>
+          <Button className="min-h-11" onClick={save} disabled={saving || pricing || !preview || lines.length === 0 || blocked}>
             {saving ? t.saving : t.save}
           </Button>
         </>
@@ -257,6 +273,7 @@ function EditItemsDialog({ order, onClose, onSaved }: { order: Order; onClose: (
         {error && (
           <Alert variant="danger" role="alert">
             {error}
+            <BookingLockLink message={error} onGo={onClose} />
           </Alert>
         )}
 
@@ -265,12 +282,29 @@ function EditItemsDialog({ order, onClose, onSaved }: { order: Order; onClose: (
         ) : (
           <ul className="divide-y divide-line rounded-[0.5rem] border border-line">
             {lines.map((line, index) => {
-              const priced = preview?.items.find(
-                (i) => i.variantId === line.variantId && (i.offerId ?? "") === (line.offerId ?? "")
-              );
+              const priced = pricedEditLine(preview, lines, line);
+              const override = orderStaffPriceOverride(priced);
               return (
                 <li key={line.key} className="flex flex-wrap items-center gap-3 px-3 py-2 text-sm">
-                  <span className="min-w-0 flex-1 text-ink">{line.label}</span>
+                  <span className="min-w-0 flex-1 text-ink">
+                    <span className="block" dir="auto">{line.label}</span>
+                    {/* Handoff 382: «مخصص» on a custom line; the pencil that changes a catalogue line's price. */}
+                    {line.custom ? (
+                      <CustomLineBadge className="mt-1" />
+                    ) : (
+                      canPrice && (
+                        <LinePriceField
+                          name={line.label}
+                          value={line.unitPrice}
+                          onChange={(next) => setLines((prev) => prev.map((l) => (l.key === line.key ? { ...l, unitPrice: next } : l)))}
+                          pricedMinor={priced?.unitPriceAmount}
+                          catalogMinor={override?.kind === "override" ? override.catalogUnitPriceAmount : null}
+                          currency={preview?.currency ?? order.currency}
+                          disabled={saving}
+                        />
+                      )
+                    )}
+                  </span>
                   <Input
                     type="number"
                     min={1}
@@ -283,13 +317,15 @@ function EditItemsDialog({ order, onClose, onSaved }: { order: Order; onClose: (
                     className="h-11 w-20"
                   />
                   <span className="w-28 text-end text-ink">{priced ? money(priced.lineTotalAmount) : "—"}</span>
+                  {/* Removing a custom line is a price change: not offered without the permission. */}
                   <button
+                    hidden={Boolean(line.custom) && !canPrice}
                     type="button"
                     onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
                     aria-label={fmt(t.remove, { name: line.label })}
                     className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-ink-soft hover:text-danger focus-visible:outline-2 focus-visible:outline-primary"
                   >
-                    <Trash2 className="size-4" aria-hidden />
+                    <IconDelete className="size-4" aria-hidden />
                   </button>
                 </li>
               );
@@ -334,13 +370,39 @@ function EditItemsDialog({ order, onClose, onSaved }: { order: Order; onClose: (
           </div>
         </fieldset>
 
+        {/* Handoff 382 (orders.price_override): a line that is not in the catalogue, and a discount off the whole order. */}
+        {canPrice && (
+          <div className="flex flex-col items-start gap-3 [&>fieldset]:w-full">
+            <CustomLineAdder
+              currency={preview?.currency ?? order.currency}
+              onAdd={(custom, quantity) =>
+                setLines((prev) => [...prev, { key: `custom-${Date.now()}`, variantId: "", offerId: null, quantity, label: custom.title.trim(), custom }])
+              }
+            />
+            <StaffDiscountField
+              value={discount}
+              currency={preview?.currency ?? order.currency}
+              showProblems={blocked}
+              disabled={saving}
+              onChange={(next) => {
+                setDiscount(next);
+                setDiscountTouched(true);
+              }}
+            />
+          </div>
+        )}
+
         {preview ? (
           <dl className="space-y-1.5 border-t border-line pt-3 text-sm" aria-busy={pricing || undefined}>
             <Row label={t.before} value={money(preview.before.totalAmount)} />
             <Row label={t.shipping} value={money(preview.after.shippingAmount)} />
-            {Number(preview.after.discountAmount) > 0 && (
-              <Row label={t.discount} value={`−${money(preview.after.discountAmount)}`} />
-            )}
+            {/* One row, or «كود الخصم» and «خصم يدوي (السبب)» as two (handoff 382). */}
+            <StaffDiscountRows
+              discountAmount={preview.after.discountAmount}
+              manual={orderStaffDiscount(preview)}
+              currency={preview.currency ?? order.currency}
+              discountLabel={t.discount}
+            />
             <div className="flex justify-between text-base font-semibold text-ink">
               <dt>{t.after}</dt>
               <dd>{money(preview.after.totalAmount)}</dd>

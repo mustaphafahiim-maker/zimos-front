@@ -1,7 +1,7 @@
-import { useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ExternalLink, FileQuestion, Plus, Trash2, X } from "lucide-react";
-import { Button, Input, cn } from "@store-builder/ui";
+import { IconClose, IconDelete, IconDraft, IconExternal, IconFileUnknown, IconPlus, IconSliders } from "@/components/icons";
+import { Button, Input } from "@store-builder/ui";
 import {
   ApiError,
   BLOG_TAGS_MAX,
@@ -27,14 +27,22 @@ import { storeHost } from "@/lib/storeAddress";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
-import { PageHeader } from "@/components/PageHeader";
+import { AccordionGroup, AccordionSection } from "@/components/Accordion";
+import type { ContextMenuItem } from "@/components/ContextMenu";
+import { PageActionBar, PageHeader } from "@/components/PageHeader";
+import { SaveBar } from "@/components/SaveBar";
+import { Segmented } from "@/components/Segmented";
+import { Sheet } from "@/components/Sheet";
+import { UnsavedGuardProvider, useReportDirty } from "@/lib/useUnsavedGuard";
+import { ItemMenu } from "@/pages/catalog/media/ItemMenu";
+import { LeaveGuard } from "@/pages/catalog/product/LeaveGuard";
+import { useIsCompact, useIsPhone } from "@/pages/returns/rowkit/useScreen";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { Section } from "@/components/Section";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
-import { FilterTabs } from "@/components/FilterTabs";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
@@ -65,6 +73,15 @@ import {
 const STRINGS = {
   en: {
     titleNew: "New post",
+    settings: "Post settings",
+    settingsHint: "When it goes live, its cover, category, link and how Google shows it.",
+    done: "Done",
+    more: "More for this post",
+    coverSet: "Chosen",
+    coverNone: "No cover yet",
+    slugAuto: "Made from the title",
+    seoSummary: "Title and description in Google",
+    seoHidden: "Hidden from search engines",
     titleEdit: "Edit post",
     notFound: "This post isn't here anymore",
     notFoundHint: "It may have been deleted. Your other posts are in the blog.",
@@ -133,7 +150,6 @@ const STRINGS = {
     slugTaken: "Another post already uses this link. Change it or leave it empty.",
     categoryGone: "That category was deleted. Pick another one.",
     productGone: "A product block names a product that isn't in your store anymore. Pick another product.",
-    unsaved: "You have unsaved changes",
     p_required: "Fill this in.",
     p_tooLong: "This is too long.",
     p_imageUrl: "Use an image link starting with https://, or pick one from your library.",
@@ -144,6 +160,15 @@ const STRINGS = {
   },
   ar: {
     titleNew: "مقال جديد",
+    settings: "إعدادات المقال",
+    settingsHint: "ينزل امتى، وصورة الغلاف والتصنيف واللينك وشكله في جوجل.",
+    done: "تمام",
+    more: "كمان للمقال ده",
+    coverSet: "متحددة",
+    coverNone: "لسه مفيش غلاف",
+    slugAuto: "هيتعمل من العنوان",
+    seoSummary: "العنوان والوصف في جوجل",
+    seoHidden: "مخفي من محركات البحث",
     titleEdit: "تعديل المقال",
     notFound: "المقال ده مبقاش موجود",
     notFoundHint: "ممكن يكون اتمسح. باقي مقالاتك في المدونة.",
@@ -212,7 +237,6 @@ const STRINGS = {
     slugTaken: "في مقال تاني واخد اللينك ده. غيّره أو سيبه فاضي.",
     categoryGone: "التصنيف ده اتمسح. اختار تصنيف تاني.",
     productGone: "في بلوك منتج بيشاور على منتج مبقاش في متجرك. اختار منتج تاني.",
-    unsaved: "عندك تغييرات لسه ماتحفظتش",
     p_required: "املا الخانة دي.",
     p_tooLong: "الكلام ده طويل زيادة.",
     p_imageUrl: "استخدم لينك صورة بيبدأ بـ https://، أو اختار صورة من المكتبة.",
@@ -265,7 +289,7 @@ export function BlogPostEditorPage() {
         <>
           <PageHeader title={t.titleEdit} back={{ to: "/blog", label: words.blog }} />
           <EmptyState
-            icon={<FileQuestion aria-hidden />}
+            icon={<IconFileUnknown aria-hidden />}
             title={t.notFound}
             description={t.notFoundHint}
             action={
@@ -281,7 +305,11 @@ export function BlogPostEditorPage() {
           error={state.error}
           onRetry={() => void state.refresh()}
         >
-          {state.data && <PostForm key={postId ?? "new"} t={t} initial={state.data} />}
+          {state.data && (
+            <UnsavedGuardProvider key={postId ?? "new"}>
+              <PostForm key={postId ?? "new"} t={t} initial={state.data} />
+            </UnsavedGuardProvider>
+          )}
         </DataState>
       )}
     </div>
@@ -314,16 +342,8 @@ function PostForm({ t, initial }: { t: T; initial: Loaded }) {
   const [confirm, setConfirm] = useState<"unpublish" | "delete" | null>(null);
 
   const dirty = fingerprint(draft) !== savedPrint;
-  // Leaving with unsaved changes asks first (tab close / reload).
-  useEffect(() => {
-    if (!dirty || busy) return;
-    const warn = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty, busy]);
+  // Leaving with unsaved changes asks first: the links of the page (LeaveGuard), a reload or a closed tab (the provider).
+  useReportDirty(dirty);
 
   const set = <K extends keyof PostDraft>(key: K, value: PostDraft[K]) => {
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -355,11 +375,14 @@ function PostForm({ t, initial }: { t: T; initial: Loaded }) {
 
   /** The first marked field or block, on screen and focused. */
   function showFirstProblem() {
-    window.requestAnimationFrame(() => {
-      const target = document.querySelector<HTMLElement>("[aria-invalid='true'], .ring-danger");
+    // A beat, not a frame: on a narrow screen the mistake may be in the settings sheet, which opens first.
+    window.setTimeout(() => {
+      const target =
+        document.querySelector<HTMLElement>("[data-slot='sheet'] [aria-invalid='true']") ??
+        document.querySelector<HTMLElement>("[aria-invalid='true'], .ring-danger");
       target?.scrollIntoView({ block: "center", behavior: "smooth" });
       if (target?.matches("input, textarea, select")) target.focus({ preventScroll: true });
-    });
+    }, 150);
   }
 
   function bodyFor(action: Action): BlogPostInput & { title: string } {
@@ -506,41 +529,225 @@ function PostForm({ t, initial }: { t: T; initial: Loaded }) {
   const host = currentWorkspace?.slug ? storeHost(currentWorkspace.slug) : null;
   const titleForDialogs = draft.title.trim() || post?.title || t.untitled;
 
-  const actionButtons = (phone: boolean) => (
-    <>
-      <Button
-        type="button"
-        variant="outline"
-        className={cn("min-h-11 md:min-h-10", phone && "flex-1")}
-        disabled={busy !== null}
-        onClick={() => (secondary === "unpublish" ? setConfirm("unpublish") : void run(secondary))}
-      >
-        {busy === secondary ? t.saving : actionLabel[secondary]}
-      </Button>
-      <Button type="button" className={cn("min-h-11 md:min-h-10", phone && "flex-1")} disabled={busy !== null} onClick={() => void run(primary)}>
+  const compact = useIsCompact();
+  const phone = useIsPhone();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // The settings live beside the post on a wide screen and in a sheet on a narrow one: a mistake in one of them opens the sheet.
+  const settingsProblem =
+    Boolean(fieldErrors.when) ||
+    Boolean(fieldErrors.categoryId) ||
+    (["coverUrl", "authorName", "slug", "seoTitle", "seoDescription"] as const).some((key) => Boolean(shownField(key)));
+  const bodyProblem = Boolean(shownField("title")) || Boolean(shownField("excerpt"));
+  useEffect(() => {
+    if (compact && settingsProblem && !bodyProblem) setSettingsOpen(true);
+    // Only when a new set of marks arrives, not on every keystroke that clears one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fieldErrors, reveal]);
+
+  // What the save bar saves: the post as it is typed, without changing whether it is live.
+  const saveAction: Action = state === "draft" ? "draft" : primary;
+  // On a phone the bar above the dock steps aside for the save bar, so a draft can also go live from the save bar.
+  const barAction: Action = phone && state === "draft" ? primary : saveAction;
+  const publishButton =
+    state !== "published" ? (
+      <Button type="button" className="min-h-11 rounded-full px-5" disabled={busy !== null} onClick={() => void run(primary)}>
         {busy === primary ? t.saving : actionLabel[primary]}
       </Button>
+    ) : null;
+
+  const menu: ContextMenuItem[] = [];
+  if (storeLink) menu.push({ id: "view", label: t.viewInStore, icon: IconExternal, onSelect: () => window.open(storeLink, "_blank", "noopener,noreferrer") });
+  if (secondary === "unpublish") menu.push({ id: "unpublish", label: t.unpublish, icon: IconDraft, disabled: busy !== null, onSelect: () => setConfirm("unpublish") });
+  if (post) menu.push({ id: "delete", label: t.deletePost, icon: IconDelete, destructive: true, separatorBefore: true, onSelect: () => setConfirm("delete") });
+
+  const categoryName = categories.find((c) => c.id === draft.categoryId)?.name;
+  const settingsSummary = [words[state], categoryName].filter(Boolean).join(" · ");
+
+  const group = (key: string, title: string, summary: string, openByDefault: boolean, children: ReactNode) =>
+    compact ? (
+      <section key={key} className="border-t border-line py-4 first:border-t-0 first:pt-0 last:pb-0">
+        <h3 className="mb-3 text-[13px] leading-5 font-semibold text-ink">{title}</h3>
+        {children}
+      </section>
+    ) : (
+      <AccordionSection key={key} title={title} summary={summary} defaultOpen={openByDefault} persistKey={`blog-post:${key}`} keepMounted>
+        {children}
+      </AccordionSection>
+    );
+
+  const settings = (
+    <>
+      {group(
+        "publishing",
+        t.publishing,
+        words[state],
+        true,
+        <div className="space-y-3 text-sm">
+          {state === "published" && post?.publishedAt && <p className="text-ink">{fmt(t.liveSince, { date: formatDateTime(post.publishedAt) })}</p>}
+          {state !== "published" && (
+            <>
+              <div className="space-y-1.5">
+                <p className="font-medium text-ink">{t.when}</p>
+                <Segmented
+                  label={t.when}
+                  size="sm"
+                  className="w-full"
+                  value={mode}
+                  onChange={(v) => {
+                    setMode(v);
+                    if (fieldErrors.when) setFieldErrors((prev) => ({ ...prev, when: undefined }));
+                  }}
+                  options={[
+                    { value: "now", label: t.now },
+                    { value: "later", label: t.later },
+                  ]}
+                />
+              </div>
+              {mode === "later" && (
+                <Field label={t.dateTime} hint={t.scheduleHint} error={fieldErrors.when}>
+                  {({ id, ...aria }) => (
+                    <Input
+                      id={id}
+                      {...aria}
+                      type="datetime-local"
+                      dir="ltr"
+                      value={when}
+                      onChange={(e) => {
+                        setWhen(e.target.value);
+                        if (fieldErrors.when) setFieldErrors((prev) => ({ ...prev, when: undefined }));
+                      }}
+                    />
+                  )}
+                </Field>
+              )}
+              {state === "scheduled" && post?.publishedAt && <p className="text-ink">{fmt(t.liveAt, { date: formatDateTime(post.publishedAt) })}</p>}
+              {state === "draft" && <p className="text-xs text-ink-soft">{t.draftNote}</p>}
+            </>
+          )}
+          <p className="text-xs text-ink-soft">
+            {fmt(words.readTime, { n: readMinutes, time: countOf("minute", readMinutes) })}
+            {post?.updatedAt ? ` · ${fmt(t.lastSaved, { date: formatDateTime(post.updatedAt) })}` : ""}
+          </p>
+        </div>
+      )}
+
+      {group(
+        "cover",
+        t.cover,
+        draft.coverUrl.trim() ? t.coverSet : t.coverNone,
+        true,
+        <div className="space-y-3">
+          <p className="text-xs text-ink-soft">{t.coverHint}</p>
+          {draft.coverUrl.trim() && /^https:\/\//i.test(draft.coverUrl.trim()) && (
+            <img src={draft.coverUrl.trim()} alt="" className="aspect-[16/9] w-full rounded-[var(--radius)] bg-paper-sunken object-cover ring-1 ring-line" />
+          )}
+          <ImageSource t={designer} value={draft.coverUrl} error={shownField("coverUrl")} onChange={(url) => set("coverUrl", url)} />
+        </div>
+      )}
+
+      {group(
+        "organise",
+        t.organise,
+        categoryName ?? t.noCategory,
+        true,
+        <div className="space-y-4">
+          <Field label={t.category} error={fieldErrors.categoryId}>
+            {({ id, ...aria }) => (
+              <Select
+                id={id}
+                {...aria}
+                value={draft.categoryId}
+                onChange={(e) => {
+                  set("categoryId", e.target.value);
+                  if (fieldErrors.categoryId) setFieldErrors((prev) => ({ ...prev, categoryId: undefined }));
+                }}
+              >
+                <option value="">{t.noCategory}</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Button type="button" variant="ghost" size="sm" className="min-h-11 rounded-full sm:min-h-8" onClick={() => setCategoryOpen(true)}>
+              <IconPlus className="size-4" aria-hidden />
+              {t.newCategory}
+            </Button>
+            <Link to="/blog/categories" className="inline-flex min-h-11 items-center text-sm font-medium text-primary-dark hover:underline sm:min-h-8">
+              {t.manageCategories}
+            </Link>
+          </div>
+          <TagsField t={t} tags={draft.tags} onChange={(tags) => set("tags", tags)} disabled={busy !== null} />
+          <Field label={t.author} hint={t.authorHint} error={shownField("authorName")}>
+            {({ id, ...aria }) => <Input id={id} {...aria} dir="auto" maxLength={120} value={draft.authorName} onChange={(e) => set("authorName", e.target.value)} />}
+          </Field>
+        </div>
+      )}
+
+      {group(
+        "link",
+        t.link,
+        draft.slug.trim() || t.slugAuto,
+        false,
+        <Field label={t.link} labelHidden hint={t.slugHint} error={shownField("slug")}>
+          {({ id, ...aria }) => (
+            <div className="space-y-1.5">
+              <Input id={id} {...aria} dir="auto" maxLength={200} value={draft.slug} onChange={(e) => set("slug", e.target.value)} />
+              {host && (
+                <p className="truncate text-xs text-ink-soft" dir="ltr">
+                  {host}/blog/{draft.slug.trim() || "…"}
+                </p>
+              )}
+            </div>
+          )}
+        </Field>
+      )}
+
+      {group(
+        "seo",
+        t.seo,
+        draft.noindex ? t.seoHidden : t.seoSummary,
+        false,
+        <div className="space-y-4">
+          <Field label={t.seoTitle} hint={t.seoTitleHint} error={shownField("seoTitle")}>
+            {({ id, ...aria }) => <Input id={id} {...aria} dir="auto" maxLength={200} value={draft.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} />}
+          </Field>
+          <Field label={t.seoDescription} hint={t.seoDescriptionHint} error={shownField("seoDescription")}>
+            {({ id, ...aria }) => (
+              <Textarea id={id} {...aria} dir="auto" rows={3} maxLength={500} value={draft.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} />
+            )}
+          </Field>
+          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink">
+            <input type="checkbox" className="size-5 shrink-0 cursor-pointer accent-primary" checked={draft.noindex} onChange={(e) => set("noindex", e.target.checked)} />
+            {t.noindex}
+          </label>
+        </div>
+      )}
     </>
   );
 
   return (
-    <>
+    <LeaveGuard>
       <PageHeader
         title={post ? t.titleEdit : t.titleNew}
         titleBadge={<StatusBadge value={state} tone={STATE_TONE[state]} text={words[state]} />}
         back={{ to: "/blog", label: words.blog }}
         actions={
-          <div className="hidden flex-wrap items-center gap-2 md:flex">
-            {storeLink && (
-              <Button asChild variant="ghost" className="min-h-10">
-                <a href={storeLink} target="_blank" rel="noreferrer">
-                  <ExternalLink className="size-4" aria-hidden />
-                  {t.viewInStore}
-                </a>
+          <>
+            {compact && (
+              <Button type="button" variant="outline" className="h-11 min-w-0 gap-2 rounded-full px-4" aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}>
+                <IconSliders className="size-4 shrink-0" aria-hidden />
+                <span className="shrink-0">{t.settings}</span>
+                {settingsSummary && <span className="min-w-0 truncate font-normal text-ink-soft max-sm:hidden">{settingsSummary}</span>}
               </Button>
             )}
-            {actionButtons(false)}
-          </div>
+            <ItemMenu items={menu} label={t.more} />
+            {/* From md the one action closes the header; on a phone it is the bar above the dock (below). */}
+            {publishButton && <div className="hidden md:contents">{publishButton}</div>}
+          </>
         }
       />
 
@@ -550,7 +757,7 @@ function PostForm({ t, initial }: { t: T; initial: Loaded }) {
         </p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+      <div className={compact ? "space-y-4" : "grid grid-cols-[minmax(0,1fr)_21rem] items-start gap-4"}>
         <div className="min-w-0 space-y-4">
           <Section title={t.post}>
             <div className="space-y-4">
@@ -576,7 +783,7 @@ function PostForm({ t, initial }: { t: T; initial: Loaded }) {
             </div>
           </Section>
 
-          <Section title={t.content} description={t.contentHint}>
+          <Section title={t.content} description={phone ? undefined : t.contentHint}>
             <BlogBlockEditor
               blocks={draft.blocks}
               onChange={(blocks) => {
@@ -590,174 +797,41 @@ function PostForm({ t, initial }: { t: T; initial: Loaded }) {
               disabled={busy !== null}
             />
           </Section>
+
+          {/* While something is unsaved, the save stays in reach. */}
+          <SaveBar
+            dirty={dirty}
+            saving={busy !== null}
+            onSave={() => void run(barAction)}
+            saveLabel={actionLabel[barAction]}
+            savingLabel={t.saving}
+            onDiscard={barAction !== saveAction ? () => void run(saveAction) : undefined}
+            discardLabel={actionLabel[saveAction]}
+          />
         </div>
 
-        <div className="min-w-0 space-y-4">
-          <Section title={t.publishing}>
-            <div className="space-y-3 text-sm">
-              {state === "published" && post?.publishedAt && <p className="text-ink">{fmt(t.liveSince, { date: formatDateTime(post.publishedAt) })}</p>}
-              {state !== "published" && (
-                <>
-                  <div className="space-y-1.5">
-                    <p className="font-medium text-ink">{t.when}</p>
-                    <FilterTabs
-                      label={t.when}
-                      value={mode}
-                      onChange={(v) => {
-                        setMode(v);
-                        if (fieldErrors.when) setFieldErrors((prev) => ({ ...prev, when: undefined }));
-                      }}
-                      tabs={[
-                        { value: "now", label: t.now },
-                        { value: "later", label: t.later },
-                      ]}
-                      buttonClassName="min-h-10"
-                    />
-                  </div>
-                  {mode === "later" && (
-                    <Field label={t.dateTime} hint={t.scheduleHint} error={fieldErrors.when}>
-                      {({ id, ...aria }) => (
-                        <Input
-                          id={id}
-                          {...aria}
-                          type="datetime-local"
-                          dir="ltr"
-                          value={when}
-                          onChange={(e) => {
-                            setWhen(e.target.value);
-                            if (fieldErrors.when) setFieldErrors((prev) => ({ ...prev, when: undefined }));
-                          }}
-                        />
-                      )}
-                    </Field>
-                  )}
-                  {state === "scheduled" && post?.publishedAt && <p className="text-ink">{fmt(t.liveAt, { date: formatDateTime(post.publishedAt) })}</p>}
-                  {state === "draft" && <p className="text-xs text-ink-soft">{t.draftNote}</p>}
-                </>
-              )}
-              <p className="text-xs text-ink-soft">
-                {fmt(words.readTime, { n: readMinutes, time: countOf("minute", readMinutes) })}
-                {post?.updatedAt ? ` · ${fmt(t.lastSaved, { date: formatDateTime(post.updatedAt) })}` : ""}
-              </p>
-              {storeLink && (
-                <a
-                  href={storeLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary-dark hover:underline md:hidden"
-                >
-                  <ExternalLink className="size-4" aria-hidden />
-                  {t.viewInStore}
-                </a>
-              )}
-            </div>
-          </Section>
+        {!compact && <AccordionGroup className="min-w-0">{settings}</AccordionGroup>}
+      </div>
 
-          <Section title={t.cover} description={t.coverHint}>
-            <div className="space-y-3">
-              {draft.coverUrl.trim() && /^https:\/\//i.test(draft.coverUrl.trim()) && (
-                <img src={draft.coverUrl.trim()} alt="" className="aspect-[16/9] w-full rounded-[var(--radius)] bg-paper-sunken object-cover ring-1 ring-line" />
-              )}
-              <ImageSource
-                t={designer}
-                value={draft.coverUrl}
-                error={shownField("coverUrl")}
-                onChange={(url) => set("coverUrl", url)}
-              />
-            </div>
-          </Section>
+      {/* Phone, nothing unsaved: the one action within thumb reach, above the dock. */}
+      {publishButton && !dirty && <PageActionBar>{publishButton}</PageActionBar>}
 
-          <Section title={t.organise}>
-            <div className="space-y-4">
-              <Field label={t.category} error={fieldErrors.categoryId}>
-                {({ id, ...aria }) => (
-                  <Select
-                    id={id}
-                    {...aria}
-                    value={draft.categoryId}
-                    onChange={(e) => {
-                      set("categoryId", e.target.value);
-                      if (fieldErrors.categoryId) setFieldErrors((prev) => ({ ...prev, categoryId: undefined }));
-                    }}
-                  >
-                    <option value="">{t.noCategory}</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <Button type="button" variant="ghost" size="sm" className="min-h-11 sm:min-h-8" onClick={() => setCategoryOpen(true)}>
-                  <Plus className="size-4" aria-hidden />
-                  {t.newCategory}
-                </Button>
-                <Link to="/blog/categories" className="inline-flex min-h-11 items-center text-sm font-medium text-primary-dark hover:underline sm:min-h-8">
-                  {t.manageCategories}
-                </Link>
-              </div>
-              <TagsField t={t} tags={draft.tags} onChange={(tags) => set("tags", tags)} disabled={busy !== null} />
-              <Field label={t.author} hint={t.authorHint} error={shownField("authorName")}>
-                {({ id, ...aria }) => (
-                  <Input id={id} {...aria} dir="auto" maxLength={120} value={draft.authorName} onChange={(e) => set("authorName", e.target.value)} />
-                )}
-              </Field>
-            </div>
-          </Section>
-
-          <Section title={t.link}>
-            <Field label={t.link} labelHidden hint={t.slugHint} error={shownField("slug")}>
-              {({ id, ...aria }) => (
-                <div className="space-y-1.5">
-                  <Input id={id} {...aria} dir="auto" maxLength={200} value={draft.slug} onChange={(e) => set("slug", e.target.value)} />
-                  {host && (
-                    <p className="truncate text-xs text-ink-soft" dir="ltr">
-                      {host}/blog/{draft.slug.trim() || "…"}
-                    </p>
-                  )}
-                </div>
-              )}
-            </Field>
-          </Section>
-
-          <Section title={t.seo}>
-            <div className="space-y-4">
-              <Field label={t.seoTitle} hint={t.seoTitleHint} error={shownField("seoTitle")}>
-                {({ id, ...aria }) => (
-                  <Input id={id} {...aria} dir="auto" maxLength={200} value={draft.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} />
-                )}
-              </Field>
-              <Field label={t.seoDescription} hint={t.seoDescriptionHint} error={shownField("seoDescription")}>
-                {({ id, ...aria }) => (
-                  <Textarea id={id} {...aria} dir="auto" rows={3} maxLength={500} value={draft.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} />
-                )}
-              </Field>
-              <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
-                <input type="checkbox" className="size-4 accent-primary" checked={draft.noindex} onChange={(e) => set("noindex", e.target.checked)} />
-                {t.noindex}
-              </label>
-            </div>
-          </Section>
-
-          {post && (
-            <Button type="button" variant="ghost" className="min-h-11 w-full text-danger hover:bg-danger-soft hover:text-danger" onClick={() => setConfirm("delete")}>
-              <Trash2 className="size-4" aria-hidden />
-              {t.deletePost}
+      {compact && (
+        <Sheet
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          title={t.settings}
+          description={t.settingsHint}
+          size="md"
+          footer={
+            <Button type="button" className="rounded-full px-5" onClick={() => setSettingsOpen(false)}>
+              {t.done}
             </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Phone: the two actions within thumb reach, above the tab bar. */}
-      <div
-        className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 mt-4 flex gap-2 rounded-[var(--radius-card)] bg-paper-raised p-3 shadow-[var(--shadow-raised)] ring-1 ring-line md:hidden"
-        role="region"
-        aria-label={dirty ? t.unsaved : t.publishing}
-      >
-        {actionButtons(true)}
-      </div>
+          }
+        >
+          {settings}
+        </Sheet>
+      )}
 
       <BlogCategoryDialog
         open={categoryOpen}
@@ -791,7 +865,7 @@ function PostForm({ t, initial }: { t: T; initial: Loaded }) {
         onCancel={() => setConfirm(null)}
         onConfirm={remove}
       />
-    </>
+    </LeaveGuard>
   );
 }
 
@@ -839,7 +913,7 @@ function TagsField({ t, tags, onChange, disabled }: { t: T; tags: string[]; onCh
                 aria-label={fmt(t.removeTag, { tag })}
                 className="inline-flex size-8 cursor-pointer items-center justify-center rounded-full hover:bg-paper-raised focus-visible:outline-2 focus-visible:outline-primary"
               >
-                <X className="size-3.5" aria-hidden />
+                <IconClose className="size-3.5" aria-hidden />
               </button>
             </li>
           ))}

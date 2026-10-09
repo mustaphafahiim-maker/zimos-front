@@ -1,0 +1,227 @@
+/* The reports hub: tab bar, takeaway, sortable table — components/report/*, pages/reports/*.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   Nothing here is blurred: every piece lies in the page flow. The one place where content
+   passes beneath another piece is the table's first column while the table is scrolled
+   sideways, and that cell takes the near-solid overlay fill instead of a blur (a blur per
+   cell would be re-drawn on every scrolled frame).
+
+   Text (worked out from the token values, not measured on rendered pixels): ink on every
+   takeaway tint is 12:1 or better in both themes; the icon of a takeaway takes the deeper
+   text shade of its tone (5.8:1 on the light tints, 5:1 or more on the dark ones); a tab at
+   rest and a column heading use --lg-ink-soft on a control pane or the table head (4.5:1 or
+   better, the same pair as the segmented control and every other table); the chosen tab is
+   --lg-on-brand on the shared selection fill. */
+:root:not([data-glass="off"]) {
+  /* How much of a takeaway's tint is the tint; the rest lets the page pane through. */
+  --rp-takeaway-alpha: 88%;
+
+  /* ---------------------------------------------------------------- *
+   * The tab bar. The track is a small pane in the page flow, like the
+   * segmented control's: translucent, lit along its rim, a hairline
+   * drawn as a shadow so the track keeps its size. The chosen tab is
+   * the shared selection fill (main button, current side-menu row,
+   * chosen segment). The second selector of each pair only outweighs
+   * the general tab rule of liquid-glass.css, which gives a tab at
+   * rest a pane of its own — inside a track it has none.
+   * ---------------------------------------------------------------- */
+  .zimos-report-tabs {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  .zimos-report-tabs > [role="tab"]:not([aria-selected="true"]),
+  .glass-app main .zimos-report-tabs[role="tablist"] > [role="tab"]:not([aria-selected="true"]) {
+    background-color: transparent;
+    color: var(--lg-ink-soft);
+  }
+  @media (hover: hover) {
+    .zimos-report-tabs > [role="tab"]:not([aria-selected="true"]):hover,
+    .glass-app main .zimos-report-tabs[role="tablist"] > [role="tab"]:not([aria-selected="true"]):hover {
+      background-color: var(--lg-control-lit);
+      color: var(--color-ink);
+    }
+  }
+  .zimos-report-tabs > [role="tab"]:not([aria-selected="true"]):active,
+  .glass-app main .zimos-report-tabs[role="tablist"] > [role="tab"]:not([aria-selected="true"]):active {
+    background-color: var(--lg-control-lit);
+    color: var(--color-ink);
+  }
+  .zimos-report-tabs > [role="tab"][aria-selected="true"],
+  .glass-app main .zimos-report-tabs[role="tablist"] > [role="tab"][aria-selected="true"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28);
+  }
+  /* The glow under the chosen tab only where the track does not scroll (from md up it
+     wraps): a scrolling track clips whatever falls below a tab. */
+  @media (min-width: 48rem) {
+    .zimos-report-tabs > [role="tab"][aria-selected="true"],
+    .glass-app main .zimos-report-tabs[role="tablist"] > [role="tab"][aria-selected="true"] {
+      box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28), var(--lg-brand-glow);
+    }
+  }
+  /* If forced colours are on while this layer still is: system colours, no gradient. */
+  @media (forced-colors: active) {
+    .zimos-report-tabs > [role="tab"][aria-selected="true"],
+    .glass-app main .zimos-report-tabs[role="tablist"] > [role="tab"][aria-selected="true"] {
+      background-color: Highlight;
+      background-image: none;
+      color: HighlightText;
+    }
+  }
+
+  /* «مباشر» on the "now" tab, where the period picker steps aside: a tinted bead of
+     glass, the same recipe as the good-news chip of a stat card. On dark glass the soft
+     token is nearly black and would read as a hole, so the tint is mixed from the colour. */
+  [data-slot="report-live"] {
+    background-color: color-mix(in srgb, var(--color-success-soft) 88%, transparent);
+    color: var(--lg-text-success);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 16%, transparent);
+  }
+  &.dark [data-slot="report-live"] {
+    background-color: color-mix(in srgb, var(--color-success) 18%, var(--lg-control-lit));
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-success) 22%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The takeaway: a tinted pane in the colour of what it says (green:
+   * good news; red: bad; amber: watch this; brand: for your
+   * information). The sentence is plain ink on it; only the icon
+   * carries the colour.
+   * ---------------------------------------------------------------- */
+  [data-slot="report-takeaway"] {
+    --rp-tone: var(--color-primary);
+    --rp-soft: var(--color-primary-soft);
+    --rp-ink: var(--lg-text-primary);
+    background-color: color-mix(in srgb, var(--rp-soft) var(--rp-takeaway-alpha), transparent);
+    background-image: var(--lg-sheen);
+    box-shadow:
+      var(--lg-rim-line),
+      0 0 0 1px color-mix(in srgb, var(--rp-tone) 20%, transparent),
+      var(--shadow-card);
+    color: var(--color-ink);
+  }
+  [data-slot="report-takeaway"][data-tone="good"] {
+    --rp-tone: var(--color-success);
+    --rp-soft: var(--color-success-soft);
+    --rp-ink: var(--lg-text-success);
+  }
+  [data-slot="report-takeaway"][data-tone="bad"] {
+    --rp-tone: var(--color-danger);
+    --rp-soft: var(--color-danger-soft);
+    --rp-ink: var(--lg-text-danger);
+  }
+  [data-slot="report-takeaway"][data-tone="warn"] {
+    --rp-tone: var(--color-accent);
+    --rp-soft: var(--color-accent-soft);
+    --rp-ink: var(--color-accent-dark);
+  }
+  [data-slot="report-takeaway-icon"] {
+    color: var(--rp-ink);
+  }
+  /* Dark: the tint is mixed from the tone itself over a near-solid well, so the pane
+     neither reads as a hole nor lets the wallpaper through under the sentence. */
+  &.dark [data-slot="report-takeaway"] {
+    background-color: color-mix(in srgb, var(--rp-tone) 15%, var(--lg-control-lit));
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.1),
+      0 0 0 1px color-mix(in srgb, var(--rp-tone) 30%, transparent),
+      var(--shadow-card);
+  }
+  /* What to do about it: a lit pill on the tint. */
+  [data-slot="report-takeaway-action"] {
+    background-color: var(--lg-control-lit);
+    color: var(--color-ink);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 1px 2px rgb(20 22 26 / 0.06);
+  }
+  /* A wash of ink under the pointer: a shade darker in light, a shade lighter in dark. */
+  @media (hover: hover) {
+    [data-slot="report-takeaway-action"]:hover {
+      background-color: color-mix(in srgb, var(--color-ink) 6%, var(--color-paper-raised));
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The sortable table. Its sheet is the shared Card (liquid-glass.css
+   * makes that glass); here the head becomes a tint of the pane, the
+   * heading of the sorted column goes to full ink, and the first
+   * column — which stays put while the rest scrolls sideways — takes
+   * the near-solid overlay fill, only while there is something to
+   * scroll (data-overflow), so on a wide screen it is one sheet.
+   * ---------------------------------------------------------------- */
+  [data-report-table] thead th {
+    background-color: var(--lg-thead);
+    color: var(--lg-ink-soft);
+  }
+  [data-report-table] thead th[data-sorted] {
+    color: var(--color-ink);
+  }
+  [data-report-table] [data-overflow] .zimos-report-sticky {
+    background-color: var(--lg-overlay);
+  }
+  /* The tint of the head and of the row under the pointer, laid over that fill, so the
+     cell that stays reads as part of its row. */
+  [data-report-table] [data-overflow] thead .zimos-report-sticky {
+    background-image: linear-gradient(var(--lg-thead), var(--lg-thead));
+  }
+  @media (hover: hover) {
+    [data-report-table] [data-overflow] tbody tr:hover > .zimos-report-sticky {
+      background-image: linear-gradient(var(--lg-row-lit), var(--lg-row-lit));
+    }
+  }
+  /* The line that shows where the fixed column ends, once the table has been scrolled. */
+  [data-report-table] .zimos-report-sticky::after {
+    background-color: var(--lg-edge);
+  }
+  [data-slot="report-table-foot"] {
+    border-color: var(--lg-hairline);
+  }
+  [data-slot="report-table-empty"] {
+    color: var(--lg-ink-soft);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The card of links to the detailed reports and the pages where a
+   * thing is managed: hairlines in the pane's colour, the row under
+   * the pointer lit like a table row, the icon in a drop of the brand
+   * colour (the stat card's icon chip).
+   * ---------------------------------------------------------------- */
+  [data-slot="report-links"] > li {
+    border-color: var(--lg-hairline);
+  }
+  @media (hover: hover) {
+    [data-slot="report-link"]:hover {
+      background-color: var(--lg-row-lit);
+    }
+  }
+  [data-slot="report-link"]:active {
+    background-color: var(--lg-row-lit);
+  }
+  [data-slot="report-link-icon"] {
+    background-color: color-mix(in srgb, var(--color-primary) 11%, transparent);
+    color: var(--lg-text-primary);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 9%, transparent);
+  }
+  &.dark [data-slot="report-link-icon"] {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+      inset 0 0 0 1px rgb(255 255 255 / 0.05);
+  }
+}
+
+/* The same preferences the off switch follows (see the end of liquid-glass.css):
+   if the attribute was not set, the tint of a takeaway turns solid too. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root:not([data-glass="off"]),
+  :root:not([data-glass="off"]).dark {
+    --rp-takeaway-alpha: 100%;
+  }
+}

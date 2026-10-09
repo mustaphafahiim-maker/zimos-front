@@ -1,6 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { Check, Eye, LayoutTemplate, Search, Upload, X } from "lucide-react";
-import { Button, Input, cn } from "@store-builder/ui";
+import { Button, cn } from "@store-builder/ui";
 import {
   MARKETPLACE_CATEGORIES,
   marketplaceBrowse,
@@ -12,13 +11,16 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
+import { pluralOf } from "@/lib/plural";
 import { fmt, useT } from "@/i18n/LocaleContext";
-import { DataState } from "@/components/DataState";
+import { IconEye, IconLayout, IconSearch, IconUpload } from "@/components/icons";
+import { DataState, SkeletonBar } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
-import { FilterTabs } from "@/components/FilterTabs";
+import { ChipRow, ListToolbar } from "@/components/list";
 import { LoadMore } from "@/components/LoadMore";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { ChoiceCard } from "../wizard/ChoiceCard";
 import { LANGUAGES, MARKET_STRINGS, categoryLabel, countsLine, languageLabel, type MarketStrings } from "./marketplaceStrings";
 
 const PAGE_SIZE = 24;
@@ -26,10 +28,11 @@ const PAGE_SIZE = 24;
 type Sort = "popular" | "new";
 
 /**
- * The listed templates (handoff 192): search, kind chips, order and language,
- * then the cards. `mode="page"` is the marketplace page — each card has
- * Preview and Use; `mode="pick"` is the new-funnel wizard's gallery tab — a
- * card is a choice (radio) the wizard creates from, with Preview beside it.
+ * The listed templates (handoff 192): one toolbar — search, order, language —
+ * then the kinds as one row of chips, then the cards. `mode="page"` is the
+ * marketplace page: a grid of one, two or three columns, each card with
+ * «عاين» and «استخدمه». `mode="pick"` is the new-funnel wizard's gallery tab:
+ * a card is a choice (a radio) the wizard creates from, with «عاين» beside it.
  */
 export function MarketplaceBrowser({
   mode,
@@ -51,7 +54,6 @@ export function MarketplaceBrowser({
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
-  const searchId = useId();
   const sortId = useId();
   const languageId = useId();
 
@@ -60,7 +62,7 @@ export function MarketplaceBrowser({
   const [category, setCategory] = useState<"all" | MarketplaceCategory>("all");
   const [sort, setSort] = useState<Sort>("popular");
   const [language, setLanguage] = useState<"" | MarketplaceLanguage>("");
-  // The search runs once typing pauses.
+  // The search runs once typing pauses; the field itself never waits.
   useEffect(() => {
     const timer = window.setTimeout(() => setQ(draft.trim()), 350);
     return () => window.clearTimeout(timer);
@@ -94,118 +96,133 @@ export function MarketplaceBrowser({
     setLanguage("");
   }
 
-  return (
-    <div className="space-y-3">
-      <div className={cn("grid gap-2", mode === "page" ? "sm:grid-cols-[minmax(0,1fr)_11rem_11rem]" : "grid-cols-2")}>
-        <div className={cn("relative", mode === "pick" && "col-span-2")}>
-          <label htmlFor={searchId} className="sr-only">
-            {t.search}
-          </label>
-          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
-          <Input
-            id={searchId}
-            type="search"
-            dir="auto"
-            value={draft}
-            maxLength={100}
-            placeholder={t.searchPlaceholder}
-            onChange={(e) => setDraft(e.target.value)}
-            className="ps-9 pe-11 [&::-webkit-search-cancel-button]:hidden"
-          />
-          {draft && (
-            <button
-              type="button"
-              onClick={() => setDraft("")}
-              aria-label={t.clearSearch}
-              className="absolute end-0 top-1/2 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-ink-soft hover:text-ink"
-            >
-              <X className="size-4" aria-hidden />
-            </button>
-          )}
-        </div>
-        <div>
-          <label htmlFor={sortId} className="sr-only">
-            {t.sort}
-          </label>
-          <Select id={sortId} value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-            <option value="popular">{t.sortPopular}</option>
-            <option value="new">{t.sortNew}</option>
-          </Select>
-        </div>
-        <div>
-          <label htmlFor={languageId} className="sr-only">
-            {t.language}
-          </label>
-          <Select id={languageId} value={language} onChange={(e) => setLanguage(e.target.value as "" | MarketplaceLanguage)}>
-            <option value="">{t.anyLanguage}</option>
-            {LANGUAGES.map((l) => (
-              <option key={l} value={l}>
-                {languageLabel(t, l)}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </div>
+  const grid = cn("grid gap-3", mode === "page" ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2");
+  const PILL_SELECT = "h-11 w-auto max-w-[11rem] rounded-full ps-4 font-medium";
 
-      {/* One sideways-scrolling row of kinds on phones, wrapped from sm up. */}
-      <FilterTabs
+  return (
+    <div className="flex min-w-0 flex-col gap-3">
+      <ListToolbar search={{ value: draft, onChange: setDraft, placeholder: t.searchPlaceholder, label: t.search }}>
+        <label htmlFor={sortId} className="sr-only">
+          {t.sort}
+        </label>
+        <Select id={sortId} value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={PILL_SELECT}>
+          <option value="popular">{t.sortPopular}</option>
+          <option value="new">{t.sortNew}</option>
+        </Select>
+        <label htmlFor={languageId} className="sr-only">
+          {t.language}
+        </label>
+        <Select id={languageId} value={language} onChange={(e) => setLanguage(e.target.value as "" | MarketplaceLanguage)} className={PILL_SELECT}>
+          <option value="">{t.anyLanguage}</option>
+          {LANGUAGES.map((l) => (
+            <option key={l} value={l}>
+              {languageLabel(t, l)}
+            </option>
+          ))}
+        </Select>
+      </ListToolbar>
+
+      <ChipRow
         label={t.category}
         value={category}
         onChange={setCategory}
-        className="flex max-w-full flex-nowrap overflow-x-auto sm:inline-flex sm:flex-wrap"
-        buttonClassName="shrink-0 whitespace-nowrap"
-        tabs={[{ value: "all", label: t.all }, ...MARKETPLACE_CATEGORIES.map((c) => ({ value: c, label: categoryLabel(t, c) }))]}
+        collapseEmpty={false}
+        items={[{ value: "all", label: t.all }, ...MARKETPLACE_CATEGORIES.map((c) => ({ value: c, label: categoryLabel(t, c) }))]}
       />
 
-      <DataState loading={first.loading} error={first.error} onRetry={() => void first.refresh()}>
+      <DataState
+        loading={first.loading && !first.data}
+        error={first.error}
+        onRetry={() => void first.refresh()}
+        skeleton={<GridSkeleton className={grid} mode={mode} />}
+      >
         {templates.length === 0 ? (
-          filtered ? (
+          first.loading ? (
+            <GridSkeleton className={grid} mode={mode} />
+          ) : filtered ? (
             <EmptyState
-              icon={<Search />}
+              icon={<IconSearch aria-hidden />}
               title={t.noneFitTitle}
               description={t.noneFitBody}
               action={
-                <Button variant="outline" onClick={clearFilters}>
+                <Button variant="outline" className="min-h-11 rounded-full px-5" onClick={clearFilters}>
                   {t.clearFilters}
                 </Button>
               }
             />
           ) : (
             <EmptyState
-              icon={<LayoutTemplate />}
+              icon={<IconLayout aria-hidden />}
               title={t.emptyTitle}
               description={t.emptyBody}
               action={
                 onShare ? (
-                  <Button onClick={onShare}>
-                    <Upload className="size-4" aria-hidden /> {t.share}
+                  <Button className="min-h-11 rounded-full px-5" onClick={onShare}>
+                    <IconUpload className="size-4" aria-hidden /> {t.share}
                   </Button>
                 ) : undefined
               }
             />
           )
         ) : (
-          <>
-            <div className={cn("grid gap-3", mode === "page" ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2")}>
-              {templates.map((tpl) =>
-                mode === "page" ? (
+          <div
+            aria-busy={first.loading || undefined}
+            className={cn("transition-opacity duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none", first.loading && "opacity-60")}
+          >
+            {mode === "page" ? (
+              <div className={grid}>
+                {templates.map((tpl) => (
                   <TemplateCard key={tpl.id} t={t} template={tpl} onPreview={() => onPreview(tpl)} onUse={() => onUse?.(tpl)} />
-                ) : (
-                  <PickCard
-                    key={tpl.id}
-                    t={t}
-                    template={tpl}
-                    active={selectedId === tpl.id}
-                    onPick={() => onPick?.(tpl)}
-                    onPreview={() => onPreview(tpl)}
-                  />
-                )
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div role="radiogroup" aria-label={t.tabBrowse} className={grid}>
+                {templates.map((tpl) => (
+                  <PickCard key={tpl.id} t={t} template={tpl} active={selectedId === tpl.id} onPick={() => onPick?.(tpl)} onPreview={() => onPreview(tpl)} />
+                ))}
+              </div>
+            )}
             <LoadMore hasMore={templates.length < total} loading={more.loading} onClick={() => void loadMore()} />
-          </>
+            {mode === "page" && (
+              <p className="pt-3 text-center text-xs text-ink-soft tabular-nums" role="status">
+                {pluralOf(t, "count", total)}
+              </p>
+            )}
+          </div>
         )}
       </DataState>
+    </div>
+  );
+}
+
+/** The grid while its first page loads: cards in the shape of the real ones, so nothing jumps when they arrive. */
+function GridSkeleton({ className, mode }: { className: string; mode: "page" | "pick" }) {
+  return (
+    <div aria-hidden className={className}>
+      {Array.from({ length: mode === "page" ? 6 : 4 }, (_, i) =>
+        mode === "page" ? (
+          <div key={i} className="zimos-template-card overflow-hidden rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line">
+            <div className="aspect-[16/9] bg-paper-sunken" />
+            <div className="space-y-2.5 p-4">
+              <SkeletonBar className="h-4 w-3/5" />
+              <SkeletonBar className="w-2/5" />
+              <SkeletonBar className="w-4/5" />
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <SkeletonBar className="h-11 rounded-full" />
+                <SkeletonBar className="h-11 rounded-full" />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div key={i} className="zimos-wizard-choice flex min-h-[5.5rem] items-center gap-3 rounded-[1.125rem] bg-paper-raised px-3.5 py-3 ring-1 ring-line">
+            <div className="size-14 shrink-0 rounded-[0.875rem] bg-paper-sunken" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <SkeletonBar className="h-4 w-3/5" />
+              <SkeletonBar className="w-2/5" />
+            </div>
+          </div>
+        )
+      )}
     </div>
   );
 }
@@ -225,8 +242,8 @@ export function TemplatePicture({ t, template, className }: { t: MarketStrings; 
     );
   }
   return (
-    <div aria-hidden className={cn("flex w-full flex-col items-center justify-center gap-1.5 bg-primary-soft text-primary-dark", className)}>
-      <LayoutTemplate className="size-6" />
+    <div aria-hidden className={cn("zimos-template-tile flex w-full flex-col items-center justify-center gap-1.5 bg-primary-soft text-primary-dark dark:text-primary", className)}>
+      <IconLayout className="size-6" weight="duotone" />
       <span className="text-xs font-medium">{categoryLabel(t, template.category)}</span>
     </div>
   );
@@ -236,10 +253,10 @@ function CardMeta({ t, template }: { t: MarketStrings; template: MarketplaceTemp
   return (
     // Spans, not paragraphs: the wizard's card puts this inside its <label>.
     <>
-      <span className="block text-xs text-ink-soft" dir="auto">
+      <span className="block truncate text-xs leading-5 text-ink-soft" dir="auto">
         {fmt(t.by, { author: template.authorName })}
       </span>
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-soft">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-ink-soft">
         <span className="rounded-full bg-paper-sunken px-2 py-0.5 text-ink">{categoryLabel(t, template.category)}</span>
         {template.language && <span>{languageLabel(t, template.language)}</span>}
         <span>{countsLine(t, template.stepCount, template.usesCount)}</span>
@@ -260,26 +277,34 @@ function TemplateCard({
   onUse: () => void;
 }) {
   return (
-    <article className="flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line">
-      <button type="button" onClick={onPreview} aria-label={fmt(t.previewOf, { name: template.name })} className="block cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary">
+    <article
+      data-slot="template-card"
+      className="zimos-template-card flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line"
+    >
+      <button
+        type="button"
+        onClick={onPreview}
+        aria-label={fmt(t.previewOf, { name: template.name })}
+        className="block cursor-pointer overflow-hidden focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+      >
         <TemplatePicture t={t} template={template} className="aspect-[16/9]" />
       </button>
       <div className="flex flex-1 flex-col gap-1.5 p-4">
-        <h3 className="line-clamp-2 text-[15px] font-medium text-ink" dir="auto">
+        <h3 className="line-clamp-2 text-[15px] leading-6 font-semibold text-ink" dir="auto">
           {template.name}
         </h3>
         <CardMeta t={t} template={template} />
         {template.description && (
-          <p className="line-clamp-2 text-sm text-ink-soft" dir="auto">
+          <p className="line-clamp-2 text-sm leading-6 text-ink-soft" dir="auto">
             {template.description}
           </p>
         )}
-        <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
-          <Button variant="outline" className="min-h-11 sm:min-h-0" onClick={onPreview} aria-label={fmt(t.previewOf, { name: template.name })}>
-            <Eye className="size-4" aria-hidden /> {t.preview}
+        <div className="mt-auto grid grid-cols-2 gap-2 pt-2.5">
+          <Button variant="outline" className="min-h-11 rounded-full" onClick={onPreview} aria-label={fmt(t.previewOf, { name: template.name })}>
+            <IconEye className="size-4" aria-hidden /> {t.preview}
           </Button>
-          <Button variant="outline" className="min-h-11 sm:min-h-0" onClick={onUse}>
-            {t.use}
+          <Button className="min-h-11 rounded-full" onClick={onUse}>
+            {t.useShort}
           </Button>
         </div>
       </div>
@@ -301,32 +326,24 @@ function PickCard({
   onPreview: () => void;
 }) {
   return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-col rounded-2xl border p-3 transition-colors",
-        active ? "border-primary bg-primary-soft ring-1 ring-primary/30" : "border-line hover:border-primary/50"
-      )}
+    <ChoiceCard
+      name="funnel-template"
+      checked={active}
+      onSelect={onPick}
+      leading={<TemplatePicture t={t} template={template} className="size-14 rounded-[0.875rem] [&>span]:hidden" />}
+      title={template.name}
+      hint={<CardMeta t={t} template={template} />}
     >
-      <label className="flex cursor-pointer gap-3">
-        <input type="radio" name="funnel-template" className="sr-only" checked={active} onChange={onPick} aria-label={fmt(t.choose, { name: template.name })} />
-        <TemplatePicture t={t} template={template} className="size-14 shrink-0 rounded-xl [&>span]:hidden" />
-        <span className="min-w-0 space-y-1">
-          <span className={cn("line-clamp-2 text-sm font-semibold", active ? "text-primary-dark" : "text-ink")} dir="auto">
-            {template.name}
-          </span>
-          <CardMeta t={t} template={template} />
-        </span>
-      </label>
-      <div className="mt-1 flex items-center justify-between gap-2">
-        <Button type="button" size="xs" variant="ghost" onClick={onPreview} aria-label={fmt(t.previewOf, { name: template.name })}>
-          <Eye className="size-3" aria-hidden /> {t.preview}
-        </Button>
-        {active && (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary-dark">
-            <Check className="size-3.5" aria-hidden /> {t.chosen}
-          </span>
-        )}
+      <div className="-mb-1.5 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={onPreview}
+          aria-label={fmt(t.previewOf, { name: template.name })}
+          className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full px-3 text-sm font-medium text-primary transition-[background-color] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none"
+        >
+          <IconEye className="size-4" aria-hidden /> {t.preview}
+        </button>
       </div>
-    </div>
+    </ChoiceCard>
   );
 }

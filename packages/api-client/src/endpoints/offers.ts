@@ -53,8 +53,9 @@ export interface OrderBumpRule {
 
 export type OrderBumpRulePayload = Pick<OrderBumpRule, "productId" | "offerId" | "headline" | "description" | "preChecked" | "position" | "isActive">;
 
-export type CrossSellPlacement = "cart" | "checkout" | "thank_you";
-export const CROSS_SELL_PLACEMENTS: CrossSellPlacement[] = ["cart", "checkout", "thank_you"];
+/** "product" is the product page (handoff 223): a rule there pins what shows as "Frequently bought together". */
+export type CrossSellPlacement = "cart" | "checkout" | "thank_you" | "product";
+export const CROSS_SELL_PLACEMENTS: CrossSellPlacement[] = ["cart", "checkout", "thank_you", "product"];
 
 export interface CrossSellRule {
   id: string;

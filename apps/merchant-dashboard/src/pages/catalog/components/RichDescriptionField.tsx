@@ -1,5 +1,5 @@
 import { Fragment, useRef, useState, type ReactNode } from "react";
-import { Bold, Eye, Heading2, Italic, Link2, List, ListOrdered, Pencil } from "lucide-react";
+import { IconBold, IconEdit, IconEye, IconHeadingTwo, IconItalic, IconLink, IconListNumbers, IconListView } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import { parseRichText, type RichInline } from "@store-builder/api-client";
 import { useT, type Messages } from "@/i18n/LocaleContext";
@@ -169,13 +169,13 @@ export function RichDescriptionField({
     apply(value.slice(0, s) + piece + value.slice(e), urlStart, urlStart + "https://".length);
   }
 
-  const tools: Array<{ label: string; icon: typeof Bold; run: () => void }> = [
-    { label: t.bold, icon: Bold, run: () => wrap("**") },
-    { label: t.italic, icon: Italic, run: () => wrap("_") },
-    { label: t.heading, icon: Heading2, run: () => prefixLines("heading") },
-    { label: t.bullets, icon: List, run: () => prefixLines("bullets") },
-    { label: t.numbers, icon: ListOrdered, run: () => prefixLines("numbers") },
-    { label: t.link, icon: Link2, run: link },
+  const tools: Array<{ label: string; icon: typeof IconBold; run: () => void }> = [
+    { label: t.bold, icon: IconBold, run: () => wrap("**") },
+    { label: t.italic, icon: IconItalic, run: () => wrap("_") },
+    { label: t.heading, icon: IconHeadingTwo, run: () => prefixLines("heading") },
+    { label: t.bullets, icon: IconListView, run: () => prefixLines("bullets") },
+    { label: t.numbers, icon: IconListNumbers, run: () => prefixLines("numbers") },
+    { label: t.link, icon: IconLink, run: link },
   ];
 
   return (
@@ -197,7 +197,7 @@ export function RichDescriptionField({
         ))}
         <span className="mx-1 h-5 w-px bg-line" aria-hidden />
         <Button type="button" size="sm" variant={previewing ? "secondary" : "ghost"} aria-pressed={previewing} onClick={() => setPreviewing((p) => !p)}>
-          {previewing ? <Pencil className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+          {previewing ? <IconEdit className="size-4" aria-hidden /> : <IconEye className="size-4" aria-hidden />}
           {previewing ? t.edit : t.preview}
         </Button>
       </div>

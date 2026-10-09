@@ -19,13 +19,14 @@ import { ProductBumpCards, useProductBumps } from "@/components/offers/StoreOffe
 import { OrderFormFields, fieldId } from "@/components/checkout/OrderFormFields";
 import { useStorePlaces } from "@/lib/useStorePlaces";
 import { BillingAddressFields, billingFieldId, useBillingAddress } from "@/components/checkout/BillingAddressFields";
+import { DeliverySlotPicker, useDeliverySlot } from "@/components/delivery/DeliverySlotPicker";
+import { useHoliday } from "@/lib/storeHoliday";
 import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
 import { hasPlan, usePlanMethods } from "@/components/product/BillingPlan";
 import {
   TransferDetails,
   asTransferMethod,
   transferProblem,
-  useDepositQuote,
   useTransferCopy,
   type TransferState,
 } from "@/components/checkout/TransferDetails";
@@ -78,9 +79,16 @@ import { contentIdOf, lineContentId } from "@/lib/contentId";
 import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { DiscountRows, clearStoredCoupon, useCouponPreview, useStoredCoupon } from "@/components/offers/CouponBits";
 import { PolicyLinks } from "@/components/PolicyLinks";
+// The marketing and terms boxes (handoff 374), the deposit a checkout asks for (362), free-shipping and buy-X-get-Y codes (353), a funnel the server refuses (355).
+import { CheckoutConsentBoxes, useCheckoutConsent } from "@/components/checkout/CheckoutConsent";
+import { useCheckoutDeposit } from "@/components/checkout/useCheckoutDeposit";
+import { CouponCodeNote } from "@/components/checkout/CouponNotes";
+import { FunnelBackToOffer, FunnelOfferGone, oneClickNeedsShopper } from "./FunnelRefusals";
+import { checkoutHardeningFunnelRefusal } from "@store-builder/api-client";
 import { OfferVariantPicker } from "@/components/offers/OfferVariantPicker";
 import { OfferTimer, useOfferCountdown } from "@/components/offers/OfferTimer";
 import { variantImageOf } from "@/lib/variantImage";
+import { PostPurchaseSurvey } from "@/components/survey/PostPurchaseSurvey";
 
 /**
  * What the shopper *does* on a running funnel's step, drawn under the page the
@@ -122,7 +130,7 @@ const island = `${container} scroll-mt-24`;
 export function useAdvance(workspaceId: string, funnelId: string, sessionId: string, stepKey: string) {
   const router = useRouter();
   const basePath = useStoreBasePath();
-  const { t } = useStore();
+  const { t, locale } = useStore();
   const [pending, setPending] = useState<FunnelRuntimeOutcomeType | null>(null);
   const [error, setError] = useState<string | null>(null);
   // A ref as well as state: two taps in one frame must not both get through.
@@ -178,7 +186,8 @@ export function useAdvance(workspaceId: string, funnelId: string, sessionId: str
         rememberFollowOn(sessionId, res.followOnOrder);
         trackPurchaseOnce(res.followOnOrder.id, { valueMinor: parseMoney(res.followOnOrder.totalAmount), numItems: 1 });
       }
-      if (declined) setError(t.funnel.oneClickDeclined);
+      // The bank wants the shopper to confirm the charge: not a decline, its own sentence (handoff 380).
+      if (declined) setError(oneClickNeedsShopper(res.followOnOrder, locale) ?? t.funnel.oneClickDeclined);
       if (res.mergedOrder) {
         // Joined the checkout order: the thank-you page shows its new total,
         // and the purchase is the added line alone (keyed by that line, since
@@ -417,9 +426,13 @@ export function FunnelCheckout({
 }) {
   const { t, money, store, locale } = useStore();
   const funnelCurrency = useFunnelCurrency();
-  const [client] = useState(() => createStorefrontApiClient());
+  // The page's language rides on the checkout and its autosave (X-Store-Locale), so the order's messages go out in it (handoff 383).
+  const [client] = useState(() => createStorefrontApiClient({ locale }));
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
   const billing = useBillingAddress(fields);
+  // A store that requires a delivery day and time asks for it on this form too (handoff 221); a paused store takes no order here either (216).
+  const deliverySlot = useDeliverySlot({ client, workspaceId, requiredOnly: true, lazy: true });
+  const holiday = useHoliday();
   const saved = usePlacedOrder(sessionId);
   // Only an order placed on this very step and not yet reported counts: one the
   // session already holds belongs to an earlier pass (a funnel that loops back).
@@ -458,7 +471,11 @@ export function FunnelCheckout({
   const method = payment.methods.find((m) => m.id === methodId) ?? payment.methods[0];
   const transferCopy = useTransferCopy();
   const transferMethod = asTransferMethod(method);
-  const deposit = useDepositQuote(client, workspaceId, values.phone, method?.method === "cod");
+  const depositRule = useCheckoutDeposit(client, workspaceId, values.phone, method?.method === "cod", payment.methods);
+  const deposit = depositRule.quote;
+  const consent = useCheckoutConsent({ client, workspaceId });
+  // The server refused the funnel itself: "gone" replaces the form, "item" adds the way back to the offer page (handoff 355).
+  const [funnelRefusal, setFunnelRefusal] = useState<"gone" | "item" | null>(null);
   const [transfer, setTransfer] = useState<{ method: ManualTransferStoreMethod; state: TransferState } | null>(null);
   const needsTransfer = Boolean(transferMethod || deposit);
   const onlyCod = !planned && payment.methods.length === 1 && payment.methods[0].method === "cod";
@@ -493,6 +510,8 @@ export function FunnelCheckout({
     values,
     lines: autosaveLines,
     source: "funnel",
+    // Named on every save, so a lost checkout gets this funnel's own recovery email (handoff 302, 322).
+    funnelId,
   });
 
   // A discount code: typed here, or from a ?coupon= link (stored by the store layout). Previewed by
@@ -545,14 +564,30 @@ export function FunnelCheckout({
         return;
       }
     }
+    // A required delivery day and time not chosen yet: said beside the picker, before anything is sent.
+    const slotMissing = deliverySlot.check();
+    if (slotMissing) {
+      setFormError(slotMissing);
+      return;
+    }
+
+    // The terms box, when the store requires it (handoff 374).
+    const termsMissing = consent.check(FORM_PREFIX);
+    if (termsMissing) {
+      setFormError(termsMissing);
+      return;
+    }
 
     submittingRef.current = true;
     setSubmitting(true);
     setFormError(null);
+    setFunnelRefusal(null);
     const checkoutSessionId = await autosave.stop();
     const payload = {
       ...toCheckoutPayload(values, fields, { item: line, showAltPhone: true, place: places.address, ...(coupon?.valid ? { discountCode: coupon.code } : {}) }),
       ...billing.payload(),
+      ...deliverySlot.payload,
+      ...consent.payload,
       funnelId,
       // The server adds the step's bump and the product's ticked ones to this order from their offers.
       ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
@@ -613,9 +648,12 @@ export function FunnelCheckout({
           invalidFromServer.length > 0 ? fieldId(FORM_PREFIX, invalidFromServer[0]) : billingFieldId(FORM_PREFIX, billingInvalid[0])
         )?.focus();
       } else {
-        setFormError(orderErrorMessage(err, t.form.errors, locale));
+        setFormError(deliverySlot.onError(err) ?? consent.onError(err) ?? orderErrorMessage(err, t.form.errors, locale));
         setSubmitting(false);
       }
+      setFunnelRefusal(checkoutHardeningFunnelRefusal(err));
+      // DEPOSIT_REQUIRED: the transfer box opens, the form stays filled (handoff 362).
+      depositRule.onError(err);
       autosave.resume();
       return;
     }
@@ -641,6 +679,15 @@ export function FunnelCheckout({
         <p className="mx-auto max-w-xl rounded-2xl border border-dashed border-line-strong bg-paper-raised px-6 py-10 text-center text-sm text-ink-soft">
           {t.funnel.noProduct}
         </p>
+      </section>
+    );
+  }
+
+  // Not published here, or paused: the form gives way; what was typed stays in this component's state.
+  if (funnelRefusal === "gone") {
+    return (
+      <section id={embedded ? undefined : FUNNEL_ACTIONS_ID} className={embedded ? undefined : `${island} pb-16 pt-6`}>
+        <FunnelOfferGone />
       </section>
     );
   }
@@ -711,6 +758,7 @@ export function FunnelCheckout({
             storePlaces={places}
           />
           <BillingAddressFields idPrefix={FORM_PREFIX} state={billing} />
+          <DeliverySlotPicker state={deliverySlot} idPrefix={FORM_PREFIX} frame="plain" className="mt-5" />
         </fieldset>
 
         {onlyCod || !method ? (
@@ -761,6 +809,7 @@ export function FunnelCheckout({
                   ) : (
                     <p className="text-xs text-primary">{t.checkout.discountPending(appliedCode)}</p>
                   )}
+                  <CouponCodeNote coupon={coupon} className="mt-0.5" />
                 </dl>
                 <button
                   type="button"
@@ -842,16 +891,18 @@ export function FunnelCheckout({
             <p role="status" className="rounded-xl bg-success-soft px-4 py-3 text-sm text-success">
               <span className="font-semibold">
                 {t.funnel.placedTitle} —{" "}
-                <bdi dir="ltr">#{placed.orderNumber}</bdi>
+                <bdi dir="ltr">{placed.orderNumber}</bdi>
               </span>
               <span className="block">{t.funnel.placedHint}</span>
             </p>
           )}
           <ErrorBox message={formError ?? flow.error} />
+          {funnelRefusal === "item" && <FunnelBackToOffer funnelId={funnelId} />}
+          {!placed && <CheckoutConsentBoxes state={consent} idPrefix={FORM_PREFIX} />}
           {/* "By placing your order you agree to…", as on the store checkout. */}
           <PolicyLinks />
-          <button type="submit" disabled={busy} aria-busy={busy} className={btnPrimaryLg}>
-            {busy ? t.checkout.placing : placed ? t.funnel.continue : t.checkout.place}
+          <button type="submit" disabled={busy || (!placed && (holiday.paused || consent.blocked))} aria-busy={busy} className={btnPrimaryLg}>
+            {!placed && holiday.pausedLabel ? holiday.pausedLabel : busy ? t.checkout.placing : placed ? t.funnel.continue : t.checkout.place}
           </button>
         </div>
       </form>
@@ -1143,6 +1194,9 @@ export function FunnelOrders({
           </div>
         )}
 
+        {/* The store's post-purchase survey, under the order summary as on the store's own thank-you page (handoff 236). */}
+        <PostPurchaseSurvey workspaceId={workspaceId} orderId={orderId} headingLevel={sub} />
+
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <StoreLink href="/track" className={btnSecondary}>
             {t.thankYou.track}
@@ -1184,7 +1238,7 @@ function FunnelOrderList({
               <span className="block text-ink-soft">{row.label}</span>
               {row.number && (
                 <bdi dir="ltr" className="font-semibold text-ink">
-                  #{row.number}
+                  {row.number}
                 </bdi>
               )}
             </span>

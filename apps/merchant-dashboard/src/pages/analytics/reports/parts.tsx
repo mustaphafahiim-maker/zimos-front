@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowDownRight, ArrowUpRight, CalendarDays, Download } from "lucide-react";
+import { IconArrowDownRight, IconArrowOut, IconCalendar, IconDownload } from "@/components/icons";
 import { Button, cn } from "@store-builder/ui";
 import type { ReportsCompare, ReportsExportName, ReportsFunnelStep } from "@store-builder/api-client";
 import { reportsExportCsv } from "@store-builder/api-client";
@@ -9,7 +9,7 @@ import { apiClient } from "@/lib/apiClient";
 import { formatCount } from "@/lib/analytics";
 import { formatPercentValue } from "@/lib/format";
 import { REPORT_COMPARES, REPORT_PRESETS, type ReportPreset, type ReportRange } from "@/lib/reportRange";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { getIntlLocale, useT, type Messages } from "@/i18n/LocaleContext";
 
 /** The API's rates are percentages (12.5); "—" when there is no denominator. */
 export function formatRate(percent: number | null | undefined): string {
@@ -39,14 +39,14 @@ const RANGE_STRINGS = {
   },
   ar: {
     label: "الفترة",
-    today: "اليوم",
-    yesterday: "أمس",
-    "7d": "آخر 7 أيام",
-    "30d": "آخر 30 يومًا",
-    "90d": "آخر 90 يومًا",
+    today: "النهارده",
+    yesterday: "إمبارح",
+    "7d": "آخر ٧ أيام",
+    "30d": "آخر ٣٠ يوم",
+    "90d": "آخر ٩٠ يوم",
     month: "هذا الشهر",
     lastMonth: "الشهر الماضي",
-    "12m": "آخر 12 شهرًا",
+    "12m": "آخر ١٢ شهر",
     custom: "تواريخ محددة",
     from: "من",
     to: "إلى",
@@ -78,7 +78,7 @@ export function DateRangeControl({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative">
-        <CalendarDays
+        <IconCalendar
           className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft"
           aria-hidden
         />
@@ -172,7 +172,7 @@ export function ExportButton({
   }
   return (
     <Button variant="outline" size="sm" onClick={download}>
-      <Download className="size-4" aria-hidden />
+      <IconDownload className="size-4" aria-hidden />
       {t.export}
     </Button>
   );
@@ -193,7 +193,7 @@ export function Delta({ percent, inverted, className }: { percent: number | null
   // A rising return rate is bad news: `inverted` flips the colour, not the arrow.
   const good = inverted ? down : up;
   const bad = inverted ? up : down;
-  const Icon = down ? ArrowDownRight : ArrowUpRight;
+  const Icon = down ? IconArrowDownRight : IconArrowOut;
   return (
     <span
       className={cn(
@@ -339,19 +339,26 @@ export function OrdersHeatmap({
   const hours = Array.from({ length: 24 }, (_, h) => h);
   // The week starts on Saturday here.
   const days = [6, 0, 1, 2, 3, 4, 5];
+  const hourFormat = new Intl.DateTimeFormat(getIntlLocale(), { hour: "numeric" });
+  const hourLabel = (hour: number) => hourFormat.format(new Date(2000, 0, 1, hour));
   return (
     <div className="overflow-x-auto" role="img" aria-label={summary}>
-      <div className="min-w-[34rem]">
+      <div className="min-w-[18rem]">
         {days.map((dow) => (
           <div key={dow} className="flex items-center gap-1">
             <span className="w-14 shrink-0 truncate text-xs text-ink-soft">{dayLabels[dow]}</span>
-            <div className="grid flex-1 gap-[3px] py-[1.5px]" style={{ gridTemplateColumns: "repeat(24, minmax(0, 1fr))" }}>
+            {/* Hours run left to right in Arabic too, like every time axis; the label row below does the same. */}
+            <div
+              dir="ltr"
+              className="grid flex-1 gap-[2px] py-[1.5px]"
+              style={{ gridTemplateColumns: "repeat(24, minmax(0, 1fr))" }}
+            >
               {hours.map((hour) => {
                 const orders = at.get(`${dow}:${hour}`) ?? 0;
                 return (
                   <div
                     key={hour}
-                    title={`${dayLabels[dow]} ${hour}:00 — ${orders}`}
+                    title={`${dayLabels[dow]} ${hourLabel(hour)} — ${formatCount(orders)}`}
                     className="h-5 rounded-[3px] bg-primary"
                     style={{ opacity: orders === 0 ? 0.07 : 0.18 + (orders / max) * 0.82 }}
                   />
@@ -360,11 +367,11 @@ export function OrdersHeatmap({
             </div>
           </div>
         ))}
-        <div className="mt-1 flex items-center gap-1" dir="ltr">
+        <div className="mt-1 flex items-center gap-1">
           <span className="w-14 shrink-0" />
-          <div className="grid flex-1 text-[10px] text-ink-soft" style={{ gridTemplateColumns: "repeat(8, minmax(0, 1fr))" }}>
-            {[0, 3, 6, 9, 12, 15, 18, 21].map((h) => (
-              <span key={h}>{h}:00</span>
+          <div dir="ltr" className="grid flex-1 text-xs text-ink-soft" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+            {[0, 6, 12, 18].map((hour) => (
+              <span key={hour}>{hourLabel(hour)}</span>
             ))}
           </div>
         </div>

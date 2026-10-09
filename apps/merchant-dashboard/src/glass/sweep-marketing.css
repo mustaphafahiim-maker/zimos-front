@@ -1,0 +1,49 @@
+/* The sweep: Tracking tools, Ad spend, Ad accounts, Automations, AI studio —
+   pages/marketing, pages/ads, pages/automations, pages/ai.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills and rims come from the --lg-* variables.
+
+   Nothing here is blurred: wells, tiles and cards lie in the page flow or inside a pane
+   that is already frosted (a sheet). The selectors are the components' own hooks and never
+   lean on ".glass-app main": the same pieces are drawn in sheets, portalled outside it.
+   Text stays var(--color-ink) / var(--lg-ink-soft) on these fills. */
+:root:not([data-glass="off"]) {
+  /* A well inside a pane: a group of fields, a sample, a note. */
+  --sweep-well: color-mix(in srgb, var(--color-primary-dark) 5%, transparent);
+
+  &.dark {
+    --sweep-well: rgb(255 255 255 / 0.05);
+  }
+
+  [data-slot="sweep-well"] {
+    background-color: var(--sweep-well);
+    box-shadow: inset 0 0 0 1px var(--lg-edge);
+  }
+
+  /* A quiet fact pill of a row. */
+  [data-slot="sweep-fact"] {
+    background-color: color-mix(in srgb, var(--color-ink) 7%, transparent);
+    color: var(--lg-ink-soft);
+  }
+
+  /* A choice drawn as a small pane (a platform tile, a timing option): lit when chosen. */
+  .zimos-pick-tile {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  .zimos-pick-tile:has(:checked) {
+    background-color: color-mix(in srgb, var(--color-primary) 12%, var(--lg-control-lit));
+    box-shadow: var(--lg-rim-line), 0 0 0 2px var(--lg-brand-solid);
+  }
+
+  /* The round «…» button under the pointer or open. */
+  .zimos-more-button:is(:hover, [aria-expanded="true"]) {
+    background-color: var(--lg-control-lit);
+  }
+
+  /* An automation that is switched off steps back a little; its words keep their contrast. */
+  .zimos-auto-card:not([data-on]) {
+    background-color: color-mix(in srgb, var(--lg-fill) 70%, transparent);
+  }
+}

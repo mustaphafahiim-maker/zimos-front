@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { CustomizationInput } from "@store-builder/api-client";
-import { useCart } from "@/lib/CartProvider";
+import { cartErrorMessage, useCart, type LinePreview } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
 import { CartGlyph, CheckIcon } from "./Icons";
 import { btnPrimary, btnSecondary } from "./ui";
@@ -19,6 +19,7 @@ export function AddToCartButton({
   customizations,
   beforeAdd,
   onAddError,
+  preview,
 }: {
   variantId: string | undefined;
   offerId?: string;
@@ -33,8 +34,14 @@ export function AddToCartButton({
   beforeAdd?: () => boolean;
   /** Gets a failed add first; true when it showed the problem itself. */
   onAddError?: (err: unknown) => boolean;
+  /**
+   * The product's name and photo as the page shows them: the line the drawer
+   * draws before the server answers. Without it the line is named from the
+   * cart's catalogue when the product is in it, else it waits as a placeholder.
+   */
+  preview?: LinePreview;
 }) {
-  const { addItem, openDrawer } = useCart();
+  const { addItem, openDrawer, reportProblem } = useCart();
   const { t } = useStore();
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -46,21 +53,32 @@ export function AddToCartButton({
     if (beforeAdd && !beforeAdd()) return;
     setStatus("loading");
     setError(null);
+    // The tap answers at once. The drawer is the confirmation — the line, the
+    // subtotal and the way to checkout, without leaving the page — so it opens
+    // now, with the line already in it, and the server's cart takes over when
+    // it answers (lib/CartProvider). The button still says "added" underneath
+    // for when the drawer is closed again.
+    //
+    // One exception: a product whose answers the server may send back to a
+    // field on the page (`onAddError`). Its drawer waits for the answer, as it
+    // always did, so the shopper is never pulled away from that field.
+    const openFirst = !onAddError;
+    if (openFirst) openDrawer();
     try {
-      await addItem(variantId, offerId, defaultQuantity, customizations);
+      await addItem(variantId, offerId, defaultQuantity, customizations, preview);
       setStatus("added");
-      // The drawer is the confirmation: the line, the subtotal and the way to
-      // checkout, without leaving the page. The button still says "added"
-      // underneath for when the drawer is closed again.
-      openDrawer();
+      if (!openFirst) openDrawer();
       setTimeout(() => setStatus((s) => (s === "added" ? "idle" : s)), 2000);
     } catch (err) {
       if (onAddError && onAddError(err)) {
         setStatus("idle");
         return;
       }
+      const message = cartErrorMessage(err) ?? t.product.addFailed;
       setStatus("error");
-      setError(err instanceof Error && err.message ? err.message : t.product.addFailed);
+      setError(message);
+      // The line is gone from the open drawer again; it says why, in this one line.
+      if (openFirst) reportProblem("add", message);
     }
   }
 
@@ -70,7 +88,8 @@ export function AddToCartButton({
         type="button"
         onClick={handleClick}
         disabled={unavailable || status === "loading"}
-        className={`${variant === "primary" ? btnPrimary : btnSecondary} w-full`}
+        aria-busy={status === "loading"}
+        className={`${variant === "primary" ? btnPrimary : btnSecondary} w-full touch-manipulation`}
       >
         {status === "added" ? <CheckIcon /> : <CartGlyph />}
         {unavailable

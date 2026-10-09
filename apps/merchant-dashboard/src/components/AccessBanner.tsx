@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AlertTriangle, Ban, PencilRuler, X } from "lucide-react";
+import { IconBlock, IconClose, IconDraft, IconWarning } from "@/components/icons";
 import { Button, cn } from "@store-builder/ui";
 import type { WorkspaceAccess } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -8,6 +8,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { getGoLiveState, openGoLive, subscribeGoLive } from "@/lib/goLive";
+import { WalletBalanceBanner } from "@/pages/settings/billing/WalletBanner";
 
 /**
  * The subscription / suspension banner shown above every dashboard page, from
@@ -23,6 +24,11 @@ import { getGoLiveState, openGoLive, subscribeGoLive } from "@/lib/goLive";
  *
  * A dismissed banner comes back the next day while it still applies. Re-read
  * on every page change, so a payment clears it without a reload.
+ *
+ * One rounded banner for all six: a filled 20px icon in the tone's colour, the
+ * sentence in plain ink, and what can be done about it as pills at the end —
+ * under the sentence on a phone. Its tinted glass is in glass/states.css
+ * (`[data-slot="access-banner"]`).
  */
 
 const STRINGS = {
@@ -43,20 +49,20 @@ const STRINGS = {
     subscribe: "Subscribe to publish your store",
   },
   ar: {
-    expiring: "ينتهي اشتراكك في {date}. جدّده حتى يستمر متجرك في العمل.",
-    expiringTrial: "تنتهي فترتك التجريبية المجانية في {date}. اختار خطة حتى يستمر متجرك في العمل.",
-    paymentDue: "هناك دفعة مستحقة على اشتراكك. تنتهي فترتك الحالية في {date}.",
+    expiring: "اشتراكك هيخلص يوم {date}. جدّده عشان متجرك يفضل شغّال.",
+    expiringTrial: "الفترة التجريبية المجانية هتخلص يوم {date}. اختار باقة عشان متجرك يفضل شغّال.",
+    paymentDue: "فيه دفعة مستحقة على اشتراكك. الفترة الحالية هتخلص يوم {date}.",
     grace:
-      "انتهى اشتراكك في {date}. إذا لم يُجدَّد، سيُقيَّد متجرك في {when}: لن يتمكن المتسوقون من رؤيته، ولن تتمكن من إضافة منتجات أو مسارات بيع جديدة.",
+      "اشتراكك خلص يوم {date}. لو ما اتجددش، متجرك هيتقيّد في {when}: العملاء مش هيشوفوه، ومش هتقدر تضيف منتجات أو مسارات بيع جديدة.",
     restricted:
-      "انتهى اشتراكك، لذلك متجرك غير متاح للمتسوقين ولا يمكنك إضافة منتجات أو مسارات بيع جديدة. كل شيء آخر يعمل كالمعتاد. جدّد اشتراكك لاستعادته.",
-    notEnforced: "انتهى اشتراكك. جدّده حتى يستمر متجرك في العمل.",
+      "اشتراكك خلص، فمتجرك مش ظاهر للعملاء ومش هتقدر تضيف منتجات أو مسارات بيع جديدة. كل حاجة تانية شغّالة زي ما هي. جدّد الاشتراك عشان يرجع.",
+    notEnforced: "اشتراكك خلص. جدّده عشان متجرك يفضل شغّال.",
     suspended:
-      "أوقفت Zimos هذا المتجر. المتجر غير متاح للمتسوقين ولا يمكن إضافة منتجات أو مسارات بيع جديدة. تواصل مع دعم Zimos.",
-    billingLink: "الخطة والفواتير",
-    dismiss: "إخفاء لليوم",
-    draft: "متجرك في وضع المسودة: ابنِ كما تشاء، واشترك لتنشره.",
-    subscribe: "اشترك لنشر متجرك",
+      "Zimos وقّفت المتجر ده. مش ظاهر للعملاء ومش هينفع تضيف منتجات أو مسارات بيع جديدة. كلّم دعم Zimos.",
+    billingLink: "الباقة والفواتير",
+    dismiss: "اخفيها النهارده",
+    draft: "متجرك لسه مسودة: ابنيه براحتك، واشترك لما تحب تنشره.",
+    subscribe: "اشترك وانشر متجرك",
   },
 } satisfies Messages;
 
@@ -148,44 +154,67 @@ export function AccessBanner() {
 
   if (!workspaceId || !access) return null;
   const notice = noticeFor(access, t);
-  if (!notice) return null;
-  if (notice.dismissible && (dismissedKey === notice.key || isDismissedToday(workspaceId, notice.key))) return null;
+  // The prepaid balance of a pay-per-order store has its own banner (handoff 335).
+  const balance = <WalletBalanceBanner access={access} />;
+  if (!notice) return balance;
+  if (notice.dismissible && (dismissedKey === notice.key || isDismissedToday(workspaceId, notice.key))) return balance;
 
   const canSeeBilling = ["owner", "accountant"].includes(currentWorkspace?.role ?? "");
 
+  const NoticeIcon = notice.key === "suspended" ? IconBlock : notice.key === "draft" ? IconDraft : IconWarning;
+  const showBilling = notice.billing && canSeeBilling;
+  const isDraft = notice.key === "draft";
+
   return (
+    <>
+    {balance}
     <div
       role={notice.tone === "danger" ? "alert" : "status"}
       data-testid="access-banner"
+      data-slot="access-banner"
+      data-tone={notice.tone}
       className={cn(
-        "mb-4 flex items-start gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-sm",
+        "mb-4 flex flex-wrap items-start gap-x-2 gap-y-1 rounded-[1.25rem] border py-1.5 ps-4 pe-2 text-sm text-ink",
         notice.tone === "danger"
-          ? "border-danger/30 bg-danger-soft text-danger"
+          ? "border-danger/30 bg-danger-soft"
           : notice.tone === "draft"
-            ? "flex-wrap items-center border-primary/30 bg-primary-soft text-ink"
-            : "border-accent/30 bg-accent-soft text-ink"
+            ? "border-primary/30 bg-primary-soft"
+            : "border-accent/30 bg-accent-soft"
       )}
     >
-      {notice.key === "suspended" ? (
-        <Ban className="mt-0.5 size-4 shrink-0" aria-hidden />
-      ) : notice.key === "draft" ? (
-        <PencilRuler className="size-4 shrink-0 text-primary" aria-hidden />
-      ) : (
-        <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
-      )}
-      <p className="flex-1">
-        {notice.text}
-        {notice.billing && canSeeBilling && (
-          <>
-            {" "}
-            <Link to="/settings?tab=billing" className="font-medium underline underline-offset-2">
-              {t.billingLink}
-            </Link>
-          </>
+      {/* The icon, the pill and the close button are level with the first line of the
+          sentence, however many lines it runs to: that line is as tall as a pill (36px,
+          44px under a thumb). */}
+      <NoticeIcon
+        weight="fill"
+        data-slot="access-banner-icon"
+        className={cn(
+          "me-1 mt-2 size-5 shrink-0 pointer-coarse:mt-3",
+          notice.tone === "danger" ? "text-danger" : notice.tone === "draft" ? "text-primary" : "text-accent-dark"
         )}
-      </p>
-      {notice.key === "draft" && (
-        <Button size="sm" className="min-h-11 w-full sm:w-auto" onClick={() => openGoLive(access.draftPlan ?? null)}>
+        aria-hidden
+      />
+      {/* A narrow basis: on the smallest phones the close button must still fit beside the sentence. */}
+      <p className="min-w-0 flex-1 basis-40 py-1.5 pe-2 leading-6 pointer-coarse:py-2.5">{notice.text}</p>
+      {/* On a phone what can be done sits on its own line under the sentence (this empty
+          item breaks the row), and the close button stays up beside the sentence. From
+          sm up everything is one row, in the order it is written here. */}
+      {(showBilling || isDraft) && <span aria-hidden className="order-1 basis-full sm:hidden" />}
+      {showBilling && (
+        <Link
+          to="/settings?tab=billing"
+          data-slot="access-banner-link"
+          className="order-1 ms-8 mb-1 inline-flex min-h-11 shrink-0 items-center rounded-full bg-paper-raised px-4 text-[13px] font-semibold text-ink ring-1 ring-line-strong/40 transition-[scale,background-color] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-paper-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 sm:order-none sm:ms-0 sm:mb-0 pointer-fine:min-h-9"
+        >
+          {t.billingLink}
+        </Link>
+      )}
+      {isDraft && (
+        <Button
+          size="sm"
+          className="order-1 me-2 mb-1.5 min-h-11 w-full rounded-full px-4 sm:order-none sm:me-0 sm:mb-0 sm:w-auto"
+          onClick={() => openGoLive(access.draftPlan ?? null)}
+        >
           {t.subscribe}
         </Button>
       )}
@@ -202,11 +231,13 @@ export function AccessBanner() {
           }}
           aria-label={t.dismiss}
           title={t.dismiss}
-          className="cursor-pointer rounded p-0.5 opacity-70 hover:opacity-100"
+          data-slot="access-banner-dismiss"
+          className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-[scale,background-color,color] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-ink/8 hover:text-ink focus-visible:outline-2 focus-visible:outline-primary active:scale-[0.94] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-fine:size-9"
         >
-          <X className="size-4" aria-hidden />
+          <IconClose className="size-5" aria-hidden />
         </button>
       )}
     </div>
+    </>
   );
 }

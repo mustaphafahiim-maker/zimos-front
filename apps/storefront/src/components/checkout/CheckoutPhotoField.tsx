@@ -7,11 +7,13 @@ import { createStorefrontApiClient } from "@/lib/apiClient";
 import { setPhotoUploading } from "@/lib/checkoutPhoto";
 import { useStore } from "@/lib/StoreContext";
 import { getVisitorId } from "@/lib/visitorId";
+import { PHOTO_MAX_BYTES } from "@/lib/photoLimit";
 import { btnSecondary, focusRing } from "../ui";
 
 const ACCEPT = "image/jpeg,image/png,image/webp";
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
-const RAW_LIMIT = 15 * 1024 * 1024;
+// Shoppers' photos are refused above 5 MB (handoff 400): a file compression could not bring under it is not sent.
+const RAW_LIMIT = PHOTO_MAX_BYTES;
 // What the browser aims for before sending; the server re-encodes anyway (as for product photos).
 const COMPRESS = { maxBytes: 4 * 1024 * 1024, maxEdgeSteps: [2400, 2000, 1600, 1200], qualitySteps: [0.85, 0.75, 0.65] };
 

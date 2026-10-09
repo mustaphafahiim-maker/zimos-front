@@ -1,8 +1,22 @@
 "use client";
 
 import { useEffect, useState, type RefObject } from "react";
+import { WarningCircleIcon } from "@phosphor-icons/react/dist/ssr/WarningCircle";
 import { useStore } from "@/lib/StoreContext";
-import { btnPrimary } from "../ui";
+import { CrossIcon } from "../Icons";
+import { btnPrimary, focusRing } from "../ui";
+import { FlashOnChange, busyProps } from "./LiveAmount";
+
+/** The order's error, shown above the bar where the shopper's thumb is. */
+export interface StickyBarAlert {
+  message: string;
+  /** The words of the "take me there" hint beside it. */
+  showLabel: string;
+  dismissLabel: string;
+  /** Tapping the message: go to the first problem. */
+  onShow: () => void;
+  onDismiss: () => void;
+}
 
 /**
  * The phone checkout's bottom bar (UX plan S13, audit U-57): the total and
@@ -16,6 +30,10 @@ import { btnPrimary } from "../ui";
  * buttons at once) and while the on-screen keyboard is up, and the page keeps
  * room for it under its last line and when a field scrolls into view
  * (globals.css, `[data-checkout-bar]`), so it never covers what is being typed.
+ *
+ * `alert`: the order's error rides on top of the bar — the page's own error
+ * line is under the summary, far below the fields on a phone. It leaves with
+ * the bar (the page's line is then on screen itself).
  */
 export function CheckoutStickyBar({
   anchor,
@@ -23,6 +41,8 @@ export function CheckoutStickyBar({
   total,
   buttonLabel,
   disabled,
+  busy = false,
+  alert = null,
 }: {
   /** The page's own order button: while it is on screen the bar is not needed. */
   anchor: RefObject<HTMLElement | null>;
@@ -31,6 +51,9 @@ export function CheckoutStickyBar({
   total: string;
   buttonLabel: string;
   disabled: boolean;
+  /** The total is the last one shown while a new shipping quote is fetched. */
+  busy?: boolean;
+  alert?: StickyBarAlert | null;
 }) {
   const { t } = useStore();
   const [anchorVisible, setAnchorVisible] = useState(false);
@@ -55,6 +78,7 @@ export function CheckoutStickyBar({
   }, []);
 
   const hidden = anchorVisible || keyboard;
+  const amount = busyProps(busy);
 
   return (
     <div
@@ -66,10 +90,33 @@ export function CheckoutStickyBar({
         hidden ? "translate-y-full" : "translate-y-0"
       }`}
     >
+      {alert && (
+        <div role="alert" className="mx-auto mb-2 flex max-w-xl items-stretch rounded-xl bg-danger-soft text-danger">
+          <button
+            type="button"
+            onClick={alert.onShow}
+            className={`flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-start text-sm font-medium ${focusRing}`}
+          >
+            <WarningCircleIcon size={20} weight="fill" className="shrink-0" aria-hidden="true" />
+            <span className="line-clamp-2 min-w-0 flex-1">{alert.message}</span>
+            <span className="shrink-0 text-xs font-semibold underline underline-offset-2">{alert.showLabel}</span>
+          </button>
+          <button
+            type="button"
+            onClick={alert.onDismiss}
+            aria-label={alert.dismissLabel}
+            className={`inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center self-center rounded-xl ${focusRing}`}
+          >
+            <CrossIcon size={18} />
+          </button>
+        </div>
+      )}
       <div className="mx-auto flex max-w-xl items-center gap-3">
-        <div className="min-w-0 shrink-0">
+        <div aria-busy={amount["aria-busy"]} className={`min-w-0 shrink-0 ${amount.className}`}>
           <p className="text-xs text-ink-soft">{totalLabel}</p>
-          <p className="truncate text-base font-bold text-ink">{total}</p>
+          <p className="truncate text-base font-bold text-ink">
+            <FlashOnChange signal={total}>{total}</FlashOnChange>
+          </p>
         </div>
         <button type="submit" disabled={disabled} className={`${btnPrimary} min-w-0 flex-1`}>
           {buttonLabel}

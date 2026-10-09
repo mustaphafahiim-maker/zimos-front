@@ -1,0 +1,238 @@
+/* «رحلة الأوردر» — the connected COD steps — pages/home/today/OrderJourney.tsx,
+   and «الإعلانات» — the cost of a delivered order — pages/home/today/AdsCard.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   Both cards are the shared Card, so the pane itself (fill, rim, sheen) is drawn by
+   liquid-glass.css. What sits ON the pane is tinted glass as well, never a solid block:
+   the step chips, the line that joins them, the rate pills, the band with the weakest
+   step, the small panes of the ads card. No blur anywhere: the cards lie in the page
+   and nothing passes beneath them.
+
+   Text on a tint. Worked out from the token values against the worst the backdrop can
+   put beneath a card (the page pane over its violet in light, over its sky blue in
+   dark) — sums, not readings from rendered pixels:
+     amber band   accent-dark on its tint     light 5.7   dark 6.9
+     green band   success ink on its tint     light 5.8   dark 6.4
+     amber pill   accent-dark on its tint     light 5.8   dark 5.7
+   all above 4.5:1; the sentence itself is plain ink, well above that. Change a mix or
+   an alpha only together with that check. */
+:root:not([data-glass="off"]) {
+  /* How much of a tinted fill is the tint; the rest lets the pane beneath through.
+     One number per kind, so the block at the end of this file can turn them all solid. */
+  --jr-chip-alpha: 72%;
+  --jr-pill-alpha: 92%;
+  --jr-band-alpha: 86%;
+
+  /* ---------------------------------------------------------------- *
+   * The round chip of a step: a small lit pane washed with its tone,
+   * running from the tone to its neighbour (brand to violet, like the
+   * main action), with a glow of the same colour under it. The icon
+   * takes the deeper text shade. Brand at rest; amber for the weakest
+   * step.
+   * ---------------------------------------------------------------- */
+  [data-slot="journey-chip"] {
+    --jr-tone: var(--color-primary);
+    --jr-tone-far: color-mix(in srgb, var(--color-primary) 62%, #7c3aed);
+    --jr-ink: var(--lg-text-primary);
+    color: var(--jr-ink);
+    background-color: color-mix(in srgb, var(--color-paper-raised) var(--jr-chip-alpha), transparent);
+    background-image: linear-gradient(145deg, color-mix(in srgb, var(--jr-tone) 22%, transparent) 0%, color-mix(in srgb, var(--jr-tone-far) 9%, transparent) 100%);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.9),
+      inset 0 0 0 1px color-mix(in srgb, var(--jr-tone) 16%, transparent),
+      0 12px 22px -14px color-mix(in srgb, var(--jr-tone) 60%, transparent);
+  }
+  /* The weakest step is amber, and wears a soft halo of it, so the eye lands there before the sentence. */
+  [data-slot="journey-chip"][data-tone="weak"] {
+    --jr-tone: var(--color-accent);
+    --jr-tone-far: color-mix(in srgb, var(--color-accent) 62%, #ea580c);
+    --jr-ink: var(--color-accent-dark);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.9),
+      inset 0 0 0 1px color-mix(in srgb, var(--jr-tone) 30%, transparent),
+      0 0 0 4px color-mix(in srgb, var(--jr-tone) 16%, transparent),
+      0 12px 22px -14px color-mix(in srgb, var(--jr-tone) 70%, transparent);
+  }
+  &.dark [data-slot="journey-chip"] {
+    background-color: color-mix(in srgb, var(--color-paper-sunken) var(--jr-chip-alpha), transparent);
+    background-image: linear-gradient(145deg, color-mix(in srgb, var(--jr-tone) 30%, transparent) 0%, color-mix(in srgb, var(--jr-tone-far) 12%, transparent) 100%);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+      inset 0 0 0 1px color-mix(in srgb, var(--jr-tone) 26%, transparent),
+      0 12px 24px -14px color-mix(in srgb, var(--jr-tone) 50%, transparent);
+  }
+  &.dark [data-slot="journey-chip"][data-tone="weak"] {
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+      inset 0 0 0 1px color-mix(in srgb, var(--jr-tone) 36%, transparent),
+      0 0 0 4px color-mix(in srgb, var(--jr-tone) 14%, transparent),
+      0 12px 24px -14px color-mix(in srgb, var(--jr-tone) 55%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The line between two steps: the pane's own hairline at double
+   * strength — the edge colour laid over itself, so it follows the
+   * pane in both themes. The arrowhead is a shade stronger: a thin
+   * stroke needs it to read as a direction.
+   * ---------------------------------------------------------------- */
+  [data-slot="journey-line"] {
+    background-color: var(--lg-edge);
+    background-image: linear-gradient(var(--lg-edge), var(--lg-edge));
+  }
+  [data-slot="journey-arrow"] {
+    color: color-mix(in srgb, var(--color-primary-dark) 46%, transparent);
+  }
+  &.dark [data-slot="journey-arrow"] {
+    color: rgb(255 255 255 / 0.42);
+  }
+
+  /* The rate sitting on the line: a small lit pane. The line stops at its
+     edges, so nothing shows through the figure. */
+  [data-slot="journey-pill"] {
+    background-color: var(--lg-control-lit);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 6px 14px -10px rgb(18 44 110 / 0.32);
+  }
+  &.dark [data-slot="journey-pill"] {
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 6px 14px -10px rgb(0 0 0 / 0.7);
+  }
+  /* The rate into the weakest step takes its amber. */
+  [data-slot="journey-pill"][data-tone="weak"] {
+    color: var(--color-accent-dark);
+    background-color: color-mix(in srgb, var(--color-accent-soft) var(--jr-pill-alpha), transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.85),
+      0 0 0 1px color-mix(in srgb, var(--color-accent) 38%, transparent),
+      0 6px 14px -10px color-mix(in srgb, var(--color-accent) 80%, transparent);
+  }
+  &.dark [data-slot="journey-pill"][data-tone="weak"] {
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--color-accent) 20%, var(--color-paper-sunken)) var(--jr-pill-alpha), transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.08),
+      0 0 0 1px color-mix(in srgb, var(--color-accent) 34%, transparent);
+  }
+
+  /* The bar under a step: a frosted track, the brand running into violet along it. */
+  [data-slot="journey-bar"] {
+    background-color: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  }
+  [data-slot="journey-bar-fill"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The band under the steps. Amber when a step is weak, green when
+   * the journey runs well, a quiet wash of ink when it is too early to
+   * say. On dark glass the soft tokens are nearly black and would read
+   * as holes in the pane, so there the tint is mixed from the colour
+   * itself. The icon and the lead carry the colour; the sentence is ink.
+   * ---------------------------------------------------------------- */
+  [data-slot="journey-strip"] {
+    --jr-tone: var(--color-accent);
+    --jr-soft: var(--color-accent-soft);
+    --jr-ink: var(--color-accent-dark);
+    color: var(--jr-ink);
+    background-color: color-mix(in srgb, var(--jr-soft) var(--jr-band-alpha), transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.8),
+      inset 0 0 0 1px color-mix(in srgb, var(--jr-tone) 22%, transparent);
+  }
+  [data-slot="journey-strip"][data-tone="good"] {
+    --jr-tone: var(--color-success);
+    --jr-soft: var(--color-success-soft);
+    --jr-ink: var(--lg-text-success);
+  }
+  &.dark [data-slot="journey-strip"] {
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--jr-tone) 16%, var(--color-paper-raised)) var(--jr-band-alpha), transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+      inset 0 0 0 1px color-mix(in srgb, var(--jr-tone) 24%, transparent);
+  }
+  [data-slot="journey-strip"][data-tone="quiet"],
+  &.dark [data-slot="journey-strip"][data-tone="quiet"] {
+    color: var(--lg-ink-soft);
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  /* «افتح التقرير»: a lit pill on the band, and on the pane when the range has no orders. */
+  [data-slot="journey-link"] {
+    background-color: var(--lg-control-lit);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 1px 2px rgb(20 22 26 / 0.06);
+  }
+  /* A wash of ink under the pointer: a shade darker in light, a shade lighter in dark. */
+  @media (hover: hover) {
+    [data-slot="journey-link"]:hover {
+      background-color: color-mix(in srgb, var(--color-ink) 6%, var(--color-paper-raised));
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The ads card: the three small figures and the campaign rows are
+   * small panes of the same glass as a secondary button — a pill row
+   * of icon, label and number.
+   * ---------------------------------------------------------------- */
+  [data-slot="ads-figure"],
+  [data-slot="ads-row"] {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  /* The icon chip: a drop of its colour with a lit top edge, the same recipe as the
+     chip of a stat card (stats.css) and of the money cards above (home-cards.css), so
+     the cards of the page read as one family. Brand for the card's own mark, green
+     for the best campaign, amber for the weakest. */
+  [data-slot="ads-chip"] {
+    background-color: color-mix(in srgb, var(--color-primary) 11%, transparent);
+    color: var(--lg-text-primary);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 9%, transparent);
+  }
+  [data-slot="ads-chip"][data-tone="good"] {
+    background-color: color-mix(in srgb, var(--color-success) 13%, transparent);
+    color: var(--lg-text-success);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-success) 14%, transparent);
+  }
+  [data-slot="ads-chip"][data-tone="weak"] {
+    background-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+    color: var(--color-accent-dark);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 22%, transparent);
+  }
+  &.dark [data-slot="ads-chip"] {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+      inset 0 0 0 1px rgb(255 255 255 / 0.05);
+  }
+  &.dark [data-slot="ads-chip"][data-tone="good"] {
+    background-color: color-mix(in srgb, var(--color-success) 20%, transparent);
+  }
+  &.dark [data-slot="ads-chip"][data-tone="weak"] {
+    background-color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+}
+
+/* The same preferences the off switch follows (see the end of liquid-glass.css):
+   if the attribute was not set, the tints of this file turn solid too. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root:not([data-glass="off"]),
+  :root:not([data-glass="off"]).dark {
+    --jr-chip-alpha: 100%;
+    --jr-pill-alpha: 100%;
+    --jr-band-alpha: 100%;
+  }
+}
+
+/* A step's bar grows from nothing to its share, once, from the start edge
+   (the element's own transform-origin: right in Arabic, left in English). */
+@keyframes home-journey-grow {
+  from {
+    transform: scaleX(0);
+  }
+}

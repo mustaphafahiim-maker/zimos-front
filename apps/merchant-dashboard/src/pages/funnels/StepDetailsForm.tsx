@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Alert, Button, Input, Label } from "@store-builder/ui";
+import { CopyButton } from "@/components/CopyButton";
+import { StepTypeTile } from "./panes/StepTypePicker";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { STEP_TYPE_LABELS } from "./FunnelEditorPage.strings";
@@ -18,21 +20,25 @@ const STRINGS = {
     taken: "Another page of this funnel already uses this address.",
     oldKept: "Links to the old address keep opening this page.",
     save: "Apply",
+    titleEmpty: "Give the page a name.",
+    copyAddress: "Copy the address",
     applied: "Applied to the funnel. Save the funnel to keep it; the new address goes live when you publish.",
   },
   ar: {
     title: "اسم الصفحة",
-    titleHint: "اسمك انت للصفحة. في الصفحة العامة بيبقى كمان نص اللينك في فوتر مسار البيع.",
-    address: "العنوان",
-    addressHint: "حروف إنجليزي صغيرة وأرقام وشَرطات (-).",
-    lockedAddress: "الصفحة اللي على خريطة مسار البيع عنوانها ثابت: الأسهم على الخريطة وجلسات الزوار بتستخدمه.",
+    titleHint: "الاسم اللي إنت بتشوفه للصفحة. في الصفحات التانية بيبقى كمان كلام اللينك في آخر الفانل.",
+    address: "اللينك",
+    addressHint: "حروف إنجليزي صغيرة وأرقام وشَرطة (-).",
+    lockedAddress: "الخطوة اللي على الخريطة لينكها ثابت: الأسهم وزيارات الزباين ماشية عليه.",
     type: "النوع",
     preview: "بتفتح على",
-    invalid: "استخدم حروف إنجليزي صغيرة وأرقام وشَرطات، ويبدأ وينتهي بحرف أو رقم.",
-    taken: "فيه صفحة تانية في مسار البيع ده بنفس العنوان.",
-    oldKept: "اللينكات على العنوان القديم هتفضل تفتح الصفحة دي.",
-    save: "تطبيق",
-    applied: "اتطبق على مسار البيع. احفظ مسار البيع عشان يتسجّل، والعنوان الجديد يشتغل لما تنشر.",
+    invalid: "اكتب حروف إنجليزي صغيرة وأرقام وشَرطة بس، وابدأ واختم بحرف أو رقم.",
+    taken: "فيه صفحة تانية في الفانل ده بنفس اللينك. اختار واحد غيره.",
+    oldKept: "اللينك القديم هيفضل يفتح الصفحة دي.",
+    save: "طبّق",
+    titleEmpty: "اكتب اسم للصفحة.",
+    copyAddress: "انسخ اللينك",
+    applied: "اتطبّق على الفانل. احفظ الفانل عشان يتسجّل، واللينك الجديد يشتغل لما تنشر.",
   },
 } satisfies Messages;
 
@@ -87,10 +93,20 @@ export function StepDetailsForm({
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="pd-title">{t.title}</Label>
-        <Input id="pd-title" dir="auto" maxLength={200} value={title} aria-describedby="pd-title-hint" onChange={(e) => setTitle(e.target.value)} />
+        <Input
+          id="pd-title"
+          dir="auto"
+          maxLength={200}
+          value={title}
+          aria-invalid={title.trim() === "" ? true : undefined}
+          aria-describedby="pd-title-hint"
+          className="h-11 text-base md:h-9 md:text-sm"
+          onChange={(e) => setTitle(e.target.value)}
+        />
         <p id="pd-title-hint" className="text-xs text-ink-soft">
           {t.titleHint}
         </p>
+        {title.trim() === "" && <p className="text-xs text-danger">{t.titleEmpty}</p>}
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="pd-key">{t.address}</Label>
@@ -102,13 +118,14 @@ export function StepDetailsForm({
           readOnly={!generic}
           aria-invalid={problem ? true : undefined}
           aria-describedby="pd-key-hint"
+          className="h-11 text-base md:h-9 md:text-sm"
           onChange={(e) => setKey(tidy(e.target.value))}
         />
         <p id="pd-key-hint" className="text-xs text-ink-soft">
           {generic ? t.addressHint : t.lockedAddress}{" "}
           {generic && cleanKey && (
             <>
-              {t.preview} <bdi dir="ltr">{pathOf(cleanKey)}</bdi>
+              {t.preview} <bdi dir="ltr">{pathOf(cleanKey)}</bdi> <CopyButton value={pathOf(cleanKey)} label={t.copyAddress} iconOnly className="align-middle" />
             </>
           )}
         </p>
@@ -117,11 +134,15 @@ export function StepDetailsForm({
       </div>
       <div className="space-y-1.5">
         <span className="text-sm font-medium text-ink">{t.type}</span>
-        <p className="text-sm text-ink-soft">{STEP_TYPE_LABELS[locale][type]}</p>
+        <p className="flex items-center gap-2 text-sm text-ink">
+          <StepTypeTile type={type} size="sm" />
+          {STEP_TYPE_LABELS[locale][type]}
+        </p>
       </div>
       <div className="text-end">
         <Button
           type="button"
+          className="min-h-11 md:min-h-9"
           disabled={!changed || Boolean(problem) || !title.trim() || !cleanKey}
           onClick={() => {
             onApply({ name: title.trim(), key: generic ? cleanKey : stepKey });

@@ -1,3 +1,4 @@
+import type { ElementType } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@store-builder/ui";
 import type { Order } from "@store-builder/api-client";
@@ -53,7 +54,7 @@ interface Entry {
  * bundle's saving is already in the item prices; the coupon's is the
  * summary's "Discount". Nothing shows for an order without either.
  */
-export function OrderDiscountsCard({ order }: { order: Order }) {
+export function OrderDiscountsCard({ order, frameless }: { order: Order; /** Inside a folding section: no card, no title. */ frameless?: boolean }) {
   const t = useT(STRINGS);
   const entries = (Array.isArray(order.discountsSnapshot) ? order.discountsSnapshot : []) as Entry[];
   if (entries.length === 0) return null;
@@ -62,11 +63,13 @@ export function OrderDiscountsCard({ order }: { order: Order }) {
     type === "percentage" || type === "fixed" || type === "free_shipping" ? t[`type_${type}`] : null;
   const saved = entries.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
+  const Frame: ElementType = frameless ? "div" : Card;
+  const Body: ElementType = frameless ? "div" : CardContent;
   return (
-    <Card>
-      <CardContent className="space-y-3 pt-6 text-sm">
+    <Frame>
+      <Body className={frameless ? "space-y-3 text-sm" : "space-y-3 pt-6 text-sm"}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
+          {!frameless && <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>}
           <Link to="/discounts" className="text-sm text-primary hover:underline">
             {t.manage}
           </Link>
@@ -112,7 +115,7 @@ export function OrderDiscountsCard({ order }: { order: Order }) {
             <span>− {formatMoney(String(saved), c)}</span>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </Body>
+    </Frame>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, ChevronLeft, Circle, X } from "lucide-react";
+import { IconCaretLeft, IconCircle, IconClose, IconSuccess } from "@/components/icons";
 import { Card, cn } from "@store-builder/ui";
 import { dashboardSetupGuide, type SetupStepKey } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -10,6 +10,7 @@ import { formatPercentValue } from "@/lib/format";
 import { storeUrl } from "@/lib/storeAddress";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
+import { useCustomDomainsClosed } from "@/pages/storeDesign/customDomainsGate";
 
 const STRINGS = {
   en: {
@@ -19,7 +20,7 @@ const STRINGS = {
     hide: "Hide the setup guide",
     go: "Set up",
     product: "Add your first product",
-    productHint: "A name, a price and a photo are enough to start.",
+    productHint: "A name, a price, a quantity and a photo are enough to start.",
     website: "Publish your store",
     websiteHint: "Pick a template, adjust it and publish.",
     payment: "Choose how customers pay",
@@ -42,7 +43,7 @@ const STRINGS = {
     hide: "اخفي دليل التجهيز",
     go: "ابدأ",
     product: "ضيف أول منتج",
-    productHint: "اسم وسعر وصورة كفاية عشان تبدأ.",
+    productHint: "اسم وسعر وكمية وصورة كفاية عشان تبدأ.",
     website: "انشر متجرك",
     websiteHint: "اختار قالب، عدّله وانشره.",
     payment: "اختار طرق الدفع",
@@ -91,11 +92,15 @@ export function SetupGuideCard({ className = "mb-[var(--bento-gap)]" }: { classN
     }
   });
 
+  // Asked only while the guide still offers the domain step.
+  const domainsClosed = useCustomDomainsClosed(!hidden && Boolean(guide.data && !guide.data.done && guide.data.steps.some((step) => step.key === "domain" && !step.done)));
+
   // The home page already has its own loading and error states; the guide is
   // an extra, so it only appears once it has something to say.
   if (hidden || !guide.data || guide.data.done) return null;
   const { steps, completed, total, percent } = guide.data;
-  const todo = steps.filter((step) => !step.done);
+  // Custom domains closed on this server (handoff 341): the step has nowhere to go, so it is not offered.
+  const todo = steps.filter((step) => !step.done && !(step.key === "domain" && domainsClosed));
   // Required steps first: the next one is the first required step not done yet.
   const next = todo.find((step) => !step.optional) ?? todo[0] ?? null;
   const rest = todo.filter((step) => step !== next);
@@ -120,7 +125,7 @@ export function SetupGuideCard({ className = "mb-[var(--bento-gap)]" }: { classN
         </div>
         <span className="tabular-nums text-2xl font-semibold text-primary">{formatPercentValue(percent / 100, 0)}</span>
         <button type="button" onClick={hide} aria-label={t.hide} title={t.hide} className="flex size-11 cursor-pointer items-center justify-center rounded-full text-ink-soft hover:bg-paper-sunken hover:text-ink">
-          <X className="size-4" aria-hidden />
+          <IconClose className="size-4" aria-hidden />
         </button>
       </div>
       <div
@@ -155,7 +160,7 @@ export function SetupGuideCard({ className = "mb-[var(--bento-gap)]" }: { classN
           {t.doneLabel}:</span>
           {done.map((step) => (
             <span key={step.key} className="inline-flex items-center gap-1">
-              <CheckCircle2 className="size-3.5 text-success" aria-hidden />
+              <IconSuccess className="size-3.5 text-success" aria-hidden />
               {t[step.key]}
             </span>
           ))}
@@ -182,7 +187,7 @@ function StepLink({
 }) {
   const body = (
     <>
-      <Circle className="mt-0.5 size-5 shrink-0 text-ink-soft" aria-hidden />
+      <IconCircle className="mt-0.5 size-5 shrink-0 text-ink-soft" aria-hidden />
       <span className="min-w-0 flex-1">
         {children}
         <span className="block text-sm font-medium text-ink">
@@ -191,7 +196,7 @@ function StepLink({
         </span>
         <span className="mt-0.5 block text-xs text-ink-soft">{t[`${step.key}Hint`]}</span>
       </span>
-      <ChevronLeft className="mt-0.5 size-4 shrink-0 text-ink-soft ltr:rotate-180" aria-hidden />
+      <IconCaretLeft className="mt-0.5 size-4 shrink-0 text-ink-soft ltr:rotate-180" aria-hidden />
     </>
   );
   const classes = cn(
@@ -212,3 +217,10 @@ function StepLink({
     </Link>
   );
 }
+
+/*
+ * Shared with the slim row the home shows once the store has its first order
+ * (pages/home/today/SetupRow.tsx): the same step names, the same destinations
+ * and the same "hidden" key, so hiding one hides the other.
+ */
+export { STRINGS as SETUP_GUIDE_STRINGS, STEP_LINK as SETUP_STEP_LINK, hiddenKey as setupGuideHiddenKey };

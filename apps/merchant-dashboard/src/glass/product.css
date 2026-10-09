@@ -1,0 +1,139 @@
+/* The product page: section index, groups, folded rows, the one save bar — pages/catalog/ProductEditPage.tsx,
+   pages/catalog/product/* and the sections in pages/catalog/components. (Photos, video and the variants grid
+   have their own partial: product-media.css.)
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   One thing here is blurred: the save bar, because the page scrolls beneath it. The index, the groups
+   and the folded rows lie in the page flow with only the still backdrop behind them.
+
+   Hooks: .zimos-product-index (the desktop index; the current row is a[aria-current]),
+   .zimos-product-group / .zimos-product-group-head / .zimos-product-part (a group and its parts),
+   .zimos-product-folds + .zimos-product-fold (the slim rows under the variants),
+   .zimos-product-savebar, .zimos-product-waiting, .zimos-product-unsaved (the dot of an unsaved group),
+   .zimos-product-chip (a collection), .zimos-product-serp (the Google preview),
+   .zimos-product-note, .zimos-product-warning, .zimos-product-publish (new product). */
+:root:not([data-glass="off"]) {
+  /* ---- The index: the side list of System Settings — a small pane, the row you are on in the brand fill. */
+  .zimos-product-index {
+    background-color: var(--lg-nav);
+    box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-edge), var(--shadow-card);
+  }
+  .zimos-product-index a:not([aria-current]) {
+    color: var(--lg-ink-soft);
+  }
+  @media (hover: hover) {
+    .zimos-product-index a:not([aria-current]):hover {
+      background-color: var(--lg-control-lit);
+      box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+      color: var(--color-ink);
+    }
+  }
+  .zimos-product-index a[aria-current] {
+    background-color: var(--lg-brand-solid);
+    background-image: linear-gradient(112deg, transparent 38%, rgb(255 255 255 / 0.34) 50%, transparent 62%), var(--lg-brand-grad);
+    background-size: 260% 100%, auto;
+    background-position: 160% 0, 0 0;
+    background-repeat: no-repeat;
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28), var(--lg-brand-glow);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .zimos-product-index a[aria-current] {
+      animation: product-index-sheen 650ms var(--ease-out) 1;
+    }
+  }
+
+  /* ---- A group: the pane is the accordion's (liquid-glass.css styles [data-slot="card"]).
+     Its secondary text sits one step deeper so it holds 4.5:1 on the pane. */
+  .zimos-product-group :where(.text-ink-soft) {
+    color: var(--lg-ink-soft);
+  }
+  .zimos-product-group-head .zimos-accordion-chip {
+    box-shadow: var(--lg-rim-line);
+  }
+  /* The hairline between two parts of a group. */
+  .zimos-product-part {
+    border-color: var(--lg-edge);
+  }
+
+  /* ---- The slim rows under the variants: one small pane, a lit row under the pointer. */
+  .zimos-product-folds {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  .zimos-product-fold {
+    border-color: var(--lg-edge);
+  }
+  @media (hover: hover) {
+    .zimos-product-fold > button:hover {
+      background-color: var(--lg-control-lit);
+    }
+  }
+  .zimos-product-fold[data-open] > button {
+    background-color: var(--lg-control-lit);
+  }
+
+  /* ---- The one save bar: it floats over the page, so it is frosted like a toast. */
+  .zimos-product-savebar {
+    background-color: var(--lg-overlay);
+    -webkit-backdrop-filter: var(--lg-blur-overlay);
+    backdrop-filter: var(--lg-blur-overlay);
+    box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-edge), var(--shadow-pop);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .zimos-product-savebar {
+      animation: product-savebar-in var(--dur-move) var(--ease-spring) both;
+    }
+  }
+  .zimos-product-waiting {
+    color: var(--lg-ink-soft);
+  }
+
+  /* The dot of a group that holds an unsaved edit. */
+  .zimos-product-unsaved {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+  }
+
+  /* ---- Small panes inside a group. */
+  .zimos-product-chip,
+  .zimos-product-serp,
+  .zimos-product-note {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  .zimos-product-warning {
+    background-color: color-mix(in srgb, var(--color-accent-soft) 86%, transparent);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.5);
+  }
+  &.dark .zimos-product-warning {
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.08);
+  }
+
+  /* New product: the publish row presses like the pane it is. */
+  @media (prefers-reduced-motion: no-preference) {
+    .zimos-product-publish {
+      transition: scale var(--dur-fade) var(--ease-out);
+    }
+    .zimos-product-publish:active {
+      scale: 0.99;
+    }
+  }
+}
+
+@keyframes product-index-sheen {
+  from {
+    background-position: 160% 0, 0 0;
+  }
+  to {
+    background-position: -60% 0, 0 0;
+  }
+}
+
+@keyframes product-savebar-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}

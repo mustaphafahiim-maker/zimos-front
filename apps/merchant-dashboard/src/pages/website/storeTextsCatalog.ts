@@ -226,7 +226,7 @@ export const STORE_TEXT_GROUPS: StoreTextGroup[] = [
       { key: "thankYou.total", en: "Total", ar: "الإجمالي", fr: "Total" },
       { key: "thankYou.payOnDelivery", en: "Pay on delivery", ar: "الدفع عند الاستلام", fr: "À payer à la livraison" },
       { key: "thankYou.whatsapp", en: "Chat with us on WhatsApp", ar: "كلمنا واتساب", fr: "Discuter avec nous sur WhatsApp" },
-      { key: "thankYou.whatsappMessage", en: "Hello {store}, I just placed order #{number}.", ar: "أهلًا {store}، لسه عامل طلب رقم #{number}.", fr: "Bonjour {store}, je viens de passer la commande n° {number}.", vars: ["store", "number"] },
+      { key: "thankYou.whatsappMessage", en: "Hello {store}, I just placed order {number}.", ar: "أهلًا {store}، لسه عامل طلب رقم {number}.", fr: "Bonjour {store}, je viens de passer la commande n° {number}.", vars: ["store", "number"] },
       { key: "thankYou.share", en: "Share the store", ar: "شارك المتجر", fr: "Partager la boutique" },
       { key: "thankYou.shareWhatsapp", en: "Share on WhatsApp", ar: "شارك على واتساب", fr: "Partager sur WhatsApp" },
       { key: "thankYou.copyLink", en: "Copy link", ar: "نسخ الرابط", fr: "Copier le lien" },

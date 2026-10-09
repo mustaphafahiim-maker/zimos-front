@@ -62,12 +62,9 @@ export function ConsentGate({ consent, children }: { consent: CookieConsentSetti
   return allowed ? <>{children}</> : null;
 }
 
-// The phone bars the banner sits above: the product page's buy bar while it shows,
-// the theme's bottom toolbar (store-sections.css
-// .zs-toolbar) and the checkout's order bar (checkout/CheckoutStickyBar), which wins.
-const OFFSETS = `@media (width < 48rem){.brand-theme:has(.zs-toolbar) [data-cookie-banner]{bottom:calc(55px + env(safe-area-inset-bottom,0px));padding-bottom:.75rem}}
-@media (width < 64rem){.brand-theme:has([data-checkout-bar]) [data-cookie-banner]{bottom:calc(5rem + env(safe-area-inset-bottom,0px));padding-bottom:.75rem}}
-@media (width < 48rem){.brand-theme:has([data-buy-bar][aria-hidden="false"]) [data-cookie-banner]{bottom:calc(4.5rem + env(safe-area-inset-bottom,0px));padding-bottom:.75rem}}`;
+// The phone bars the banner rests on — a page's own order bar while it shows, the theme's bottom
+// toolbar — are the store wrapper's to know: globals.css lifts `[data-cookie-banner]` by
+// `--sf-bars-h` ("The bottom of the screen on a store page"), so nothing is measured here.
 
 /**
  * The banner, at the bottom of every page: one "OK" for a notice, "Accept" and
@@ -128,7 +125,6 @@ export function CookieConsentBanner({ consent }: { consent: CookieConsentSetting
           onKeyDown={onKeyDown}
           className="pointer-events-none fixed inset-x-0 bottom-0 z-[45] px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-4 sm:pb-4"
         >
-          <style>{OFFSETS}</style>
           <div className="zt-card pointer-events-auto mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-line bg-paper-raised p-4 shadow-xl sm:flex-row sm:items-center sm:gap-4">
             <h2 id={titleId} className="sr-only">
               {t.cookies.label}

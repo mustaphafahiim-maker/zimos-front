@@ -1,8 +1,11 @@
-import { ExternalLink } from "lucide-react";
+import { IconExternal } from "@/components/icons";
 import { Alert } from "@store-builder/ui";
 import { PINTEREST_CONVERSIONS_HELP_URL, PINTEREST_TEST_EVENTS } from "@store-builder/api-client";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { TextField } from "@/components/Field";
+import { ServerModeChip } from "./ServerModeChip";
+import { Well } from "./kit/Facts";
+import { SwitchRow } from "./kit/Switch";
 
 const STRINGS = {
   en: {
@@ -55,7 +58,10 @@ export function PinterestCapiFields({
   testEventCode,
   onTestEventCodeChange,
   warning,
+  serverMode,
 }: {
+  /** "sandbox" while Pinterest's server events are only built and logged (handoff 257). */
+  serverMode?: "live" | "sandbox" | null;
   enabled: boolean;
   onEnabledChange: (next: boolean) => void;
   adAccountId: string;
@@ -75,16 +81,9 @@ export function PinterestCapiFields({
 }) {
   const t = useT(STRINGS);
   return (
-    <div className="space-y-3 rounded-[0.5rem] border border-line p-3">
-      <label className="flex cursor-pointer items-start gap-3">
-        <input
-          type="checkbox"
-          className="mt-0.5 size-4 cursor-pointer accent-primary"
-          checked={enabled}
-          onChange={(e) => onEnabledChange(e.target.checked)}
-        />
-        <span className="text-sm font-medium text-ink">{t.capiEnabled}</span>
-      </label>
+    <Well className="space-y-3">
+      <SwitchRow checked={enabled} onChange={onEnabledChange} label={t.capiEnabled} />
+      <ServerModeChip mode={serverMode} />
       {enabled && (
         <>
           <Alert>{warning}</Alert>
@@ -97,7 +96,7 @@ export function PinterestCapiFields({
               className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
             >
               {t.helpLink}
-              <ExternalLink className="size-3.5" aria-hidden />
+              <IconExternal className="size-3.5" aria-hidden />
             </a>
           </p>
           <TextField
@@ -122,20 +121,14 @@ export function PinterestCapiFields({
             error={tokenMissing ? t.tokenRequired : tokenError}
             hint={tokenMask ? fmt(t.tokenKeep, { mask: tokenMask }) : undefined}
           />
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              className="mt-0.5 size-4 cursor-pointer accent-primary"
-              checked={testEventCode.trim() !== ""}
-              onChange={(e) => onTestEventCodeChange(e.target.checked ? PINTEREST_TEST_EVENTS : "")}
-            />
-            <span>
-              <span className="block text-sm font-medium text-ink">{t.testEvents}</span>
-              <span className="block text-xs text-ink-soft">{t.testEventsHint}</span>
-            </span>
-          </label>
+          <SwitchRow
+            checked={testEventCode.trim() !== ""}
+            onChange={(next) => onTestEventCodeChange(next ? PINTEREST_TEST_EVENTS : "")}
+            label={t.testEvents}
+            hint={t.testEventsHint}
+          />
         </>
       )}
-    </div>
+    </Well>
   );
 }

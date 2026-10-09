@@ -487,7 +487,7 @@ export function AddressSearch({
       </ul>
 
       {pickFailed && (
-        <p id={errorId} className="mt-1 text-xs font-medium text-danger">
+        <p id={errorId} className="mt-1.5 text-sm font-medium text-danger">
           {t.addressSearch.pickFailed}
         </p>
       )}

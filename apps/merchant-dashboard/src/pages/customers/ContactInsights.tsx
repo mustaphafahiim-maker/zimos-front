@@ -1,27 +1,25 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { MessageCircle, X } from "lucide-react";
+import { IconChat, IconClose } from "@/components/icons";
 import { Button } from "@store-builder/ui";
-import { contactsGet, contactsSetTags } from "@store-builder/api-client";
+import { contactsSetTags } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useWorkspace } from "@/context/WorkspaceContext";
-import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
-import { useT, type Messages } from "@/i18n/LocaleContext";
-import { Section } from "@/components/Section";
+import { formatDate, formatDateTime } from "@/lib/format";
+import { pluralOf } from "@/lib/plural";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TextField } from "@/components/Field";
 import { useToast } from "@/components/Toast";
 import { CONTACT_STRINGS, parseTagInput } from "./contactStrings";
-import { DeliveryRateBar } from "./DeliveryRateBar";
+import { CustomerCard, type CustomerCardFrame } from "./detail/CardFrame";
+import type { CustomerContactState } from "./detail/contactState";
+import { SECTION_STRINGS } from "./detail/sectionStrings";
 
 const STRINGS = {
   en: {
     title: "Contact",
-    orders: "Orders",
-    spent: "Spent",
     lastOrder: "Last order",
     never: "Never",
     source: "Came from",
@@ -38,49 +36,54 @@ const STRINGS = {
   },
   ar: {
     title: "جهة الاتصال",
-    orders: "الطلبات",
-    spent: "المدفوع",
-    lastOrder: "آخر طلب",
-    never: "لم يطلب بعد",
-    source: "المصدر",
+    lastOrder: "آخر أوردر",
+    never: "لسه ما طلبش",
+    source: "جاي منين",
     tags: "الوسوم",
     noTags: "مفيش وسوم لسه.",
-    addTag: "إضافة وسم",
+    addTag: "ضيف وسم",
     addTagPlaceholder: "مثال: vip، جملة",
-    add: "إضافة",
-    removeTag: "حذف الوسم {tag}",
-    forms: "رسائل النماذج",
-    noMessage: "بدون رسالة",
-    allForms: "كل الرسائل",
-    inbox: "فتح محادثة واتساب",
+    add: "ضيف",
+    removeTag: "شيل الوسم {tag}",
+    forms: "رسايل النماذج",
+    noMessage: "من غير رسالة",
+    allForms: "كل الرسايل",
+    inbox: "افتح محادثة الواتساب",
   },
 } satisfies Messages;
 
 /**
- * The contact side of a customer page: lead/customer, live order facts,
- * delivery rate, tags, the forms they sent and their WhatsApp thread.
+ * The contact side of a customer page: whether they are a lead or a customer
+ * and accept marketing, when they last ordered and where they came from, their
+ * tags, the forms they sent and their WhatsApp thread.
+ *
+ * How many orders, what they spent and how many parcels they received are the
+ * hero's to say (detail/CustomerHero.tsx) — said once, there. The contact
+ * record itself is read by the page (`state`) and shared with the hero, so it
+ * is asked for once.
+ *
+ * `frame` lets the page draw this as one of its folding sections, with the
+ * tags as the folded line; left out, it is a `Section`.
  */
-export function ContactInsights({ customerId }: { customerId: string }) {
+export function ContactInsights({ customerId, state, frame }: { customerId: string; state: CustomerContactState; frame?: CustomerCardFrame }) {
   const t = useT(STRINGS);
   const c = useT(CONTACT_STRINGS);
+  const sections = useT(SECTION_STRINGS);
   const workspaceId = useWorkspaceId();
-  const { currentWorkspace } = useWorkspace();
-  const currency = currentWorkspace?.defaultCurrency ?? "EGP";
   const toast = useToast();
   const errorMessage = useErrorMessage();
-  const detail = useAsync(() => contactsGet(apiClient, workspaceId, customerId), [workspaceId, customerId]);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
 
   // The page around this section already shows loading and errors.
-  if (!detail.data) return null;
-  const { contact, submissions, conversationId } = detail.data;
+  if (!state.data) return null;
+  const { contact, submissions, conversationId } = state.data;
 
   async function saveTags(tags: string[]) {
     setSaving(true);
     try {
       const saved = await contactsSetTags(apiClient, workspaceId, customerId, tags);
-      detail.setData((prev) => (prev ? { ...prev, contact: { ...prev.contact, tags: saved } } : (prev as never)));
+      state.setData((prev) => (prev ? { ...prev, contact: { ...prev.contact, tags: saved } } : (prev as never)));
       setDraft("");
     } catch (err) {
       toast.error(errorMessage(err));
@@ -96,17 +99,22 @@ export function ContactInsights({ customerId }: { customerId: string }) {
   }
 
   const sourceKey = `source_${contact.source}` as keyof typeof c;
-  const facts: [string, React.ReactNode][] = [
-    [t.orders, <span className="tabular-nums">{contact.ordersCount}</span>],
-    [t.spent, <span className="tabular-nums">{formatMoney(contact.totalSpent, currency)}</span>],
-    [t.lastOrder, contact.lastOrderAt ? formatDate(contact.lastOrderAt) : t.never],
-    [c.deliveryRate, <DeliveryRateBar contact={contact} />],
-  ];
+  const facts: [string, ReactNode][] = [[t.lastOrder, contact.lastOrderAt ? formatDate(contact.lastOrderAt) : t.never]];
   if (contact.source) facts.push([t.source, c[sourceKey] ?? contact.source]);
 
+  // The folded line: the tags themselves, then how many form messages there are.
+  const summary = [
+    contact.tags.length > 0 ? contact.tags.join(sections.listSep) : sections.tagsNone,
+    submissions.length > 0 ? pluralOf(sections, "forms", submissions.length) : null,
+  ]
+    .filter(Boolean)
+    .join(sections.listSep);
+
   return (
-    <Section
+    <CustomerCard
+      frame={frame}
       title={t.title}
+      summary={summary}
       actions={
         <>
           <StatusBadge value={contact.type} tone={contact.type === "customer" ? "success" : "info"} text={c[`type_${contact.type}`]} />
@@ -118,37 +126,38 @@ export function ContactInsights({ customerId }: { customerId: string }) {
         </>
       }
     >
-      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-4">
         {facts.map(([label, value]) => (
-          <div key={label}>
+          <div key={label} className="min-w-0">
             <dt className="text-xs text-ink-soft">{label}</dt>
             <dd className="mt-1 text-sm font-medium text-ink">{value}</dd>
           </div>
         ))}
       </dl>
 
-      <div className="mt-5 border-t border-line pt-4">
+      <div className="mt-4 border-t border-line pt-4">
         <h3 className="text-sm font-semibold text-ink">{t.tags}</h3>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {contact.tags.length === 0 && <span className="text-sm text-ink-soft">{t.noTags}</span>}
+        <div className="mt-2 flex flex-wrap gap-2">
+          {contact.tags.length === 0 && <span className="text-sm leading-6 text-ink-soft">{t.noTags}</span>}
           {contact.tags.map((tag) => (
-            <span key={tag} className="inline-flex items-center gap-1 rounded-full border border-line bg-paper py-0.5 ps-2.5 pe-1 text-sm text-ink">
-              <bdi>{tag}</bdi>
+            // The chip is as tall as its remove button: 36px beside a mouse, 44px under a thumb.
+            <span key={tag} data-slot="customer-tag" className="inline-flex h-9 max-w-full items-center rounded-full border border-line bg-paper ps-3 text-sm text-ink pointer-coarse:h-11">
+              <bdi className="min-w-0 truncate">{tag}</bdi>
               <button
                 type="button"
                 disabled={saving}
-                aria-label={t.removeTag.replace("{tag}", tag)}
+                aria-label={fmt(t.removeTag, { tag })}
                 onClick={() => void saveTags(contact.tags.filter((other) => other !== tag))}
-                className="flex size-5 cursor-pointer items-center justify-center rounded-full text-ink-soft hover:bg-line hover:text-ink"
+                className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-colors duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:text-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-50 motion-reduce:transition-none pointer-coarse:size-11"
               >
-                <X className="size-3" aria-hidden />
+                <IconClose className="size-3.5" weight="bold" aria-hidden />
               </button>
             </span>
           ))}
         </div>
         <form onSubmit={addTags} className="mt-3 flex max-w-md items-end gap-2">
           <TextField
-            className="flex-1"
+            className="min-w-0 flex-1"
             label={t.addTag}
             labelHidden
             placeholder={t.addTagPlaceholder}
@@ -156,21 +165,21 @@ export function ContactInsights({ customerId }: { customerId: string }) {
             onChange={(e) => setDraft(e.target.value)}
             maxLength={200}
           />
-          <Button type="submit" variant="outline" disabled={saving || !draft.trim()}>
+          <Button type="submit" variant="outline" className="min-h-11 shrink-0 rounded-full px-5 pointer-fine:min-h-9" disabled={saving || !draft.trim()}>
             {t.add}
           </Button>
         </form>
       </div>
 
       {submissions.length > 0 && (
-        <div className="mt-5 border-t border-line pt-4">
+        <div className="mt-4 border-t border-line pt-4">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-ink">{t.forms}</h3>
-            <Link to="/form-submissions" className="text-sm text-primary hover:underline">
+            <Link to="/form-submissions" className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline pointer-fine:min-h-0">
               {t.allForms}
             </Link>
           </div>
-          <ul className="mt-2 divide-y divide-line">
+          <ul className="mt-1 divide-y divide-line">
             {submissions.map((submission) => (
               <li key={submission.id} className="py-2 text-sm">
                 <p className="flex flex-wrap justify-between gap-2 text-xs text-ink-soft">
@@ -187,13 +196,13 @@ export function ContactInsights({ customerId }: { customerId: string }) {
       )}
 
       {conversationId && (
-        <div className="mt-5 border-t border-line pt-4">
-          <Link to={`/inbox?conversation=${conversationId}`} className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline">
-            <MessageCircle className="size-4" aria-hidden />
+        <div className="mt-4 border-t border-line pt-3">
+          <Link to={`/inbox?conversation=${conversationId}`} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary hover:underline">
+            <IconChat className="size-4" aria-hidden />
             {t.inbox}
           </Link>
         </div>
       )}
-    </Section>
+    </CustomerCard>
   );
 }

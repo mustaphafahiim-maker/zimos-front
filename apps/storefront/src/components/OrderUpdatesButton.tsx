@@ -1,30 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { storeFollowOrder, storePushConfig, type StorePushConfig } from "@store-builder/api-client";
+import { ApiError, storeFollowOrder, storePushConfig, type StorePushConfig } from "@store-builder/api-client";
 import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStoreBasePath } from "@/components/StoreRoute";
+import { pickText } from "@/lib/i18n";
 import { useStore } from "@/lib/StoreContext";
 import { btnSecondary } from "./ui";
 
 const TEXT = {
   en: {
-    title: "Follow your order",
+    title: "Order notifications",
     hint: "Get a notification on this phone when your order is confirmed, shipped and delivered.",
     button: "Notify me",
     working: "One moment…",
     done: "Done — we'll notify you on this phone.",
     denied: "Notifications are blocked for this site in your browser settings.",
     failed: "Couldn't turn on notifications. Try again.",
+    invalid: "Couldn't turn on notifications in this browser",
   },
   ar: {
-    title: "تابع طلبك",
+    title: "إشعارات الطلب",
     hint: "يوصلك إشعار على الموبايل ده لما طلبك يتأكد ويتشحن ويتوصّل.",
     button: "فعّل الإشعارات",
     working: "لحظة…",
     done: "تمام — هنبعتلك إشعار على الموبايل ده.",
     denied: "الإشعارات محظورة للموقع ده من إعدادات المتصفح.",
     failed: "معرفناش نفعّل الإشعارات. جرّب تاني.",
+    invalid: "تعذّر تفعيل الإشعارات على المتصفح ده",
   },
 } as const;
 
@@ -42,10 +45,11 @@ function keyBytes(base64Url: string): Uint8Array {
  */
 export function OrderUpdatesButton({ workspaceId, orderId, orderNumber }: { workspaceId: string; orderId: string; orderNumber: string | null }) {
   const { locale } = useStore();
-  const t = TEXT[locale === "en" ? "en" : "ar"];
+  // A language this file has no words for reads English (lib/i18n pickText), not Arabic.
+  const t = pickText(TEXT, locale);
   const base = useStoreBasePath();
   const [config, setConfig] = useState<StorePushConfig | null>(null);
-  const [state, setState] = useState<"idle" | "working" | "done" | "denied" | "failed">("idle");
+  const [state, setState] = useState<"idle" | "working" | "done" | "denied" | "failed" | "invalid">("idle");
 
   useEffect(() => {
     if (!orderNumber) return;
@@ -74,8 +78,9 @@ export function OrderUpdatesButton({ workspaceId, orderId, orderNumber }: { work
       }
       await storeFollowOrder(createStorefrontApiClient(), workspaceId, orderId, { number: orderNumber, token });
       setState("done");
-    } catch {
-      setState("failed");
+    } catch (err) {
+      // 422 INVALID_PUSH_SUBSCRIPTION: what this browser handed over is not a subscription the server can use (handoff 392).
+      setState(err instanceof ApiError && err.code === "INVALID_PUSH_SUBSCRIPTION" ? "invalid" : "failed");
     }
   }
 
@@ -84,11 +89,15 @@ export function OrderUpdatesButton({ workspaceId, orderId, orderNumber }: { work
       <h2 id="order-updates-title" className="font-semibold text-ink">
         {t.title}
       </h2>
-      <p className="mt-0.5 text-ink-soft">{state === "done" ? t.done : t.hint}</p>
-      {state === "denied" && <p className="mt-1 text-xs font-medium text-danger">{t.denied}</p>}
-      {state === "failed" && <p className="mt-1 text-xs font-medium text-danger">{t.failed}</p>}
+      {/* The answer to the tap is said, not only shown. */}
+      <p role="status" className={`mt-0.5 ${state === "done" ? "font-medium text-success" : "text-ink-soft"}`}>
+        {state === "done" ? t.done : t.hint}
+      </p>
+      <p role="alert" className="mt-1 text-sm font-medium text-danger empty:hidden">
+        {state === "denied" ? t.denied : state === "invalid" ? t.invalid : state === "failed" ? t.failed : null}
+      </p>
       {state !== "done" && (
-        <button type="button" className={`${btnSecondary} mt-3`} disabled={state === "working"} onClick={() => void follow()}>
+        <button type="button" className={`${btnSecondary} mt-3 w-full sm:w-auto`} disabled={state === "working"} aria-busy={state === "working"} onClick={() => void follow()}>
           {state === "working" ? t.working : t.button}
         </button>
       )}

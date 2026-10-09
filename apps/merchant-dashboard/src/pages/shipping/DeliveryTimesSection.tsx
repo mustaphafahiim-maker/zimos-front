@@ -1,5 +1,6 @@
 import { useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { IconCaretDown } from "@/components/icons";
 import { Alert, Button, Card, Input, cn } from "@store-builder/ui";
 import {
   DELIVERY_MAX_DAYS_MAX,
@@ -23,6 +24,7 @@ import { fmt, getIntlLocale, useLocale, useT, type Messages } from "@/i18n/Local
 import { DataState } from "@/components/DataState";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { SaveBar } from "@/components/SaveBar";
 
 const STRINGS = {
   en: {
@@ -232,10 +234,7 @@ export function DeliveryTimesSection() {
   const loading = (settings.loading && !settings.data) || (shipping.loading && !shipping.data);
   return (
     <section className="space-y-4">
-      <div className="min-w-0">
-        <h2 className="text-lg font-semibold text-ink">{t.title}</h2>
-        <p className="mt-1 max-w-2xl text-sm text-ink-soft">{t.description}</p>
-      </div>
+      <p className="px-1 text-sm leading-6 text-ink-soft">{t.description}</p>
       <DataState
         loading={loading}
         error={settings.error ?? shipping.error}
@@ -288,6 +287,7 @@ function DeliveryForm({
   const [saving, setSaving] = useState(false);
 
   const dirty = signature(draft) !== signature(saved);
+  useReportDirty(dirty);
   const governorates = shipping.governorates ?? [];
   const regional = shipping.country === "SA";
   const visiblePlaces = (places ?? []).filter((p) => !p.hidden);
@@ -503,32 +503,28 @@ function DeliveryForm({
 
       {saveError && !dirty && <Alert variant="danger">{saveError}</Alert>}
 
-      {/* Unsaved changes: one bar, above the phone tab bar. */}
-      {(dirty || saving) && (
-        <div className="sticky bottom-20 z-20 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] bg-ink p-3 text-paper-raised shadow-[var(--shadow-pop)] md:bottom-4">
-          <span className="text-sm font-medium" role="status">
-            {saveError ?? t.unsaved}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              className="min-h-11 text-paper-raised hover:bg-paper-raised/10"
-              disabled={saving}
-              onClick={() => {
-                setDraft(saved);
-                setErrors({});
-                setSaveError(null);
-              }}
-            >
-              {t.cancel}
-            </Button>
-            <Button type="submit" className="min-h-11" disabled={saving}>
-              {saving ? t.saving : t.save}
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Unsaved changes: the shared save bar, above the phone dock. */}
+      <SaveBar
+        dirty={dirty}
+        saving={saving}
+        saveLabel={t.save}
+        savingLabel={t.saving}
+        discardLabel={t.cancel}
+        onDiscard={() => {
+          setDraft(saved);
+          setErrors({});
+          setSaveError(null);
+        }}
+        message={
+          saveError ? (
+            <span role="alert" className="text-danger">
+              {saveError}
+            </span>
+          ) : (
+            t.unsaved
+          )
+        }
+      />
     </form>
   );
 }
@@ -550,7 +546,7 @@ function Fold({ title, hint, open, children }: { title: string; hint: string; op
           <span className="block text-[15px] font-semibold text-ink">{title}</span>
           <span className="block text-xs text-ink-soft">{hint}</span>
         </span>
-        <ChevronDown className="size-5 shrink-0 text-ink-soft transition-transform group-open:rotate-180" aria-hidden />
+        <IconCaretDown className="size-5 shrink-0 text-ink-soft transition-transform group-open:rotate-180" aria-hidden />
       </summary>
       <div className="pb-2">{children}</div>
     </details>
@@ -704,7 +700,7 @@ function RegionGroup({
           onClick={() => setOpen((o) => !o)}
           className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 text-start"
         >
-          <ChevronDown className={cn("size-4 shrink-0 text-ink-soft transition-transform", shown && "rotate-180")} aria-hidden />
+          <IconCaretDown className={cn("size-4 shrink-0 text-ink-soft transition-transform", shown && "rotate-180")} aria-hidden />
           <span className="min-w-0">
             <span className="block text-sm font-semibold text-ink">
               <bdi>{nameOf(region)}</bdi>

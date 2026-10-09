@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { IconRefresh } from "@/components/icons";
 import { Button, cn } from "@store-builder/ui";
 import { domainPurchaseSetAutoRenew, domainPurchasesList, type DomainPurchase } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -15,6 +15,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { PURCHASE_STRINGS, type PurchaseStrings } from "./domainPurchaseStrings";
 import { RenewDomainDialog } from "./RenewDomainDialog";
+import { BoughtDomainMenu, TransferUnlockedBadge } from "./BoughtDomainManage";
 
 /** Only a bought domain (active, or lapsed) renews; the API answers DOMAIN_NOT_ACTIVE otherwise. */
 const renewable = (p: DomainPurchase) => p.status === "active" || p.status === "expired";
@@ -75,7 +76,8 @@ export function BoughtDomainsSection({ version, onLoaded }: BoughtDomainsSection
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reported when the list changes, not when the callback does
   }, [purchases]);
 
-  const replace = (next: DomainPurchase) => state.setData((prev) => (prev ?? []).map((p) => (p.id === next.id ? next : p)));
+  // Merged over the listed row: only the list carries `manage` (handoff 385), a single purchase's answer does not.
+  const replace = (next: DomainPurchase) => state.setData((prev) => (prev ?? []).map((p) => (p.id === next.id ? { ...p, ...next } : p)));
 
   async function toggleAutoRenew(purchase: DomainPurchase, autoRenew: boolean) {
     setBusyId(purchase.id);
@@ -118,6 +120,7 @@ export function BoughtDomainsSection({ version, onLoaded }: BoughtDomainsSection
         return (
           <span className="inline-flex flex-col items-end gap-1 md:items-start">
             <StatusBadge value={status} tone={TONE[status] ?? "neutral"} text={t[`status_${status}`] ?? status} />
+            <TransferUnlockedBadge purchase={p} />
             {issue && (
               <span className={cn("max-w-[18rem] text-end text-xs md:text-start", status === "not_connected" ? "text-accent-dark" : "text-danger")}>
                 {issue}
@@ -156,8 +159,9 @@ export function BoughtDomainsSection({ version, onLoaded }: BoughtDomainsSection
       key: "actions",
       header: <span className="sr-only">{t.colActions}</span>,
       align: "end",
-      cell: (p) =>
-        renewable(p) ? (
+      cell: (p) => (
+        <span className="inline-flex items-center justify-end gap-1">
+          {renewable(p) ? (
           <Button
             type="button"
             variant="outline"
@@ -167,10 +171,14 @@ export function BoughtDomainsSection({ version, onLoaded }: BoughtDomainsSection
             disabled={busyId !== null}
             onClick={() => setRenewing(p)}
           >
-            <RefreshCw className="size-4" aria-hidden />
+            <IconRefresh className="size-4" aria-hidden />
             {t.renewNow}
           </Button>
-        ) : null,
+          ) : null}
+          {/* Handoff 385: «سجلات DNS» and, for the store's owner, «نقل لمسجّل تاني». */}
+          <BoughtDomainMenu purchase={p} disabled={busyId !== null} onChanged={replace} />
+        </span>
+      ),
     },
   ];
 

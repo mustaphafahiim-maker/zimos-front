@@ -1,9 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useState, type ElementType, type FormEvent } from "react";
 import { RefundLinesPicker } from "./FulfillAndRefundLines";
-import { RefreshCw } from "lucide-react";
+import { IconRefresh } from "@/components/icons";
 import { Alert, Button, Card, CardContent, Spinner } from "@store-builder/ui";
 import type { Order, Payment, PaymentTimeline, Refund } from "@store-builder/api-client";
-import { ordersRefundWithNotify } from "@store-builder/api-client";
+// Handoff 320: the refund goes with one Idempotency-Key per dialog.
+import { useRefundOnce } from "./useRefundOnce";
+// Handoff 377: card disputes on the payment card, and refunds that came from a chargeback or the gateway's dashboard.
+import { PaymentDisputeBanners, isDisputeAlert, useRefundOrigin } from "./PaymentDisputeBanners";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -13,6 +16,8 @@ import { NotifyCustomerToggle } from "./NotifyCustomerToggle";
 import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { ManualTransfersCard } from "./ManualTransfersCard";
+// Handoff 340: paid to the store's InstaPay or wallet number, with a screenshot staff approve or reject.
+import { ManualPaymentCard } from "./ManualPaymentCard";
 import { PaymentLinkButton } from "./PaymentLinkButton";
 import { SavedMethodsCard } from "./SavedMethodsCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -25,6 +30,17 @@ import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { useOrderLabels } from "../orderLabels";
 import { GiftCardPaymentIcon, GiftCardPaymentName, isGiftCardPayment } from "@/pages/giftCards/GiftCardPaymentName";
+// Handoff 203 / 204: points and store-credit payments by name, and where a refund goes (money, store credit, back to the tender).
+import {
+  RefundDestinationField,
+  StoreTenderPaymentIcon,
+  StoreTenderPaymentName,
+  isStoreTenderPayment,
+  refundReasonText,
+  useRefundDestination,
+} from "@/pages/storeCredit/RefundDestination";
+// Handoff 229: a payment recorded on an on-account order, by name (it is not a gateway attempt).
+import { OnAccountNothingPaid, OnAccountPaymentIcon, OnAccountPaymentName, isOnAccountPayment, isUnpaidOnAccountOrder, takesCustomerTransfers } from "@/pages/b2b/OnAccountPaymentName";
 
 const STRINGS = {
   en: {
@@ -174,7 +190,8 @@ const REFUND_TONE = { pending: "warning", processed: "success", failed: "danger"
 /** Alerts that come with a one-click refund of the payment that shouldn't be kept. */
 const REFUND_ALERTS = new Set(["duplicate_payment", "paid_after_expiry", "paid_after_cancel"]);
 
-export function PaymentsSection({ order, onChanged }: { order: Order; onChanged: () => void }) {
+/** `frameless`: inside a folding section of the order page, so no card and no title of its own. */
+export function PaymentsSection({ order, onChanged, frameless }: { order: Order; onChanged: () => void; frameless?: boolean }) {
   const t = useT(STRINGS);
   const labels = useOrderLabels();
   const workspaceId = useWorkspaceId();
@@ -188,7 +205,7 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
 
   const data = timeline.data;
   const money = (n: number | string) => formatMoney(n, order.currency);
-  const hasGateway = Boolean(data?.attempts.some((p) => p.method));
+  const hasGateway = Boolean(data?.attempts.some((p) => p.method && !isOnAccountPayment(p)));
 
   async function sync() {
     setSyncing(true);
@@ -212,23 +229,28 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
   // A cash-on-delivery order with nothing collected yet has nothing to refund: no «استرداد»
   // next to «المدفوع ٠» (re-audit N-15). Display only; the API's numbers are unchanged.
   const codNotCollected = order.paymentMethod === "cod" && order.financialState === "pending" && (data?.amountPaid ?? 0) === 0;
+  // The same for an on-account order nobody has paid anything on yet (handoff 229).
+  const onAccountUnpaid = isUnpaidOnAccountOrder(order, data?.amountPaid);
 
+  const Frame: ElementType = frameless ? "div" : Card;
+  const Body: ElementType = frameless ? "div" : CardContent;
   return (
-    <Card>
-      <CardContent className="space-y-4 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
+    <Frame>
+      <Body className={frameless ? "space-y-4" : "space-y-4 p-5"}>
+        {/* Frameless, the row holds only the buttons: with none of them it takes no room. */}
+        <div className={frameless ? "flex flex-wrap items-center justify-between gap-2 has-[>div:empty]:hidden" : "flex flex-wrap items-center justify-between gap-2"}>
+          {!frameless && <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>}
           <div className="flex flex-wrap gap-2">
             {hasGateway && (
               <Button variant="outline" className="min-h-11" disabled={syncing} onClick={sync}>
-                <RefreshCw className="size-4" aria-hidden />
+                <IconRefresh className="size-4" aria-hidden />
                 {syncing ? t.syncing : t.sync}
               </Button>
             )}
             {["card", "wallet", "valu", "kiosk", "paypal"].includes(order.paymentMethod) &&
               order.financialState === "pending" &&
               !order.cancelledAt && <PaymentLinkButton workspaceId={workspaceId} orderId={order.id} />}
-            {data && data.refundable > 0 && !codNotCollected && (
+            {data && data.refundable > 0 && !codNotCollected && !onAccountUnpaid && (
               <Button variant="outline" className="min-h-11" onClick={() => setDialog({})}>
                 {t.refund}
               </Button>
@@ -248,9 +270,20 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
           }}
         />
 
+        {takesCustomerTransfers(order) && (
         <ManualTransfersCard
           workspaceId={workspaceId}
           orderId={order.id}
+          onChanged={() => {
+            void timeline.refresh({ silent: true });
+            onChanged();
+          }}
+        />
+        )}
+
+        <ManualPaymentCard
+          workspaceId={workspaceId}
+          order={order}
           onChanged={() => {
             void timeline.refresh({ silent: true });
             onChanged();
@@ -265,7 +298,8 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
           <Alert variant="danger">{errorMessage(timeline.error)}</Alert>
         ) : data ? (
           <>
-            {data.alerts.map((alert) => (
+            <PaymentDisputeBanners timeline={data} />
+            {data.alerts.filter((alert) => !isDisputeAlert(alert, data)).map((alert) => (
               <Alert key={alert} variant={alert === "test_payment" || alert === "paid_after_cod_switch" ? "default" : "danger"}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span>{t[`alert_${alert}` as keyof Strings] ?? labels.riskFlag(alert)}</span>
@@ -287,6 +321,10 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
 
             {codNotCollected ? (
               <p className="text-sm text-ink-soft">{t.codNotCollected}</p>
+            ) : onAccountUnpaid ? (
+              <p className="text-sm text-ink-soft">
+                <OnAccountNothingPaid />
+              </p>
             ) : (
               <dl className="grid gap-3 text-sm sm:grid-cols-4">
                 <Stat label={t.paid} value={money(data.amountPaid)} />
@@ -303,13 +341,13 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
                 {data.attempts.length > 0 && (
                   <AttemptList attempts={data.attempts} money={money} t={t} methodLabel={labels.paymentMethod} />
                 )}
-                {data.refunds.length > 0 && <RefundList refunds={data.refunds} money={money} t={t} />}
+                {data.refunds.length > 0 && <RefundList refunds={data.refunds} attempts={data.attempts} money={money} t={t} />}
                 {data.events.length > 0 && <EventList timeline={data} t={t} />}
               </div>
             )}
           </>
         ) : null}
-      </CardContent>
+      </Body>
 
       {dialog && data && (
         <RefundDialog
@@ -329,7 +367,7 @@ export function PaymentsSection({ order, onChanged }: { order: Order; onChanged:
           }}
         />
       )}
-    </Card>
+    </Frame>
   );
 }
 
@@ -361,17 +399,17 @@ function AttemptList({
           <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
             <span className="flex min-w-0 items-center gap-3">
               {/* A method means a gateway attempt; COD / manual records have none. */}
-              {isGiftCardPayment(p) ? <GiftCardPaymentIcon /> : p.method && <ProviderLogo code={p.providerCode} size="sm" />}
+              {isOnAccountPayment(p) ? <OnAccountPaymentIcon /> : isStoreTenderPayment(p) ? <StoreTenderPaymentIcon payment={p} /> : isGiftCardPayment(p) ? <GiftCardPaymentIcon /> : p.method && <ProviderLogo code={p.providerCode} size="sm" />}
               <span className="min-w-0">
                 <span className="font-medium text-ink">
-                  {isGiftCardPayment(p) ? <GiftCardPaymentName payment={p} /> : p.method
+                  {isOnAccountPayment(p) ? <OnAccountPaymentName payment={p} /> : isStoreTenderPayment(p) ? <StoreTenderPaymentName payment={p} /> : isGiftCardPayment(p) ? <GiftCardPaymentName payment={p} /> : p.method
                     ? fmt(t.methodViaGateway, { method: methodLabel(p.method), gateway: providerName(p.providerCode) })
                     : p.providerCode}{" "}
                   · {money(p.amount)}
                 </span>
                 <span className="block text-xs text-ink-soft">
                   {formatDateTime(p.createdAt)}
-                  {p.maskedDisplay && !isGiftCardPayment(p) && ` · ${p.maskedDisplay}`}
+                  {p.maskedDisplay && !isGiftCardPayment(p) && !isStoreTenderPayment(p) && !isOnAccountPayment(p) && ` · ${p.maskedDisplay}`}
                   {p.failureReason && p.status === "failed" && ` · ${p.failureReason}`}
                 </span>
               </span>
@@ -391,7 +429,8 @@ function AttemptList({
   );
 }
 
-function RefundList({ refunds, money, t }: { refunds: Refund[]; money: (n: number | string) => string; t: Strings }) {
+function RefundList({ refunds, attempts, money, t }: { refunds: Refund[]; attempts: Payment[]; money: (n: number | string) => string; t: Strings }) {
+  const origin = useRefundOrigin();
   return (
     <div>
       <h3 className="text-sm font-medium text-ink">{t.refunds}</h3>
@@ -401,8 +440,8 @@ function RefundList({ refunds, money, t }: { refunds: Refund[]; money: (n: numbe
             <span className="min-w-0">
               <span className="font-medium text-ink">{money(r.amount)}</span>
               <span className="block text-xs text-ink-soft">
-                {formatDateTime(r.createdAt)} · {t[`source_${r.source}` as keyof Strings]}
-                {r.reason && ` · ${r.reason}`}
+                {formatDateTime(r.createdAt)} · {origin(r, attempts) ?? t[`source_${r.source}` as keyof Strings]}
+                {r.reason && ` · ${refundReasonText(r.reason)}`}
                 {r.failureCode === REFUND_NO_BALANCE
                   ? ` · ${t.refundNoBalance}`
                   : r.failureReason && ` · ${r.failureReason}`}
@@ -457,12 +496,16 @@ function RefundDialog({
   const viaGateway = timeline.refundVia === "gateway";
   const [paymentId, setPaymentId] = useState(initial.paymentId ?? timeline.perPayment[0]?.paymentId ?? "");
   const perPayment = timeline.perPayment.find((p) => p.paymentId === paymentId);
-  const max = viaGateway ? Math.min(timeline.refundable, perPayment?.refundable ?? 0) : timeline.refundable;
+  const moneyMax = viaGateway ? Math.min(timeline.refundable, perPayment?.refundable ?? 0) : timeline.refundable;
+  // Money (as before), the customer's store credit, or back to the gift card / points / credit that paid (RefundDestination.tsx).
+  const destination = useRefundDestination(order, timeline);
+  const max = destination.max ?? moneyMax;
   const [amount, setAmount] = useState(minorToMajorInput(initial.amount ?? max));
   const [reason, setReason] = useState("");
   const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const refundOnce = useRefundOnce(workspaceId, order.id);
 
   const minor = majorToMinor(amount);
   const valid = Number.isFinite(minor) && minor >= 1 && minor <= max;
@@ -473,10 +516,17 @@ function RefundDialog({
       setError(fmt(t.amountInvalid, { max: money(max) }));
       return;
     }
+    const destinationProblem = destination.problem(reason);
+    if (destinationProblem) {
+      setError(destinationProblem);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const refund = await ordersRefundWithNotify(apiClient, workspaceId, order.id, {
+      const refund = !destination.isMoney
+        ? await destination.send({ amount: minor, reason: reason.trim(), notifyCustomer: notify }, refundOnce)
+        : await refundOnce({
         amount: minor,
         notifyCustomer: notify,
         ...(reason.trim() ? { reason: reason.trim() } : {}),
@@ -490,20 +540,25 @@ function RefundDialog({
   }
 
   const attempt = (id: string) => timeline.attempts.find((p) => p.id === id);
-  // A gift card's share is refunded onto the card (backend giftCards/giftCardProvider.js), not in cash.
-  const toGiftCard = viaGateway
-    ? Boolean(paymentId && attempt(paymentId) && isGiftCardPayment(attempt(paymentId)!))
-    : timeline.attempts.some((p) => isGiftCardPayment(p));
+  // A gift card's, points' or credit's share goes back to it only when that payment is picked
+  // below (handoff 203 / 273): a refund that names no payment is money.
+  const destinations = destination.options.length > 1;
 
   return (
     <Modal
       open
       onClose={onClose}
       title={t.refundTitle}
-      description={toGiftCard ? t.refundGiftCard : viaGateway ? t.refundGateway : t.refundManual}
+      description={destinations ? undefined : viaGateway ? t.refundGateway : t.refundManual}
     >
       <form onSubmit={submit} className="space-y-4 p-5">
-        {viaGateway && timeline.perPayment.length > 1 && (
+        <RefundDestinationField
+          state={destination}
+          viaGateway={viaGateway}
+          currency={order.currency}
+          onPick={(limit) => setAmount(minorToMajorInput(limit ?? moneyMax))}
+        />
+        {destination.isMoney && viaGateway && timeline.perPayment.length > 1 && (
           <Field label={t.fromPayment}>
             {({ id }) => (
               <Select id={id} value={paymentId} onChange={(e) => setPaymentId(e.target.value)} className="h-11">
@@ -539,12 +594,12 @@ function RefundDialog({
           hint={fmt(t.amountHint, { max: money(max) })}
           required
         />
-        <Field label={t.reason}>
+        <Field label={t.reason} required={destination.reasonRequired}>
           {({ id }) => (
-            <Textarea id={id} value={reason} maxLength={300} placeholder={t.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
+            <Textarea id={id} value={reason} maxLength={300} placeholder={destination.reasonRequired ? undefined : t.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
           )}
         </Field>
-        <NotifyCustomerToggle checked={notify} onChange={setNotify} />
+        {destination.notifiable && <NotifyCustomerToggle checked={notify} onChange={setNotify} />}
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={onClose}>

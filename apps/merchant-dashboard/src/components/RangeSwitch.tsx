@@ -1,4 +1,4 @@
-import { CalendarDays } from "lucide-react";
+import { IconCalendar } from "@/components/icons";
 import { cn } from "@store-builder/ui";
 import { Select } from "@/components/Select";
 import { useCommon, useT, type Messages } from "@/i18n/LocaleContext";
@@ -13,8 +13,8 @@ const STRINGS = {
   },
   ar: {
     label: "الفترة",
-    yesterday: "أمس",
-    last365: "آخر 365 يومًا",
+    yesterday: "إمبارح",
+    last365: "آخر ٣٦٥ يوم",
     compare: "المقارنة: الفترة السابقة",
   },
 } satisfies Messages;
@@ -22,16 +22,19 @@ const STRINGS = {
 /**
  * The date-range control above the analytics and funnel screens: the presets
  * in a native select (the dashboard's own control — it also keeps the menu
- * library out of every page that shows this), next to the always-on
- * comparison chip.
+ * library out of every page that shows this), next to the comparison chip.
+ * A screen that shows no change against the period before passes
+ * `compare={false}`, so the chip does not promise one.
  */
 export function RangeSwitch({
   value,
   onChange,
+  compare = true,
   className,
 }: {
   value: AnalyticsRange;
   onChange: (value: AnalyticsRange) => void;
+  compare?: boolean;
   className?: string;
 }) {
   const t = useT(STRINGS);
@@ -47,7 +50,7 @@ export function RangeSwitch({
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
       <div className="relative">
-        <CalendarDays
+        <IconCalendar
           className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft"
           aria-hidden
         />
@@ -64,9 +67,11 @@ export function RangeSwitch({
           ))}
         </Select>
       </div>
-      <span className="inline-flex h-9 items-center rounded-[0.5rem] border border-line bg-paper-raised px-3 text-sm font-medium text-ink-soft">
-        {t.compare}
-      </span>
+      {compare && (
+        <span className="inline-flex h-9 items-center rounded-[0.5rem] border border-line bg-paper-raised px-3 text-sm font-medium text-ink-soft">
+          {t.compare}
+        </span>
+      )}
     </div>
   );
 }

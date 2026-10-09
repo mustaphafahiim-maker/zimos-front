@@ -1,287 +1,137 @@
-import { RiskBadge, RiskFilter, useRiskParam } from "@/pages/fraud/RiskBadge";
-import { NetworkScoresProvider, OrderNetworkRate } from "@/pages/fraud/NetworkRate";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { CalendarDays, Ellipsis, Plus, Search, ShoppingBag, X } from "lucide-react";
-import { Alert, Button, Input, cn } from "@store-builder/ui";
-import {
-  ORDER_SORTS,
-  ORDER_STAGES,
-  isInvalidCursorError,
-  type Order,
-  type OrderPipeline,
-  type OrderSort,
-  type OrderStage,
-} from "@store-builder/api-client";
-import { apiClient } from "@/lib/apiClient";
-import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useCursorList } from "@/lib/useCursorList";
-import { useAsync } from "@/lib/useAsync";
-import { useErrorMessage } from "@/lib/errorMessages";
-import { formatMoney } from "@/lib/format";
-import { useListSort } from "@/lib/listSort";
-import { providerName } from "@/lib/providers";
-import { fmt, useT, type Messages, getIntlLocale } from "@/i18n/LocaleContext";
-import { PageHeader } from "@/components/PageHeader";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link, useLocation } from "react-router-dom";
+import type { Order } from "@store-builder/api-client";
+import { Alert, Button } from "@store-builder/ui";
 import { DataState } from "@/components/DataState";
-import { StatusBadge } from "@/components/StatusBadge";
-import { LoadMore } from "@/components/LoadMore";
-import { Select } from "@/components/Select";
-import { ContactActions } from "@/components/ContactActions";
-import { useWorkspace } from "@/context/WorkspaceContext";
-import { storeUrl } from "@/lib/storeAddress";
 import { EmptyState } from "@/components/EmptyState";
-import { useNow } from "@/pages/confirmation/confirmationRoles";
-import { STAGE_TONE, useOrderLabels } from "./orderLabels";
-import { OrderTimelineLines } from "./components/OrderTimelineLines";
-import { ExportOrders } from "./components/ExportOrders";
-import { rememberOrdersListQuery } from "./orderListQuery";
-import { OrderBulkBar } from "./components/OrderBulkBar";
-import { SelectAllMatching } from "./components/SelectAllMatching";
-import { OrderListDocuments } from "./components/OrderDocuments";
-import { OrderColumnCell } from "./components/OrderColumnCell";
-import { orderRiskCountsOf, ordersMeta, type OrderSearchParams } from "@store-builder/api-client";
-import {
-  OrderFilterBar,
-  useColumnLabel,
-  useOrderExtraFilters,
-  useOrderListPrefs,
-  type OrderColumn,
-} from "./components/OrderListFilters";
+import { IconOrders, IconPlus, IconRefresh, IconSearch, IconShare } from "@/components/icons";
+import { BulkBar, ListSkeleton } from "@/components/list";
+import { LoadMore } from "@/components/LoadMore";
+import { PageHeader } from "@/components/PageHeader";
+import { useToast } from "@/components/Toast";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { isPermissionError } from "@/lib/errors";
+import { pluralOf } from "@/lib/plural";
+import { storeUrl } from "@/lib/storeAddress";
+import { markViewSource, useViewNavigate } from "@/lib/viewTransition";
+import { OrderQuickLook } from "@/pages/home/today/OrderQuickLook";
+import { shownOrderColumns, useOrderFilterOptions } from "./components/OrderListFilters";
 import { OrdersHeaderTools } from "./components/OrdersHeaderTools";
+import { useSavedOrderViews } from "./components/useSavedOrderViews";
+import { ActiveFilters } from "./list/ActiveFilters";
+import { OrderCards } from "./list/OrderCards";
+import { copyText, orderRowElement, useOrderRowViews, type OrderRowView } from "./list/orderRow";
+import { OrdersFilterSheet, useActiveFilterChips } from "./list/OrdersFilterSheet";
+import { OrdersStageChips } from "./list/OrdersStageChips";
+import { OrdersTable } from "./list/OrdersTable";
+import { OrdersToolbar } from "./list/OrdersToolbar";
+import { useIsDesktop } from "./list/useIsDesktop";
+import { useNetworkScores } from "./list/useNetworkScores";
+import { useOrderBulk } from "./list/useOrderBulk";
+import { useOrderMenu } from "./list/useOrderMenu";
+import { useOrdersData } from "./list/useOrdersData";
+import { useOrdersQuery } from "./list/useOrdersQuery";
+import { useSelectMatching } from "./list/useSelectMatching";
+import { useOrderLabels } from "./orderLabels";
 
 const STRINGS = {
   en: {
     title: "Orders",
-    description: "Every order, grouped by where it stands right now.",
-    tabsLabel: "Filter orders by stage",
-    tabAll: "All",
-    searchLabel: "Search orders",
-    searchPlaceholder: "Order #, name, phone or its last 4 digits, waybill",
-    searchHint: "Matches the order number, customer name or email, the phone (or just its last 4+ digits), or a courier waybill number.",
-    today: "Today",
-    last7: "Last 7 days",
-    last30: "Last 30 days",
-    searchTooShort: "Type at least 2 characters to search.",
-    clearSearch: "Clear search",
-    from: "From",
-    to: "To",
-    datesHint: "Days follow this device's clock.",
-    dates: "Date",
-    tools: "More tools",
-    emptyAllTitle: "No orders yet",
-    emptyAllBody: "The moment a customer orders from your store, the order shows up here — and on your home screen.",
-    emptyShare: "Open your store",
-    emptyTest: "Create an order by hand",
-    rangeInvalid: "The start date is after the end date, so the dates aren't applied.",
-    clearFilters: "Clear filters",
-    countsFailed: "Couldn't load the tab counts.",
-    retry: "Try again",
-    colOrder: "Order",
-    colCustomer: "Customer",
-    colTotal: "Total",
-    colStage: "Stage",
-    colPayment: "Payment",
-    colTimeline: "Placed / confirmed",
-    sortLabel: "Sort",
-    sort_newest: "Newest first",
-    sort_oldest: "Oldest first",
-    sort_total_desc: "Total: high to low",
-    sort_total_asc: "Total: low to high",
-    emptyAll: "No orders yet. Orders from your store will appear here.",
-    emptyStage: "No orders under “{stage}” right now.",
-    emptyFiltered: "No orders match this search and dates.",
-    loadMoreFailed: "Couldn't load more orders.",
-    phoneLabel: "Phone",
-    unseen: "Not seen yet",
     createOrder: "New order",
-    selectAll: "Select all orders shown",
-    selectOrder: "Select order {number}",
-    test: "Test",
+    selected_one: "1 order selected",
+    selected_other: "{n} orders selected",
+    countsFailed: "Couldn't load the stage counts.",
+    retry: "Try again",
+    refreshFailed: "Couldn't refresh the list, so this is what was loaded last.",
+    loadMoreFailed: "Couldn't load more orders.",
+    emptyAllTitle: "No orders yet",
+    emptyAllBody: "The moment a customer orders from your store, the order shows up here — and on your home screen. Share your store's link to get the first one.",
+    emptyShare: "Share your store link",
+    emptyCreate: "Create an order by hand",
+    linkCopied: "Your store's link is copied. Send it to your customers.",
+    copyFailed: "We couldn't copy that. Try again.",
+    emptyFilteredTitle: "No orders match this search and these filters",
+    emptyFilteredInStage: "Nothing under “{stage}” matches this search and these filters",
+    emptyFilteredBody: "Try another word, or take off one of the filters in effect.",
+    clearFilters: "Clear search and filters",
+    emptyStageTitle: "No orders under “{stage}” right now",
+    emptyStageBody: "An order shows up here the moment it reaches this stage.",
+    showAll: "See all orders",
+    emptyUnknownBody: "Refresh the list and look again.",
+    refresh: "Refresh",
   },
   ar: {
     title: "الأوردرات",
-    description: "كل الأوردرات، متقسّمة حسب هي فين دلوقتي.",
-    tabsLabel: "فلترة الأوردرات حسب المرحلة",
-    tabAll: "الكل",
-    searchLabel: "البحث في الأوردرات",
-    searchPlaceholder: "رقم الأوردر، الاسم، الموبايل أو آخر ٤ أرقام، البوليصة",
-    searchHint: "بيدوّر في رقم الأوردر، اسم العميل أو إيميله، الموبايل (أو آخر ٤ أرقام منه)، أو رقم البوليصة.",
-    today: "النهارده",
-    last7: "آخر 7 أيام",
-    last30: "آخر 30 يوم",
-    searchTooShort: "اكتب حرفين على الأقل عشان ندوّر.",
-    clearSearch: "امسح البحث",
-    from: "من",
-    to: "لحد",
-    datesHint: "الأيام بتوقيت الجهاز ده.",
-    dates: "التاريخ",
-    tools: "أدوات تانية",
-    emptyAllTitle: "لسه مفيش أوردرات",
-    emptyAllBody: "أول ما عميل يطلب من متجرك، الأوردر هيظهر هنا وفي الصفحة الرئيسية.",
-    emptyShare: "افتح متجرك",
-    emptyTest: "اعمل أوردر بإيدك",
-    rangeInvalid: "تاريخ البداية بعد تاريخ النهاية، فمطبّقناش التواريخ.",
-    clearFilters: "امسح الفلاتر",
-    countsFailed: "معرفناش نجيب الأعداد.",
-    retry: "جرّب تاني",
-    colOrder: "الأوردر",
-    colCustomer: "العميل",
-    colTotal: "الإجمالي",
-    colStage: "المرحلة",
-    colPayment: "الدفع",
-    colTimeline: "الطلب / التأكيد",
-    sortLabel: "الترتيب",
-    sort_newest: "الأحدث الأول",
-    sort_oldest: "الأقدم الأول",
-    sort_total_desc: "الأغلى الأول",
-    sort_total_asc: "الأرخص الأول",
-    emptyAll: "لسه مفيش أوردرات. أوردرات متجرك هتظهر هنا.",
-    emptyStage: "مفيش أوردرات في «{stage}» دلوقتي.",
-    emptyFiltered: "مفيش أوردرات بالبحث والتواريخ دي.",
-    loadMoreFailed: "معرفناش نجيب أوردرات أكتر.",
-    phoneLabel: "الموبايل",
-    unseen: "محدش فتحه لسه",
     createOrder: "أوردر جديد",
-    selectAll: "اختار كل الأوردرات اللي ظاهرة",
-    selectOrder: "اختار الأوردر {number}",
-    test: "تجريبي",
+    selected_one: "أوردر واحد متحدد",
+    selected_two: "أوردرين متحددين",
+    selected_few: "{n} أوردرات متحددة",
+    selected_other: "{n} أوردر متحدد",
+    countsFailed: "معرفناش نجيب أعداد المراحل.",
+    retry: "جرّب تاني",
+    refreshFailed: "معرفناش نحدّث القائمة، فدي آخر حاجة اتحمّلت.",
+    loadMoreFailed: "معرفناش نجيب أوردرات أكتر.",
+    emptyAllTitle: "لسه مفيش أوردرات",
+    emptyAllBody: "أول ما عميل يطلب من متجرك، الأوردر هيظهر هنا وفي الصفحة الرئيسية. شارك لينك متجرك عشان أول أوردر ييجي.",
+    emptyShare: "شارك لينك متجرك",
+    emptyCreate: "اعمل أوردر بإيدك",
+    linkCopied: "لينك متجرك اتنسخ. ابعته لعملائك.",
+    copyFailed: "معرفناش ننسخ. جرّب تاني.",
+    emptyFilteredTitle: "مفيش أوردرات بالبحث والفلاتر دي",
+    emptyFilteredInStage: "مفيش في «{stage}» أوردرات بالبحث والفلاتر دي",
+    emptyFilteredBody: "جرّب كلمة تانية، أو شيل فلتر من اللي شغّالين.",
+    clearFilters: "امسح البحث والفلاتر",
+    emptyStageTitle: "مفيش أوردرات في «{stage}» دلوقتي",
+    emptyStageBody: "أول ما أوردر يوصل للمرحلة دي هيظهر هنا.",
+    showAll: "شوف كل الأوردرات",
+    emptyUnknownBody: "حدّث القائمة وبص تاني.",
+    refresh: "تحديث",
   },
 } satisfies Messages;
 
-const SEARCH_DEBOUNCE_MS = 300;
-const SEARCH_MIN = 2;
-const SEARCH_MAX = 100;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** "2026-10-06" for a moment, on this device's calendar (Cairo for an Egyptian merchant), not UTC's. */
-function localDay(at: number): string {
-  const d = new Date(at);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 /**
- * The device's time zone (Africa/Cairo for an Egyptian merchant). Sent with
- * the dates so the API reads "6 Oct" as that whole day there, not in UTC.
+ * The orders list — «الأوردرات».
+ *
+ * Top to bottom: the header (title, the «أدوات» menu, «أوردر جديد»), ONE
+ * toolbar (search and the Filters button), the stage chips with their counts,
+ * the chips of the filters in effect (only while any is), then the orders: a
+ * table on a sheet of glass from md up, cards on a phone. Everything else that
+ * filters or shapes the list lives in the Filters sheet (list/OrdersFilterSheet).
+ *
+ * A row opens Quick Look; Enter on it, or its order number, opens the order.
+ * Ticking rows raises the bulk bar. The list is all in the URL (see
+ * list/useOrdersQuery.ts), is kept between visits and refreshes behind
+ * (list/useOrdersData.ts).
+ *
+ * It does not look at the path: the create-order sheet at /orders/new draws
+ * this same page underneath itself, for whatever query the URL carries.
  */
-function deviceTimeZone(): string | undefined {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/** `value`, once it has stopped changing for `delayMs`. */
-function useDebouncedValue<T>(value: T, delayMs: number): T {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setSettled(value), delayMs);
-    return () => window.clearTimeout(timer);
-  }, [value, delayMs]);
-  return settled;
-}
-
-function isStage(value: string | null): value is OrderStage {
-  return value !== null && (ORDER_STAGES as readonly string[]).includes(value);
-}
-
-/**
- * The list's filters live in the URL (?stage=&q=&from=&to=) so a view can be
- * shared and survives a refresh. Anything malformed in a hand-edited URL is
- * ignored rather than sent.
- */
-function useOrderFilters() {
-  const [params, setParams] = useSearchParams();
-  const rawStage = params.get("stage");
-  const stage = isStage(rawStage) ? rawStage : null;
-  const rawQ = (params.get("q") ?? "").trim();
-  const q = rawQ.length >= SEARCH_MIN ? rawQ.slice(0, SEARCH_MAX) : "";
-  const rawFrom = params.get("from") ?? "";
-  const rawTo = params.get("to") ?? "";
-  const from = DATE_RE.test(rawFrom) ? rawFrom : "";
-  const to = DATE_RE.test(rawTo) ? rawTo : "";
-  const rangeInvalid = Boolean(from && to && from > to);
-
-  function update(patch: Partial<Record<"stage" | "q" | "from" | "to", string | null>>) {
-    setParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        for (const [key, value] of Object.entries(patch)) {
-          if (value) next.set(key, value);
-          else next.delete(key);
-        }
-        return next;
-      },
-      { replace: true }
-    );
-  }
-
-  return {
-    stage,
-    q,
-    from,
-    to,
-    rangeInvalid,
-    // Dates only reach the API as a valid range.
-    query: {
-      q: q || undefined,
-      from: rangeInvalid ? undefined : from || undefined,
-      to: rangeInvalid ? undefined : to || undefined,
-      tz: !rangeInvalid && (from || to) ? deviceTimeZone() : undefined,
-    },
-    hasSearchFilters: Boolean(q || from || to),
-    update,
-  };
-}
-
 export function OrdersListPage() {
-  const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const labels = useOrderLabels();
   const errorMessage = useErrorMessage();
-  const filters = useOrderFilters();
-  const { stage, query } = filters;
-  // Lane 2: the risk tabs (`?risk=`), sent to the list and the tab counts alike.
-  const risk = useRiskParam();
-  // Sorted on the server; the default is the list's order as it always was.
-  const [sort, setSort] = useListSort<OrderSort>("zimos.orders.sort", ORDER_SORTS, "newest");
+  const toast = useToast();
+  const location = useLocation();
+  const navigate = useViewNavigate();
+  const { currentWorkspace } = useWorkspace();
+  const desktop = useIsDesktop();
 
-  // SPEC §4.3 filters (tag, source, payment, governorate, courier, seen, test,
-  // archive), the column chooser and the page size.
-  const extra = useOrderExtraFilters();
-  const prefs = useOrderListPrefs();
-  // The API accepts them on the list, the counts and the export alike.
-  const fullQuery = { ...query, ...extra.query, ...risk.query } as OrderSearchParams;
+  const query = useOrdersQuery();
+  const data = useOrdersData(query);
+  const { stage } = query;
+  const { rows } = data;
 
-  const pipeline = useAsync<OrderPipeline>(
-    () => apiClient.getOrderPipeline(workspaceId, fullQuery),
-    [workspaceId, query.q, query.from, query.to, extra.key, risk.risk]
-  );
+  const views = useOrderRowViews(rows);
+  const scores = useNetworkScores(rows);
+  const shownIds = useMemo(() => rows.map((order) => order.id), [rows]);
 
-  const list = useCursorList<Order>(
-    (cursor) =>
-      apiClient
-        .listOrders(workspaceId, { cursor, limit: prefs.pageSize, stage: stage ?? undefined, sort, ...fullQuery })
-        .then((r) => ({ items: r.orders, nextCursor: r.nextCursor })),
-    [workspaceId, stage, sort, query.q, query.from, query.to, extra.key, prefs.pageSize, risk.risk],
-    { isStaleCursor: (err) => isInvalidCursorError(err, "cursor") }
-  );
-
-  // The order page's previous / next arrows follow this list.
-  useEffect(() => {
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries({ stage, sort, ...fullQuery })) {
-      if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
-    }
-    rememberOrdersListQuery(params.toString());
-  }, [stage, sort, query.q, query.from, query.to, extra.key, risk.risk]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Orders ticked for a bulk action; a different list starts a fresh selection.
+  // ---- selection: orders ticked for a bulk action; a different list starts a fresh one ----
   const [selected, setSelected] = useState<Set<string>>(new Set());
   useEffect(() => {
     setSelected(new Set());
-  }, [workspaceId, stage, sort, query.q, query.from, query.to, extra.key, risk.risk]);
+  }, [query.selectionKey]);
   const toggleSelected = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
@@ -289,659 +139,288 @@ export function OrdersListPage() {
       else next.add(id);
       return next;
     });
-  const allSelected = list.items.length > 0 && list.items.every((o) => selected.has(o.id));
-  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(list.items.map((o) => o.id)));
+  const allSelected = shownIds.length > 0 && shownIds.every((id) => selected.has(id));
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(shownIds));
+  const clearSelection = () => setSelected(new Set());
+  const selectedIds = useMemo(() => [...selected], [selected]);
 
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const { currentWorkspace } = useWorkspace();
+  // ---- the Filters sheet ----
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // What the pickers offer is read the first time the sheet opens — or at once, when the link
+  // already filters by a product or a funnel whose name the chip has to say.
+  const [optionsWanted, setOptionsWanted] = useState(false);
+  const options = useOrderFilterOptions(optionsWanted || Boolean(query.extra.values.productId || query.extra.values.funnelId));
+  // Read with the page, so the sheet opens with its views already in place.
+  const saved = useSavedOrderViews();
+  const chips = useActiveFilterChips(query, options);
+
+  // ---- Quick Look: the order being looked at stays here while the panel closes ----
+  const [peek, setPeek] = useState<{ order: Order; open: boolean } | null>(null);
+  // The preview follows the list: a refresh that changes the order shows in the open panel too.
+  const peeked = peek ? (rows.find((order) => order.id === peek.order.id) ?? peek.order) : null;
+
+  // The row is marked as the source before leaving (and when it is peeked at, for «افتح بالكامل»):
+  // its name, amount and status then travel into the order page's header.
+  const peekOrder = (view: OrderRowView) => {
+    markViewSource(orderRowElement(view.order.id));
+    setPeek({ order: view.order, open: true });
+  };
+  const openOrder = (view: OrderRowView) => {
+    markViewSource(orderRowElement(view.order.id));
+    navigate(view.to);
+  };
+  const setPeekOpen = (open: boolean) => {
+    setPeek((current) => (current ? { ...current, open } : current));
+    if (open) return;
+    // Closed without going to the order: the row is no longer the source of anything. («افتح بالكامل» closes
+    // the panel and navigates in the same breath — <html data-vt> is then already set, and the mark stays
+    // until that transition ends and clears it itself.)
+    window.setTimeout(() => {
+      if (!("vt" in document.documentElement.dataset)) markViewSource(null);
+    }, 0);
+  };
+
+  // ---- bulk actions, and the same actions for one order from its row's menu ----
+  const bulk = useOrderBulk({ rows, onChanged: data.afterChange, onClearSelection: clearSelection });
+  const menuFor = useOrderMenu({
+    onOpen: openOrder,
+    onChangeStatus: (view) => bulk.open("set_status", [view.order.id], { selection: false, orderNumber: view.order.orderNumber }),
+    onArchive: (view) => void bulk.archiveOne(view.order),
+  });
+  const selectMore = useSelectMatching({
+    params: query.listParams,
+    shownIds,
+    selected,
+    hasMore: data.hasMore,
+    total: data.total,
+    onSelect: (ids) => setSelected(new Set(ids)),
+  });
+
+  // ---- what to say when there is nothing to list ----
   const storeLink = currentWorkspace?.slug ? storeUrl(currentWorkspace.slug) : null;
+  // Nothing to list, and not because it is still on its way. A list that was empty last time says so at
+  // once, from memory, while it is read again.
+  const empty = rows.length === 0 && !data.showSkeleton;
+  const searched = Boolean(query.q || query.from || query.to) || query.extra.active.length > 0 || Boolean(query.risk);
   // A store with no orders at all (not a filter that matched none): guide, don't just say "empty".
-  const noOrdersAtAll =
-    !list.loading && !list.error && list.items.length === 0 && pipeline.data?.total === 0 &&
-    !stage && !filters.hasSearchFilters && extra.active.length === 0 && !risk.risk;
-  // The date range opens by itself when the link already carries one.
-  const [datesOpen, setDatesOpen] = useState(() => Boolean(filters.from || filters.to));
+  const noOrdersAtAll = empty && !stage && !searched && data.pipeline?.total === 0;
 
-  const emptyMessage = filters.hasSearchFilters || extra.active.length > 0
-    ? t.emptyFiltered
-    : stage
-      ? fmt(t.emptyStage, { stage: labels.stage(stage) })
-      : t.emptyAll;
+  async function shareStore() {
+    if (!storeLink) return;
+    // A phone's own share sheet (WhatsApp, Messenger…) where the browser has one; the clipboard elsewhere.
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: currentWorkspace?.name, url: storeLink });
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      }
+    }
+    if (await copyText(storeLink)) toast.success(t.linkCopied);
+    else toast.error(t.copyFailed);
+  }
+
+  const pill = "min-h-11 rounded-full px-5";
+  const newOrder = (
+    <Button asChild className={pill}>
+      {/* The query rides along: under the create-order sheet the list stays the one the merchant was on.
+          `from` tells that sheet where closing should go back to (ManualOrderPage.tsx). */}
+      <Link to={{ pathname: "/orders/new", search: location.search }} state={{ from: location.pathname }}>
+        <IconPlus className="size-4" weight="bold" aria-hidden />
+        {t.createOrder}
+      </Link>
+    </Button>
+  );
+
+  let body: ReactNode;
+  if (data.showSkeleton) {
+    // Cards on a phone, the table's sheet from md up: the shape of what is coming.
+    body = <ListSkeleton rows={8} />;
+  } else if (data.error != null && (rows.length === 0 || isPermissionError(data.error))) {
+    body = (
+      <DataState loading={false} error={data.error} onRetry={data.reload}>
+        {null}
+      </DataState>
+    );
+  } else if (noOrdersAtAll) {
+    body = (
+      <EmptyState
+        icon={<IconOrders aria-hidden />}
+        title={t.emptyAllTitle}
+        description={t.emptyAllBody}
+        action={
+          storeLink ? (
+            <Button className={pill} onClick={() => void shareStore()}>
+              <IconShare className="size-4" weight="bold" aria-hidden />
+              {t.emptyShare}
+            </Button>
+          ) : (
+            <Button asChild className={pill}>
+              <Link to="/orders/new">{t.emptyCreate}</Link>
+            </Button>
+          )
+        }
+      />
+    );
+  } else if (empty && searched) {
+    body = (
+      <EmptyState
+        icon={<IconSearch aria-hidden />}
+        title={stage ? fmt(t.emptyFilteredInStage, { stage: labels.stage(stage) }) : t.emptyFilteredTitle}
+        description={t.emptyFilteredBody}
+        action={
+          <Button variant="outline" className={pill} onClick={query.clearSearchAndFilters}>
+            {t.clearFilters}
+          </Button>
+        }
+      />
+    );
+  } else if (empty && stage) {
+    body = (
+      <EmptyState
+        icon={<IconOrders aria-hidden />}
+        title={fmt(t.emptyStageTitle, { stage: labels.stage(stage) })}
+        description={t.emptyStageBody}
+        action={
+          <Button variant="outline" className={pill} onClick={() => query.setStage(null)}>
+            {t.showAll}
+          </Button>
+        }
+      />
+    );
+  } else if (empty) {
+    // No filter, and the counts did not say "none" (they failed, or are out of step): offer to read again.
+    body = (
+      <EmptyState
+        icon={<IconOrders aria-hidden />}
+        title={t.emptyAllTitle}
+        description={t.emptyUnknownBody}
+        action={
+          <Button variant="outline" className={pill} onClick={data.reload}>
+            <IconRefresh className="size-4" weight="bold" aria-hidden />
+            {t.refresh}
+          </Button>
+        }
+      />
+    );
+  } else {
+    body = (
+      <>
+        {data.error != null && (
+          <Alert variant="danger" className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <span>{t.refreshFailed}</span>
+            <Button size="sm" variant="outline" className="min-h-11 rounded-full px-4" onClick={data.reload}>
+              {t.retry}
+            </Button>
+          </Alert>
+        )}
+        {desktop ? (
+          <OrdersTable
+            rows={views}
+            columns={shownOrderColumns(query.prefs.columns)}
+            selected={selected}
+            onToggle={toggleSelected}
+            allSelected={allSelected}
+            onToggleAll={toggleAll}
+            scores={scores}
+            menuFor={menuFor}
+            onPeek={peekOrder}
+            onOpen={openOrder}
+          />
+        ) : (
+          <OrderCards rows={views} selected={selected} onToggle={toggleSelected} scores={scores} menuFor={menuFor} onPeek={peekOrder} onOpen={openOrder} />
+        )}
+        {data.loadMoreError != null && (
+          <Alert variant="danger" className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <span>
+              {t.loadMoreFailed} {errorMessage(data.loadMoreError)}
+            </span>
+            <Button size="sm" variant="outline" className="min-h-11 rounded-full px-4" onClick={data.loadMore}>
+              {t.retry}
+            </Button>
+          </Alert>
+        )}
+        <LoadMore hasMore={data.hasMore} loading={data.loadingMore} onClick={data.loadMore} />
+      </>
+    );
+  }
 
   return (
     <div className="max-w-6xl">
       <PageHeader
         title={t.title}
-        description={t.description}
         actions={
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* On a phone the secondary tools fold behind one button; New order stays in reach. */}
-            <Button
-              variant="outline"
-              className="min-h-11 md:hidden"
-              aria-expanded={toolsOpen}
-              onClick={() => setToolsOpen((v) => !v)}
-            >
-              <Ellipsis className="size-4" aria-hidden />
-              {t.tools}
-            </Button>
-            <div className={cn("flex-wrap items-center justify-end gap-2 md:flex", toolsOpen ? "flex basis-full md:basis-auto" : "hidden")}>
-            <OrdersHeaderTools
-              onRefresh={() => {
-                list.reload();
-                pipeline.refresh({ silent: true });
-              }}
-            />
-            <OrderListDocuments
-              onImported={() => {
-                list.reload();
-                pipeline.refresh({ silent: true });
-              }}
-            />
-            <ExportOrders filters={{ ...fullQuery, stage: stage ?? undefined, sort }} />
-            </div>
-            <Link
-              to="/orders/new"
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius)] bg-primary px-4 text-sm font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              <Plus className="size-4" aria-hidden />
-              {t.createOrder}
-            </Link>
-          </div>
-        }
-      />
-
-      <SearchAndDates filters={filters} showDates={datesOpen} />
-
-      {/* The stage first: it is what a merchant switches most. */}
-      <StageTabs
-        value={stage}
-        onChange={(next) => filters.update({ stage: next })}
-        pipeline={pipeline.data}
-        countsLoading={pipeline.loading}
-      />
-
-      <OrderFilterBar
-        filters={extra}
-        prefs={prefs}
-        leading={
-          <>
-            <Button
-              variant={datesOpen || filters.from || filters.to ? "secondary" : "outline"}
-              size="sm"
-              className="min-h-11 gap-1.5"
-              aria-expanded={datesOpen}
-              onClick={() => setDatesOpen((v) => !v)}
-            >
-              <CalendarDays className="size-4" aria-hidden />
-              {filters.from || filters.to ? `${filters.from || "…"} → ${filters.to || "…"}` : t.dates}
-            </Button>
-            <SortPicker value={sort} onChange={setSort} />
-          </>
-        }
-      />
-
-      {/* Risk tabs: always on a wide screen; on a phone only while one is picked. */}
-      <div className={cn(risk.risk ? "block" : "hidden md:block")}>
-        <RiskFilter counts={orderRiskCountsOf(pipeline.data)} />
-      </div>
-      {pipeline.error != null && (
-        <p className="mb-3 flex flex-wrap items-center gap-2 text-sm text-danger" role="alert">
-          {t.countsFailed}
-          <Button size="sm" variant="outline" className="min-h-11" onClick={() => pipeline.refresh()}>
-            {t.retry}
-          </Button>
-        </p>
-      )}
-
-      {/* Outside DataState: its result dialog must survive the list reloading. */}
-      <OrderBulkBar
-        selectedIds={[...selected]}
-        onClear={() => setSelected(new Set())}
-        onDone={() => {
-          setSelected(new Set());
-          list.reload();
-          pipeline.refresh({ silent: true });
-        }}
-      />
-      <SelectAllMatching
-        params={{ stage: stage ?? undefined, sort, ...fullQuery }}
-        pageCount={list.items.length}
-        selectedCount={selected.size}
-        allPageSelected={allSelected}
-        hasMore={list.hasMore}
-        total={pipeline.data ? (stage ? pipeline.data.stages[stage] : pipeline.data.total) : undefined}
-        onSelect={(ids) => setSelected(new Set(ids))}
-        onClear={() => setSelected(new Set())}
-      />
-
-      {noOrdersAtAll ? (
-        <EmptyState
-          icon={<ShoppingBag aria-hidden />}
-          title={t.emptyAllTitle}
-          description={t.emptyAllBody}
-          action={
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button asChild className="min-h-11">
-                <Link to="/orders/new">{t.emptyTest}</Link>
-              </Button>
-              {storeLink && (
-                <Button variant="outline" asChild className="min-h-11">
-                  <a href={storeLink} target="_blank" rel="noreferrer">
-                    {t.emptyShare}
-                  </a>
-                </Button>
-              )}
-            </div>
-          }
-        />
-      ) : (
-      <DataState
-        loading={list.loading}
-        error={list.items.length ? null : list.error}
-        empty={list.items.length === 0}
-        emptyMessage={emptyMessage}
-        onRetry={list.reload}
-      >
-        <NetworkScoresProvider orders={list.items}>
-          <OrdersTable
-            orders={list.items}
-            columns={prefs.columns}
-            selected={selected}
-            onToggle={toggleSelected}
-            allSelected={allSelected}
-            onToggleAll={toggleAll}
+          <OrdersHeaderTools
+            onRefresh={data.reload}
+            refreshing={data.refreshing}
+            onImported={data.afterChange}
+            exportFilters={{ ...query.fullQuery, stage: stage ?? undefined, sort: query.sort }}
           />
-        </NetworkScoresProvider>
-        {list.error != null && list.items.length > 0 && (
-          <Alert variant="danger" className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <span>
-              {t.loadMoreFailed} {errorMessage(list.error)}
-            </span>
-            <Button size="sm" variant="outline" className="min-h-11" onClick={list.loadMore}>
+        }
+        // The page's one creation action: in the header from md up, in the bar above the dock on a phone.
+        primaryAction={newOrder}
+      />
+
+      <div className="flex flex-col gap-3">
+        <OrdersToolbar
+          q={query.q}
+          onSearch={(next) => query.patch({ q: next })}
+          filterCount={query.activeCount}
+          onOpenFilters={() => {
+            setOptionsWanted(true);
+            setFiltersOpen(true);
+          }}
+        />
+
+        {/* The stage: what a merchant switches most. */}
+        <OrdersStageChips value={stage} onChange={query.setStage} pipeline={data.pipeline} countsLoading={data.countsLoading} />
+
+        <ActiveFilters chips={chips} onClearAll={query.clearFilters} />
+
+        {data.countsError != null && (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-danger" role="alert">
+            {t.countsFailed}
+            <Button size="sm" variant="outline" className="min-h-11 rounded-full px-4" onClick={data.retryCounts}>
               {t.retry}
             </Button>
-          </Alert>
-        )}
-        <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
-      </DataState>
-      )}
-
-      {filters.hasSearchFilters && list.items.length === 0 && !list.loading && !list.error && (
-        <div className="mt-3 flex justify-center">
-          <Button
-            variant="outline"
-            className="min-h-11"
-            onClick={() => filters.update({ q: null, from: null, to: null })}
-          >
-            {t.clearFilters}
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-function SearchAndDates({ filters, showDates }: { filters: ReturnType<typeof useOrderFilters>; showDates: boolean }) {
-  const t = useT(STRINGS);
-  const searchId = useId();
-  const hintId = useId();
-  const fromId = useId();
-  const toId = useId();
-  const datesHintId = useId();
-
-  // What's typed, ahead of the debounce. The URL only ever holds a query the
-  // API accepts (2+ characters), so a single character stays local.
-  const [draft, setDraft] = useState(filters.q);
-  // Back/forward or a shared link changed the query under us: adopt it,
-  // unless it's just what the draft already says.
-  const [syncedQ, setSyncedQ] = useState(filters.q);
-  if (filters.q !== syncedQ) {
-    setSyncedQ(filters.q);
-    if (draft.trim() !== filters.q) setDraft(filters.q);
-  }
-
-  const { update } = filters;
-  const debounced = useDebouncedValue(draft.trim(), SEARCH_DEBOUNCE_MS);
-  useEffect(() => {
-    const next = debounced.length >= SEARCH_MIN ? debounced : "";
-    if (next !== filters.q) update({ q: next || null });
-    // Only a settled draft should write the URL — not every re-render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debounced]);
-
-  const tooShort = draft.trim().length > 0 && draft.trim().length < SEARCH_MIN;
-
-  return (
-    <div className="mb-3 grid gap-3">
-      <div>
-        <label htmlFor={searchId} className="sr-only">
-          {t.searchLabel}
-        </label>
-        <div className="relative">
-          <Search
-            aria-hidden
-            className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft"
-          />
-          <Input
-            id={searchId}
-            type="search"
-            value={draft}
-            maxLength={SEARCH_MAX}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={t.searchPlaceholder}
-            aria-describedby={hintId}
-            className="h-11 ps-9 pe-11"
-          />
-          {draft && (
-            <button
-              type="button"
-              onClick={() => {
-                setDraft("");
-                update({ q: null });
-              }}
-              aria-label={t.clearSearch}
-              className="absolute end-0 top-0 flex size-11 cursor-pointer items-center justify-center rounded-md text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
-            >
-              <X className="size-4" aria-hidden />
-            </button>
-          )}
-        </div>
-        <p id={hintId} className={cn("mt-1 text-xs", tooShort ? "text-accent-dark" : "hidden text-ink-soft sm:block")} aria-live="polite">
-          {tooShort ? t.searchTooShort : t.searchHint}
-        </p>
-      </div>
-
-      {showDates && (
-      <fieldset className="min-w-0 rounded-[var(--radius-card)] bg-paper-raised p-3 ring-1 ring-line">
-        <legend className="sr-only">
-          {t.from} / {t.to}
-        </legend>
-        <div className="flex flex-wrap items-center gap-2">
-          <label htmlFor={fromId} className="text-sm text-ink-soft">
-            {t.from}
-          </label>
-          <Input
-            id={fromId}
-            type="date"
-            value={filters.from}
-            max={filters.to || undefined}
-            onChange={(e) => update({ from: e.target.value || null })}
-            aria-describedby={datesHintId}
-            className="h-11 w-auto"
-          />
-          <label htmlFor={toId} className="text-sm text-ink-soft">
-            {t.to}
-          </label>
-          <Input
-            id={toId}
-            type="date"
-            value={filters.to}
-            min={filters.from || undefined}
-            onChange={(e) => update({ to: e.target.value || null })}
-            aria-describedby={datesHintId}
-            className="h-11 w-auto"
-          />
-          {/* Shortcuts, on this device's calendar like the dates themselves. */}
-          {([
-            ["today", 0],
-            ["last7", 6],
-            ["last30", 29],
-          ] as const).map(([key, back]) => {
-            const day = (offset: number) => localDay(Date.now() - offset * 86_400_000);
-            const from = day(back);
-            const to = day(0);
-            const active = filters.from === from && filters.to === to;
-            return (
-              <Button
-                key={key}
-                variant={active ? "secondary" : "ghost"}
-                size="sm"
-                className="min-h-11"
-                aria-pressed={active}
-                onClick={() => update({ from, to })}
-              >
-                {t[key]}
-              </Button>
-            );
-          })}
-          {(filters.from || filters.to) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="min-h-11"
-              onClick={() => update({ from: null, to: null })}
-            >
-              {t.clearFilters}
-            </Button>
-          )}
-        </div>
-        <p id={datesHintId} className="mt-1 text-xs text-ink-soft">
-          {t.datesHint}
-        </p>
-        {filters.rangeInvalid && (
-          <p className="mt-1 text-xs font-medium text-danger" role="alert">
-            {t.rangeInvalid}
           </p>
         )}
-      </fieldset>
-      )}
-    </div>
-  );
-}
 
-// ---------------------------------------------------------------------------
+        {/* Fixed to the foot of the page; written here so Tab reaches it before the rows. */}
+        <BulkBar
+          count={selectedIds.length}
+          label={pluralOf(t, "selected", selectedIds.length)}
+          onClear={clearSelection}
+          actions={bulk.barActions(selectedIds)}
+          maxInline={desktop ? 4 : 2}
+          extra={selectMore}
+          busy={bulk.busy}
+        />
 
-function SortPicker({ value, onChange }: { value: OrderSort; onChange: (next: OrderSort) => void }) {
-  const t = useT(STRINGS);
-  const id = useId();
-  return (
-    <div className="flex items-center gap-2">
-      <label htmlFor={id} className="sr-only">
-        {t.sortLabel}
-      </label>
-      <Select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value as OrderSort)}
-        className="h-11 w-auto"
-      >
-        {ORDER_SORTS.map((key) => (
-          <option key={key} value={key}>
-            {t[`sort_${key}`]}
-          </option>
-        ))}
-      </Select>
-    </div>
-  );
-}
-
-/** "Cash on delivery", or "Card · Paymob" for an online order. */
-function usePaymentLabel() {
-  const labels = useOrderLabels();
-  return (order: Order) => {
-    const method = labels.paymentMethod(order.paymentMethod);
-    return order.paymentProvider ? `${method} · ${providerName(order.paymentProvider)}` : method;
-  };
-}
-
-// ---------------------------------------------------------------------------
-
-/**
- * The stages in the order a cash-on-delivery order lives through them; waiting
- * for an online payment (not a COD stage) and cancelled go last (re-audit N-25).
- */
-const COD_STAGE_ORDER: readonly OrderStage[] = [
-  "pending_confirmation",
-  "needs_follow_up",
-  "ready_to_ship",
-  "shipped",
-  "out_for_delivery",
-  "delivery_failed",
-  "delivered",
-  "returned",
-  "awaiting_payment",
-  "cancelled",
-].filter((stage): stage is OrderStage => (ORDER_STAGES as readonly string[]).includes(stage));
-
-function StageTabs({
-  value,
-  onChange,
-  pipeline,
-  countsLoading,
-}: {
-  value: OrderStage | null;
-  onChange: (next: OrderStage | null) => void;
-  pipeline: OrderPipeline | null;
-  countsLoading: boolean;
-}) {
-  const t = useT(STRINGS);
-  const labels = useOrderLabels();
-  const selectedRef = useRef<HTMLButtonElement | null>(null);
-
-  // A shared link may open on a tab that's scrolled out of view on a phone.
-  useEffect(() => {
-    selectedRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [value]);
-
-  const tabs: Array<{ key: OrderStage | null; label: string; count: number | undefined }> = [
-    { key: null, label: t.tabAll, count: pipeline?.total },
-    ...COD_STAGE_ORDER.map((stage) => ({
-      key: stage,
-      label: labels.stage(stage),
-      count: pipeline?.stages[stage],
-    })),
-  ];
-
-  return (
-    <div
-      role="group"
-      aria-label={t.tabsLabel}
-      aria-busy={countsLoading || undefined}
-      className="-mx-4 mb-4 flex gap-1 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
-    >
-      {tabs.map((tab) => {
-        const selected = tab.key === value;
-        return (
-          <button
-            key={tab.key ?? "all"}
-            ref={selected ? selectedRef : undefined}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onChange(tab.key)}
-            className={cn(
-              "inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-[0.5rem] border px-3 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-              selected
-                ? "border-primary/40 bg-primary-soft text-primary-dark dark:text-primary"
-                : "border-line bg-paper-raised text-ink-soft hover:text-ink",
-              // A stage with nothing in it steps back, so the busy ones stand out.
-              !selected && tab.key !== null && tab.count === 0 && "opacity-60"
-            )}
-          >
-            {tab.label}
-            <span
-              className={cn(
-                "min-w-6 rounded-full px-1.5 py-0.5 text-center text-xs tabular-nums",
-                selected ? "bg-paper-raised text-ink" : "bg-paper text-ink-soft",
-                countsLoading && "opacity-50"
-              )}
-            >
-              {tab.count === undefined ? "–" : new Intl.NumberFormat(getIntlLocale()).format(tab.count)}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
-function OrdersTable({
-  orders,
-  columns,
-  selected,
-  onToggle,
-  allSelected,
-  onToggleAll,
-}: {
-  orders: Order[];
-  columns: OrderColumn[];
-  selected: Set<string>;
-  onToggle: (id: string) => void;
-  allSelected: boolean;
-  onToggleAll: () => void;
-}) {
-  const t = useT(STRINGS);
-  const columnLabel = useColumnLabel();
-  const labels = useOrderLabels();
-  const paymentLabel = usePaymentLabel();
-  // One clock for the whole list, so every row's "3 hours ago" moves together.
-  const now = useNow(60_000);
-
-  const rows = useMemo(
-    () =>
-      orders.map((order) => ({
-        order,
-        stageLabel: order.stage ? labels.stage(order.stage) : null,
-        flagged: order.riskFlags.length > 0,
-        meta: ordersMeta(order),
-      })),
-    [orders, labels]
-  );
-
-  return (
-    <>
-      <label className="mb-2 flex min-h-11 w-fit cursor-pointer items-center gap-2 text-sm text-ink-soft md:hidden">
-        <input type="checkbox" className="size-5 cursor-pointer accent-primary" checked={allSelected} onChange={onToggleAll} />
-        {t.selectAll}
-      </label>
-      {/* Phones and small tablets: one card per order. The whole card opens the
-          order (a stretched link); the checkbox and the call / WhatsApp buttons
-          sit above it, so they work on their own. */}
-      <ul className="space-y-[var(--bento-gap)] md:hidden">
-        {rows.map(({ order, stageLabel, flagged, meta }) => {
-          const isSelected = selected.has(order.id);
-          return (
-            <li
-              key={order.id}
-              className={cn(
-                "relative rounded-[var(--radius-card)] bg-paper-raised p-4 shadow-[var(--shadow-card)] ring-1 transition-colors",
-                isSelected ? "ring-2 ring-primary" : "ring-line"
-              )}
-            >
-              <div className="flex items-start gap-3">
-                <label className="relative z-10 -m-2 flex size-11 shrink-0 cursor-pointer items-center justify-center">
-                  <input
-                    type="checkbox"
-                    className="size-5 cursor-pointer accent-primary"
-                    checked={isSelected}
-                    onChange={() => onToggle(order.id)}
-                    aria-label={fmt(t.selectOrder, { number: order.orderNumber })}
-                  />
-                </label>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <Link
-                      to={`/orders/${order.id}`}
-                      className={cn(
-                        "min-w-0 truncate text-[15px] text-ink after:absolute after:inset-0 after:rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-primary",
-                        meta.isSeen ? "font-medium" : "font-bold"
-                      )}
-                    >
-                      {!meta.isSeen && <UnseenDot label={t.unseen} />}
-                      <bdi>{order.contactSnapshot?.fullName || "—"}</bdi>
-                    </Link>
-                    <span className="shrink-0 text-[15px] font-semibold text-ink tabular-nums">
-                      <bdi dir="ltr">{formatMoney(order.totalAmount, order.currency)}</bdi>
-                    </span>
-                  </div>
-                  <p className="mt-0.5 truncate text-xs text-ink-soft">
-                    <bdi dir="ltr">{order.orderNumber}</bdi> · {paymentLabel(order)}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    {order.stage && stageLabel && (
-                      <StatusBadge value={order.stage} tone={STAGE_TONE[order.stage]} text={stageLabel} />
-                    )}
-                    {flagged && <StatusBadge value="flagged" tone="danger" text={labels.flagged} />}
-                    <RiskBadge order={order} />
-                    <OrderNetworkRate order={order} />
-                    {meta.isTest && <StatusBadge value="test" tone="warning" text={t.test} />}
-                    {meta.tags.map((tag) => (
-                      <StatusBadge key={tag} value={tag} tone="info" text={tag} />
-                    ))}
-                  </div>
-                  <OrderTimelineLines order={order} now={now} className="mt-2" />
-                  <ContactActions
-                    phone={order.contactSnapshot?.phone}
-                    name={order.contactSnapshot?.fullName}
-                    className="relative z-10 mt-3"
-                  />
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-
-      {/* Tablet landscape and up: the table. */}
-      <div className="hidden overflow-x-auto rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line md:block">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-line bg-paper-sunken/60 text-start text-xs text-ink-soft">
-              <th scope="col" className="w-10 ps-4 py-3">
-                <input
-                  type="checkbox"
-                  className="size-4 cursor-pointer accent-primary"
-                  checked={allSelected}
-                  onChange={onToggleAll}
-                  aria-label={t.selectAll}
-                />
-              </th>
-              <th scope="col" className="px-4 py-3 text-start font-medium">
-                {t.colOrder}
-              </th>
-              {columns.map((column) => (
-                <th key={column} scope="col" className="px-4 py-3 text-start font-medium">
-                  {columnLabel(column)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ order, stageLabel, flagged, meta }) => (
-              <tr
-                key={order.id}
-                className={cn(
-                  "border-b border-line last:border-0 hover:bg-paper-raised",
-                  selected.has(order.id) && "bg-primary-soft/50"
-                )}
-              >
-                <td className="w-10 ps-4 py-3">
-                  <input
-                    type="checkbox"
-                    className="size-4 cursor-pointer accent-primary"
-                    checked={selected.has(order.id)}
-                    onChange={() => onToggle(order.id)}
-                    aria-label={fmt(t.selectOrder, { number: order.orderNumber })}
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <Link
-                    to={`/orders/${order.id}`}
-                    className={cn(
-                      "inline-flex min-h-11 items-center text-ink hover:text-primary focus-visible:outline-2 focus-visible:outline-primary",
-                      meta.isSeen ? "font-medium" : "font-bold"
-                    )}
-                  >
-                    {!meta.isSeen && <UnseenDot label={t.unseen} />}
-                    <bdi dir="ltr">{order.orderNumber}</bdi>
-                  </Link>
-                  {meta.isTest && <StatusBadge value="test" tone="warning" text={t.test} className="ms-2" />}
-                </td>
-                {columns.map((column) => (
-                  <OrderColumnCell
-                    key={column}
-                    column={column}
-                    row={{ order, stageLabel, flagged, meta }}
-                    paymentLabel={paymentLabel(order)}
-                    now={now}
-                  />
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div aria-busy={data.refreshing || undefined} className="min-w-0">
+          {body}
+        </div>
       </div>
-    </>
-  );
-}
 
-/** The dot in front of an order nobody has opened yet. */
-function UnseenDot({ label }: { label: string }) {
-  return (
-    <span className="me-2 inline-block size-2 shrink-0 rounded-full bg-primary" role="img" aria-label={label} title={label} />
+      <OrdersFilterSheet
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        query={query}
+        options={options}
+        saved={saved}
+        riskCounts={data.riskCounts}
+        total={data.total}
+        desktop={desktop}
+      />
+
+      <OrderQuickLook
+        order={peeked}
+        open={Boolean(peek?.open)}
+        onOpenChange={setPeekOpen}
+      />
+
+      {/* Outside the list's own states: a result dialog must survive the list reloading. */}
+      {bulk.dialogs}
+    </div>
   );
 }

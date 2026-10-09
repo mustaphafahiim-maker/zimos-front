@@ -228,20 +228,26 @@ export function CodSwitch({
               className={`${input} text-center text-2xl tracking-[0.5em]`}
             />
           </div>
-          <button type="submit" disabled={busy || code.length < challenge.codeLength} className={`${btnPrimary} w-full`}>
+          <button type="submit" disabled={busy || code.length < challenge.codeLength} aria-busy={busy} className={`${btnPrimary} min-h-12 w-full`}>
             {busy ? t.checking : t.check}
           </button>
           <button
             type="button"
             onClick={() => void send()}
             disabled={busy || secondsLeft > 0}
-            className={`${btnGhost} disabled:cursor-default disabled:opacity-60`}
+            className={`${btnGhost} min-h-12 w-full disabled:cursor-default disabled:opacity-60`}
           >
             {secondsLeft > 0 ? t.resendIn(secondsLeft) : t.resend}
           </button>
         </form>
       ) : (
-        <button type="button" disabled={disabled || busy} onClick={start} className={`${deposit && open ? btnPrimary : btnSecondary} w-full ${deposit && open ? "mt-4" : ""}`}>
+        <button
+          type="button"
+          disabled={disabled || busy}
+          aria-busy={busy}
+          onClick={start}
+          className={`${deposit && open ? btnPrimary : btnSecondary} min-h-12 w-full ${deposit && open ? "mt-4" : ""}`}
+        >
           {busy ? busyLabel : deposit && open ? t.confirm : label}
         </button>
       )}
@@ -252,7 +258,11 @@ export function CodSwitch({
             {error}
           </p>
         )}
-        {!error && notice && <p className="mt-3 text-sm text-ink-soft">{notice}</p>}
+        {!error && notice && (
+          <p role="status" className="mt-3 text-sm text-ink-soft">
+            {notice}
+          </p>
+        )}
       </div>
     </div>
   );

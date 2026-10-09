@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ExternalLink, Eye, FileSpreadsheet, Pause, Pencil, Play, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { IconClose, IconDelete, IconEdit, IconExternal, IconEye, IconPause, IconPlay, IconPlus, IconRefresh, IconSheet } from "@/components/icons";
 import { Alert, Button, Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@store-builder/ui";
 import {
   googleSheetsAuthorizeUrl,
@@ -28,6 +28,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AppOffNotice } from "@/components/AppOffNotice";
 import { GoogleSheetDialog } from "./GoogleSheetDialog";
+// A real Google account: refusals on the way back, access taken away, stopped sheets (handoff 393).
+import { SHEETS_REAL_STRINGS, SheetPreviewProblem, sheetPreviewProblem, useGoogleReturnError, useSheetErrorOverrides } from "./googleSheetsReal";
 
 const STRINGS = {
   en: {
@@ -182,6 +184,10 @@ export function GoogleSheetsPage() {
   const [previewing, setPreviewing] = useState<SheetConnection | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const handled = useRef<string | null>(null);
+  const g = useT(SHEETS_REAL_STRINGS);
+  const sheetErrors = useSheetErrorOverrides();
+  // Back from Google with ?error= (Cancel pressed, or Google refused).
+  useGoogleReturnError(params.get("error"), setError);
 
   // Back from Google: hand the code over once, then drop it from the address.
   const code = params.get("code");
@@ -195,7 +201,7 @@ export function GoogleSheetsPage() {
         toast.success(t.connectedToast);
         return overview.refresh({ silent: true });
       })
-      .catch((err) => setError(errorMessage(err)))
+      .catch((err) => setError(errorMessage(err, sheetErrors)))
       .finally(() => {
         setConnecting(false);
         navigate("/apps/google-sheets", { replace: true });
@@ -221,7 +227,7 @@ export function GoogleSheetsPage() {
       toast.success(await work());
       await overview.refresh({ silent: true });
     } catch (err) {
-      toast.error(errorMessage(err));
+      toast.error(errorMessage(err, sheetErrors));
     } finally {
       setBusy(null);
     }
@@ -253,40 +259,56 @@ export function GoogleSheetsPage() {
                 actions={data.adapter.sandbox ? <StatusBadge value="test" tone="warning" text={t.test} /> : undefined}
               >
                 {data.adapter.sandbox && <p className="mb-3 text-xs text-ink-soft">{t.sandboxHint}</p>}
-                {anyRevoked && account?.connected && (
-                  <Alert variant="danger" className="mb-3">
-                    {t.revokedAlert}
+                {account?.reconnect ? (
+                  <Alert variant="danger" className="mb-3" data-slot="sheets-reconnect">
+                    <p>{g.reconnectBanner}</p>
+                    {account.email && (
+                      <p className="mt-1 text-xs">
+                        {g.reconnectAccount.split("{email}")[0]}
+                        <bdi dir="ltr">{account.email}</bdi>
+                        {g.reconnectAccount.split("{email}")[1]}
+                      </p>
+                    )}
                   </Alert>
+                ) : (
+                  anyRevoked &&
+                  account?.connected && (
+                    <Alert variant="danger" className="mb-3">
+                      {t.revokedAlert}
+                    </Alert>
+                  )
                 )}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-ink">{account?.connected ? fmt(t.connectedAs, { email: account.email ?? "" }) : t.notConnected}</p>
                   <div className="flex flex-wrap gap-2">
                     {account?.connected && (
-                      <Button variant="ghost" size="sm" disabled={connecting} onClick={() => setDisconnecting(true)}>
+                      <Button variant="ghost" size="sm" className="pointer-coarse:min-h-11" disabled={connecting} onClick={() => setDisconnecting(true)}>
                         {t.disconnect}
                       </Button>
                     )}
-                    {(!account?.connected || anyRevoked) && (
-                      <Button size="sm" disabled={connecting} onClick={() => void connect()}>
+                    {(!account?.connected || anyRevoked || account?.reconnect) && (
+                      <Button size="sm" className="pointer-coarse:min-h-11" disabled={connecting} onClick={() => void connect()}>
                         {connecting ? t.connecting : account?.connected ? t.reconnect : t.connect}
                       </Button>
                     )}
                   </div>
                 </div>
+                {/* Said before the redirect to Google: what the permission covers. */}
+                {(!account?.connected || anyRevoked || account?.reconnect) && <p className="mt-2 text-xs leading-5 text-ink-soft">{g.scopeNote}</p>}
               </Section>
 
               <Section
                 title={t.sheetsTitle}
                 description={t.sheetsHint}
                 actions={
-                  <Button size="sm" disabled={!account?.connected} title={account?.connected ? undefined : t.connectFirst} onClick={() => setEditing("new")}>
-                    <Plus className="size-4" aria-hidden />
+                  <Button size="sm" className="pointer-coarse:min-h-11" disabled={!account?.connected} title={account?.connected ? undefined : t.connectFirst} onClick={() => setEditing("new")}>
+                    <IconPlus className="size-4" aria-hidden />
                     {t.add}
                   </Button>
                 }
               >
                 {connections.length === 0 ? (
-                  <EmptyState icon={<FileSpreadsheet />} title={t.noSheetsTitle} description={account?.connected ? t.noSheetsBody : t.connectFirst} />
+                  <EmptyState icon={<IconSheet />} title={t.noSheetsTitle} description={account?.connected ? t.noSheetsBody : t.connectFirst} />
                 ) : (
                   <ul className="divide-y divide-line">
                     {connections.map((connection) => (
@@ -410,12 +432,13 @@ function SheetRow({
   const working = busy?.startsWith(`${connection.id}:`) ?? false;
   const stopped = connection.status === "revoked" || connection.status === "error";
   const url = connection.spreadsheetUrl && /^https:\/\//.test(connection.spreadsheetUrl) ? connection.spreadsheetUrl : null;
+  const g = useT(SHEETS_REAL_STRINGS);
   return (
     <li className="space-y-2 py-3 first:pt-0 last:pb-0">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
-            <FileSpreadsheet className="size-4 shrink-0 text-ink-soft" aria-hidden />
+            <IconSheet className="size-4 shrink-0 text-ink-soft" aria-hidden />
             <span className="min-w-0 truncate">{connection.name}</span>
             <StatusBadge value={connection.status} tone={STATUS_TONE[connection.status]} text={t[connection.status]} />
           </p>
@@ -429,40 +452,51 @@ function SheetRow({
         </div>
         <div className="flex flex-wrap items-center gap-1">
           {url && (
-            <Button size="sm" variant="ghost" asChild>
+            <Button size="sm" className="pointer-coarse:min-h-11" variant="ghost" asChild>
               <a href={url} target="_blank" rel="noreferrer">
-                <ExternalLink className="size-4" aria-hidden />
-                {t.open}
+                <IconExternal className="size-4" aria-hidden />
+                {g.openInGoogle}
               </a>
             </Button>
           )}
-          {sandbox && (
-            <Button size="sm" variant="ghost" onClick={onPreview}>
-              <Eye className="size-4" aria-hidden />
+          {/* The real Google adapter reads rows back too (handoff 393). */}
+          {(sandbox || url !== null) && (
+            <Button size="sm" className="pointer-coarse:min-h-11" variant="ghost" onClick={onPreview}>
+              <IconEye className="size-4" aria-hidden />
               {t.preview}
             </Button>
           )}
-          <Button size="sm" variant="ghost" disabled={working || connection.status !== "active"} title={fmt(t.backfillHint, { days: backfillDays })} onClick={onBackfill}>
-            <RefreshCw className="size-4" aria-hidden />
+          <Button size="sm" className="pointer-coarse:min-h-11" variant="ghost" disabled={working || connection.status !== "active"} title={fmt(t.backfillHint, { days: backfillDays })} onClick={onBackfill}>
+            <IconRefresh className="size-4" aria-hidden />
             {t.backfill}
           </Button>
           {!stopped && (
-            <Button size="sm" variant="ghost" disabled={working} onClick={onToggle}>
-              {connection.status === "active" ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
+            <Button size="sm" className="pointer-coarse:min-h-11" variant="ghost" disabled={working} onClick={onToggle}>
+              {connection.status === "active" ? <IconPause className="size-4" aria-hidden /> : <IconPlay className="size-4" aria-hidden />}
               {connection.status === "active" ? t.pause : t.resume}
             </Button>
           )}
-          <Button size="sm" variant="ghost" disabled={working} onClick={onEdit}>
-            <Pencil className="size-4" aria-hidden />
+          <Button size="sm" className="pointer-coarse:min-h-11" variant="ghost" disabled={working} onClick={onEdit}>
+            <IconEdit className="size-4" aria-hidden />
             {t.edit}
           </Button>
-          <Button size="sm" variant="ghost" disabled={working} aria-label={`${t.delete} — ${connection.name}`} onClick={onDelete}>
-            <Trash2 className="size-4 text-danger" aria-hidden />
+          <Button size="sm" className="pointer-coarse:min-h-11" variant="ghost" disabled={working} aria-label={`${t.delete} — ${connection.name}`} onClick={onDelete}>
+            <IconDelete className="size-4 text-danger" aria-hidden />
           </Button>
         </div>
       </div>
       {stopped ? (
-        <p className="text-xs text-danger">{connection.status === "revoked" ? t.revokedLine : t.missingLine}</p>
+        <p className="text-xs text-danger">
+          {connection.status === "revoked" ? (
+            g.revokedRow
+          ) : (
+            <>
+              {connection.lastError ? <bdi>{connection.lastError}</bdi> : t.missingLine}
+              {" — "}
+              {g.errorRow}
+            </>
+          )}
+        </p>
       ) : (
         connection.lastError && <p className="text-xs text-ink-soft">{fmt(t.retrying, { error: connection.lastError })}</p>
       )}
@@ -487,12 +521,19 @@ function SheetPreview({ t, connection, onClose }: { t: T; connection: SheetConne
             <DialogTitle>{fmt(t.previewTitle, { name: connection?.name ?? "" })}</DialogTitle>
             {rows.data && <DialogDescription>{fmt(t.previewHint, { total: rows.data.total })}</DialogDescription>}
           </div>
-          <DialogClose render={<Button type="button" size="icon-sm" variant="ghost" aria-label={t.close} title={t.close} />}>
-            <X className="size-4" aria-hidden />
+          <DialogClose render={<Button type="button" size="icon-sm" className="pointer-coarse:size-11" variant="ghost" aria-label={t.close} title={t.close} />}>
+            <IconClose className="size-4" aria-hidden />
           </DialogClose>
         </DialogHeader>
         <div className="-mx-6 min-h-0 overflow-auto px-6">
-          <DataState loading={rows.loading} error={rows.error} empty={body.length === 0} emptyMessage={t.previewEmpty} onRetry={() => void rows.refresh()}>
+          <SheetPreviewProblem error={rows.error} />
+          <DataState
+            loading={rows.loading}
+            error={sheetPreviewProblem(rows.error) ? null : rows.error}
+            empty={!sheetPreviewProblem(rows.error) && body.length === 0}
+            emptyMessage={t.previewEmpty}
+            onRetry={() => void rows.refresh()}
+          >
             <table className="w-full border-collapse text-xs">
               <thead>
                 <tr>

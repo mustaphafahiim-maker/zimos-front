@@ -1,4 +1,4 @@
-import { ImageOff } from "lucide-react";
+import { IconImageMissing } from "@/components/icons";
 import {
   checkoutBillingAddressModeOf,
   checkoutFieldLabel,
@@ -100,7 +100,7 @@ export function OrderCheckoutPhotos({ order }: { order: Order }) {
               </a>
             ) : (
               <p className="inline-flex items-center gap-1.5 text-xs text-ink-soft">
-                <ImageOff className="size-4" aria-hidden />
+                <IconImageMissing className="size-4" aria-hidden />
                 {t.missing}
               </p>
             )}

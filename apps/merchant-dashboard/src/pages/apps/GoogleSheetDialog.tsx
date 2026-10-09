@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2, X } from "lucide-react";
+import { IconArrowDown, IconArrowUp, IconClose, IconDelete, IconPlus } from "@/components/icons";
 import { Alert, Button, Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label } from "@store-builder/ui";
 import {
   funnelsList,
@@ -16,6 +16,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
+import { ExistingSpreadsheetField, isSpreadsheetRef, useSheetErrorOverrides } from "./googleSheetsReal";
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { Select } from "@/components/Select";
@@ -164,6 +165,9 @@ export function GoogleSheetDialog({
   const [funnelIds, setFunnelIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A spreadsheet to reuse, by link or id (new sheets only; handoff 393).
+  const [existing, setExisting] = useState("");
+  const sheetErrors = useSheetErrorOverrides();
   // Whether a new sheet has its default columns yet (the order fields load first).
   const [seeded, setSeeded] = useState(false);
 
@@ -171,6 +175,7 @@ export function GoogleSheetDialog({
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setExisting("");
     setName(connection?.name ?? "");
     setDataType(connection?.dataType ?? "orders");
     setLang(connection?.filter.lang ?? (locale === "en" ? "en" : "ar"));
@@ -239,6 +244,8 @@ export function GoogleSheetDialog({
       .map((r) => (r.key ? { header: r.header.trim(), key: r.key } : { header: r.header.trim(), fixed: r.fixed }));
     if (!name.trim()) return setError(t.needName);
     if (columns.length === 0) return setError(t.needColumns);
+    const reuse = connection ? "" : existing.trim();
+    if (reuse && !isSpreadsheetRef(reuse)) return;
     const filter = {
       ...(dataType !== "leads" ? { productIds } : {}),
       ...(dataType !== "lost_orders" ? { funnelIds } : {}),
@@ -247,10 +254,10 @@ export function GoogleSheetDialog({
     setError(null);
     try {
       const body = { name: name.trim(), filter, columns, lang, ...(dataType === "orders" ? { groupByOrder } : {}) };
-      const saved = connection ? await googleSheetsUpdate(apiClient, workspaceId, connection.id, body) : await googleSheetsCreate(apiClient, workspaceId, { ...body, dataType });
+      const saved = connection ? await googleSheetsUpdate(apiClient, workspaceId, connection.id, body) : await googleSheetsCreate(apiClient, workspaceId, { ...body, dataType, ...(reuse ? { spreadsheetId: reuse } : {}) });
       onSaved(saved, !connection);
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, sheetErrors));
     } finally {
       setBusy(false);
     }
@@ -270,8 +277,8 @@ export function GoogleSheetDialog({
             <DialogTitle>{connection ? fmt(t.editTitle, { name: connection.name }) : t.newTitle}</DialogTitle>
             {!connection && <DialogDescription>{t.intro}</DialogDescription>}
           </div>
-          <DialogClose render={<Button type="button" size="icon-sm" variant="ghost" aria-label={t.close} title={t.close} />}>
-            <X className="size-4" aria-hidden />
+          <DialogClose render={<Button type="button" size="icon-sm" className="pointer-coarse:size-11" variant="ghost" aria-label={t.close} title={t.close} />}>
+            <IconClose className="size-4" aria-hidden />
           </DialogClose>
         </DialogHeader>
 
@@ -280,6 +287,8 @@ export function GoogleSheetDialog({
             <Label htmlFor="sheet-name">{t.name}</Label>
             <Input id="sheet-name" dir="auto" maxLength={80} value={name} placeholder={t.namePlaceholder} onChange={(e) => setName(e.target.value)} />
           </div>
+
+          {!connection && <ExistingSpreadsheetField value={existing} onChange={setExisting} />}
 
           {!connection && (
             <fieldset className="space-y-2">
@@ -345,25 +354,25 @@ export function GoogleSheetDialog({
                         )}
                       </div>
                       <div className="flex items-start gap-0.5">
-                        <Button type="button" size="icon-sm" variant="ghost" aria-label={fmt(t.moveUp, { name: labelOf(row, i) })} disabled={i === 0} onClick={() => move(i, -1)}>
-                          <ArrowUp className="size-4" aria-hidden />
+                        <Button type="button" size="icon-sm" className="pointer-coarse:size-11" variant="ghost" aria-label={fmt(t.moveUp, { name: labelOf(row, i) })} disabled={i === 0} onClick={() => move(i, -1)}>
+                          <IconArrowUp className="size-4" aria-hidden />
                         </Button>
-                        <Button type="button" size="icon-sm" variant="ghost" aria-label={fmt(t.moveDown, { name: labelOf(row, i) })} disabled={i === rows.length - 1} onClick={() => move(i, 1)}>
-                          <ArrowDown className="size-4" aria-hidden />
+                        <Button type="button" size="icon-sm" className="pointer-coarse:size-11" variant="ghost" aria-label={fmt(t.moveDown, { name: labelOf(row, i) })} disabled={i === rows.length - 1} onClick={() => move(i, 1)}>
+                          <IconArrowDown className="size-4" aria-hidden />
                         </Button>
-                        <Button type="button" size="icon-sm" variant="ghost" aria-label={fmt(t.remove, { name: labelOf(row, i) })} onClick={() => setRows((list) => list.filter((_, j) => j !== i))}>
-                          <Trash2 className="size-4 text-danger" aria-hidden />
+                        <Button type="button" size="icon-sm" className="pointer-coarse:size-11" variant="ghost" aria-label={fmt(t.remove, { name: labelOf(row, i) })} onClick={() => setRows((list) => list.filter((_, j) => j !== i))}>
+                          <IconDelete className="size-4 text-danger" aria-hidden />
                         </Button>
                       </div>
                     </li>
                   ))}
                 </ol>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="ghost" disabled={rows.length >= 60} onClick={() => setRows((list) => [...list, { header: "", key: "", fixed: "" }])}>
-                    <Plus className="size-4" aria-hidden />
+                  <Button type="button" size="sm" className="pointer-coarse:min-h-11" variant="ghost" disabled={rows.length >= 60} onClick={() => setRows((list) => [...list, { header: "", key: "", fixed: "" }])}>
+                    <IconPlus className="size-4" aria-hidden />
                     {t.add}
                   </Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setRows(defaultsFor(dataType, lang))}>
+                  <Button type="button" size="sm" className="pointer-coarse:min-h-11" variant="ghost" onClick={() => setRows(defaultsFor(dataType, lang))}>
                     {t.defaults}
                   </Button>
                 </div>
@@ -398,10 +407,10 @@ export function GoogleSheetDialog({
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-3">
-          <Button type="button" variant="outline" disabled={busy} onClick={onClose}>
+          <Button className="min-h-11" type="button" variant="outline" disabled={busy} onClick={onClose}>
             {t.close}
           </Button>
-          <Button type="button" disabled={busy || (dataType === "orders" && catalogue.loading)} onClick={() => void save()}>
+          <Button className="min-h-11" type="button" disabled={busy || (dataType === "orders" && catalogue.loading)} onClick={() => void save()}>
             {busy ? t.saving : connection ? t.save : t.create}
           </Button>
         </div>

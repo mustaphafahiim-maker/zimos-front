@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { ShopperAddress, ShopperAddressInput } from "@store-builder/api-client";
 import { StorePlaceFields } from "@/components/checkout/StorePlaceFields";
 import { btnGhost, btnPrimary, card, input, label as labelClass } from "@/components/ui";
@@ -28,6 +28,12 @@ export function AddressForm({
   canBeDefault,
   onSave,
   onCancel,
+  title,
+  addressOnly = false,
+  children,
+  submitLabel,
+  busyLabel,
+  withoutPostalCode = false,
 }: {
   /** The address being edited; absent for a new one. */
   address?: ShopperAddress | null;
@@ -35,6 +41,17 @@ export function AddressForm({
   canBeDefault: boolean;
   onSave: (input: ShopperAddressInput) => Promise<string | null>;
   onCancel: () => void;
+  /** Said instead of "Edit address" / "New address" (an order's address, handoff 220). */
+  title?: string;
+  /** Leaves out the label, recipient and phone: an order's address has none of them. */
+  addressOnly?: boolean;
+  /** More fields, drawn after the postal code (an order's «ملاحظات للمندوب»). */
+  children?: ReactNode;
+  /** Said on the save button instead of "Save address" (a quote's «موافق — اطلب», handoff 219), and while it runs. */
+  submitLabel?: string;
+  busyLabel?: string;
+  /** Leaves the postal code out even when the store's form shows it: a quote's delivery address has none. */
+  withoutPostalCode?: boolean;
 }) {
   const { t, store, locale } = useStore();
   const a = t.account;
@@ -87,7 +104,7 @@ export function AddressForm({
     firstRef.current?.focus();
   }, []);
 
-  const showPostal = store?.checkout?.postal_code !== "hidden";
+  const showPostal = !withoutPostalCode && store?.checkout?.postal_code !== "hidden";
 
   function validate(): Errors {
     const e: Errors = {};
@@ -158,9 +175,11 @@ export function AddressForm({
   return (
     <form onSubmit={submit} noValidate className={`${card} p-5 sm:p-6`} aria-labelledby={`${prefix}-title`}>
       <h2 id={`${prefix}-title`} className="text-lg font-semibold text-ink">
-        {address ? a.editAddress : a.newAddress}
+        {title ?? (address ? a.editAddress : a.newAddress)}
       </h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        {!addressOnly && (
+          <>
         <div className="sm:col-span-2">
           <label htmlFor={`${prefix}-label`} className={labelClass}>
             {a.label}
@@ -214,6 +233,8 @@ export function AddressForm({
           />
           {errorLine("phone", errors.phone)}
         </div>
+          </>
+        )}
 
         {places.active ? (
           <StorePlaceFields
@@ -319,6 +340,8 @@ export function AddressForm({
           </div>
         )}
 
+        {children}
+
         {canBeDefault && (
           <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium text-ink sm:col-span-2">
             <input
@@ -341,7 +364,7 @@ export function AddressForm({
           {a.cancel}
         </button>
         <button type="submit" disabled={busy} className={btnPrimary}>
-          {busy ? a.saving : a.saveAddress}
+          {busy ? (busyLabel ?? a.saving) : (submitLabel ?? a.saveAddress)}
         </button>
       </div>
     </form>

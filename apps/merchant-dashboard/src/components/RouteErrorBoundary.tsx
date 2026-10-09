@@ -1,33 +1,47 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { Alert, Button } from "@store-builder/ui";
+import { Button } from "@store-builder/ui";
+import { StateMessage } from "@/components/DataState";
+import { IconRefresh, IconWarning } from "@/components/icons";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { errorReporter } from "@/lib/errorReporting";
 
 const STRINGS = {
   en: {
-    title: "This page couldn't be displayed.",
-    body: "Something went wrong while showing it. Reload to try again, or use the menu to open another page.",
-    reload: "Reload",
+    title: "This page didn't open",
+    body: "Something broke while we were showing it. Reload and try again, or open another page from the menu.",
+    reload: "Reload the page",
   },
   ar: {
-    title: "تعذّر عرض هذه الصفحة.",
-    body: "حدث خطأ أثناء عرضها. أعد التحميل للمحاولة مرة أخرى، أو استخدم القائمة لفتح صفحة أخرى.",
-    reload: "إعادة التحميل",
+    title: "الصفحة دي ما اتفتحتش",
+    body: "حصلت مشكلة وإحنا بنعرضها. حدّث الصفحة وجرّب تاني، أو افتح صفحة تانية من القايمة.",
+    reload: "حدّث الصفحة",
   },
 } satisfies Messages;
 
+/**
+ * What a crashed page becomes: the same pane a failed load shows
+ * (components/DataState.tsx), saying what happened and the two ways on —
+ * reload, or the menu, which is still up. Inside the dashboard it takes the
+ * page column; in a full-screen editor, which has no page padding, it keeps
+ * its own margin.
+ */
 function RouteErrorFallback() {
   const t = useT(STRINGS);
   return (
-    <Alert variant="danger" className="flex max-w-xl flex-col gap-3">
-      <span className="font-medium">{t.title}</span>
-      <span>{t.body}</span>
-      <div>
-        <Button size="sm" variant="outline" onClick={() => window.location.reload()} className="min-h-11">
+    <StateMessage
+      role="alert"
+      tone="danger"
+      icon={<IconWarning aria-hidden />}
+      title={t.title}
+      description={t.body}
+      action={
+        <Button variant="outline" onClick={() => window.location.reload()} className="min-h-11 rounded-full px-5">
+          <IconRefresh weight="bold" className="size-4" aria-hidden />
           {t.reload}
         </Button>
-      </div>
-    </Alert>
+      }
+      className="mx-auto w-full max-w-xl [&:not(main_*)]:my-6 [&:not(main_*)]:w-[calc(100%-2rem)]"
+    />
   );
 }
 

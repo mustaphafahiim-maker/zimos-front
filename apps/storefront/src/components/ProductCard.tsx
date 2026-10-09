@@ -1,16 +1,20 @@
 "use client";
 
 import { ConvertedPrice } from "./ConvertedPrice";
-import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { StorefrontProduct } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { useDictionary, useStore } from "@/lib/StoreContext";
-import { dirFor, formatPrice, type Locale } from "@/lib/i18n";
+import { dirFor, formatPrice, pickText, type Locale } from "@/lib/i18n";
+import { storefrontProductAvailable } from "@store-builder/api-client";
+import { SOLD_OUT_COPY } from "./catalog/InStockOnly";
 import { compareAtOf, defaultOfferOf, discountPercent, offerAppliesTo, priceOf, productImages } from "@/lib/product";
 import { swipeStep } from "@/lib/swipe";
+import { lineImage } from "@/lib/variantImage";
 import { ArrowIcon, BoxIcon } from "./Icons";
 import { QuickAddButton } from "./QuickAddButton";
 import { WishlistHeart } from "./wishlist/WishlistHeart";
+import { CardLowestPrice } from "./product/LowestPriceLine";
 import { skeleton } from "./ui";
 
 export function ProductCard({
@@ -18,12 +22,19 @@ export function ProductCard({
   currency,
   locale,
   from,
+  priority = false,
 }: {
   product: StorefrontProduct;
   currency: string;
   locale: Locale;
   /** Where the card is shown (e.g. cross_sell): carried to the product page for the add-to-cart event. */
   from?: string;
+  /**
+   * The card is in the first row of a grid at the top of a page: its photo is
+   * fetched with the page (not lazily) and ahead of the rest. Leave it off for
+   * every other card, or the whole grid loads at once.
+   */
+  priority?: boolean;
 }) {
   const t = useDictionary(locale);
   // The store's currency format (lib/moneyFormat), from the store context.
@@ -32,6 +43,8 @@ export function ProductCard({
   const compareAt = compareAtOf(product);
   const pct = price !== undefined ? discountPercent(price, compareAt) : null;
   const anyInStock = product.variants.some((v) => v.inStock);
+  // Nobody can buy it right now (handoff 390: `available` counts stock, selling past stock and pre-orders).
+  const soldOut = !storefrontProductAvailable(product);
   const images = productImages(product);
   const many = images.length > 1;
 
@@ -41,6 +54,8 @@ export function ProductCard({
   // A product with custom fields is answered on its own page, never quick-added.
   const quickAdd = only && only.inStock && !(product.customFields && product.customFields.length > 0) ? only : undefined;
   const offer = quickAdd ? defaultOfferOf(product) : undefined;
+  // What the cart draws while a quick add is on its way: this card's own name and photo.
+  const linePreview = quickAdd ? { name: product.name, image: lineImage(product, quickAdd.id), slug: product.slug } : undefined;
 
   // --- image carousel: every real photo, not just the first ----------------
   // In an RTL store "next" travels the other way, matching ProductGallery.
@@ -56,6 +71,16 @@ export function ProductCard({
   const [loaded, setLoaded] = useState<Set<string>>(() => new Set());
   const markLoaded = (src: string) => setLoaded((prev) => (prev.has(src) ? prev : new Set(prev).add(src)));
 
+  // A photo that finished before the page woke up (the first row is fetched
+  // with the page) fired its `load` with nobody listening: read it off the
+  // element instead, or the pulse would sit over it for good.
+  const photo = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const el = photo.current;
+    if (!current || !el || !el.complete || el.naturalWidth === 0) return;
+    setLoaded((prev) => (prev.has(current) ? prev : new Set(prev).add(current)));
+  }, [current]);
+
   // Swipe-to-advance, the same pointer math as ProductGallery's main photo —
   // a drag past the card counts as a swipe and skips the tap-to-navigate it
   // would otherwise fire.
@@ -63,6 +88,9 @@ export function ProductCard({
   const movedRef = useRef(false);
 
   function onPointerDown(e: ReactPointerEvent) {
+    // A new gesture: a finger's swipe is followed by no click (a mouse's is),
+    // so the flag it left would swallow the next real tap on the photo.
+    movedRef.current = false;
     if (!many) return;
     swipe.current = { x: e.clientX, y: e.clientY };
   }
@@ -86,11 +114,21 @@ export function ProductCard({
     return false;
   }
 
+  // The photo arrows are a mouse's: they show on hover, which a finger never
+  // does. On a touch screen (`pointer-coarse`) they are taken out of
+  // hit-testing — invisible strips over the photo's edges were eating taps
+  // meant for the product — and the photo is swiped instead; a keyboard still
+  // reaches them.
+  const arrow =
+    "absolute inset-y-0 z-10 flex w-8 items-center justify-center opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:pointer-events-none";
+
   return (
     <article className="zt-card zt-product group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-[border-color,box-shadow] hover:border-primary hover:shadow-lg">
       {/* `z-10` lifts this above the title's stretched link (below) so the
           swipe and the nav arrows receive their own pointer events; a plain
-          tap still reaches the same product through the link inside it. */}
+          tap still reaches the same product through the link inside it.
+          The square is the photo's box from the first paint, whether or not
+          the photo has arrived, so the grid never moves under it. */}
       <div className="relative z-10 aspect-square overflow-hidden bg-paper">
         {current ? (
           <StoreLink
@@ -112,11 +150,13 @@ export function ProductCard({
             {/* Merchant media are arbitrary remote URLs (no next/image allowlist). */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
+              ref={photo}
               src={current}
               alt=""
               width={600}
               height={600}
-              loading="lazy"
+              loading={priority ? "eager" : "lazy"}
+              fetchPriority={priority && active === 0 ? "high" : undefined}
               decoding="async"
               onLoad={() => markLoaded(current)}
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
@@ -138,7 +178,7 @@ export function ProductCard({
                 e.stopPropagation();
                 step(-forward);
               }}
-              className="absolute inset-y-0 start-1 z-10 flex w-8 items-center justify-center opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+              className={`${arrow} start-1`}
             >
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-paper-raised/90 text-ink shadow-sm backdrop-blur">
                 <ArrowIcon size={14} className="rotate-180 rtl:rotate-0" />
@@ -152,7 +192,7 @@ export function ProductCard({
                 e.stopPropagation();
                 step(forward);
               }}
-              className="absolute inset-y-0 end-1 z-10 flex w-8 items-center justify-center opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+              className={`${arrow} end-1`}
             >
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-paper-raised/90 text-ink shadow-sm backdrop-blur">
                 <ArrowIcon size={14} className="rtl:rotate-180" />
@@ -166,9 +206,9 @@ export function ProductCard({
             {t.common.save(pct)}
           </span>
         )}
-        {!anyInStock && (
-          <span className="absolute end-3 top-3 rounded-full bg-paper-raised/95 px-2.5 py-1 text-xs font-semibold text-danger">
-            {product.variants.length === 0 ? t.common.unavailable : t.common.outOfStock}
+        {soldOut && (
+          <span data-slot="sold-out" className="absolute end-3 top-3 rounded-full bg-paper-raised/95 px-2.5 py-1 text-xs font-semibold text-danger">
+            {product.variants.length === 0 ? t.common.unavailable : pickText(SOLD_OUT_COPY, locale).badge}
           </span>
         )}
         <WishlistHeart productId={product.id} className="absolute bottom-2 end-2" />
@@ -185,7 +225,7 @@ export function ProductCard({
           </StoreLink>
         </h3>
         <p className="mt-2 flex flex-wrap items-baseline gap-x-2">
-          <span className="text-base font-bold text-ink">
+          <span className={`text-base font-bold ${soldOut ? "text-ink-soft" : "text-ink"}`}>
             {price !== undefined ? formatPrice(price, currency, locale, storeFormat) : "—"}
           </span>
           {price !== undefined && <ConvertedPrice amountMinor={price} currency={currency} className="basis-full" />}
@@ -195,11 +235,14 @@ export function ProductCard({
             </span>
           )}
         </p>
+        {/* «أقل سعر في آخر 30 يوم», only beside a sale price (handoff 234). */}
+        <CardLowestPrice product={product} className="mt-1" />
         {quickAdd ? (
           <QuickAddButton
             variantId={quickAdd.id}
             offerId={offer && offerAppliesTo(offer, quickAdd.id) ? offer.id : undefined}
             label={t.product.addToCart}
+            preview={linePreview}
           />
         ) : (
           // Part of the stretched link: the whole card opens the product page,

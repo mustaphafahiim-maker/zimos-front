@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Button } from "@store-builder/ui";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
 import { storeAppGet, storeAppSave, type StoreAppSettings } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -7,10 +7,10 @@ import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { ColorField } from "@/components/ColorField";
-import { DataState } from "@/components/DataState";
-import { TextField } from "@/components/Field";
-import { Section } from "@/components/Section";
+import { SaveBar } from "@/components/SaveBar";
+import { SettingsGroup, SettingsSwitch } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+import { GroupBlock, GroupState, InputRow, STACK } from "./sections/parts";
 
 const STRINGS = {
   en: {
@@ -26,7 +26,8 @@ const STRINGS = {
     iconHint: "A square image, 512×512 or larger. Empty: your logo.",
     color: "Bar colour",
     colorHint: "Empty: your store's main colour.",
-    save: "Save",
+    enabledHint: "Shoppers see “Install the app” where their phone allows it.",
+    save: "Save store app",
     saving: "Saving…",
     saved: "Store app settings saved.",
   },
@@ -42,7 +43,8 @@ const STRINGS = {
     iconHint: "صورة مربعة 512×512 أو أكبر. فارغ: شعارك.",
     color: "لون الشريط",
     colorHint: "فارغ: اللون الأساسي لمتجرك.",
-    save: "حفظ",
+    enabledHint: "العميل هيشوف «ثبّت التطبيق» لما موبايله يسمح.",
+    save: "احفظ تطبيق المتجر",
     saving: "بنحفظ…",
     saved: "تم حفظ إعدادات تطبيق المتجر.",
   },
@@ -50,13 +52,24 @@ const STRINGS = {
 
 const EMPTY: StoreAppSettings = { enabled: false, name: null, shortName: null, iconUrl: null, themeColor: null };
 
-/** Settings → Store design → General: the store as an app for shoppers (SPEC §20.2). */
+/** What a draft saves as: a text field left blank goes up as null. */
+function cleaned(draft: StoreAppSettings): StoreAppSettings {
+  return {
+    ...draft,
+    name: draft.name?.trim() || null,
+    shortName: draft.shortName?.trim() || null,
+    iconUrl: draft.iconUrl?.trim() || null,
+    themeColor: draft.themeColor?.trim() || null,
+  };
+}
+
+/** Store settings → General: the store as an app for shoppers (SPEC §20.2). Its own data, its own save. */
 export function StoreAppSection() {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
-  // A 403 (no website.publish) is the no-permission state DataState draws.
+  // A 403 (no website.publish) is the no-permission state GroupState draws, under this part's name.
   const loaded = useAsync(() => storeAppGet(apiClient, workspaceId), [workspaceId]);
   const [draft, setDraft] = useState<StoreAppSettings>(EMPTY);
   const [busy, setBusy] = useState(false);
@@ -67,18 +80,15 @@ export function StoreAppSection() {
   }, [loaded.data]);
 
   const set = (patch: Partial<StoreAppSettings>) => setDraft((prev) => ({ ...prev, ...patch }));
+  // This part saves by itself, apart from the section's own save: its bar shows only for its own changes.
+  const dirty = JSON.stringify(cleaned(draft)) !== JSON.stringify(cleaned(loaded.data ?? EMPTY));
+  useReportDirty(dirty);
 
   async function save() {
     setBusy(true);
     setError(null);
     try {
-      const saved = await storeAppSave(apiClient, workspaceId, {
-        ...draft,
-        name: draft.name?.trim() || null,
-        shortName: draft.shortName?.trim() || null,
-        iconUrl: draft.iconUrl?.trim() || null,
-        themeColor: draft.themeColor?.trim() || null,
-      });
+      const saved = await storeAppSave(apiClient, workspaceId, cleaned(draft));
       loaded.setData(saved);
       toast.success(t.saved);
     } catch (err) {
@@ -89,29 +99,40 @@ export function StoreAppSection() {
   }
 
   return (
-    <Section title={t.title} description={t.description}>
-      <DataState loading={loaded.loading && !loaded.data} error={loaded.error} onRetry={() => void loaded.refresh()}>
-        <div className="space-y-4">
-          <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-ink">
-            <input type="checkbox" checked={draft.enabled} onChange={(e) => set({ enabled: e.target.checked })} />
-            {t.enabled}
-          </label>
+    <GroupState title={t.title} loading={loaded.loading && !loaded.data} error={loaded.error} onRetry={() => void loaded.refresh()}>
+      <div className={STACK}>
+        <SettingsGroup title={t.title} description={t.description}>
+          <SettingsSwitch label={t.enabled} hint={t.enabledHint} checked={draft.enabled} disabled={busy} onChange={(enabled) => set({ enabled })} />
           {draft.enabled && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <TextField label={t.name} placeholder={t.namePlaceholder} maxLength={60} value={draft.name ?? ""} onChange={(e) => set({ name: e.target.value })} />
-              <TextField label={t.shortName} hint={t.shortNameHint} maxLength={12} value={draft.shortName ?? ""} onChange={(e) => set({ shortName: e.target.value })} />
-              <TextField label={t.icon} hint={t.iconHint} dir="ltr" type="url" value={draft.iconUrl ?? ""} onChange={(e) => set({ iconUrl: e.target.value })} />
-              <ColorField label={t.color} hint={t.colorHint} value={draft.themeColor ?? ""} onChange={(hex) => set({ themeColor: hex })} />
-            </div>
+            <>
+              <InputRow label={t.name} placeholder={t.namePlaceholder} maxLength={60} value={draft.name ?? ""} disabled={busy} onChange={(e) => set({ name: e.target.value })} />
+              <InputRow label={t.shortName} hint={t.shortNameHint} maxLength={12} value={draft.shortName ?? ""} disabled={busy} onChange={(e) => set({ shortName: e.target.value })} />
+              <InputRow label={t.icon} hint={t.iconHint} dir="ltr" type="url" inputMode="url" value={draft.iconUrl ?? ""} disabled={busy} onChange={(e) => set({ iconUrl: e.target.value })} />
+              <GroupBlock>
+                <ColorField label={t.color} hint={t.colorHint} value={draft.themeColor ?? ""} onChange={(hex) => set({ themeColor: hex })} />
+              </GroupBlock>
+            </>
           )}
-          {error && <Alert variant="danger">{error}</Alert>}
-          <div className="text-end">
-            <Button type="button" className="min-h-11" disabled={busy} onClick={() => void save()}>
-              {busy ? t.saving : t.save}
-            </Button>
-          </div>
-        </div>
-      </DataState>
-    </Section>
+        </SettingsGroup>
+        <SaveBar
+          dirty={dirty}
+          saving={busy}
+          onSave={() => void save()}
+          onDiscard={() => {
+            setDraft(loaded.data ?? EMPTY);
+            setError(null);
+          }}
+          saveLabel={t.save}
+          savingLabel={t.saving}
+          message={
+            error ? (
+              <span role="alert" className="text-danger">
+                {error}
+              </span>
+            ) : undefined
+          }
+        />
+      </div>
+    </GroupState>
   );
 }

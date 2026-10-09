@@ -1,6 +1,6 @@
 import { useId, useMemo, useState, type FormEvent } from "react";
-import { Gift, Search } from "lucide-react";
-import { Alert, Button, Card, Input, Spinner } from "@store-builder/ui";
+import { IconGift, IconSearch } from "@/components/icons";
+import { Alert, Button, Input, Spinner } from "@store-builder/ui";
 import {
   GIFT_CARD_MAX_PRODUCTS,
   giftCardSettingsGet,
@@ -14,6 +14,7 @@ import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { countOf, pluralOf } from "@/lib/plural";
 import { fmt, useCommon, useT } from "@/i18n/LocaleContext";
+import { AccordionSection } from "@/components/Accordion";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/Toast";
 import { GIFT_CARD_STRINGS } from "./giftCardStrings";
@@ -30,8 +31,9 @@ function parseDays(raw: string): number | null | undefined {
 /**
  * Gift cards → "Products sold as gift cards" (GET/PUT /gift-cards/settings):
  * which products issue a card per piece sold, worth its price, and how long a
- * bought card stays valid. Folded to one line; the choice is made in a dialog
- * with the store's products and a search.
+ * bought card stays valid. A section that folds to one row saying what is set
+ * («٣ منتجات · صالح لمدة ٣٦٥ يوم»); the choice is made in a sheet with the
+ * store's products and a search.
  */
 export function GiftCardSettingsCard() {
   const t = useT(GIFT_CARD_STRINGS);
@@ -47,28 +49,29 @@ export function GiftCardSettingsCard() {
   const complete = catalog.data ? catalog.data.nextCursor === null : false;
   const [editing, setEditing] = useState(false);
 
+  const frame = { title: t.settingsTitle, icon: IconGift, persistKey: "gift-cards:sold-as" };
+
   if (settings.loading) {
     return (
-      <Card className="p-4">
+      <AccordionSection {...frame} summary={t.settingsLoading}>
         <div role="status" className="flex min-h-11 items-center gap-2 text-sm text-ink-soft">
           <Spinner className="size-5" role="presentation" aria-hidden="true" aria-label={undefined} />
           {t.settingsLoading}
         </div>
-      </Card>
+      </AccordionSection>
     );
   }
 
   if (settings.error || !settings.data) {
     return (
-      <Card className="p-4">
-        <h2 className="text-sm font-semibold text-ink">{t.settingsTitle}</h2>
-        <div role="alert" className="mt-2 flex flex-wrap items-center gap-3">
+      <AccordionSection {...frame} summary={errorMessage(settings.error)}>
+        <div role="alert" className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-danger">{errorMessage(settings.error)}</p>
-          <Button variant="outline" size="sm" className="min-h-11" onClick={() => void settings.refresh()}>
+          <Button variant="outline" size="sm" className="min-h-11 rounded-full px-4" onClick={() => void settings.refresh()}>
             {common.retry}
           </Button>
         </div>
-      </Card>
+      </AccordionSection>
     );
   }
 
@@ -78,14 +81,13 @@ export function GiftCardSettingsCard() {
   const validityLine = saved.validityDays ? fmt(t.validFor, { days: countOf("day", saved.validityDays) }) : t.noEnd;
 
   return (
-    <Card className="p-4">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <Gift className="size-4 shrink-0 text-ink-soft" aria-hidden />
-        {t.settingsTitle}
-      </h2>
-      <p className="mt-0.5 text-xs text-ink-soft">{t.settingsHint}</p>
+    <AccordionSection
+      {...frame}
+      summary={saved.productIds.length === 0 ? t.noProductsSelected : `${pluralOf(t, "products", saved.productIds.length)} · ${validityLine}`}
+    >
+      <p className="text-[13px] leading-5 text-ink-soft">{t.settingsHint}</p>
 
-      <div className="mt-3 flex items-center justify-between gap-3 rounded-[var(--radius)] bg-paper-sunken px-3 py-2">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[1rem] bg-paper-sunken px-3.5 py-2.5">
         <div className="min-w-0">
           {saved.productIds.length === 0 ? (
             <p className="text-sm text-ink-soft">{t.noProductsSelected}</p>
@@ -106,7 +108,7 @@ export function GiftCardSettingsCard() {
             </>
           )}
         </div>
-        <Button type="button" variant="outline" className="min-h-11 shrink-0" onClick={() => setEditing(true)}>
+        <Button type="button" variant="outline" className="min-h-11 shrink-0 rounded-full px-4" onClick={() => setEditing(true)}>
           {saved.productIds.length > 0 ? t.changeProducts : t.chooseProducts}
         </Button>
       </div>
@@ -126,7 +128,7 @@ export function GiftCardSettingsCard() {
           toast.success(t.settingsSaved);
         }}
       />
-    </Card>
+    </AccordionSection>
   );
 }
 
@@ -215,10 +217,10 @@ function SettingsDialog({
       description={t.settingsHint}
       footer={
         <>
-          <Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={onClose}>
+          <Button type="button" variant="outline" className="rounded-full px-5" disabled={saving} onClick={onClose}>
             {t.cancel}
           </Button>
-          <Button type="submit" form={formId} className="min-h-11" disabled={saving}>
+          <Button type="submit" form={formId} className="rounded-full px-5" disabled={saving}>
             {saving ? t.settingsSaving : t.settingsSave}
           </Button>
         </>
@@ -238,7 +240,7 @@ function SettingsDialog({
           ) : (
             <>
               <div className="relative">
-                <Search aria-hidden className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" />
+                <IconSearch aria-hidden className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" />
                 <Input
                   type="search"
                   aria-label={t.filterProducts}

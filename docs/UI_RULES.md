@@ -11,9 +11,12 @@ extend the existing project conventions, not the lane feature assignments.
 3. **Use semantic tokens.** Colours come from the host's CSS. Do not duplicate
    colour constants in TypeScript or paste screenshots' colour values into
    page code. Decorative `line` and interactive `line-strong` are different.
-4. **Keep information readable.** Use opaque Section/Card for business data,
-   prices, charts, long text, long forms and the editor canvas. Limit Glass
-   to reviewed navigation, overlays and secondary floating controls.
+4. **Keep information readable.** In the merchant dashboard, cards and tables
+   are glass sheets through one layer (`liquid-glass.css`, see UI_SYSTEM).
+   Never add glass, blur or translucency page by page: use Section/Card and
+   the layer reaches it. Text stays at 4.5:1 on the composed result; blur
+   only where content passes beneath a surface. The editor canvas, the
+   storefront and everything outside the dashboard shell stay opaque.
 5. **Keep the prototype scoped.** `/design-system` is DEV only. No API calls,
    auth bypass for product screens, navigation-registry entry, merchant fixture
    imports or automatic production rollout.

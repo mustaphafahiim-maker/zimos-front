@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ChevronDown } from "lucide-react";
-import { Alert, Button, Card, CardContent } from "@store-builder/ui";
+import { IconArchive, IconSliders } from "@/components/icons";
+import { Alert, Button, cn } from "@store-builder/ui";
 import {
   isApiErrorCode,
   type CreateProductPayload,
@@ -18,6 +18,9 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { majorToMinor, minorToMajorInput } from "@/lib/format";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
+import { SaveBar } from "@/components/SaveBar";
+import { AccordionSection } from "@/components/Accordion";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
 import { Field, TextField } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
 import { WeightInput } from "@/components/WeightInput";
@@ -28,6 +31,10 @@ import { useCatalogLabels } from "../catalogLabels";
 import { ProductImagesSection } from "./ProductImagesSection";
 import { AiDescriptionButton } from "./AiDescriptionButton";
 import { TrackQuantityField } from "./TrackQuantityField";
+import { ProductPageCard } from "./ProductPageCard";
+import { SwitchTrack } from "../variants/SwitchTrack";
+import { SectionSaveBar } from "../product/saveQueue";
+import type { ProductStatusControl } from "../product/productStatus";
 
 const STATUSES: ProductStatus[] = ["draft", "active", "archived"];
 const TYPES: ProductType[] = ["physical", "digital", "service"];
@@ -36,12 +43,20 @@ const SHIPPING_MODES: ProductShippingMode[] = ["standard", "free", "extra_fee"];
 const STRINGS = {
   en: {
     basics: "Basics",
+    basicsHint: "The name and the words shoppers read, and how the product ships.",
+    archive: "Archive the product",
+    archiveHint: "It leaves the store and the list. You can bring it back at any time.",
+    archived: "This product is archived. Choose Active or Draft above to bring it back.",
     essentials: "The essentials",
     moreDetails: "More details (optional)",
     moreDetailsHint: "Description, type, SKU, weight, tags and shipping",
     publish: "Show it in the store now",
     publishOn: "Shoppers can see and order it as soon as you save.",
     publishOff: "Saved as a draft: nobody sees it until you show it.",
+    publishSoldOut: "It will show in the store as sold out, because the quantity is 0. Type the quantity you have above.",
+    soldOutNote: "Quantity is 0: the store will show it as sold out",
+    unsavedBasics: "Basics not saved yet",
+    unsavedNew: "This product isn't saved yet",
     stockZero: "Left at 0, the store shows it as sold out.",
     name: "Name",
     namePlaceholder: "Product name",
@@ -91,13 +106,21 @@ const STRINGS = {
     extraFeeInvalid: "Enter an amount greater than 0.",
   },
   ar: {
-    basics: "البيانات الأساسية",
+    basics: "الأساسيات",
+    basicsHint: "الاسم والكلام اللي العميل بيقراه، وطريقة شحن المنتج.",
+    archive: "أرشف المنتج",
+    archiveHint: "بيختفي من المتجر ومن القايمة، وتقدر ترجّعه في أي وقت.",
+    archived: "المنتج ده مؤرشف. اختار «شغّال» أو «مسودة» فوق عشان ترجّعه.",
     essentials: "الأساسي",
     moreDetails: "تفاصيل تانية (اختياري)",
     moreDetailsHint: "الوصف، النوع، الـ SKU، الوزن، التاجات والشحن",
     publish: "اعرضه في المتجر على طول",
     publishOn: "العملاء هيشوفوه ويطلبوه أول ما تحفظ.",
     publishOff: "هيتحفظ مسودة: محدش هيشوفه لحد ما تعرضه.",
+    publishSoldOut: "هيتعرض في المتجر بس هيظهر إنه خلص، عشان الكمية صفر. اكتب الكمية اللي عندك فوق.",
+    soldOutNote: "الكمية صفر: المنتج هيظهر في المتجر إنه خلص",
+    unsavedBasics: "البيانات الأساسية لسه ما اتحفظتش",
+    unsavedNew: "المنتج لسه ما اتحفظش",
     stockZero: "لو سبتها صفر، المنتج هيظهر في المتجر إنه خلص.",
     name: "الاسم",
     namePlaceholder: "اسم المنتج",
@@ -165,9 +188,14 @@ interface Props {
   product?: Product;
   onCreated?: (product: Product) => void;
   onSaved?: () => void;
+  /**
+   * Edit mode: the status is changed in place by the page (the «شغّال / مسودة» switch, with Undo).
+   * The form then has no status field of its own and sends the status the page shows.
+   */
+  statusControl?: ProductStatusControl;
 }
 
-export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props) {
+export function ProductDetailsForm({ mode, product, onCreated, onSaved, statusControl }: Props) {
   const t = useT(STRINGS);
   const labels = useCatalogLabels();
   const workspaceId = useWorkspaceId();
@@ -180,10 +208,11 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
 
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
-  // A new product goes on sale when saved (the setup guide promises name + price + photo is
-  // enough); a visible switch keeps "save as draft" one tap away (audit N-04).
+  // A new product goes on sale when saved (the setup guide promises name + price + quantity +
+  // photo is enough); a visible switch keeps "save as draft" one tap away (audit N-04).
   const initialStatus: ProductStatus = product?.status ?? (mode === "create" ? "active" : "draft");
-  const [status, setStatus] = useState<ProductStatus>(initialStatus);
+  const [ownStatus, setStatus] = useState<ProductStatus>(initialStatus);
+  const status = statusControl?.status ?? ownStatus;
   const [productType, setProductType] = useState<ProductType>(product?.productType ?? "physical");
   const [tags, setTags] = useState((product?.tags ?? []).join(", "));
   const [shippingMode, setShippingMode] = useState<ProductShippingMode>(product?.shippingMode ?? "standard");
@@ -223,13 +252,21 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
     });
   }
 
-  // Leaving with typed but unsaved basics asks first (tab close / reload).
-  const initialBasics = useRef(
-    JSON.stringify([product?.name ?? "", product?.description ?? "", initialStatus, (product?.tags ?? []).join(", ")])
-  );
-  const dirty =
-    JSON.stringify([name, description, status, tags]) !== initialBasics.current ||
-    (isCreate && (price !== "" || media.length > 0));
+  // Leaving with typed but unsaved basics asks first (tab close / reload), and the save bar shows.
+  // Everything the basics save sends is compared; a fee typed under another shipping mode is not sent.
+  const basicsNow = JSON.stringify([
+    name,
+    description,
+    // Changed in place by the page when it is controlled: not an unsaved edit of this form.
+    statusControl ? "" : status,
+    tags,
+    productType,
+    tracked,
+    shippingMode,
+    shippingMode === "extra_fee" ? extraFee : "",
+  ]);
+  const initialBasics = useRef(basicsNow);
+  const dirty = basicsNow !== initialBasics.current || (isCreate && (price !== "" || media.length > 0));
   useEffect(() => {
     if (!dirty || saving) return;
     const warn = (e: BeforeUnloadEvent) => {
@@ -241,6 +278,22 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
   }, [dirty, saving]);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // The new-product form tells the page's leave guard itself; the edit form does it through its save bar.
+  useReportDirty(isCreate && dirty && !saving);
+  // What "discard" puts back: the basics as they were last saved.
+  const savedBasics = useRef({ name, description, productType, tags, shippingMode, extraFee, trackInventory });
+  function discard() {
+    const was = savedBasics.current;
+    setName(was.name);
+    setDescription(was.description);
+    setProductType(was.productType);
+    setTags(was.tags);
+    setShippingMode(was.shippingMode);
+    setExtraFee(was.extraFee);
+    setTrackInventory(was.trackInventory);
+    setFieldErrors({});
+    setFormError(null);
+  }
   const [mediaError, setMediaError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
@@ -318,7 +371,8 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
         onCreated?.(created.product);
       } else if (product) {
         await apiClient.updateProduct(workspaceId, product.id, basics);
-        initialBasics.current = JSON.stringify([name, description, status, tags]);
+        initialBasics.current = basicsNow;
+        savedBasics.current = { name, description, productType, tags, shippingMode, extraFee, trackInventory };
         toast.success(t.savedToast);
         onSaved?.();
       }
@@ -410,82 +464,97 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
 
   if (!isCreate) {
     return (
-      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <h2 className="font-display text-lg font-medium text-ink">{t.basics}</h2>
-              {formError && <Alert variant="danger">{formError}</Alert>}
-              {nameField}
-              {descriptionFields}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label={t.status} error={fieldErrors.status}>
-                  {({ id }) => (
-                    <Select id={id} value={status} onChange={(e) => setStatus(e.target.value as ProductStatus)}>
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {labels.status(s)}
-                        </option>
-                      ))}
-                    </Select>
-                  )}
-                </Field>
-                {typeField}
+      <ProductPageCard title={t.basics} description={t.basicsHint}>
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+          {formError && <Alert variant="danger">{formError}</Alert>}
+          {nameField}
+          {descriptionFields}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {typeField}
+            {!statusControl && (
+              <Field label={t.status} error={fieldErrors.status}>
+                {({ id }) => (
+                  <Select id={id} value={status} onChange={(e) => setStatus(e.target.value as ProductStatus)}>
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {labels.status(s)}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+            )}
+          </div>
+          {trackField}
+          {tagsField}
+          {shippingFields}
+          {/* Archiving is the third status: it stays here, one tap away, and can be undone from its toast. */}
+          {statusControl &&
+            (statusControl.status === "archived" ? (
+              <p role="status" className="zimos-product-note rounded-[var(--radius)] bg-paper-sunken px-3.5 py-3 text-sm leading-6 text-ink-soft">
+                {t.archived}
+              </p>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line pt-3">
+                <p className="min-w-0 flex-1 basis-56 text-[13px] leading-5 text-ink-soft">{t.archiveHint}</p>
+                <Button type="button" variant="ghost" className="min-h-11 shrink-0 text-ink-soft hover:text-danger" onClick={() => statusControl.change("archived")}>
+                  <IconArchive className="size-4" aria-hidden />
+                  {t.archive}
+                </Button>
               </div>
-              {trackField}
-              {tagsField}
-              {shippingFields}
-            </div>
-          </CardContent>
-        </Card>
-        <div className="flex justify-end">
-          <Button type="submit" className="min-h-11" disabled={saving || imagesUploading > 0}>
-            {submitLabel}
-          </Button>
-        </div>
-      </form>
+            ))}
+          {/* The page's one save bar: it names the section and stays in reach wherever the page is scrolled. */}
+          <SectionSaveBar
+            section={t.basics}
+            dirty={dirty}
+            saving={saving}
+            error={formError}
+            onSave={() => formRef.current?.requestSubmit()}
+            onDiscard={discard}
+          />
+        </form>
+      </ProductPageCard>
     );
   }
 
   // New product: name → price → photo first (audit N-04), everything optional folded below.
   const stockValueNow = stock.trim() === "" ? 0 : Number(stock);
+  // On sale with nothing to sell: the store would show it as sold out, so the screen must not promise orders.
+  const soldOutOnPublish = status === "active" && tracked && stockValueNow === 0 && !allowOverselling;
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            {/* The page header already says a name, a price and a photo are enough. */}
-            <h2 className="font-display text-lg font-medium text-ink">{t.essentials}</h2>
-            {formError && <Alert variant="danger">{formError}</Alert>}
-            {nameField}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <MoneyInput currency={currency} label={t.price} required value={price} onChange={setPrice} error={fieldErrors.price} />
-              <MoneyInput
-                currency={currency}
-                label={t.compareAt}
-                value={compareAt}
-                onChange={setCompareAt}
-                error={fieldErrors.compareAt}
-                hint={t.compareAtHint}
-              />
-            </div>
-            {tracked && (
-              <TextField
-                label={t.stock}
-                type="number"
-                min={0}
-                step={1}
-                inputMode="numeric"
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
-                error={fieldErrors.stock}
-                hint={stockValueNow === 0 ? t.stockZero : t.stockHint}
-                className="sm:max-w-[calc(50%-0.5rem)]"
-              />
-            )}
+    <form ref={formRef} onSubmit={handleSubmit} className="zimos-product-new flex flex-col gap-4 md:gap-5">
+      {/* The page header already says a name, a price, a quantity and a photo are enough. */}
+      <ProductPageCard title={t.essentials}>
+        <div className="space-y-4">
+          {formError && <Alert variant="danger">{formError}</Alert>}
+          {nameField}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <MoneyInput currency={currency} label={t.price} required value={price} onChange={setPrice} error={fieldErrors.price} />
+            <MoneyInput
+              currency={currency}
+              label={t.compareAt}
+              value={compareAt}
+              onChange={setCompareAt}
+              error={fieldErrors.compareAt}
+              hint={t.compareAtHint}
+            />
           </div>
-        </CardContent>
-      </Card>
+          {tracked && (
+            <TextField
+              label={t.stock}
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              error={fieldErrors.stock}
+              hint={stockValueNow === 0 ? t.stockZero : t.stockHint}
+              className="sm:max-w-[calc(50%-0.5rem)]"
+            />
+          )}
+        </div>
+      </ProductPageCard>
 
       <ProductImagesSection
         mode="create"
@@ -495,20 +564,9 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
         onUploadingChange={setImagesUploading}
       />
 
-      {/* Still mounted while closed, so nothing typed is lost. */}
-      <details
-        open={moreOpen}
-        onToggle={(e) => setMoreOpen(e.currentTarget.open)}
-        className="group rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line"
-      >
-        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 sm:px-5 [&::-webkit-details-marker]:hidden">
-          <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-ink">{t.moreDetails}</span>
-            <span className="block text-xs text-ink-soft">{t.moreDetailsHint}</span>
-          </span>
-          <ChevronDown className="size-5 shrink-0 text-ink-soft transition-transform group-open:rotate-180" aria-hidden />
-        </summary>
-        <div className="space-y-4 border-t border-line px-4 py-4 sm:px-5">
+      {/* Still mounted while folded, so nothing typed is lost; an error inside opens it. */}
+      <AccordionSection title={t.moreDetails} summary={t.moreDetailsHint} icon={IconSliders} open={moreOpen} onOpenChange={setMoreOpen} keepMounted>
+        <div className="space-y-4 pt-1">
           {descriptionFields}
           <div className="grid gap-4 sm:grid-cols-2">{typeField}</div>
           {trackField}
@@ -534,10 +592,10 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
             )}
           </div>
           {tracked && (
-            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
+            <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink">
               <input
                 type="checkbox"
-                className="size-4 accent-primary"
+                className="size-5 shrink-0 accent-primary"
                 checked={allowOverselling}
                 onChange={(e) => setAllowOverselling(e.target.checked)}
               />
@@ -547,29 +605,53 @@ export function ProductDetailsForm({ mode, product, onCreated, onSaved }: Props)
           {tagsField}
           {shippingFields}
         </div>
-      </details>
+      </AccordionSection>
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-[var(--radius-card)] bg-paper-raised px-4 py-3 shadow-[var(--shadow-card)] ring-1 ring-line sm:px-5">
+      {/* The publish switch: a whole 56px row to press, the switch at its end. */}
+      <label
+        data-slot="card"
+        className="zimos-product-publish relative flex min-h-14 cursor-pointer items-center gap-3 rounded-[var(--radius-card)] bg-card px-4 py-3 shadow-[var(--shadow-card)] ring-1 ring-line sm:px-5"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-ink">{t.publish}</span>
+          <span
+            id="product-publish-hint"
+            className={cn("block text-[13px] leading-5", soldOutOnPublish ? "font-medium text-accent-dark" : "text-ink-soft")}
+          >
+            {status !== "active" ? t.publishOff : soldOutOnPublish ? t.publishSoldOut : t.publishOn}
+          </span>
+        </span>
         <input
           type="checkbox"
-          className="mt-1 size-5 shrink-0 accent-primary"
+          role="switch"
+          className="peer absolute inset-0 m-0 size-full cursor-pointer appearance-none opacity-0"
           checked={status === "active"}
           onChange={(e) => setStatus(e.target.checked ? "active" : "draft")}
           aria-describedby="product-publish-hint"
         />
-        <span className="min-w-0">
-          <span className="block text-[15px] font-semibold text-ink">{t.publish}</span>
-          <span id="product-publish-hint" className="block text-sm text-ink-soft">
-            {status === "active" ? t.publishOn : t.publishOff}
-          </span>
-        </span>
+        <SwitchTrack
+          on={status === "active"}
+          className="peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary peer-active:[&>span]:scale-[0.92]"
+        />
       </label>
 
-      <div className="flex justify-end">
-        <Button type="submit" className="min-h-11 w-full sm:w-auto" disabled={saving || imagesUploading > 0}>
-          {submitLabel}
-        </Button>
-      </div>
+      {/* The bar is in reach from the first field, so it carries the sold-out warning the switch above also gives. */}
+      {dirty ? (
+        <SaveBar
+          dirty={dirty}
+          saving={saving}
+          disabled={imagesUploading > 0}
+          message={soldOutOnPublish ? <span className="text-accent-dark">{t.soldOutNote}</span> : t.unsavedNew}
+          saveLabel={imagesUploading > 0 ? t.uploading : t.create}
+          savingLabel={t.saving}
+        />
+      ) : (
+        <div className="flex justify-end">
+          <Button type="submit" className="min-h-11 w-full sm:w-auto" disabled={saving || imagesUploading > 0}>
+            {submitLabel}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

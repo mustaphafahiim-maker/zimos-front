@@ -142,6 +142,9 @@ export interface OrderSnapshot {
   productIds: string[];
   /** The pixels' ids for the lines (lib/contentId): the feed's item ids. */
   contentIds?: string[];
+  /** How the order is paid and — for one paid later on account (handoff 229) — when it is due: the thank-you page says so. */
+  paymentMethod?: string;
+  paymentDueAt?: string | null;
 }
 
 export function snapshotFromOrder(order: Order, phone: string): OrderSnapshot {
@@ -164,6 +167,8 @@ export function snapshotFromOrder(order: Order, phone: string): OrderSnapshot {
     })),
     productIds: (order.items ?? []).map((i) => i.productId).filter((id): id is string => !!id),
     contentIds: (order.items ?? []).map((i) => lineContentId(i)).filter((id): id is string => !!id),
+    paymentMethod: order.paymentMethod,
+    paymentDueAt: (order as { paymentDueAt?: string | null }).paymentDueAt ?? null,
   };
 }
 

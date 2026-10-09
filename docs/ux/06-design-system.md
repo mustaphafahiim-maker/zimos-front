@@ -122,10 +122,17 @@ Touch targets ≥ 44 px (buttons are `h-11` on phones, `h-10` desktop).
 
 ## 5. Glass
 
-The 2026-10-04 Glass frame is retired on `ux-redesign`: the owner's redesign
-brief asks for a light neutral palette with very soft shadows. The glass
-classes stay in the CSS (so nothing breaks) but resolve to opaque surfaces.
-`data-glass` is no longer needed.
+The 2026-10-04 Glass frame was retired on `ux-redesign` (2026-10-06): the
+owner's redesign brief asks for a light neutral palette with very soft
+shadows. The glass classes stay in `index.css` (so nothing breaks) and resolve
+to opaque surfaces there.
+
+On 2026-10-07 the owner asked for a liquid glass look again, tables first. It
+is a separate, removable layer over these calm surfaces
+(`apps/merchant-dashboard/src/liquid-glass.css`, described in
+`docs/UI_SYSTEM.md`). The tokens and components in this document are
+unchanged: they are what the dashboard shows with `data-glass="off"` on
+`<html>`, and principle 4's contrast floor holds on the glass as well.
 
 ## 6. Voice (Egyptian Arabic)
 

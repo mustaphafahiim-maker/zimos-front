@@ -1,37 +1,45 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { Button, Input, Label, Alert } from "@store-builder/ui";
+import { Button, Alert } from "@store-builder/ui";
+import { IconEmailOpen } from "@/components/icons";
+import { accountPasswordResetRequest } from "@store-builder/api-client";
 import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { AuthBackdrop } from "@/components/AuthBackdrop";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { errorMessageNow } from "@/lib/errorMessages";
+import { AUTH_SUBMIT, AuthField, AuthHeading, AuthLink, AuthShell } from "./AuthShell";
 
 const STRINGS = {
   en: {
-    title: "Reset your password",
-    intro: "Enter your email and we'll send you a link to set a new password.",
-    sent: "If this email is registered with us, a link to set a new password will arrive within minutes.",
+    title: "Forgot your password?",
+    intro: "Enter your email and we'll send you a link to set a new one.",
+    sentTitle: "Check your email",
+    sent: "If this email is registered with us, a link to set a new password will arrive within minutes. The link is valid for 30 minutes and works once.",
+    rateLimited: "Too many requests from this network — try again in a while",
+    unavailable: "Password reset isn't available right now — try again shortly",
     email: "Email",
-    send: "Send reset link",
+    send: "Send me the link",
     sending: "Sending…",
-    back: "← Back to sign in",
+    back: "Back to sign in",
     failed: "Something unexpected went wrong. Try again in a moment.",
   },
   ar: {
-    title: "إعادة تعيين كلمة المرور",
-    intro: "اكتب بريدك الإلكتروني وسنرسل لك رابطًا لتعيين كلمة مرور جديدة.",
-    sent: "إذا كان هذا البريد الإلكتروني مسجّلًا لدينا، سيصلك رابط لتعيين كلمة مرور جديدة خلال دقائق.",
-    email: "البريد الإلكتروني",
-    send: "إرسال رابط إعادة التعيين",
+    title: "نسيت كلمة السر؟",
+    intro: "اكتب إيميلك وهنبعتلك لينك تعمل بيه كلمة سر جديدة.",
+    sentTitle: "بص على إيميلك",
+    sent: "إذا كان هذا البريد الإلكتروني مسجّلًا لدينا، سيصلك رابط لتعيين كلمة مرور جديدة خلال دقائق. الرابط صالح لمدة 30 دقيقة ولمرة واحدة.",
+    rateLimited: "طلبات كتير من الشبكة دي — جرّب بعد شوية",
+    unavailable: "إعادة تعيين كلمة المرور مش متاحة دلوقتي — جرّب كمان شوية",
+    email: "الإيميل",
+    send: "ابعتلي اللينك",
     sending: "بنبعت…",
-    back: "← العودة لتسجيل الدخول",
-    failed: "حدث خطأ غير متوقع. حاول مرة أخرى بعد قليل.",
+    back: "ارجع لتسجيل الدخول",
+    failed: "حصلت مشكلة مش متوقعة. جرّب تاني بعد شوية.",
   },
 } satisfies Messages;
 
 export function ForgotPasswordPage() {
   const t = useT(STRINGS);
+  const { locale } = useLocale();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +50,8 @@ export function ForgotPasswordPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await apiClient.requestPasswordReset(email);
+      // `locale`: the language of the email (handoff 331).
+      await accountPasswordResetRequest(apiClient, email, locale);
       // The backend returns the same response whether or not the address is
       // registered, so any resolved call just means "show the notice".
       setSent(true);
@@ -50,7 +59,13 @@ export function ForgotPasswordPage() {
       // Only a genuine server-side failure lands here (the endpoint never
       // rejects a merely-unknown email) — surface it and let them retry.
       setError(
-        err instanceof ApiError ? errorMessageNow(err) : t.failed
+        err instanceof ApiError
+          ? err.status === 429
+            ? t.rateLimited
+            : err.status === 503
+              ? t.unavailable
+              : errorMessageNow(err)
+          : t.failed
       );
     } finally {
       setSubmitting(false);
@@ -58,61 +73,51 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="auth-glass">
-      <AuthBackdrop />
-      <div className="auth-glass-stage">
-        <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
+    <AuthShell>
+      {sent ? (
+        <>
+          <AuthHeading title={t.sentTitle} icon={<IconEmailOpen aria-hidden />} tone="success">
+            {t.sent}
+          </AuthHeading>
+          <AuthLink to="/login" back className="mt-4">
+            {t.back}
+          </AuthLink>
+        </>
+      ) : (
+        <>
+          <AuthHeading title={t.title}>{t.intro}</AuthHeading>
 
-          {sent ? (
-            <>
-              <Alert variant="success" className="mt-6">
-                {t.sent}
-              </Alert>
-              <Link
-                to="/login"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                {t.back}
-              </Link>
-            </>
-          ) : (
-            <>
-              <p className="mt-2 text-sm text-ink-soft">
-                {t.intro}
-              </p>
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            {error && <Alert variant="danger">{error}</Alert>}
 
-              <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-                {error && <Alert variant="danger">{error}</Alert>}
+            <AuthField
+              label={t.email}
+              fieldId="email"
+              name="email"
+              type="email"
+              inputMode="email"
+              dir="ltr"
+              autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="send"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="email">{t.email}</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                  />
-                </div>
+            <Button type="submit" className={AUTH_SUBMIT} disabled={submitting}>
+              {submitting ? t.sending : t.send}
+            </Button>
+          </form>
 
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? t.sending : t.send}
-                </Button>
-              </form>
-
-              <Link
-                to="/login"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                {t.back}
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+          <AuthLink to="/login" back className="mt-4">
+            {t.back}
+          </AuthLink>
+        </>
+      )}
+    </AuthShell>
   );
 }

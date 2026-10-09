@@ -14,6 +14,13 @@ const TEXT = {
     minutes: "min",
     seconds: "sec",
     choose: (name: string) => `Choose ${name}`,
+    // The line under the options, while one is still to be chosen.
+    pick: (name: string) => `Choose ${name}`,
+    // The lines under the buy button, and the page's skeleton.
+    trust: "Why order from us",
+    loading: "Loading the product…",
+    // The phone's bottom bar, named for a screen reader.
+    bar: "Quick order",
     soldOut: "sold out",
     buyNow: "Buy now",
     buying: "One moment…",
@@ -28,6 +35,10 @@ const TEXT = {
     minutes: "دقيقة",
     seconds: "ثانية",
     choose: (name: string) => `اختر ${name}`,
+    pick: (name: string) => `اختار ${name}`,
+    trust: "ليه تطلب مننا",
+    loading: "بنحمّل المنتج…",
+    bar: "اطلب بسرعة",
     soldOut: "نفد",
     buyNow: "اشترِ الآن",
     buying: "لحظة واحدة…",

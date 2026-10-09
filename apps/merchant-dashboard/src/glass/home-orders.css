@@ -1,0 +1,173 @@
+/* «المنتجات» and «آخر الأوردرات» on the home, and the order Quick Look — pages/home/today/ProductsCards.tsx, LatestOrders.tsx, OrderQuickLook.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   Nothing here is blurred: the rows and the chips lie on a card in the page flow, and
+   the pane of the preview is drawn by sheet.css. The selectors are the data-slot hooks
+   of the components and never lean on ".glass-app main", because the chips and the
+   thumbnails are drawn in the preview too, which is portalled outside it. */
+:root:not([data-glass="off"]) {
+  /* How much of a tinted chip is the tint; the rest lets the pane beneath through.
+     One number, so the block at the end of this file can turn every chip solid. */
+  --ho-alpha: 90%;
+  /* How much of its tone goes into a chip, over the raised paper. */
+  --ho-mix: 14%;
+  /* An unlit dot of the ten. */
+  --ho-dot: color-mix(in srgb, var(--color-primary-dark) 16%, transparent);
+
+  &.dark {
+    --ho-mix: 18%;
+    --ho-dot: rgb(255 255 255 / 0.16);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Rows. A row has no fill of its own: the card is the pane. Under
+   * the pointer, the keyboard or a finger it lights up as a pill of
+   * brighter glass with a lit rim, the same tint a table row takes.
+   * Ink on it is the ink of the card, on a whiter ground: nothing
+   * loses contrast by being pointed at.
+   * ---------------------------------------------------------------- */
+  a[data-slot="home-row"],
+  [data-slot="home-order-row"] {
+    transition:
+      background-color var(--dur-fade) var(--ease-out),
+      box-shadow var(--dur-fade) var(--ease-out);
+  }
+  @media (hover: hover) {
+    a[data-slot="home-row"]:hover,
+    [data-slot="home-order-row"]:hover {
+      background-color: var(--lg-row-lit);
+      box-shadow: var(--lg-rim-line);
+    }
+  }
+  a[data-slot="home-row"]:is(:focus-visible, :active),
+  [data-slot="home-order-row"]:has([role="button"]:is(:focus-visible, :active)) {
+    background-color: var(--lg-row-lit);
+    box-shadow: var(--lg-rim-line);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    a[data-slot="home-row"],
+    [data-slot="home-order-row"] {
+      transition: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The 36px chip a row or a card title starts with: a drop of its
+   * tone over the pane, a lit top edge, and the deeper shade of the
+   * tone for the icon. It holds an icon, never words, so the measure
+   * is 3:1; the deeper shades give more than 4.5:1 on these tints
+   * (the same recipe as the call and WhatsApp pills in states.css).
+   * ---------------------------------------------------------------- */
+  [data-slot="home-chip"] {
+    --ho-tone: var(--color-primary);
+    --ho-ink: var(--lg-text-primary);
+    color: var(--ho-ink);
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--ho-tone) var(--ho-mix), var(--color-paper-raised)) var(--ho-alpha), transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      inset 0 0 0 1px color-mix(in srgb, var(--ho-tone) 12%, transparent);
+  }
+  [data-slot="home-chip"][data-tone="success"] {
+    --ho-tone: var(--color-success);
+    --ho-ink: var(--lg-text-success);
+  }
+  [data-slot="home-chip"][data-tone="warning"] {
+    --ho-tone: var(--color-accent);
+    --ho-ink: var(--color-accent-dark);
+  }
+  [data-slot="home-chip"][data-tone="danger"] {
+    --ho-tone: var(--color-danger);
+    --ho-ink: var(--lg-text-danger);
+  }
+  [data-slot="home-chip"][data-tone="neutral"] {
+    --ho-tone: var(--color-ink-soft);
+    --ho-ink: var(--lg-ink-soft);
+  }
+  &.dark [data-slot="home-chip"] {
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.12),
+      inset 0 0 0 1px color-mix(in srgb, var(--ho-tone) 24%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The rank medal of «الأكسب». The first wears the fill of the main
+   * action and of the current side-menu row: brand gradient, white
+   * figure, a glow of the brand under it. The second and third are
+   * the quiet brand chip, their figure in the deeper brand shade
+   * (5.3:1 on the light tint, 5.6:1 on the dark one, as worked out
+   * for the same recipe in states.css).
+   * ---------------------------------------------------------------- */
+  [data-slot="home-rank"] {
+    color: var(--lg-text-primary);
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--color-primary) var(--ho-mix), var(--color-paper-raised)) var(--ho-alpha), transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 16%, transparent);
+  }
+  &.dark [data-slot="home-rank"] {
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.12),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 28%, transparent);
+  }
+  [data-slot="home-rank"][data-rank="1"],
+  &.dark [data-slot="home-rank"][data-rank="1"] {
+    color: var(--lg-on-brand);
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.28),
+      var(--lg-brand-glow);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Ten dots, some of them lit: "4 of every 10 come back". Amber up
+   * to three, red from four. Decorative (the sentence beside them
+   * carries the number), so the unlit ones may be faint.
+   * ---------------------------------------------------------------- */
+  [data-slot="home-dots"] > i {
+    background-color: var(--ho-dot);
+  }
+  [data-slot="home-dots"] > i[data-on] {
+    background-color: var(--color-accent);
+  }
+  [data-slot="home-dots"][data-tone="danger"] > i[data-on] {
+    background-color: var(--color-danger);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Product pictures of an order, in the row and in the preview: the
+   * hairline takes the colour of the pane, and a picture that is
+   * missing is a small pane of its own instead of a solid box.
+   * ---------------------------------------------------------------- */
+  :is([data-slot="home-order-row"], [data-slot="order-peek"]) :is(img, span)[class~="border-line"] {
+    border-color: var(--lg-edge);
+  }
+  :is([data-slot="home-order-row"], [data-slot="order-peek"]) span[class~="border-line"][class~="bg-paper"] {
+    background-color: var(--lg-control);
+    color: var(--lg-ink-soft);
+  }
+  /* "+2": how many more products the order holds. Solid on purpose, it sits on a picture;
+     the ring of bright glass lifts it off whatever that picture is. */
+  [data-slot="home-order-more"] {
+    background-color: var(--color-ink);
+    color: var(--color-paper-raised);
+    box-shadow: 0 0 0 2px var(--lg-control-lit);
+  }
+
+  /* The hairlines between the blocks of the preview take the colour of its pane. */
+  [data-slot="order-peek"] [data-slot="order-peek-rule"] {
+    background-color: var(--lg-hairline);
+  }
+}
+
+/* The same preferences the off switch follows (see the end of liquid-glass.css):
+   if the attribute was not set, the tints of this file turn solid too. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root:not([data-glass="off"]),
+  :root:not([data-glass="off"]).dark {
+    --ho-alpha: 100%;
+    --ho-dot: var(--color-line-strong);
+  }
+}

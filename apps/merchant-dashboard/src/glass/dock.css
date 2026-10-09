@@ -1,0 +1,93 @@
+/* The phone dock — components/MobileTabBar.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables. */
+:root:not([data-glass="off"]) {
+  /* The dock floats over the page, and the page scrolls beneath it: the near-solid
+     bar fill with the page blurred behind, a hairline edge, the small-pane rim and
+     the soft light from the top. The drop shadow is what lifts it off the page. */
+  .zimos-dock {
+    border: 1px solid var(--lg-edge);
+    background-color: var(--lg-frost);
+    background-image: var(--lg-sheen);
+    -webkit-backdrop-filter: var(--lg-blur);
+    backdrop-filter: var(--lg-blur);
+    box-shadow: var(--lg-rim-line), var(--shadow-raised);
+  }
+
+  /* Where you are: the fill the current side-menu row and the main button share. */
+  .zimos-dock-pill[data-current] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28), var(--lg-brand-glow);
+  }
+  .zimos-dock-label[data-current] {
+    color: var(--lg-text-primary);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Refraction. The owner's reference dock (liquid-glass "GlassDock")
+   * bends what is behind it through an SVG turbulence + displacement
+   * filter: #lg-dock-distort, defined once inside the dock.
+   *
+   * It is switched on ONLY for a mouse with hover. A displacement filter
+   * runs in software, and under a dock it would run again on every
+   * scrolled frame: that costs a mid-range Android phone its 60fps. So
+   * touch devices get the same dock — same fill, same blur, same rim —
+   * without the refraction, and nobody scrolls slower for a nicety.
+   *
+   * How it is layered. A backdrop can only be read by a layer that does
+   * not sit inside another backdrop-filter, and the lens has to lie
+   * UNDER the fill. So here the dock itself keeps only its edge and its
+   * drop shadow, and hands the rest to .zimos-dock-lens (an empty layer
+   * behind the slots, clipped to the dock's shape): ::before is the
+   * lens, ::after the fill, the sheen and the rim on top of it. The lens
+   * reaches 1.25rem past the clip on every side, so the displacement
+   * (18px at most) never pulls an empty edge into view.
+   * ---------------------------------------------------------------- */
+  @media (hover: hover) and (pointer: fine) {
+    .zimos-dock {
+      background-color: transparent;
+      background-image: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      box-shadow: var(--shadow-raised);
+    }
+    .zimos-dock-lens {
+      display: block;
+    }
+    .zimos-dock-lens::before {
+      content: "";
+      position: absolute;
+      inset: -1.25rem;
+      -webkit-backdrop-filter: blur(3px);
+      backdrop-filter: blur(3px);
+      filter: url(#lg-dock-distort);
+    }
+    .zimos-dock-lens::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background-color: var(--lg-frost);
+      background-image: var(--lg-sheen);
+      box-shadow: var(--lg-rim-line);
+    }
+    /* The fill is solid for these two: nothing shows through, so nothing is bent. */
+    @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+      .zimos-dock-lens::before {
+        display: none;
+      }
+    }
+  }
+}
+
+/* The count on a slot pops in, and again each time the number changes
+   (the badge is keyed by its count). Outside the switch: it is motion, not
+   material, and the solid dock has it too. */
+@keyframes dock-badge-pop {
+  from {
+    transform: scale(0.6);
+  }
+}

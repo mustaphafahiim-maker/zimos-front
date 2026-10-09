@@ -112,7 +112,13 @@ export async function BuilderExtraElement({
     return (
       <div>
         <Title text={title} />
-        <ProductReviews workspaceId={workspaceId} productId={product.id} {...storefrontProductReviews(product)} formOnly />
+        <ProductReviews
+          workspaceId={workspaceId}
+          productId={product.id}
+          {...storefrontProductReviews(product)}
+          formOnly
+          formOpen={(product as { reviewFormOpen?: boolean }).reviewFormOpen !== false}
+        />
       </div>
     );
   }

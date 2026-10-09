@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
-import { Alert, Button, Card, CardContent, Input, Label } from "@store-builder/ui";
+import { IconDelete, IconPlus } from "@/components/icons";
+import { Alert, Button, Input, Label } from "@store-builder/ui";
 import {
   catalogUpdateProduct,
   resolveProductPageSettings,
@@ -15,6 +15,8 @@ import { useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { TextField } from "@/components/Field";
 import { LandingPagePicker } from "./LandingPagePicker";
+import { SectionSaveBar } from "../product/saveQueue";
+import { ProductPageCard } from "./ProductPageCard";
 
 /**
  * How the product's storefront page behaves (SPEC §7.3) plus the three small
@@ -24,7 +26,8 @@ import { LandingPagePicker } from "./LandingPagePicker";
 
 const STRINGS = {
   en: {
-    title: "Product page",
+    title: "Page settings",
+    settingsName: "Page settings",
     description: "How this product's page looks and sells in your store.",
     priority: "Display priority",
     priorityHint: "Higher numbers come first in listings. 0 is the default.",
@@ -72,7 +75,8 @@ const STRINGS = {
     discard: "Discard changes",
   },
   ar: {
-    title: "صفحة المنتج",
+    title: "إعدادات الصفحة",
+    settingsName: "إعدادات الصفحة",
     description: "شكل صفحة المنتج في متجرك وطريقة البيع منها.",
     priority: "أولوية الظهور",
     priorityHint: "الرقم الأعلى يظهر أولًا في القوائم. الافتراضي 0.",
@@ -222,7 +226,7 @@ export function ProductPageSettingsSection({ product, onChanged }: { product: Ca
     <label key={key} className="flex min-h-11 cursor-pointer items-start gap-3 rounded-[0.5rem] px-2 py-2 hover:bg-paper">
       <input
         type="checkbox"
-        className="mt-0.5 size-4 shrink-0 accent-primary"
+        className="mt-0.5 size-5 shrink-0 accent-primary"
         checked={draft.settings[key]}
         disabled={busy}
         onChange={(e) => setSetting(key, e.target.checked)}
@@ -235,12 +239,8 @@ export function ProductPageSettingsSection({ product, onChanged }: { product: Ca
   );
 
   return (
-    <Card>
-      <CardContent className="space-y-5 py-5">
-        <div>
-          <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-          <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-        </div>
+    <ProductPageCard title={t.title} description={t.description}>
+      <div className="space-y-5">
 
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
@@ -352,9 +352,9 @@ export function ProductPageSettingsSection({ product, onChanged }: { product: Ca
                 aria-label={t.removeRef}
                 disabled={busy}
                 onClick={() => setDraft((d) => ({ ...d, refs: d.refs.filter((_, i) => i !== index) }))}
-                className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[0.5rem] text-ink-soft hover:bg-danger-soft hover:text-danger"
+                className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft hover:bg-danger-soft hover:text-danger focus-visible:outline-2 focus-visible:outline-primary"
               >
-                <Trash2 className="size-4" aria-hidden />
+                <IconDelete className="size-4" aria-hidden />
               </button>
             </div>
           ))}
@@ -365,24 +365,25 @@ export function ProductPageSettingsSection({ product, onChanged }: { product: Ca
             disabled={busy || draft.refs.length >= 10}
             onClick={() => setDraft((d) => ({ ...d, refs: [...d.refs, { platform: "", code: "" }] }))}
           >
-            <Plus className="size-4" aria-hidden />
+            <IconPlus className="size-4" aria-hidden />
             {t.addRef}
           </Button>
         </div>
 
         {error && <Alert variant="danger">{error}</Alert>}
 
-        {dirty && (
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={() => setDraft(saved)}>
-              {t.discard}
-            </Button>
-            <Button type="button" className="min-h-11" disabled={busy} onClick={() => void save()}>
-              {busy ? t.saving : t.save}
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        <SectionSaveBar
+          section={t.settingsName}
+          dirty={dirty}
+          saving={busy}
+          error={error}
+          onSave={() => void save()}
+          onDiscard={() => {
+            setDraft(saved);
+            setError(null);
+          }}
+        />
+      </div>
+    </ProductPageCard>
   );
 }

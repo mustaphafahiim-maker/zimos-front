@@ -1,49 +1,60 @@
-import type { LucideIcon } from "lucide-react";
+import type { Icon } from "@/components/icons";
 import {
-  HeartHandshake,
-  FileDown,
-  GraduationCap,
-  MousePointerClick,
-  Handshake,
-  Repeat,
-  UsersRound,
-  Sparkles,
-  Activity,
-  BadgeDollarSign,
-  BarChart3,
-  Bot,
-  ClipboardCheck,
-  CreditCard,
-  Gift,
-  Globe,
-  History,
-  Images,
-  LayoutDashboard,
-  LayoutGrid,
-  LineChart,
-  LifeBuoy,
-  Megaphone,
-  Newspaper,
-  MessageCircle,
-  Package,
-  PiggyBank,
-  Settings,
-  ShieldAlert,
-  ShoppingBag,
-  ShoppingCart,
-  Star,
-  Store,
-  Tag,
-  Target,
-  Ticket,
-  Truck,
-  Undo2,
-  Users,
-  Wallet,
-  Workflow,
-} from "lucide-react";
+  IconActivity,
+  IconAdAccounts,
+  IconAds,
+  IconAffiliates,
+  IconAi,
+  IconApps,
+  IconAttribution,
+  IconAutomations,
+  IconBlog,
+  IconConfirm,
+  IconCourses,
+  IconCustomers,
+  IconDigital,
+  IconDiscounts,
+  IconFunnels,
+  IconGiftCards,
+  IconHome,
+  IconInbox,
+  IconInventory,
+  IconLostOrders,
+  IconLoyalty,
+  IconMarketing,
+  IconMedia,
+  IconMoreReports,
+  IconOffers,
+  IconOrders,
+  IconPayments,
+  IconProducts,
+  IconProfit,
+  IconProtection,
+  IconQuestions,
+  IconQuotes,
+  IconRealtime,
+  IconReferrals,
+  IconReports,
+  IconReturns,
+  IconReviews,
+  IconSearch,
+  IconServices,
+  IconSettings,
+  IconSettlements,
+  IconShoppableImages,
+  IconShipping,
+  IconSizeCharts,
+  IconStoreCredit,
+  IconStoreSettings,
+  IconSubscriptions,
+  IconSupport,
+  IconSynonyms,
+  IconWebAnalytics,
+  IconWebsite,
+} from "@/components/icons";
 import type { Messages } from "@/i18n/LocaleContext";
 import { NO_ANALYTICS_ROLES } from "@/lib/analyticsAccess";
+import { NO_INVENTORY_ROLES } from "@/lib/inventoryAccess";
 
 export type NavKey =
   | "overview"
@@ -51,9 +62,15 @@ export type NavKey =
   | "confirmationQueue"
   | "fraud"
   | "returns"
+  | "quotes"
   | "abandonedCarts"
   | "catalog"
+  | "inventory"
   | "reviews"
+  | "productQuestions"
+  | "sizeCharts"
+  | "searchSynonyms"
+  | "searchInsights"
   | "customers"
   | "discounts"
   | "offers"
@@ -63,22 +80,27 @@ export type NavKey =
   | "blog"
   | "funnels"
   | "analytics"
+  | "storeReports"
   | "webAnalytics"
   | "attribution"
   | "realtime"
   | "settings"
   | "support"
   | "settlements"
+  | "paymentLedger"
   | "inbox"
   | "automations"
   | "marketing"
   | "profit"
   | "ads"
+  | "adAccounts"
   | "media"
   | "digital"
   | "ai"
   | "affiliates"
   | "giftCards"
+  | "loyalty"
+  | "storeCredit"
   | "subscriptions"
   | "services"
   | "referrals"
@@ -89,19 +111,34 @@ export type NavKey =
   | "activity";
 
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
-export type NavGroupKey = "orders" | "products" | "customers" | "marketing" | "store" | "analytics" | "money" | "more";
+export type NavGroupKey = "orders" | "products" | "customers" | "marketing" | "store" | "money" | "more";
+
+/**
+ * Which queue of work a row's badge counts (components/WorkCounts.tsx):
+ * calls due now, confirmed orders with no courier booked, unread messages.
+ */
+export type NavBadge = "toConfirm" | "toShip" | "unread";
 
 export interface NavItem {
   /** Key into NAV_LABELS — the visible label is resolved per locale. */
   key: NavKey;
   to: string;
-  icon: LucideIcon;
+  icon: Icon;
   /**
    * Role keys that don't see this entry: the system roles the backend refuses
    * for the page's API (the page still handles a 403 for any other role).
    * Entries without it are shown to everyone, as before.
    */
   hiddenForRoles?: ReadonlySet<string>;
+  /**
+   * The sidebar entry (its `to`) this page is reached from: a tab, a card or a
+   * header link on that page. An item with `under` is not listed in the
+   * sidebar — that entry lights up instead — but it stays here so the
+   * breadcrumb, ⌘K and pinned shortcuts still know the page.
+   */
+  under?: string;
+  /** A count of waiting work shown on the row (see NavBadge). */
+  badge?: NavBadge;
 }
 
 export interface NavGroup {
@@ -113,90 +150,99 @@ export interface NavGroup {
 }
 
 /**
- * Sidebar structure, in the order a merchant thinks about the business: the
- * orders that came in and what each one needs, what is being sold, who bought
- * it, how more people are brought in, the store they land on, the numbers, and
- * the money (getting paid, shipping). Admin and help sit at the bottom.
+ * Sidebar structure (docs/ux/REDESIGN_PROMPT.md, Phase 1): seven headings in
+ * the order a merchant thinks about the day — the day itself, the orders that
+ * came in and what each needs, what is sold, who buys, how more people are
+ * brought in, the store they land on, and the money. Other ways to sell start
+ * closed; admin and help sit at the bottom.
  *
- * Every entry here must map to a route in App.tsx — the sidebar is not a
- * roadmap. Features the backend does not serve yet stay out until they do.
+ * URLs never change here and role rules stay as they were. Every entry must
+ * map to a route in App.tsx — the sidebar is not a roadmap.
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
     id: "main",
     labelKey: null,
-    items: [{ key: "overview", to: "/", icon: LayoutDashboard }],
+    items: [{ key: "overview", to: "/", icon: IconHome }],
   },
   {
     id: "orders",
     labelKey: "orders",
     items: [
-      { key: "orders", to: "/orders", icon: ShoppingBag },
-      { key: "confirmationQueue", to: "/confirmation-queue", icon: ClipboardCheck },
-      { key: "abandonedCarts", to: "/abandoned-carts", icon: ShoppingCart },
-      { key: "returns", to: "/returns", icon: Undo2 },
-      { key: "fraud", to: "/fraud", icon: ShieldAlert },
+      { key: "orders", to: "/orders", icon: IconOrders, badge: "toShip" },
+      { key: "confirmationQueue", to: "/confirmation-queue", icon: IconConfirm, badge: "toConfirm" },
+      { key: "abandonedCarts", to: "/abandoned-carts", icon: IconLostOrders },
+      { key: "returns", to: "/returns", icon: IconReturns },
+      { key: "fraud", to: "/fraud", icon: IconProtection },
+      { key: "quotes", to: "/quotes", icon: IconQuotes },
     ],
   },
   {
     id: "products",
     labelKey: "products",
     items: [
-      { key: "catalog", to: "/catalog", icon: Package },
-      { key: "offers", to: "/offers", icon: Gift },
-      { key: "discounts", to: "/discounts", icon: Tag },
-      { key: "reviews", to: "/reviews", icon: Star },
-      { key: "media", to: "/media", icon: Images },
+      { key: "catalog", to: "/catalog", icon: IconProducts },
+      { key: "inventory", to: "/inventory", icon: IconInventory, hiddenForRoles: NO_INVENTORY_ROLES },
+      // Offers, discounts and gift cards become tabs of one hub in Phase 4; until then, three rows.
+      { key: "offers", to: "/offers", icon: IconOffers },
+      { key: "discounts", to: "/discounts", icon: IconDiscounts, under: "/offers" },
+      { key: "giftCards", to: "/gift-cards", icon: IconGiftCards, under: "/offers" },
+      { key: "reviews", to: "/reviews", icon: IconReviews },
+      { key: "productQuestions", to: "/questions", icon: IconQuestions },
+      { key: "sizeCharts", to: "/size-charts", icon: IconSizeCharts, under: "/catalog" },
+      { key: "searchSynonyms", to: "/search-synonyms", icon: IconSynonyms, under: "/catalog" },
+      { key: "media", to: "/media", icon: IconMedia },
     ],
   },
   {
     id: "customers",
     labelKey: "customers",
     items: [
-      { key: "customers", to: "/customers", icon: Users },
-      { key: "inbox", to: "/inbox", icon: MessageCircle },
-    ],
-  },
-  {
-    id: "money",
-    labelKey: "money",
-    items: [
-      { key: "profit", to: "/profit", icon: PiggyBank, hiddenForRoles: NO_ANALYTICS_ROLES },
-      { key: "settlements", to: "/settlements", icon: Wallet },
-      { key: "payments", to: "/payments", icon: CreditCard },
-      { key: "ads", to: "/ads", icon: BadgeDollarSign, hiddenForRoles: NO_ANALYTICS_ROLES },
-    ],
-  },
-  {
-    id: "store",
-    labelKey: "store",
-    items: [
-      { key: "website", to: "/website", icon: Globe },
-      { key: "blog", to: "/blog", icon: Newspaper },
-      { key: "funnels", to: "/funnels", icon: Workflow },
-      { key: "shipping", to: "/shipping", icon: Truck },
-      { key: "storeSettings", to: "/store-settings", icon: Store },
+      { key: "customers", to: "/customers", icon: IconCustomers },
+      { key: "inbox", to: "/inbox", icon: IconInbox, badge: "unread" },
+      { key: "loyalty", to: "/loyalty", icon: IconLoyalty },
+      { key: "storeCredit", to: "/store-credit", icon: IconStoreCredit, under: "/loyalty" },
     ],
   },
   {
     id: "marketing",
     labelKey: "marketing",
     items: [
-      { key: "marketing", to: "/marketing", icon: Megaphone },
-      { key: "automations", to: "/automations", icon: Bot },
-      { key: "affiliates", to: "/affiliates", icon: UsersRound },
-      { key: "giftCards", to: "/gift-cards", icon: Ticket },
-      { key: "ai", to: "/ai", icon: Sparkles },
+      { key: "marketing", to: "/marketing", icon: IconMarketing },
+      { key: "automations", to: "/automations", icon: IconAutomations },
+      { key: "ads", to: "/ads", icon: IconAds, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "adAccounts", to: "/ads/accounts", icon: IconAdAccounts, hiddenForRoles: NO_ANALYTICS_ROLES, under: "/ads" },
+      { key: "affiliates", to: "/affiliates", icon: IconAffiliates },
+      { key: "ai", to: "/ai", icon: IconAi },
     ],
   },
   {
-    id: "analytics",
-    labelKey: "analytics",
+    id: "store",
+    labelKey: "store",
     items: [
-      { key: "analytics", to: "/analytics", icon: BarChart3, hiddenForRoles: NO_ANALYTICS_ROLES },
-      { key: "realtime", to: "/analytics/realtime", icon: Activity, hiddenForRoles: NO_ANALYTICS_ROLES },
-      { key: "webAnalytics", to: "/analytics/web", icon: LineChart, hiddenForRoles: NO_ANALYTICS_ROLES },
-      { key: "attribution", to: "/analytics/attribution", icon: Target, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "website", to: "/website", icon: IconWebsite },
+      { key: "funnels", to: "/funnels", icon: IconFunnels },
+      { key: "blog", to: "/blog", icon: IconBlog },
+      { key: "shipping", to: "/shipping", icon: IconShipping },
+      { key: "payments", to: "/payments", icon: IconPayments },
+      { key: "storeSettings", to: "/store-settings", icon: IconStoreSettings },
+    ],
+  },
+  {
+    id: "money",
+    labelKey: "money",
+    items: [
+      { key: "profit", to: "/profit", icon: IconProfit, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "settlements", to: "/settlements", icon: IconSettlements },
+      // Handoff 384 / 377: the online payments ledger, payouts and disputes — reached from Payments, found by search.
+      { key: "paymentLedger", to: "/payments/transactions", icon: IconSettlements, under: "/payments" },
+      // One row for the reports hub; its tabs and the side reports are found by search and light this row up.
+      { key: "analytics", to: "/analytics", icon: IconReports, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "storeReports", to: "/analytics/reports", icon: IconMoreReports, hiddenForRoles: NO_ANALYTICS_ROLES, under: "/analytics" },
+      { key: "realtime", to: "/analytics/realtime", icon: IconRealtime, hiddenForRoles: NO_ANALYTICS_ROLES, under: "/analytics" },
+      { key: "webAnalytics", to: "/analytics/web", icon: IconWebAnalytics, hiddenForRoles: NO_ANALYTICS_ROLES, under: "/analytics" },
+      { key: "attribution", to: "/analytics/attribution", icon: IconAttribution, hiddenForRoles: NO_ANALYTICS_ROLES, under: "/analytics" },
+      { key: "searchInsights", to: "/analytics/search", icon: IconSearch, hiddenForRoles: NO_ANALYTICS_ROLES, under: "/analytics" },
     ],
   },
   {
@@ -205,29 +251,43 @@ export const NAV_GROUPS: NavGroup[] = [
     id: "more",
     labelKey: "more",
     items: [
-      { key: "digital", to: "/digital", icon: FileDown },
-      { key: "courses", to: "/courses", icon: GraduationCap },
-      { key: "subscriptions", to: "/subscriptions", icon: Repeat },
-      { key: "shoppableImages", to: "/shoppable-images", icon: MousePointerClick },
-      { key: "services", to: "/services", icon: Handshake },
+      { key: "digital", to: "/digital", icon: IconDigital },
+      { key: "courses", to: "/courses", icon: IconCourses },
+      { key: "subscriptions", to: "/subscriptions", icon: IconSubscriptions },
+      { key: "shoppableImages", to: "/shoppable-images", icon: IconShoppableImages },
+      { key: "services", to: "/services", icon: IconServices },
     ],
   },
   {
     id: "config",
     labelKey: null,
     items: [
-      { key: "apps", to: "/apps", icon: LayoutGrid },
-      { key: "settings", to: "/settings", icon: Settings },
-      { key: "activity", to: "/activity", icon: History },
-      { key: "referrals", to: "/referrals", icon: HeartHandshake },
-      { key: "support", to: "/support", icon: LifeBuoy },
+      { key: "apps", to: "/apps", icon: IconApps },
+      { key: "settings", to: "/settings", icon: IconSettings },
+      // Reached from Settings (its «كمان» row), not from the sidebar.
+      { key: "activity", to: "/activity", icon: IconActivity, under: "/settings" },
+      { key: "referrals", to: "/referrals", icon: IconReferrals, under: "/settings" },
+      { key: "support", to: "/support", icon: IconSupport },
     ],
   },
 ];
 
+/** Groups that start open. The rest start closed and still show the page you are on. */
+export const NAV_OPEN_BY_DEFAULT: ReadonlySet<string> = new Set(["main", "orders", "products", "customers", "marketing", "store", "money", "config"]);
+
 /** The group an item sits in — the first crumb of the page's breadcrumb. */
 export function findNavGroup(item: NavItem): NavGroup | undefined {
   return NAV_GROUPS.find((group) => group.items.includes(item));
+}
+
+/** Whether an item has its own line in the sidebar (see NavItem.under). */
+export function isSidebarItem(item: NavItem): boolean {
+  return !item.under;
+}
+
+/** The sidebar entry that lights up for an item: itself, or the entry it sits under. */
+export function sidebarHome(item: NavItem | undefined): string | undefined {
+  return item ? (item.under ?? item.to) : undefined;
 }
 
 /** Whether a role sees an entry (see NavItem.hiddenForRoles). */
@@ -254,23 +314,30 @@ export function findNavItem(pathname: string): NavItem | undefined {
 /** Sidebar / drawer labels. Read with `useT(NAV_LABELS)`. */
 export const NAV_LABELS = {
   en: {
-    overview: "Home",
+    overview: "Today",
     orders: "Orders",
     confirmationQueue: "Confirm orders",
-    fraud: "Fraud protection",
+    fraud: "Protection",
     returns: "Returns",
+    quotes: "Quotes",
     abandonedCarts: "Lost orders",
     catalog: "Products",
+    inventory: "Inventory",
     reviews: "Reviews",
+    productQuestions: "Questions",
+    sizeCharts: "Size charts",
+    searchSynonyms: "Search synonyms",
+    searchInsights: "Store search",
     customers: "Customers",
     discounts: "Discounts",
-    offers: "Offers",
+    offers: "Offers & discounts",
     shipping: "Shipping",
     payments: "Payments",
-    website: "Website",
+    website: "Store editor",
     blog: "Blog",
     funnels: "Funnels",
     analytics: "Reports",
+    storeReports: "More reports",
     webAnalytics: "Store traffic",
     attribution: "Sales sources",
     realtime: "Live now",
@@ -279,16 +346,20 @@ export const NAV_LABELS = {
     settings: "Settings",
     support: "Contact support",
     settlements: "COD settlements",
-    inbox: "WhatsApp inbox",
+    paymentLedger: "Online payments: transactions, payouts, disputes",
+    inbox: "Messages",
     automations: "Automations",
-    marketing: "Marketing",
+    marketing: "Campaigns",
     profit: "Profit",
-    ads: "Ad spend",
+    ads: "Ads",
+    adAccounts: "Ad accounts",
     media: "Media library",
     digital: "Digital products",
     ai: "AI studio",
     affiliates: "Affiliates",
     giftCards: "Gift cards",
+    loyalty: "Loyalty & rewards",
+    storeCredit: "Store credit balances",
     subscriptions: "Subscriptions",
     services: "Services",
     referrals: "Refer & earn",
@@ -297,41 +368,52 @@ export const NAV_LABELS = {
     storeSettings: "Store settings",
   },
   ar: {
-    overview: "الرئيسية",
+    overview: "اليوم",
     orders: "الأوردرات",
     confirmationQueue: "تأكيد الأوردرات",
-    fraud: "الحماية من النصب",
+    fraud: "الحماية",
     returns: "المرتجعات",
+    quotes: "عروض الأسعار",
     abandonedCarts: "الأوردرات المفقودة",
     catalog: "المنتجات",
+    inventory: "المخزون",
     reviews: "التقييمات",
+    productQuestions: "الأسئلة",
+    sizeCharts: "جداول المقاسات",
+    searchSynonyms: "مرادفات البحث",
+    searchInsights: "البحث في المتجر",
     customers: "العملاء",
     discounts: "الخصومات",
-    offers: "العروض",
+    offers: "العروض والخصومات",
     shipping: "الشحن",
     payments: "المدفوعات",
-    website: "الموقع",
+    website: "محرر المتجر",
     blog: "المدونة",
     funnels: "مسارات البيع",
     analytics: "التقارير",
+    storeReports: "تقارير تانية",
     webAnalytics: "زيارات الموقع",
     attribution: "مصادر المبيعات",
-    realtime: "مباشر الآن",
+    realtime: "دلوقتي",
     apps: "التطبيقات",
     activity: "سجل النشاط",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
     settlements: "تحصيل شركات الشحن",
-    inbox: "صندوق واتساب",
+    paymentLedger: "المدفوعات الأونلاين: المعاملات والتحويلات البنكية والنزاعات",
+    inbox: "الرسايل",
     automations: "الأتمتة",
-    marketing: "التسويق",
+    marketing: "الحملات",
     profit: "الأرباح",
-    ads: "مصاريف الإعلانات",
+    ads: "الإعلانات",
+    adAccounts: "حسابات الإعلانات",
     media: "مكتبة الصور",
     digital: "المنتجات الرقمية",
     ai: "استوديو الذكاء الاصطناعي",
     affiliates: "المسوّقون بالعمولة",
     giftCards: "كروت الهدايا",
+    loyalty: "الولاء والمكافآت",
+    storeCredit: "أرصدة العملاء",
     subscriptions: "الاشتراكات",
     services: "الخدمات",
     referrals: "اكسب من الإحالة",
@@ -348,9 +430,8 @@ export const NAV_GROUP_LABELS = {
     products: "Products",
     customers: "Customers",
     marketing: "Marketing",
-    store: "Online store",
-    analytics: "Analytics",
-    money: "Money",
+    store: "Store",
+    money: "Money & reports",
     more: "More ways to sell",
   },
   ar: {
@@ -359,8 +440,7 @@ export const NAV_GROUP_LABELS = {
     customers: "العملاء",
     marketing: "التسويق",
     store: "المتجر",
-    analytics: "التحليلات",
-    money: "الفلوس",
+    money: "الفلوس والتقارير",
     more: "طرق بيع أكتر",
   },
 } satisfies Messages<NavGroupKey>;

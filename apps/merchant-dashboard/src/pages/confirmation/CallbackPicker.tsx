@@ -14,7 +14,7 @@ const STRINGS = {
     clear: "No time",
   },
   ar: {
-    label: "يتكلم تاني الساعة",
+    label: "نكلّمه تاني إمتى؟",
     hint: "اختياري. من غيره: بعد ٢٤ ساعة (أجّل) أو ٤ ساعات (مردّش).",
     in1h: "بعد ساعة",
     tonight: "النهارده ٨ بالليل",
@@ -39,6 +39,15 @@ function toLocalInput(iso: string): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+// The same pill as the chips over a list and in a filter sheet (glass/list.css styles `.zimos-chip` once):
+// 40px with a mouse, 44px under a finger; the chosen one takes the brand fill.
+const CHIP =
+  "zimos-chip inline-flex h-10 cursor-pointer items-center rounded-full px-3.5 text-sm font-medium whitespace-nowrap select-none pointer-coarse:h-11 " +
+  "transition-[scale,background-color,color] duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] motion-reduce:active:scale-100";
+const CHIP_ON = "bg-primary text-primary-foreground";
+const CHIP_OFF = "bg-paper-raised text-ink ring-1 ring-line hover:bg-paper-sunken";
 
 /**
  * «كلّمني بكرة الساعة ٥»: when to call a postponed / unanswered customer
@@ -69,7 +78,7 @@ export function CallbackPicker({
   const minute = (iso: string) => iso.slice(0, 16);
 
   return (
-    <fieldset className="space-y-2" disabled={disabled}>
+    <fieldset className="min-w-0 space-y-2.5" disabled={disabled}>
       <legend className="text-sm font-medium text-ink">{t.label}</legend>
       <div className="flex flex-wrap gap-2">
         {chips
@@ -83,12 +92,7 @@ export function CallbackPicker({
                 type="button"
                 aria-pressed={picked}
                 onClick={() => onChange(picked ? "" : iso)}
-                className={cn(
-                  "min-h-10 cursor-pointer rounded-full border px-3.5 text-sm font-medium transition-colors",
-                  picked
-                    ? "border-accent bg-accent-soft text-accent-dark"
-                    : "border-line-strong/50 bg-paper-raised text-ink hover:bg-paper-sunken"
-                )}
+                className={cn(CHIP, picked ? CHIP_ON : CHIP_OFF)}
               >
                 {c.label}
               </button>
@@ -105,15 +109,19 @@ export function CallbackPicker({
           value={value ? toLocalInput(value) : ""}
           min={toLocalInput(new Date(now + 5 * 60 * 1000).toISOString())}
           onChange={(e) => onChange(e.target.value ? new Date(e.target.value).toISOString() : "")}
-          className="h-10 rounded-[var(--radius)] border border-line-strong bg-paper-raised px-3 text-sm text-ink"
+          className="h-10 min-w-0 rounded-[0.875rem] border border-line-strong bg-paper-raised px-3 text-sm text-ink focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 pointer-coarse:h-11"
         />
         {value && (
-          <button type="button" onClick={() => onChange("")} className="min-h-10 cursor-pointer px-2 text-sm text-ink-soft hover:text-ink">
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="min-h-10 cursor-pointer rounded-full px-2.5 text-sm text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-primary pointer-coarse:min-h-11"
+          >
             {t.clear}
           </button>
         )}
       </div>
-      <p className="text-xs text-ink-soft">{t.hint}</p>
+      <p className="text-xs leading-5 text-ink-soft">{t.hint}</p>
     </fieldset>
   );
 }

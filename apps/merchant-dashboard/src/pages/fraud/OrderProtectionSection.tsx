@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Ban } from "lucide-react";
+import { IconBlock } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import { protectionAddBlocked, protectionNetworkScore, protectionReportSpam, type Order } from "@store-builder/api-client";
 import { useAsync } from "@/lib/useAsync";
@@ -8,7 +8,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
-import { Section } from "@/components/Section";
+import { CardFrame } from "@/pages/orders/detail/CardFrame";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { RiskBadge, useRiskReasonLabel, type OrderRiskFields } from "./RiskBadge";
@@ -95,7 +95,7 @@ function countryName(code: string, locale: string): string {
  * IP, country and browser with "Block IP". Renders nothing for an order that
  * has neither (staff orders, older ones).
  */
-export function OrderProtectionSection({ order }: { order: Order }) {
+export function OrderProtectionSection({ order, frameless }: { order: Order; /** Inside a folding section of the order page: no card and no title of its own. */ frameless?: boolean }) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -161,12 +161,13 @@ export function OrderProtectionSection({ order }: { order: Order }) {
   }
 
   return (
-    <Section
+    <CardFrame
+      frameless={frameless}
       title={t.title}
       actions={
         ip ? (
           <Button variant="outline" size="sm" className="min-h-9" onClick={() => setConfirming(true)}>
-            <Ban className="size-4" aria-hidden />
+            <IconBlock className="size-4" aria-hidden />
             {t.blockIp}
           </Button>
         ) : undefined
@@ -269,6 +270,6 @@ export function OrderProtectionSection({ order }: { order: Order }) {
         onCancel={() => setConfirming(false)}
         onConfirm={block}
       />
-    </Section>
+    </CardFrame>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { Alert, Button, Input, Label } from "@store-builder/ui";
 import { ApiError, securityVerifyTwoFactor, type TwoFactorChallenge } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -34,6 +35,9 @@ const STRINGS = {
     // A browser new to the account (backend auth/newDeviceSignIn.js).
     newDevice: "You are signing in from a device we don't know yet.",
     newDeviceWait: "We already sent several codes, so no new one was sent. Wait a few minutes and sign in again.",
+    // Too many wrong codes over all the account's sign-ins (handoff 359).
+    locked: "Too many wrong codes were entered for this account. Wait a while and try again, or reset your password",
+    forgot: "Forgot your password?",
   },
   ar: {
     title: "خطوة كمان",
@@ -56,6 +60,8 @@ const STRINGS = {
     codeNotSent: "بعتنا أكواد كتير قبل كده، فمبعتناش كود جديد. استخدم رمز احتياطي، أو استنى كام دقيقة وسجّل دخول تاني.",
     newDevice: "إنت بتسجّل دخول من جهاز لسه منعرفوش.",
     newDeviceWait: "بعتنا أكواد كتير قبل كده، فمبعتناش كود جديد. استنى كام دقيقة وسجّل دخول تاني.",
+    locked: "اتكتب أكواد غلط كتير على الحساب ده. استنى شوية وجرّب تاني، أو غيّر كلمة المرور",
+    forgot: "نسيت كلمة المرور؟",
   },
 } satisfies Messages;
 
@@ -80,16 +86,20 @@ export function TwoFactorStep({
   const ready = backup ? code.replace(/[^A-Z0-9]/g, "").length === 8 : code.length === 6;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 429 TWO_FACTOR_LOCKED: every code is refused for a while, the right one too. No countdown: the API gives none.
+  const [locked, setLocked] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (locked) return;
     setBusy(true);
     setError(null);
     try {
       await securityVerifyTwoFactor(apiClient, { challengeToken: challenge.challengeToken, code: code.trim(), rememberDevice: remember });
       await onVerified();
     } catch (err) {
-      if (err instanceof ApiError) setError(err.status === 429 ? t.tooMany : err.status === 401 || err.status === 422 ? t.wrong : errorMessageNow(err));
+      if (err instanceof ApiError && (err.code as string | undefined) === "TWO_FACTOR_LOCKED") setLocked(true);
+      else if (err instanceof ApiError) setError(err.status === 429 ? t.tooMany : err.status === 401 || err.status === 422 ? t.wrong : errorMessageNow(err));
       else setError(t.failed);
     } finally {
       setBusy(false);
@@ -113,7 +123,15 @@ export function TwoFactorStep({
               : t.appBody}
         </p>
       </div>
-      {error && <Alert variant="danger">{error}</Alert>}
+      {error && !locked && <Alert variant="danger">{error}</Alert>}
+      {locked && (
+        <Alert variant="danger">
+          <span className="block">{t.locked}</span>
+          <Link to="/forgot-password" className="mt-1 inline-flex min-h-11 items-center font-medium underline underline-offset-4">
+            {t.forgot}
+          </Link>
+        </Alert>
+      )}
       <div className="space-y-2">
         <Label htmlFor="two-factor-code">{backup ? t.backupCode : t.code}</Label>
         {backup ? (
@@ -125,6 +143,7 @@ export function TwoFactorStep({
             autoCapitalize="characters"
             spellCheck={false}
             autoFocus
+            disabled={locked}
             maxLength={9}
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ""))}
@@ -138,6 +157,7 @@ export function TwoFactorStep({
             inputMode="numeric"
             autoComplete="one-time-code"
             autoFocus
+            disabled={locked}
             maxLength={6}
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
@@ -163,7 +183,7 @@ export function TwoFactorStep({
         <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
         {t.remember}
       </label>
-      <Button type="submit" className="w-full" disabled={busy || !ready}>
+      <Button type="submit" className="w-full" disabled={busy || !ready || locked}>
         {busy ? t.verifying : t.verify}
       </Button>
       <button type="button" onClick={onBack} className="block w-full text-center text-sm text-ink-soft hover:text-primary">

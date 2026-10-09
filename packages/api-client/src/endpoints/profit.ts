@@ -94,8 +94,34 @@ export interface ProfitEconomicsList {
   products: ProfitEconomicsProduct[];
 }
 
-export type ProfitAdPlatform = "meta" | "tiktok" | "snapchat" | "google" | "other";
-export const PROFIT_AD_PLATFORMS: ProfitAdPlatform[] = ["meta", "tiktok", "snapchat", "google", "other"];
+// pinterest … microsoft: handoff 254 (before `other`, as the backend lists them).
+export type ProfitAdPlatform =
+  | "meta"
+  | "tiktok"
+  | "snapchat"
+  | "google"
+  | "pinterest"
+  | "x"
+  | "taboola"
+  | "outbrain"
+  | "kwai"
+  | "reddit"
+  | "microsoft"
+  | "other";
+export const PROFIT_AD_PLATFORMS: ProfitAdPlatform[] = [
+  "meta",
+  "tiktok",
+  "snapchat",
+  "google",
+  "pinterest",
+  "x",
+  "taboola",
+  "outbrain",
+  "kwai",
+  "reddit",
+  "microsoft",
+  "other",
+];
 
 export interface ProfitAdSpendEntry {
   id: string;

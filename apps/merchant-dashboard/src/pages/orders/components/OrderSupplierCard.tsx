@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { RefreshCw, Send } from "lucide-react";
+import { IconRefresh, IconSend } from "@/components/icons";
 import { Alert, Button } from "@store-builder/ui";
 import {
   ApiError,
@@ -16,7 +16,7 @@ import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDateTime, humanize } from "@/lib/format";
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
-import { Section } from "@/components/Section";
+import { CardFrame } from "@/pages/orders/detail/CardFrame";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -68,6 +68,9 @@ const STRINGS = {
     ext_completed: "Completed",
     ext_refunded: "Refunded",
     ext_failed: "Failed",
+    // Handoff 318: the same order is already on its way to the supplier.
+    pushInProgress: "This order is being sent to the supplier — refresh in a moment",
+    sendingRef: "Sending…",
   },
   ar: {
     title: "المورّد",
@@ -109,6 +112,8 @@ const STRINGS = {
     ext_completed: "خلص",
     ext_refunded: "فلوسه رجعت",
     ext_failed: "فشل",
+    pushInProgress: "الطلب بيتبعت للمورد دلوقتي — حدّث الصفحة بعد شوية",
+    sendingRef: "جاري الإرسال…",
   },
 } satisfies Messages;
 
@@ -117,7 +122,7 @@ const STRINGS = {
  * supplier is connected — what was forwarded, where it stands there, and the
  * buttons to forward and to ask again. Nothing at all for a store without one.
  */
-export function OrderSupplierCard({ order, onChanged }: { order: Order; onChanged: () => void }) {
+export function OrderSupplierCard({ order, onChanged, frameless }: { order: Order; onChanged: () => void; /** Inside a folding section of the order page: no card and no title of its own. */ frameless?: boolean }) {
   const t = useT(STRINGS);
   const labels = useOrderLabels();
   const workspaceId = useWorkspaceId();
@@ -157,14 +162,15 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
       if (err instanceof ApiError && err.status === 403) setForbidden(true);
       // WooCommerce names the line it does not have: «"Demo T-Shirt" is not a product of the WooCommerce store».
       const missing = err instanceof ApiError ? /"(.+)" is not a product of the WooCommerce store/.exec(err.message)?.[1] : undefined;
-      setError(errorMessage(err, missing ? { DROPSHIP_ORDER_REJECTED: `${t.notInWoo}: «${missing}»` } : undefined));
+      setError(errorMessage(err, { DROPSHIP_PUSH_IN_PROGRESS: t.pushInProgress, ...(missing ? { DROPSHIP_ORDER_REJECTED: `${t.notInWoo}: «${missing}»` } : {}) }));
     } finally {
       setBusy(null);
     }
   }
 
   return (
-    <Section
+    <CardFrame
+      frameless={frameless}
       title={t.title}
       description={t.description}
       actions={
@@ -193,9 +199,13 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
                 ) : (
                   <span className="font-medium text-ink">
                     {fmt(t.reference, { name: ref.providerName })}{" "}
-                    <bdi dir="ltr" className="font-mono text-xs">
-                      {ref.externalOrderId}
-                    </bdi>
+                    {ref.externalOrderId === "pending" ? (
+                      <span className="text-xs font-normal text-ink-soft">{t.sendingRef}</span>
+                    ) : (
+                      <bdi dir="ltr" className="font-mono text-xs">
+                        {ref.externalOrderId}
+                      </bdi>
+                    )}
                   </span>
                 )}
                 <StatusBadge
@@ -252,7 +262,7 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
                     title={s.lines > 0 ? fmt(t.lines, { n: s.lines, name }) : fmt(t.noLines, { name })}
                     onClick={() => void run(`push:${s.code}`, () => dropshipOrderPush(apiClient, workspaceId, order.id, s.code), sent)}
                   >
-                    <Send className="size-4" aria-hidden />
+                    <IconSend className="size-4" aria-hidden />
                     {busy === `push:${s.code}` ? t.sending : done ? `${t.sendAgain} · ${name}` : fmt(t.send, { name })}
                     {s.isTest && <span className="text-xs opacity-80">({t.test})</span>}
                   </Button>
@@ -266,7 +276,7 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
                   disabled={busy !== null}
                   onClick={() => void run("refresh", () => dropshipOrderRefresh(apiClient, workspaceId, order.id))}
                 >
-                  <RefreshCw className="size-4" aria-hidden />
+                  <IconRefresh className="size-4" aria-hidden />
                   {busy === "refresh" ? t.refreshing : t.refresh}
                 </Button>
               )}
@@ -281,6 +291,6 @@ export function OrderSupplierCard({ order, onChanged }: { order: Order; onChange
           )}
         </div>
       ) : null}
-    </Section>
+    </CardFrame>
   );
 }

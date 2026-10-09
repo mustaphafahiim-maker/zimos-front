@@ -16,6 +16,8 @@ import { isEgyptianMobile, normalizePhone } from "@/lib/egypt";
 import type { Dictionary } from "@/lib/i18n";
 import { useStore } from "@/lib/StoreContext";
 import { useStoreCountry } from "@/lib/storeCountry";
+// «نبّهني على المتصفح»: the same sign-up by browser push, when the store can push (handoff 392).
+import { BackInStockPush, BackInStockPushDone, pushSignedUp } from "./BackInStockPush";
 
 /** A bell, drawn like components/Icons.tsx (24px grid, 1.8 stroke). */
 function BellIcon({ size = 20, ...rest }: SVGProps<SVGSVGElement> & { size?: number }) {
@@ -97,6 +99,7 @@ function SignUp({ variantId }: { variantId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(() => signedUp.get(variantId) ?? null);
   const [backNow, setBackNow] = useState(false);
+  const [pushDone, setPushDone] = useState(() => pushSignedUp(variantId));
   const field = useRef<HTMLInputElement>(null);
 
   // The shopper asked for the form: straight to the field (and the phone's keyboard).
@@ -146,6 +149,8 @@ function SignUp({ variantId }: { variantId: string }) {
 
   // Until the refreshed page arrives (or when its data still says sold out).
   if (backNow) return <BackNow />;
+
+  if (pushDone) return <BackInStockPushDone />;
 
   if (done) {
     return (
@@ -245,6 +250,19 @@ function SignUp({ variantId }: { variantId: string }) {
       <button type="submit" disabled={busy} aria-busy={busy || undefined} className={`${btnPrimary} w-full`}>
         {busy ? b.sending : b.submit}
       </button>
+
+      {store && (
+        <BackInStockPush
+          workspaceId={store.id}
+          variantId={variantId}
+          onDone={() => setPushDone(true)}
+          onInStock={() => {
+            cameBack.add(variantId);
+            setBackNow(true);
+            router.refresh();
+          }}
+        />
+      )}
     </form>
   );
 }

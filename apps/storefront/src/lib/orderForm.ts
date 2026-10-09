@@ -190,6 +190,59 @@ export interface PlacePicks {
   hasCities: boolean;
 }
 
+/**
+ * What is wrong with one field of the purchase form, in the shopper's words;
+ * undefined when it is fine. The one set of rules: the whole-form check the
+ * order button runs (`validateOrderForm`) and the check a field runs as it is
+ * typed in (`validateOrderField`) both read it, so they can never disagree.
+ */
+function fieldProblem(f: CheckoutFormField, values: OrderFormValues, t: Dictionary, places: PlacePicks | null): string | undefined {
+  const field = FORM_FIELD_OF[f.key];
+  const value = values[field].trim();
+  const egypt = isEgyptForm(values);
+  const validPhone = (raw: string) => (egypt ? isEgyptianMobile(raw) : INTL_PHONE.test(normalizePhone(raw)));
+
+  switch (f.key) {
+    case "full_name":
+      return value.length < 2 ? t.form.errors.fullName : undefined;
+    case "phone":
+      return validPhone(value) ? undefined : egypt ? t.form.errors.phone : t.form.errors.phoneIntl;
+    case "phone_alt":
+      if (!value) return f.required ? t.form.errors.required : undefined;
+      return validPhone(value) ? undefined : egypt ? t.form.errors.altPhone : t.form.errors.phoneIntl;
+    case "email":
+      if (!value) return f.required ? t.form.errors.emailRequired : undefined;
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? undefined : t.form.errors.email;
+    case "country":
+      return f.required && !value ? t.form.errors.country : undefined;
+    case "government":
+      if (places) return f.required && !places.regionId ? t.form.errors.governorate : undefined;
+      if (!value) return f.required ? t.form.errors.governorate : undefined;
+      return placesFor(values.country).length > 0 && !placesFor(values.country).some((p) => p.code === value)
+        ? t.form.errors.governorate
+        : undefined;
+    case "city":
+      // Picked from the region's cities; a region without any keeps the typed city.
+      if (places && (!places.regionId || places.hasCities)) {
+        return f.required && places.regionId && !places.cityId ? t.form.errors.cityChoose : undefined;
+      }
+      return f.required && !value ? t.form.errors.city : undefined;
+    case "address":
+      return f.required && value.length < 5 ? t.form.errors.address : undefined;
+    case "postal_code":
+      return f.required && !value ? t.form.errors.postalCode : undefined;
+    case "note":
+      return undefined;
+    default:
+      // A photo field waits for its upload; its answer is the upload id (components/checkout/CheckoutPhotoField).
+      if (isCheckoutPhotoField(f)) {
+        if (isPhotoUploading(f.key)) return t.custom.waitUpload;
+        return f.required && !value ? t.form.errors.photoRequired : undefined;
+      }
+      return f.required && !value ? t.form.errors.required : undefined;
+  }
+}
+
 export function validateOrderForm(
   values: OrderFormValues,
   t: Dictionary,
@@ -198,72 +251,54 @@ export function validateOrderForm(
 ): OrderFormErrors {
   const places = opts.places?.active ? opts.places : null;
   const e: OrderFormErrors = {};
-  const egypt = isEgyptForm(values);
-  const validPhone = (raw: string) => (egypt ? isEgyptianMobile(raw) : INTL_PHONE.test(normalizePhone(raw)));
-
   for (const f of formOf(fields, opts)) {
-    const field = FORM_FIELD_OF[f.key];
-    const value = values[field].trim();
-    switch (f.key) {
-      case "full_name":
-        if (value.length < 2) e.fullName = t.form.errors.fullName;
-        break;
-      case "phone":
-        if (!validPhone(value)) e.phone = egypt ? t.form.errors.phone : t.form.errors.phoneIntl;
-        break;
-      case "phone_alt":
-        if (!value) {
-          if (f.required) e.altPhone = t.form.errors.required;
-        } else if (!validPhone(value)) {
-          e.altPhone = egypt ? t.form.errors.altPhone : t.form.errors.phoneIntl;
-        }
-        break;
-      case "email":
-        if (!value) {
-          if (f.required) e.email = t.form.errors.emailRequired;
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          e.email = t.form.errors.email;
-        }
-        break;
-      case "country":
-        if (f.required && !value) e.country = t.form.errors.country;
-        break;
-      case "government":
-        if (places) {
-          if (f.required && !places.regionId) e.governorate = t.form.errors.governorate;
-          break;
-        }
-        if (!value) {
-          if (f.required) e.governorate = t.form.errors.governorate;
-        } else if (placesFor(values.country).length > 0 && !placesFor(values.country).some((p) => p.code === value)) {
-          e.governorate = t.form.errors.governorate;
-        }
-        break;
-      case "city":
-        // Picked from the region's cities; a region without any keeps the typed city.
-        if (places && (!places.regionId || places.hasCities)) {
-          if (f.required && places.regionId && !places.cityId) e.city = t.form.errors.cityChoose;
-          break;
-        }
-        if (f.required && !value) e.city = t.form.errors.city;
-        break;
-      case "address":
-        if (f.required && value.length < 5) e.address = t.form.errors.address;
-        break;
-      case "postal_code":
-        if (f.required && !value) e.postalCode = t.form.errors.postalCode;
-        break;
-      case "note":
-        break;
-      default:
-        // A photo field waits for its upload; its answer is the upload id (components/checkout/CheckoutPhotoField).
-        if (isCheckoutPhotoField(f)) {
-          if (isPhotoUploading(f.key)) e[field] = t.custom.waitUpload;
-          else if (f.required && !value) e[field] = t.form.errors.photoRequired;
-        } else if (f.required && !value) e[field] = t.form.errors.required;
-    }
+    const problem = fieldProblem(f, values, t, places);
+    if (problem) e[FORM_FIELD_OF[f.key]] = problem;
   }
   return e;
+}
+
+/**
+ * The same check for one field — what a field shows once the shopper has left
+ * it, and from then on as they type. Undefined when the field is fine, and
+ * for a field this form does not show.
+ */
+export function validateOrderField(
+  field: OrderFormField,
+  values: OrderFormValues,
+  t: Dictionary,
+  fields: OrderFormFieldModes,
+  opts: { showAltPhone?: boolean; places?: PlacePicks | null } = {}
+): string | undefined {
+  const f = formOf(fields, opts).find((candidate) => FORM_FIELD_OF[candidate.key] === field);
+  return f ? fieldProblem(f, values, t, opts.places?.active ? opts.places : null) : undefined;
+}
+
+/**
+ * Why a number is not an Egyptian mobile, for the words under the field. It
+ * decides nothing: whether a number is one is `isEgyptianMobile` (lib/egypt),
+ * and this only names what to fix in one that is not. Null for a valid number
+ * and for an empty field (the form's own "required" line covers that).
+ *
+ *   prefix   — does not start with 01
+ *   operator — starts with 01, but not 010 / 011 / 012 / 015
+ *   short    — fewer than 11 digits so far (`digits` says how many)
+ *   long     — more than 11 digits
+ *   letters  — something that is not a digit (a foreign "+", a letter)
+ */
+export type EgyptPhoneIssue =
+  | { kind: "prefix" | "operator" | "long" | "letters" }
+  | { kind: "short"; digits: number };
+
+export function egyptPhoneIssue(raw: string): EgyptPhoneIssue | null {
+  if (isEgyptianMobile(raw)) return null;
+  const number = normalizePhone(raw);
+  if (!number) return null;
+  if (/\D/.test(number)) return { kind: "letters" };
+  if (!"01".startsWith(number.slice(0, 2))) return { kind: "prefix" };
+  if (number.length >= 3 && !"0125".includes(number[2])) return { kind: "operator" };
+  if (number.length < 11) return { kind: "short", digits: number.length };
+  return { kind: "long" };
 }
 
 /**

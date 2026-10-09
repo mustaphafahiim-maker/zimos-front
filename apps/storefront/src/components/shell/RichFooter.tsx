@@ -8,6 +8,7 @@ import type { Locale } from "@/lib/i18n";
 import { useDictionary } from "@/lib/StoreContext";
 import { resolveShellLinks, type FooterShell } from "@/lib/storeShell";
 import { pageAndPolicyGroups } from "@/lib/footerLinks";
+import { withBranchesLink } from "@/lib/storeBranches";
 
 /**
  * The fuller footer (`themeSettings.footer.layout: "rich"`): the store's logo
@@ -63,7 +64,8 @@ export function RichFooter({
   const groups = [
     ...(footer.showLinks ? (footer.groups ?? []).map((group) => ({ title: group.title, links: resolveShellLinks(group.links, t.common) })) : []),
     // The footer pages and the store's policies, as the plain footer shows them (lib/footerLinks).
-    ...pageAndPolicyGroups(store, t),
+    // …with «فروعنا» among the pages when the store shows its branches (lib/storeBranches, handoff 233).
+    ...withBranchesLink(pageAndPolicyGroups(store, t), store, t, locale),
   ];
 
   return (

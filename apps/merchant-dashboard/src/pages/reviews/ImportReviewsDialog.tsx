@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { Download } from "lucide-react";
-import { Alert, Button, Input, Label } from "@store-builder/ui";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Alert, Button, Input } from "@store-builder/ui";
 import { reviewImportRun, reviewImporterInfo, type ReviewImportRequest, type ReviewImportResult } from "@store-builder/api-client";
-import { apiClient } from "@/lib/apiClient";
-import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
-import { useErrorMessage } from "@/lib/errorMessages";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { Field } from "@/components/Field";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { apiClient } from "@/lib/apiClient";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { useAsync } from "@/lib/useAsync";
+import { useWorkspaceId } from "@/lib/useWorkspaceId";
 
 /**
  * Importing the merchant's own reviews of a product from their Shopify store
@@ -17,15 +17,20 @@ import { useToast } from "@/components/Toast";
  * "verified buyer" badge and, unless the merchant says so, wait for approval.
  */
 
+const FORM_ID = "import-reviews-form";
+
+const EMPTY: ReviewImportRequest = { productId: "", url: "", photosOnly: false, minRating: 1, language: "any", status: "pending" };
+
 const STRINGS = {
   en: {
-    open: "Import reviews",
     title: "Import reviews from Shopify",
     description: "Paste the link of the same product in your Shopify store. Its reviews are added to the product you choose here, without the “verified buyer” badge.",
     product: "Product here",
     chooseProduct: "Choose a product",
+    productRequired: "Choose the product the reviews go to.",
     url: "Product link on Shopify",
     urlHint: "For example https://your-store.com/products/summer-cap",
+    urlRequired: "Paste the link of the product's page on Shopify.",
     photosOnly: "Only reviews with photos",
     minRating: "Lowest rating",
     stars: "{n} stars and up",
@@ -35,8 +40,8 @@ const STRINGS = {
     arabic: "Arabic",
     english: "English",
     french: "French",
-    publish: "Show them in the store now (otherwise they wait for your approval)",
-    missing: "Choose the product and paste its Shopify link.",
+    publish: "Show them in the store now",
+    publishHint: "Off: they wait for your approval.",
     sandbox: "Test mode: this importer returns sample reviews marked “sandbox”, not your store's. Use it on a test store only.",
     unavailable: "Importing reviews isn't available yet.",
     cancel: "Cancel",
@@ -46,68 +51,86 @@ const STRINGS = {
     done: "{imported} imported · {duplicates} already here · {filtered} left out by the filters (of {found} found).",
   },
   ar: {
-    open: "استيراد تقييمات",
-    title: "استيراد تقييمات من شوبيفاي",
-    description: "الصق لينك نفس المنتج في متجرك على شوبيفاي. تقييماته هتتضاف للمنتج اللي هتختاره هنا، من غير علامة «مشترٍ موثّق».",
+    title: "استورد تقييمات من شوبيفاي",
+    description: "الصق لينك نفس المنتج في متجرك على شوبيفاي. تقييماته هتتضاف للمنتج اللي هتختاره هنا، من غير علامة «مشتري موثّق».",
     product: "المنتج هنا",
-    chooseProduct: "اختار منتجًا",
+    chooseProduct: "اختار منتج",
+    productRequired: "اختار المنتج اللي التقييمات هتتضاف له.",
     url: "لينك المنتج على شوبيفاي",
     urlHint: "مثلًا https://your-store.com/products/summer-cap",
+    urlRequired: "الصق لينك صفحة المنتج على شوبيفاي.",
     photosOnly: "التقييمات اللي فيها صور بس",
     minRating: "أقل تقييم",
-    stars: "{n} نجوم فأكثر",
+    stars: "{n} نجوم وأكتر",
     anyRating: "أي تقييم",
     language: "اللغة",
     anyLanguage: "أي لغة",
     arabic: "عربي",
     english: "إنجليزي",
     french: "فرنساوي",
-    publish: "اعرضها في المتجر دلوقتي (غير كده هتستنى موافقتك)",
-    missing: "اختار المنتج والصق لينك شوبيفاي بتاعه.",
+    publish: "اعرضها في المتجر دلوقتي",
+    publishHint: "لو مقفول: هتستنى موافقتك.",
     sandbox: "وضع تجريبي: المستورد ده بيرجّع تقييمات تجريبية مكتوب عليها «sandbox»، مش تقييمات متجرك. استخدمه في متجر تجريبي بس.",
     unavailable: "استيراد التقييمات مش متاح لسه.",
     cancel: "إلغاء",
-    close: "إغلاق",
-    run: "استيراد",
+    close: "قفل",
+    run: "استورد",
     running: "بنستورد…",
     done: "اتضاف {imported} · {duplicates} موجودين قبل كده · {filtered} اتشالوا بالفلاتر (من {found}).",
   },
 } satisfies Messages;
 
-export function ImportReviewsButton({ onImported }: { onImported: () => void }) {
-  const t = useT(STRINGS);
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
-        <Download className="size-4" aria-hidden />
-        {t.open}
-      </Button>
-      {open && <ImportReviewsDialog onClose={() => setOpen(false)} onImported={onImported} />}
-    </>
-  );
-}
+const CHECK_ROW = "flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink";
+const CHECK_BOX = "size-5 shrink-0 cursor-pointer accent-primary";
 
-function ImportReviewsDialog({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
+export function ImportReviewsSheet({ open, onClose, onImported }: { open: boolean; onClose: () => void; onImported: () => void }) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
-  const importer = useAsync(() => reviewImporterInfo(apiClient, workspaceId), [workspaceId]);
-  const products = useAsync(() => apiClient.listProducts(workspaceId, { status: ["draft", "active"], limit: 200 }), [workspaceId]);
-  const [form, setForm] = useState<ReviewImportRequest>({ productId: "", url: "", photosOnly: false, minRating: 1, language: "any", status: "pending" });
+  // Asked for once the sheet is first opened, not with the page.
+  const [wanted, setWanted] = useState(open);
+  if (open && !wanted) setWanted(true);
+  const importer = useAsync(() => (wanted ? reviewImporterInfo(apiClient, workspaceId) : Promise.resolve(null)), [workspaceId, wanted]);
+  const products = useAsync(
+    () => (wanted ? apiClient.listProducts(workspaceId, { status: ["draft", "active"], limit: 200 }) : Promise.resolve(null)),
+    [workspaceId, wanted]
+  );
+  const [form, setForm] = useState<ReviewImportRequest>(EMPTY);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ product?: string; url?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [result, setResult] = useState<ReviewImportResult | null>(null);
+  const productField = useRef<HTMLSelectElement>(null);
+  const urlField = useRef<HTMLInputElement>(null);
   const set = (patch: Partial<ReviewImportRequest>) => setForm((prev) => ({ ...prev, ...patch }));
 
-  async function run() {
-    if (!form.productId || !form.url.trim()) {
-      setError(t.missing);
+  // Every opening starts from an empty form.
+  useEffect(() => {
+    if (!open) return;
+    setForm(EMPTY);
+    setBusy(false);
+    setErrors({});
+    setFormError(null);
+    setResult(null);
+  }, [open]);
+
+  async function run(event: FormEvent) {
+    event.preventDefault();
+    if (busy) return;
+    const found: { product?: string; url?: string } = {};
+    if (!form.productId) found.product = t.productRequired;
+    if (!form.url.trim()) found.url = t.urlRequired;
+    setErrors(found);
+    if (found.product || found.url) {
+      // The first field that needs fixing, on screen and under the cursor.
+      const first = found.product ? productField.current : urlField.current;
+      first?.scrollIntoView({ block: "center" });
+      first?.focus({ preventScroll: true });
       return;
     }
     setBusy(true);
-    setError(null);
+    setFormError(null);
     try {
       const done = await reviewImportRun(apiClient, workspaceId, { ...form, url: form.url.trim() });
       setResult(done);
@@ -116,109 +139,134 @@ function ImportReviewsDialog({ onClose, onImported }: { onClose: () => void; onI
         onImported();
       }
     } catch (err) {
-      setError(errorMessage(err));
+      setFormError(errorMessage(err));
     } finally {
       setBusy(false);
     }
   }
 
-  const unavailable = importer.data && !importer.data.available;
+  const unavailable = Boolean(importer.data && !importer.data.available);
   return (
     <Modal
-      open
+      open={open}
       onClose={busy ? () => {} : onClose}
       title={t.title}
       description={t.description}
       footer={
         <>
-          <Button type="button" variant="outline" disabled={busy} onClick={onClose}>
+          <Button type="button" variant="outline" className="rounded-full px-5" disabled={busy} onClick={onClose}>
             {result ? t.close : t.cancel}
           </Button>
-          <Button type="button" disabled={busy || Boolean(unavailable)} onClick={() => void run()}>
+          <Button type="submit" form={FORM_ID} className="rounded-full px-5" disabled={busy || unavailable}>
             {busy ? t.running : t.run}
           </Button>
         </>
       }
     >
-      <div className="space-y-4">
+      <form id={FORM_ID} noValidate className="space-y-4" onSubmit={(event) => void run(event)}>
         {unavailable && <Alert>{t.unavailable}</Alert>}
         {importer.data?.sandbox && <Alert>{t.sandbox}</Alert>}
-        <div className="space-y-1.5">
-          <Label htmlFor="import-product">{t.product}</Label>
-          <Select id="import-product" value={form.productId} disabled={busy || products.loading} onChange={(e) => set({ productId: e.target.value })}>
-            <option value="">{t.chooseProduct}</option>
-            {(products.data?.products ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="import-url">{t.url}</Label>
-          <Input
-            id="import-url"
-            type="url"
-            dir="ltr"
-            maxLength={1000}
-            placeholder="https://"
-            value={form.url}
-            disabled={busy}
-            aria-describedby="import-url-hint"
-            onChange={(e) => set({ url: e.target.value })}
-          />
-          <p id="import-url-hint" className="text-xs text-ink-soft" dir="ltr">
-            {t.urlHint}
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="import-rating">{t.minRating}</Label>
-            <Select id="import-rating" value={String(form.minRating)} disabled={busy} onChange={(e) => set({ minRating: Number(e.target.value) })}>
-              <option value="1">{t.anyRating}</option>
-              {[2, 3, 4, 5].map((n) => (
-                <option key={n} value={n}>
-                  {fmt(t.stars, { n })}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="import-language">{t.language}</Label>
-            <Select
-              id="import-language"
-              value={form.language}
-              disabled={busy}
-              onChange={(e) => set({ language: e.target.value as ReviewImportRequest["language"] })}
-            >
-              <option value="any">{t.anyLanguage}</option>
-              <option value="ar">{t.arabic}</option>
-              <option value="en">{t.english}</option>
-              <option value="fr">{t.french}</option>
-            </Select>
-          </div>
-        </div>
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink">
-          <input type="checkbox" className="size-4 accent-primary" checked={Boolean(form.photosOnly)} disabled={busy} onChange={(e) => set({ photosOnly: e.target.checked })} />
-          {t.photosOnly}
-        </label>
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink">
-          <input
-            type="checkbox"
-            className="size-4 accent-primary"
-            checked={form.status === "approved"}
-            disabled={busy}
-            onChange={(e) => set({ status: e.target.checked ? "approved" : "pending" })}
-          />
-          {t.publish}
-        </label>
-        {error && <Alert variant="danger">{error}</Alert>}
+        {formError && <Alert variant="danger">{formError}</Alert>}
         {result && (
           <Alert variant={result.imported > 0 ? "success" : "info"}>
             {fmt(t.done, { imported: result.imported, duplicates: result.duplicates, filtered: result.filteredOut, found: result.found })}
           </Alert>
         )}
-      </div>
+
+        <Field label={t.product} required error={errors.product}>
+          {({ id, ...aria }) => (
+            <Select
+              ref={productField}
+              id={id}
+              {...aria}
+              value={form.productId}
+              disabled={busy || products.loading}
+              onChange={(event) => {
+                set({ productId: event.target.value });
+                if (errors.product) setErrors((prev) => ({ ...prev, product: undefined }));
+              }}
+            >
+              <option value="">{t.chooseProduct}</option>
+              {(products.data?.products ?? []).map((product) => (
+                <option key={product.id} value={product.id}>
+                  {product.name}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+
+        <Field label={t.url} required hint={t.urlHint} error={errors.url}>
+          {({ id, ...aria }) => (
+            <Input
+              ref={urlField}
+              id={id}
+              {...aria}
+              type="url"
+              inputMode="url"
+              dir="ltr"
+              maxLength={1000}
+              placeholder="https://"
+              value={form.url}
+              disabled={busy}
+              onChange={(event) => {
+                set({ url: event.target.value });
+                if (errors.url) setErrors((prev) => ({ ...prev, url: undefined }));
+              }}
+            />
+          )}
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t.minRating}>
+            {({ id, ...aria }) => (
+              <Select id={id} {...aria} value={String(form.minRating)} disabled={busy} onChange={(event) => set({ minRating: Number(event.target.value) })}>
+                <option value="1">{t.anyRating}</option>
+                {[2, 3, 4, 5].map((n) => (
+                  <option key={n} value={n}>
+                    {fmt(t.stars, { n })}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <Field label={t.language}>
+            {({ id, ...aria }) => (
+              <Select
+                id={id}
+                {...aria}
+                value={form.language}
+                disabled={busy}
+                onChange={(event) => set({ language: event.target.value as ReviewImportRequest["language"] })}
+              >
+                <option value="any">{t.anyLanguage}</option>
+                <option value="ar">{t.arabic}</option>
+                <option value="en">{t.english}</option>
+                <option value="fr">{t.french}</option>
+              </Select>
+            )}
+          </Field>
+        </div>
+
+        <div>
+          <label className={CHECK_ROW}>
+            <input type="checkbox" className={CHECK_BOX} checked={Boolean(form.photosOnly)} disabled={busy} onChange={(event) => set({ photosOnly: event.target.checked })} />
+            {t.photosOnly}
+          </label>
+          <label className={CHECK_ROW}>
+            <input
+              type="checkbox"
+              role="switch"
+              className={CHECK_BOX}
+              checked={form.status === "approved"}
+              disabled={busy}
+              onChange={(event) => set({ status: event.target.checked ? "approved" : "pending" })}
+            />
+            {t.publish}
+          </label>
+          <p className="text-xs leading-5 text-ink-soft">{t.publishHint}</p>
+        </div>
+      </form>
     </Modal>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowDownRight, ArrowUpRight, BarChart3, Info, Users } from "lucide-react";
+import { IconArrowDownRight, IconArrowOut, IconChart, IconInfo, IconPeople } from "@/components/icons";
 import {
   Card,
   Table,
@@ -29,6 +29,7 @@ import {
   type AnalyticsRange,
 } from "@/lib/analytics";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { countOf } from "@/lib/plural";
 import { ReportCurrencySelect, useReportMoney } from "@/lib/reportCurrency";
 
 const STRINGS = {
@@ -66,7 +67,6 @@ const STRINGS = {
     salesOverTimeDesc: "Daily gross sales in {currency}, against the previous period.",
     ordersOverTime: "Orders over time",
     ordersOverTimeDesc: "Orders per day, against the previous period.",
-    ordersCount: "{n} orders",
     breakdownTitle: "Sales breakdown",
     breakdownDesc: "Where the money in this period stands.",
     rowGross: "Gross sales",
@@ -145,71 +145,70 @@ const STRINGS = {
   },
   ar: {
     title: "التحليلات",
-    description: "أرقام المبيعات محسوبة من طلباتك الفعلية، والزيارات من تتبّع متجرك نفسه. مفيش أي رقم تقديري.",
+    description: "أرقام المبيعات محسوبة من أوردراتك الفعلية، والزيارات من تتبّع متجرك نفسه. مفيش أي رقم تقديري.",
     comparedTo: "{current} مقارنةً بـ {previous}",
     thisPeriod: "هذه الفترة",
     previousPeriod: "الفترة السابقة",
     vsPrevious: "مقارنةً بالفترة السابقة",
     noComparison: "مفيش فترة سابقة للمقارنة",
     grossSales: "إجمالي المبيعات",
-    grossSalesHint: "قيمة الطلبات المُنشأة، بعد استبعاد الملغاة والمرفوضة.",
-    orders: "الطلبات",
-    ordersHint: "الطلبات المُنشأة في هذه الفترة.",
-    avgOrderValue: "متوسط قيمة الطلب",
-    avgOrderHint: "إجمالي المبيعات ÷ عدد الطلبات.",
-    ordersDelivered: "الطلبات المُسلَّمة",
-    ordersDeliveredHint: "الطلبات التي وصلت إلى العميل.",
+    grossSalesHint: "قيمة الأوردرات المُنشأة، بعد استبعاد الملغاة والمرفوضة.",
+    orders: "الأوردرات",
+    ordersHint: "الأوردرات المُنشأة في هذه الفترة.",
+    avgOrderValue: "متوسط قيمة الأوردر",
+    avgOrderHint: "إجمالي المبيعات ÷ عدد الأوردرات.",
+    ordersDelivered: "الأوردرات المُسلَّمة",
+    ordersDeliveredHint: "الأوردرات التي وصلت إلى العميل.",
     deliveredRevenue: "المبيعات المُسلَّمة",
-    deliveredRevenueHint: "قيمة الطلبات التي وصلت إلى العميل.",
+    deliveredRevenueHint: "قيمة الأوردرات التي وصلت إلى العميل.",
     collected: "المبالغ المحصَّلة",
-    collectedHint: "المدفوعات المسجَّلة فعلًا على الطلبات.",
+    collectedHint: "المدفوعات المسجَّلة فعلًا على الأوردرات.",
     grossProfit: "إجمالي الربح",
     grossProfitHint: "إيراد المنتجات المُسلَّمة بعد خصم الخصومات وتكلفة المنتجات والمبالغ المستردة.",
     confirmationRate: "نسبة التأكيد",
-    confirmationHint: "الطلبات المؤكَّدة ÷ الطلبات التي تلقيت ردًّا عليها.",
+    confirmationHint: "الأوردرات المؤكَّدة ÷ الأوردرات التي تلقيت ردًّا عليها.",
     deliveryRate: "نسبة التسليم",
     deliveryHint: "المُسلَّمة ÷ المؤكَّدة.",
     returnRate: "نسبة المرتجعات",
     returnHint: "المرتجعة ÷ (المُسلَّمة + المرتجعة).",
     newCustomers: "عملاء جدد",
-    newCustomersHint: "العملاء الذين كان أول طلب لهم في هذه الفترة.",
+    newCustomersHint: "العملاء الذين كان أول أوردر لهم في هذه الفترة.",
     salesOverTime: "إجمالي المبيعات عبر الزمن",
     salesOverTimeDesc: "المبيعات اليومية بعملة {currency}، مقارنةً بالفترة السابقة.",
-    ordersOverTime: "الطلبات عبر الزمن",
-    ordersOverTimeDesc: "الطلبات اليومية، مقارنةً بالفترة السابقة.",
-    ordersCount: "{n} طلب",
+    ordersOverTime: "الأوردرات عبر الزمن",
+    ordersOverTimeDesc: "الأوردرات اليومية، مقارنةً بالفترة السابقة.",
     breakdownTitle: "تفصيل المبيعات",
     breakdownDesc: "أين تقف المبالغ في هذه الفترة.",
     rowGross: "إجمالي المبيعات",
-    rowGrossSub: "كل الطلبات المُنشأة، بعد استبعاد الملغاة والمرفوضة",
+    rowGrossSub: "كل الأوردرات المُنشأة، بعد استبعاد الملغاة والمرفوضة",
     rowDelivered: "المبيعات المُسلَّمة",
-    rowDeliveredSub: "الطلبات التي وصلت إلى العميل",
+    rowDeliveredSub: "الأوردرات التي وصلت إلى العميل",
     rowCollected: "المبالغ المحصَّلة",
     rowCollectedSub: "المدفوعات المسجَّلة",
     rowRefunded: "المبالغ المستردة",
     rowRefundedSub: "المبالغ التي أُعيدت إلى العملاء",
     rowDiscounts: "الخصومات",
-    rowDiscountsSub: "على الطلبات المُسلَّمة",
+    rowDiscountsSub: "على الأوردرات المُسلَّمة",
     rowShipping: "رسوم الشحن المحصَّلة",
-    rowShippingSub: "على الطلبات المُسلَّمة",
-    journeyTitle: "مسار الطلب",
-    journeyDesc: "إلى أين وصلت طلبات هذه الفترة.",
+    rowShippingSub: "على الأوردرات المُسلَّمة",
+    journeyTitle: "مسار الأوردر",
+    journeyDesc: "إلى أين وصلت أوردرات هذه الفترة.",
     stepPlaced: "مُنشأة",
     stepConfirmed: "مؤكَّدة",
     stepDelivered: "مُسلَّمة",
     stepReturned: "مرتجعة",
-    ofPlaced: "{pct} من الطلبات المُنشأة",
+    ofPlaced: "{pct} من الأوردرات المُنشأة",
     productsTitle: "المنتجات الأكثر مبيعًا",
     productsDesc: "حسب عدد الوحدات المبيعة في هذه الفترة.",
     colProduct: "المنتج",
     colUnits: "الوحدات",
     colSales: "المبيعات",
     noProducts: "لم يُبَع شيء في هذه الفترة",
-    noProductsDesc: "عند وصول الطلبات، ستظهر هنا منتجاتك الأكثر مبيعًا.",
+    noProductsDesc: "عند وصول الأوردرات، ستظهر هنا منتجاتك الأكثر مبيعًا.",
     unnamedProduct: "منتج بلا اسم",
-    statusTitle: "الطلبات حسب الحالة",
-    statusDesc: "طلبات هذه الفترة حسب حالتها الحالية.",
-    statusPending: "بانتظار التأكيد",
+    statusTitle: "الأوردرات حسب الحالة",
+    statusDesc: "أوردرات هذه الفترة حسب حالتها الحالية.",
+    statusPending: "مستني تأكيد",
     statusConfirmed: "مؤكَّدة",
     statusPostponed: "مؤجَّلة",
     statusUnreachable: "تعذَّر الوصول إلى العميل",
@@ -217,23 +216,23 @@ const STRINGS = {
     statusCancelled: "ملغاة",
     statusDelivered: "مُسلَّمة",
     statusReturned: "مرتجعة",
-    noActivity: "مفيش طلبات في هذه الفترة",
-    noActivityDesc: "ستمتلئ الرسوم البيانية بمجرد أن تبدأ الطلبات بالوصول.",
+    noActivity: "مفيش أوردرات في الفترة دي",
+    noActivityDesc: "ستمتلئ الرسوم البيانية بمجرد أن تبدأ الأوردرات بالوصول.",
     sessions: "الجلسات",
     sessionsHint: "زيارات متجرك ومسارات البيع، يحسبها المتجر نفسه.",
     visitors: "الزوار",
     visitorsHint: "المتسوقون المختلفون، ويُحسب كل تبويب متصفح مرة واحدة.",
     conversionRate: "معدل التحويل",
-    conversionRateHint: "الجلسات التي انتهت بطلب ÷ جميع الجلسات.",
+    conversionRateHint: "الجلسات التي انتهت بأوردر ÷ جميع الجلسات.",
     sessionsOverTime: "الجلسات عبر الزمن",
     sessionsOverTimeDesc: "الجلسات اليومية، مقارنةً بالفترة السابقة.",
     sessionsCount: "{n} جلسة",
-    funnelTitle: "قمع التحويل",
+    funnelTitle: "مسار التحويل",
     funnelDesc: "إلى أين وصلت جلسات هذه الفترة.",
     stepSessions: "الجلسات",
     stepAddToCart: "أضافوا إلى السلة",
     stepCheckout: "وصلوا إلى الدفع",
-    stepOrders: "أتمّوا طلبًا",
+    stepOrders: "عملوا أوردر",
     ofSessions: "{pct} من الجلسات",
     devicesTitle: "الجلسات حسب الجهاز",
     devicesDesc: "حسب جهاز كل جلسة.",
@@ -245,7 +244,7 @@ const STRINGS = {
     sourcesDesc: "من وسوم UTM والمواقع المُحيلة التي وصلت منها الجلسات.",
     colSource: "المصدر",
     colSessions: "الجلسات",
-    colOrders: "الطلبات",
+    colOrders: "الأوردرات",
     direct: "مباشر / بلا وسم",
     pagesTitle: "الصفحات الأكثر مشاهدة",
     pagesDesc: "الصفحات الأكثر مشاهدة في هذه الفترة.",
@@ -271,8 +270,8 @@ function Delta({ basisPoints, vsLabel }: { basisPoints: number | null; vsLabel: 
           !up && !down && "text-ink-soft"
         )}
       >
-        {up && <ArrowUpRight className="size-3.5" aria-hidden />}
-        {down && <ArrowDownRight className="size-3.5" aria-hidden />}
+        {up && <IconArrowOut className="size-3.5" aria-hidden />}
+        {down && <IconArrowDownRight className="size-3.5" aria-hidden />}
         <bdi dir="ltr">{formatPercentValue(Math.abs(basisPoints) / 10000)}</bdi>
       </span>
     </span>
@@ -307,7 +306,7 @@ function MetricTile({
             native tooltip keeps the popup library out of the dashboard's
             shared bundle. */}
         <span title={hint} className="inline-flex cursor-help text-ink-soft/70 hover:text-ink">
-          <Info className="size-3.5" aria-hidden />
+          <IconInfo className="size-3.5" aria-hidden />
           <span className="sr-only">{hint}</span>
         </span>
       </div>
@@ -670,7 +669,7 @@ export function AnalyticsPage() {
                   </Panel>
                 </div>
               ) : (
-                <EmptyState icon={<Users />} title={t.noTraffic} description={t.noTrafficDesc} />
+                <EmptyState icon={<IconPeople />} title={t.noTraffic} description={t.noTrafficDesc} />
               ))}
 
             {hasOrders ? (
@@ -720,7 +719,7 @@ export function AnalyticsPage() {
                     <ComparisonLineChart
                       summary={t.ordersOverTimeDesc}
                       points={comparePoints((d) => d.orders)}
-                      format={(value) => fmt(t.ordersCount, { n: formatCount(value) })}
+                      format={(value) => countOf("order", value)}
                       formatAxis={(value) => formatCount(Math.round(value))}
                       currentLabel={t.thisPeriod}
                       previousLabel={t.previousPeriod}
@@ -769,7 +768,7 @@ export function AnalyticsPage() {
 
                 <Panel title={t.productsTitle} description={t.productsDesc}>
                   {current.topProducts.length === 0 ? (
-                    <EmptyState icon={<BarChart3 />} title={t.noProducts} description={t.noProductsDesc} />
+                    <EmptyState icon={<IconChart />} title={t.noProducts} description={t.noProductsDesc} />
                   ) : (
                     <Table>
                       <TableHeader>
@@ -811,7 +810,7 @@ export function AnalyticsPage() {
                 </Panel>
               </div>
             ) : (
-              <EmptyState icon={<BarChart3 />} title={t.noActivity} description={t.noActivityDesc} />
+              <EmptyState icon={<IconChart />} title={t.noActivity} description={t.noActivityDesc} />
             )}
           </div>
         )}

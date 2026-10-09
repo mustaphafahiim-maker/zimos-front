@@ -1,0 +1,244 @@
+/* The list kit every list page shares: toolbar, chip row, bulk bar, filter sheet, row card — components/list/*.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   What lies in the page flow is never blurred: the search pill, the Filters pill and the
+   chips are small panes, a row card is a sheet pane (fifty of them scroll at once). Only
+   the bulk bar floats over the page, so only it is frosted. The selectors are the kit's
+   own hooks (zimos-* classes, data-slot) and never lean on `.glass-app main`: the same
+   pieces are drawn in sheets, which are portalled outside it.
+
+   Text: var(--color-ink) and var(--lg-ink-soft) on the panes, var(--lg-on-brand) on the
+   brand fill. Every count tint is mixed over a near-solid fill, so its digits hold 4.5:1
+   whatever part of the backdrop is behind the chip (worked out from the token values:
+   5.0:1 or better for each tone, in both themes). */
+:root:not([data-glass="off"]) {
+  /* The figure on a chip: neutral, then the three tones, then on the brand fill. */
+  --list-count: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  --list-count-attention: color-mix(in srgb, var(--color-accent) 26%, var(--lg-control-lit));
+  --list-count-danger: color-mix(in srgb, var(--color-danger) 15%, var(--lg-control-lit));
+  --list-count-success: color-mix(in srgb, var(--color-success) 16%, var(--lg-control-lit));
+  --list-count-on-brand: rgb(8 16 48 / 0.24);
+  --list-count-on-brand-rim: inset 0 0 0 1px rgb(255 255 255 / 0.24);
+  /* Something on a pane under the pointer or the finger. */
+  --list-press: color-mix(in srgb, var(--color-ink) 7%, transparent);
+  /* A selected row: the pane washed with the store's colour. */
+  --list-selected: color-mix(in srgb, var(--color-primary) 10%, var(--lg-control-lit));
+
+  &.dark {
+    --list-count: rgb(255 255 255 / 0.1);
+    --list-count-attention: color-mix(in srgb, var(--color-accent) 20%, var(--lg-control-lit));
+    --list-count-danger: color-mix(in srgb, var(--color-danger) 20%, var(--lg-control-lit));
+    --list-count-success: color-mix(in srgb, var(--color-success) 20%, var(--lg-control-lit));
+    /* The brand fill is light in the dark theme and its text dark: the bead lifts instead of sinking. */
+    --list-count-on-brand: rgb(255 255 255 / 0.34);
+    --list-count-on-brand-rim: inset 0 0 0 1px rgb(255 255 255 / 0.3);
+    --list-press: rgb(255 255 255 / 0.09);
+    --list-selected: color-mix(in srgb, var(--color-primary) 18%, var(--lg-control-lit));
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Small panes in the page flow: the search pill, the Filters pill
+   * and a chip that is not the chosen one (in the row over a list and
+   * in the filter sheet). Translucent, lit along the rim, a hairline
+   * outside — a shadow, not a border, so each keeps the exact size it
+   * has without the glass layer. No blur: nothing passes beneath them.
+   * ---------------------------------------------------------------- */
+  .zimos-list-search,
+  .zimos-list-filters,
+  .zimos-chip {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  @media (hover: hover) {
+    .zimos-list-search:hover,
+    .zimos-list-filters:hover,
+    .zimos-chip:not([aria-pressed="true"]):hover {
+      background-color: var(--lg-control-lit);
+    }
+  }
+  .zimos-list-filters:active,
+  .zimos-chip:not([aria-pressed="true"]):is(:active, [aria-expanded="true"]) {
+    background-color: var(--lg-control-lit);
+  }
+  /* The field being typed in turns solid and glows in the brand colour, like every field of the pages.
+     The glow is added to the pane's own rim; the focus outline is the component's and stays. */
+  .zimos-list-search:focus-within {
+    background-color: var(--color-paper-raised);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 0 0 4px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  }
+  /* Secondary words go one step deeper on glass (inside the shell they already do; a sheet is outside it). */
+  .zimos-list-search > svg,
+  .zimos-list-search input::placeholder,
+  [data-slot="list-search-hint"],
+  [data-slot="filter-hint"],
+  [data-slot="bulk-bar-extra"] {
+    color: var(--lg-ink-soft);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The chosen chip and the count of filters in effect: the shared
+   * selection fill — the one the main button, the current side-menu
+   * row and the chosen segment have. The chip also keeps its glow.
+   * ---------------------------------------------------------------- */
+  .zimos-chip[aria-pressed="true"],
+  .zimos-list-badge {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28);
+  }
+  .zimos-chip[aria-pressed="true"] {
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28), var(--lg-brand-glow);
+  }
+
+  /* The figure after a chip's label. A tone tints it only while there is something to look at. */
+  .zimos-chip-count {
+    background-color: var(--list-count);
+    color: var(--lg-ink-soft);
+  }
+  .zimos-chip-count[data-tone="attention"] {
+    background-color: var(--list-count-attention);
+    color: var(--color-accent-dark);
+  }
+  .zimos-chip-count[data-tone="danger"] {
+    background-color: var(--list-count-danger);
+    color: var(--lg-text-danger);
+  }
+  .zimos-chip-count[data-tone="success"] {
+    background-color: var(--list-count-success);
+    color: var(--lg-text-success);
+  }
+  .zimos-chip-count:is([data-tone="attention"], [data-tone="danger"], [data-tone="success"]) {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 16%, transparent);
+  }
+  .zimos-chip[aria-pressed="true"] .zimos-chip-count {
+    background-color: var(--list-count-on-brand);
+    color: var(--lg-on-brand);
+    box-shadow: var(--list-count-on-brand-rim);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The bulk bar. It floats over the list and the rows scroll beneath
+   * it: an overlay pane — near solid, frosted, the small rim, a
+   * hairline and the pop shadow. Its main action is a default Button,
+   * which liquid-glass.css already fills with the brand and its sheen.
+   * ---------------------------------------------------------------- */
+  .zimos-bulk-bar {
+    background-color: var(--lg-overlay);
+    -webkit-backdrop-filter: var(--lg-blur-overlay);
+    backdrop-filter: var(--lg-blur-overlay);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), var(--shadow-pop);
+  }
+  /* «الغي التحديد»: a small bead of glass, like the close button of a sheet. */
+  .zimos-bulk-clear {
+    background-color: var(--list-press);
+    box-shadow: var(--lg-rim-line);
+    color: var(--lg-ink-soft);
+  }
+  .zimos-bulk-clear:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-ink) 12%, transparent);
+    color: var(--color-ink);
+  }
+  /* The quiet actions light up on the bar; one that destroys is written in the danger colour. */
+  .zimos-bulk-action[data-variant="ghost"]:is(:hover, [aria-expanded="true"]):not([data-disabled]) {
+    background-color: var(--list-press);
+  }
+  .zimos-bulk-action[data-destructive]:not([data-primary]) {
+    color: var(--lg-text-danger);
+  }
+  .zimos-bulk-action[data-destructive]:not([data-primary]):hover:not([data-disabled]) {
+    background-color: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The row card: a sheet pane. Translucent with the two crisp rim
+   * lines and the card shadow — no blur and no soft inner glows, so a
+   * page of fifty scrolls at 60fps. Selected, it takes a brand ring and
+   * a wash of the store's colour; its words keep 4.5:1 on that wash.
+   * ---------------------------------------------------------------- */
+  .zimos-row-card {
+    background-color: var(--lg-fill);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), var(--shadow-card);
+  }
+  .zimos-row-card[data-selected] {
+    background-color: var(--list-selected);
+    box-shadow: var(--lg-rim-line), 0 0 0 2px var(--lg-brand-solid), var(--shadow-card);
+  }
+  /* The ticked box and the dot of an unread row: the brand fill again. The empty box keeps its solid
+     boundary (3:1 against the card), so it is found without relying on the tint. */
+  .zimos-row-check[data-checked],
+  .zimos-row-dot {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+  }
+  .zimos-row-check[data-checked] {
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28);
+  }
+  .zimos-row-dot {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--lg-brand-solid) 16%, transparent);
+  }
+
+  /* The table-shaped placeholder (ListSkeleton): the same sheet a table lies on, with its tinted head. */
+  .zimos-list-sheet {
+    background-color: var(--lg-fill);
+    background-image: var(--lg-sheen);
+    box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-edge), var(--shadow-card);
+  }
+  .zimos-list-sheet [data-slot="list-skeleton-head"] {
+    background-color: var(--lg-thead);
+  }
+  .zimos-list-sheet :where([data-slot="list-skeleton-head"], [data-slot="list-skeleton-row"]) {
+    border-color: var(--lg-hairline);
+  }
+
+  /* The filter sheet: the hairlines between its groups take the pane's colour; a group that folds lights up under the pointer. */
+  [data-slot="filter-group"] {
+    border-color: var(--lg-hairline);
+  }
+  @media (hover: hover) {
+    [data-slot="filter-toggle"]:hover {
+      background-color: var(--list-press);
+    }
+  }
+
+  /* If forced colours are on while this layer still is: system colours, no gradient. */
+  @media (forced-colors: active) {
+    .zimos-chip[aria-pressed="true"],
+    .zimos-list-badge,
+    .zimos-row-check[data-checked],
+    .zimos-row-dot {
+      background-color: Highlight;
+      background-image: none;
+      color: HighlightText;
+    }
+    .zimos-chip[aria-pressed="true"] .zimos-chip-count {
+      background-color: transparent;
+      color: HighlightText;
+    }
+  }
+}
+
+/* Layout, not material, so it holds with the glass layer off too. On a phone the bulk bar rises exactly
+   where a page keeps its own action bar (PageHeader's primaryAction): while rows are selected
+   components/list/BulkBar.tsx sets the attribute and that bar steps aside, keeping its room in the page. */
+html[data-bulk-open] [data-page-action] {
+  visibility: hidden;
+}
+
+/* A count that arrives or changes pops (the Filters badge, the tick of a row); the controls of a filter
+   group that was just unfolded settle in. Transform and opacity only; the components ask for them
+   through motion-safe, so nothing moves for people who asked for less. */
+@keyframes list-badge-pop {
+  from {
+    transform: scale(0.6);
+  }
+}
+@keyframes list-group-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

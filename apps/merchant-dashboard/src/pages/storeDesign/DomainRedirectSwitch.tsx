@@ -1,6 +1,6 @@
-import { useId } from "react";
 import { domainRedirectsToPrimary, type StoreDomain } from "@store-builder/api-client";
 import { useT, type Messages } from "@/i18n/LocaleContext";
+import { ToggleRow } from "./SettingsFormFooter";
 
 const STRINGS = {
   en: {
@@ -26,24 +26,5 @@ interface DomainRedirectSwitchProps {
  */
 export function DomainRedirectSwitch({ domain, disabled, onChange }: DomainRedirectSwitchProps) {
   const t = useT(STRINGS);
-  const hintId = useId();
-  return (
-    <div className="space-y-1">
-      <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink">
-        <input
-          type="checkbox"
-          role="switch"
-          className="size-5 shrink-0 cursor-pointer accent-primary disabled:cursor-default"
-          checked={domainRedirectsToPrimary(domain)}
-          disabled={disabled}
-          aria-describedby={hintId}
-          onChange={(e) => onChange(e.target.checked)}
-        />
-        {t.label}
-      </label>
-      <p id={hintId} className="text-xs text-ink-soft">
-        {t.hint}
-      </p>
-    </div>
-  );
+  return <ToggleRow label={t.label} hint={t.hint} checked={domainRedirectsToPrimary(domain)} disabled={disabled} onChange={onChange} />;
 }

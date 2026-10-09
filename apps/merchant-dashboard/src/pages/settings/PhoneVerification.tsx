@@ -8,11 +8,14 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { TextField } from "@/components/Field";
 import { Modal } from "@/components/Modal";
 import { StatusBadge } from "@/components/StatusBadge";
+import { SettingsRow } from "@/components/settings";
 import { useToast } from "@/components/Toast";
+import { PhoneChangeByCode, usePhoneChangeByCode } from "./EmailChangeByCode";
 
 const STRINGS = {
   en: {
     phone: "Phone",
+    why: "A verified number can get sign-in codes and alerts on WhatsApp.",
     none: "No phone number yet",
     verified: "Verified",
     unverified: "Not verified",
@@ -38,30 +41,31 @@ const STRINGS = {
     done: "Your phone number is verified.",
   },
   ar: {
-    phone: "الهاتف",
-    none: "مفيش رقم هاتف لسه",
+    phone: "الموبايل",
+    why: "الرقم الموثّق بيوصله أكواد الدخول والتنبيهات على واتساب.",
+    none: "لسه مفيش رقم",
     verified: "موثّق",
-    unverified: "غير موثّق",
-    verify: "توثيق الهاتف",
-    change: "تغيير الرقم",
-    title: "توثيق رقم هاتفك",
-    description: "نرسل كودًا من 6 أرقام إلى هذا الرقم. الرقم الموثّق يمكنه استقبال أكواد الدخول على واتساب.",
+    unverified: "مش موثّق",
+    verify: "وثّق الرقم",
+    change: "غيّر الرقم",
+    title: "وثّق رقم موبايلك",
+    description: "هنبعت كود من 6 أرقام على الرقم ده. الرقم الموثّق بيوصله أكواد الدخول على واتساب.",
     number: "رقم الموبايل",
     numberHint: "بكود الدولة، مثل ‎+20 10 1234 5678‎، أو رقم مصري محلي.",
-    via: "إرسال الكود عبر",
+    via: "ابعت الكود على",
     whatsapp: "واتساب",
     sms: "رسالة نصية",
-    send: "إرسال الكود",
+    send: "ابعت الكود",
     sending: "بنبعت…",
-    sentWhatsapp: "أرسلنا كودًا إلى {phone} على واتساب.",
-    sentSms: "أرسلنا كودًا إلى {phone} برسالة نصية.",
+    sentWhatsapp: "بعتنا كود على {phone} على واتساب.",
+    sentSms: "بعتنا كود على {phone} برسالة SMS.",
     code: "الكود",
-    confirm: "توثيق",
+    confirm: "وثّق",
     confirming: "بنتأكد…",
-    resend: "إرسال كود جديد",
-    back: "استخدام رقم آخر",
+    resend: "ابعت كود جديد",
+    back: "استخدم رقم تاني",
     cancel: "إلغاء",
-    done: "تم توثيق رقم هاتفك.",
+    done: "رقم موبايلك اتوثّق.",
   },
 } satisfies Messages;
 
@@ -74,28 +78,36 @@ export function PhoneVerification() {
   const t = useT(STRINGS);
   const { user, refreshUser } = useAuth();
   const [open, setOpen] = useState(false);
+  // While the server allows it, a verified number is changed with the password and an SMS code (handoff 332).
+  const byCode = usePhoneChangeByCode();
   if (!user) return null;
   const verified = Boolean(user.phone && user.phoneVerifiedAt);
 
   return (
-    <div className="sm:col-span-2">
-      <dt className="text-ink-soft">{t.phone}</dt>
-      <dd className="mt-0.5 flex flex-wrap items-center gap-2">
-        {user.phone ? (
-          <bdi dir="ltr" className="font-medium text-ink">
-            {user.phone}
-          </bdi>
-        ) : (
-          <span className="text-ink-soft">{t.none}</span>
-        )}
-        {user.phone && (
-          <StatusBadge value={verified ? "verified" : "unverified"} tone={verified ? "success" : "warning"} text={verified ? t.verified : t.unverified} />
-        )}
-        <Button size="sm" variant="outline" className="min-h-11" onClick={() => setOpen(true)}>
-          {verified ? t.change : t.verify}
-        </Button>
-      </dd>
-      {open && (
+    <>
+      <SettingsRow
+        label={t.phone}
+        hint={verified ? undefined : t.why}
+        control={
+          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+            {user.phone ? (
+              <bdi dir="ltr" className="text-sm font-medium text-ink tabular-nums">
+                {user.phone}
+              </bdi>
+            ) : (
+              <span className="text-sm text-ink-soft">{t.none}</span>
+            )}
+            {user.phone && (
+              <StatusBadge value={verified ? "verified" : "unverified"} tone={verified ? "success" : "warning"} text={verified ? t.verified : t.unverified} />
+            )}
+            <Button variant="outline" className="min-h-11" onClick={() => setOpen(true)}>
+              {verified ? t.change : t.verify}
+            </Button>
+          </div>
+        }
+      />
+      {open && byCode && verified && <PhoneChangeByCode onClose={() => setOpen(false)} />}
+      {open && !(byCode && verified) && (
         <PhoneDialog
           initialPhone={verified ? "" : user.phone ?? ""}
           onClose={() => setOpen(false)}
@@ -105,7 +117,7 @@ export function PhoneVerification() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -202,10 +214,10 @@ function PhoneDialog({ initialPhone, onClose, onVerified }: { initialPhone: stri
           {error && <Alert variant="danger">{error}</Alert>}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-3 text-sm">
-              <button type="button" className="text-primary hover:underline" onClick={() => void send()} disabled={busy}>
+              <button type="button" className="min-h-11 cursor-pointer font-medium text-primary hover:underline" onClick={() => void send()} disabled={busy}>
                 {t.resend}
               </button>
-              <button type="button" className="text-primary hover:underline" onClick={() => setSentVia(null)} disabled={busy}>
+              <button type="button" className="min-h-11 cursor-pointer font-medium text-primary hover:underline" onClick={() => setSentVia(null)} disabled={busy}>
                 {t.back}
               </button>
             </div>

@@ -1,15 +1,13 @@
-import { Alert } from "@store-builder/ui";
 import { resolveStoreSeo, storeDesignSaveSeo, type StoreSeoSettings } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
-import { Section } from "@/components/Section";
-import { Field, TextField } from "@/components/Field";
-import { Textarea } from "@/components/Textarea";
+import { SettingsGroup } from "@/components/settings";
 import { ReadOnlyNotice, SettingsFormFooter } from "./SettingsFormFooter";
 import { useSettingsEditor } from "./useSettingsEditor";
+import { GroupBlock, InputRow, STACK, SettingsSkeleton, TextareaRow } from "./sections/parts";
 
 const STRINGS = {
   en: {
@@ -65,69 +63,75 @@ export function SeoTab() {
   const previewTitle = (template && !templateInvalid ? template : `%s — ${storeName}`).replace("%s", t.samplePage);
 
   return (
-    <DataState loading={!editor.ready} error={null}>
-      <div className="space-y-5">
+    <DataState loading={!editor.ready} error={null} skeleton={<SettingsSkeleton />}>
+      <div className={STACK}>
         <ReadOnlyNotice editable={editable} />
-        <Alert>{t.auto}</Alert>
 
-        <Section title={t.title} description={t.description}>
-          <div className="space-y-4">
-            <TextField
-              label={t.titleTemplate}
-              hint={t.titleTemplateHint}
-              error={templateInvalid ? t.titleTemplateError : undefined}
-              maxLength={120}
-              value={draft.title_template}
-              disabled={locked}
-              onChange={(e) => setDraft((prev) => ({ ...prev, title_template: e.target.value }))}
-            />
-            <Field label={t.metaDescription} hint={t.metaDescriptionHint}>
-              {({ id }) => (
-                <Textarea
-                  id={id}
-                  rows={3}
-                  maxLength={320}
-                  disabled={locked}
-                  value={draft.description}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, description: e.target.value }))}
-                />
-              )}
-            </Field>
-            <TextField
-              label={t.ogImage}
-              hint={t.ogImageHint}
-              type="url"
-              dir="ltr"
-              maxLength={1000}
-              placeholder="https://"
-              value={draft.og_image_url}
-              disabled={locked}
-              onChange={(e) => setDraft((prev) => ({ ...prev, og_image_url: e.target.value }))}
-            />
-            <TextField
-              label={t.verification}
-              hint={t.verificationHint}
-              dir="ltr"
-              maxLength={120}
-              value={draft.google_site_verification}
-              disabled={locked}
-              onChange={(e) => setDraft((prev) => ({ ...prev, google_site_verification: e.target.value }))}
-            />
-          </div>
-        </Section>
+        {/* The result first: what the fields below change. */}
+        <SettingsGroup title={t.preview}>
+          <GroupBlock>
+            <p className="truncate text-base font-medium text-primary" dir="auto">
+              {previewTitle}
+            </p>
+            <p className="mt-1 line-clamp-2 text-sm text-ink-soft" dir="auto">
+              {draft.description || storeName}
+            </p>
+          </GroupBlock>
+        </SettingsGroup>
 
-        <Section title={t.preview}>
-          <div className="rounded-[0.5rem] bg-paper p-4">
-            <p className="truncate text-base font-medium text-primary">{previewTitle}</p>
-            <p className="mt-1 line-clamp-2 text-sm text-ink-soft">{draft.description || storeName}</p>
-          </div>
-        </Section>
+        <SettingsGroup title={t.title} description={t.description} footer={t.auto}>
+          <InputRow
+            label={t.titleTemplate}
+            hint={t.titleTemplateHint}
+            error={templateInvalid ? t.titleTemplateError : undefined}
+            stacked
+            dir="auto"
+            maxLength={120}
+            value={draft.title_template}
+            disabled={locked}
+            onChange={(e) => setDraft((prev) => ({ ...prev, title_template: e.target.value }))}
+          />
+          <TextareaRow
+            label={t.metaDescription}
+            hint={t.metaDescriptionHint}
+            rows={3}
+            dir="auto"
+            maxLength={320}
+            disabled={locked}
+            value={draft.description}
+            onChange={(e) => setDraft((prev) => ({ ...prev, description: e.target.value }))}
+          />
+          <InputRow
+            label={t.ogImage}
+            hint={t.ogImageHint}
+            stacked
+            type="url"
+            inputMode="url"
+            dir="ltr"
+            maxLength={1000}
+            placeholder="https://"
+            value={draft.og_image_url}
+            disabled={locked}
+            onChange={(e) => setDraft((prev) => ({ ...prev, og_image_url: e.target.value }))}
+          />
+          <InputRow
+            label={t.verification}
+            hint={t.verificationHint}
+            stacked
+            dir="ltr"
+            maxLength={120}
+            value={draft.google_site_verification}
+            disabled={locked}
+            onChange={(e) => setDraft((prev) => ({ ...prev, google_site_verification: e.target.value }))}
+          />
+        </SettingsGroup>
 
         <SettingsFormFooter
           editable={editable}
-          dirty={editor.dirty && !templateInvalid}
+          dirty={editor.dirty}
           saving={saving}
           error={editor.error}
+          blocked={templateInvalid ? t.titleTemplateError : null}
           onSave={() => void editor.save()}
           onReset={editor.reset}
         />

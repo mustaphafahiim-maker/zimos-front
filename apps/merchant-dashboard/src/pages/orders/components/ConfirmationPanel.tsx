@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useImperativeHandle, useState, type ElementType, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Button, Card } from "@store-builder/ui";
 import {
@@ -22,6 +22,7 @@ import { useToast } from "@/components/Toast";
 import { CONFIRM_ROLES, MANAGE_ROLES, minutesUntil, useNow } from "@/pages/confirmation/confirmationRoles";
 import { ChannelPicker, WhatsAppButton, useChannelLabels } from "@/pages/confirmation/confirmationChannel";
 import { CustomizationList } from "./CustomizationList";
+import { attemptAgentName, isCustomerLinkAttempt } from "@/pages/confirmation/customerLink";
 
 const STRINGS = {
   en: {
@@ -87,6 +88,33 @@ const STRINGS = {
 const OPEN_STATES = new Set(["pending", "unreachable", "postponed"]);
 
 /**
+ * Whether the order still waits on its confirmation call, and whether this
+ * viewer may confirm it now. Pure, so the panel and the order page's hero
+ * (which owns the one confirm button there) read the same answer.
+ */
+export function confirmationGate(order: Order, viewer: { role: string; userId: string | null | undefined; now: number }) {
+  const task = order.confirmationTask ?? null;
+  const open = order.paymentMethod === "cod" && !order.cancelledAt && OPEN_STATES.has(order.confirmationState);
+  const canConfirm = CONFIRM_ROLES.has(viewer.role);
+  const canManage = MANAGE_ROLES.has(viewer.role);
+  const heldMinutes = task?.lockedBy ? minutesUntil(task.lockExpiresAt, viewer.now) : 0;
+  // The holder themselves may confirm here; the server allows it.
+  const heldByOther = Boolean(task?.lockedBy) && task?.lockedBy?.id !== viewer.userId && heldMinutes > 0;
+  const assignee = task?.assignedTo ?? null;
+  const assignedToOther = Boolean(assignee) && assignee?.id !== viewer.userId && !canManage;
+  // A funnel order waits until the shopper is past the offers (the server refuses before).
+  const waiting =
+    task?.status === "queued" && Boolean(task.availableAt) && new Date(task.availableAt as string).getTime() > viewer.now;
+  const waitingMinutes = waiting ? minutesUntil(task?.availableAt ?? null, viewer.now) : 0;
+  return { open, canConfirm, heldMinutes, heldByOther, assignee, assignedToOther, waiting, waitingMinutes };
+}
+
+/** What the order page's hero may trigger: the same confirm, with the channel picked here. Resolves false when it failed (the reason shows in the panel). */
+export interface ConfirmationPanelHandle {
+  confirm: () => Promise<boolean>;
+}
+
+/**
  * Confirm a COD order that's still waiting on its call, without going through
  * the queue. Same backend rules as a queue call (POST /orders/:id/confirmation):
  * refused while another agent holds a live claim, or while the task is
@@ -94,8 +122,24 @@ const OPEN_STATES = new Set(["pending", "unreachable", "postponed"]);
  * with Cancel order, which also closes the task.
  *
  * Once the order is past confirmation, only its attempt history stays.
+ *
+ * On the order page it sits inside a folding section: `frameless` drops the
+ * card and its title, `hideConfirm` drops the confirm button (the page's hero
+ * owns it) and `actionRef` lets that hero run the same confirm.
  */
-export function ConfirmationPanel({ order, onChanged }: { order: Order; onChanged: () => void }) {
+export function ConfirmationPanel({
+  order,
+  onChanged,
+  frameless,
+  hideConfirm,
+  actionRef,
+}: {
+  order: Order;
+  onChanged: () => void;
+  frameless?: boolean;
+  hideConfirm?: boolean;
+  actionRef?: Ref<ConfirmationPanelHandle>;
+}) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -109,37 +153,33 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
 
   const task = order.confirmationTask ?? null;
   const attempts = task?.attempts ?? [];
-  const open = order.paymentMethod === "cod" && !order.cancelledAt && OPEN_STATES.has(order.confirmationState);
+  const { open, canConfirm, heldMinutes, heldByOther, assignee, assignedToOther, waiting, waitingMinutes } = confirmationGate(order, {
+    role: currentWorkspace?.role ?? "",
+    userId: user?.id,
+    now,
+  });
+  useImperativeHandle(actionRef, () => ({ confirm }));
 
   if (!open) {
-    return attempts.length > 0 ? (
+    if (attempts.length === 0) return null;
+    return frameless ? (
+      <AttemptList attempts={attempts} />
+    ) : (
       <Card className="space-y-3 p-5">
         <h2 className="font-display text-lg font-medium text-ink">{t.history}</h2>
         <AttemptList attempts={attempts} />
       </Card>
-    ) : null;
+    );
   }
 
-  const role = currentWorkspace?.role ?? "";
-  const canConfirm = CONFIRM_ROLES.has(role);
-  const canManage = MANAGE_ROLES.has(role);
-  const heldMinutes = task?.lockedBy ? minutesUntil(task.lockExpiresAt, now) : 0;
-  // The holder themselves may confirm here; the server allows it.
-  const heldByOther = Boolean(task?.lockedBy) && task?.lockedBy?.id !== user?.id && heldMinutes > 0;
-  const assignee = task?.assignedTo ?? null;
-  const assignedToOther = Boolean(assignee) && assignee?.id !== user?.id && !canManage;
-  // A funnel order waits until the shopper is past the offers (the server refuses before).
-  const waiting =
-    task?.status === "queued" && Boolean(task.availableAt) && new Date(task.availableAt as string).getTime() > now;
-  const waitingMinutes = waiting ? minutesUntil(task?.availableAt ?? null, now) : 0;
-
-  async function confirm() {
+  async function confirm(): Promise<boolean> {
     setBusy(true);
     setError(null);
     try {
       await apiClient.confirmOrder(workspaceId, order.id, undefined, channel);
       toast.success(t.confirmedToast);
       onChanged();
+      return true;
     } catch (err) {
       if (isApiErrorCode(err, "TASK_ALREADY_LOCKED")) {
         const lock = apiErrorDetails<ConfirmationLockDetails>(err);
@@ -156,14 +196,16 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
         setError(errorMessage(err));
       }
       onChanged();
+      return false;
     } finally {
       setBusy(false);
     }
   }
 
+  const Frame: ElementType = frameless ? "div" : Card;
   return (
-    <Card className="space-y-3 p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
+    <Frame className={frameless ? "space-y-3" : "space-y-3 p-5"}>
+      {!frameless && <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>}
       <div className="space-y-1 text-sm text-ink-soft">
         <p className="text-ink">{t.needsConfirmation}</p>
         {task && task.attemptCount > 0 && (
@@ -219,7 +261,7 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
       {error && <Alert variant="danger">{error}</Alert>}
 
       <div className="flex flex-wrap items-center gap-3">
-        {canConfirm && (
+        {canConfirm && !hideConfirm && (
           <Button onClick={confirm} disabled={busy || heldByOther || assignedToOther || waiting} className="min-h-11">
             {busy ? t.confirming : t.confirm}
           </Button>
@@ -236,7 +278,7 @@ export function ConfirmationPanel({ order, onChanged }: { order: Order; onChange
           <AttemptList attempts={attempts} />
         </details>
       )}
-    </Card>
+    </Frame>
   );
 }
 
@@ -251,8 +293,8 @@ function AttemptList({ attempts }: { attempts: OrderConfirmationAttempt[] }) {
         <li key={attempt.id} className="border-b border-line pb-2 last:border-b-0 last:pb-0">
           <p className="text-ink">
             <span className="font-medium">{outcome(attempt.outcome)}</span>
-            {attempt.channel && <> · {fmt(t.via, { channel: channelLabel[attempt.channel] })}</>} ·{" "}
-            {attempt.agent?.fullName ?? t.unknownAgent}
+            {attempt.channel && !isCustomerLinkAttempt(attempt) && <> · {fmt(t.via, { channel: channelLabel[attempt.channel] })}</>} ·{" "}
+            {attemptAgentName(attempt, t.unknownAgent)}
           </p>
           <p className="text-xs text-ink-soft">{formatDateTime(attempt.createdAt)}</p>
           {attempt.notes && <p className="mt-0.5 whitespace-pre-line text-ink-soft">{attempt.notes}</p>}

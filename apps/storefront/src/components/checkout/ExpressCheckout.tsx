@@ -44,12 +44,19 @@ function useApplePay(): boolean {
  * / returnUrl and on to `payment.redirectUrl` exactly as a card order does.
  * Stripe's page offers Apple Pay / Google Pay on capable devices; PayPal's asks
  * the shopper to approve. Nothing renders when no method has `express`.
+ *
+ * `frame`: "page" is the block above the form, as it was. "inline" is the
+ * same buttons without a frame of their own, for inside the payment section:
+ * the wallets are only known once the payment methods have loaded, and a
+ * block arriving above the form pushes every field down under the shopper
+ * who has already started on them.
  */
 export function ExpressCheckout({
   methods,
   onChoose,
   submitRef,
   busy,
+  frame = "page",
 }: {
   /** The methods the checkout offers (already filtered by currency and plan). */
   methods: StorefrontPaymentMethod[];
@@ -58,6 +65,7 @@ export function ExpressCheckout({
   /** The page's order button: its form is the one submitted. */
   submitRef: RefObject<HTMLButtonElement | null>;
   busy: boolean;
+  frame?: "page" | "inline";
 }) {
   const { t } = useStore();
   const titleId = useId();
@@ -77,6 +85,39 @@ export function ExpressCheckout({
     // Committed first, so the submit below runs with this method chosen.
     flushSync(() => onChoose(methodId));
     submitRef.current?.form?.requestSubmit();
+  }
+
+  if (frame === "inline") {
+    return (
+      <section aria-labelledby={titleId} className="mt-4">
+        <h3 id={titleId} className="text-sm font-semibold text-ink">
+          {t.express.title}
+        </h3>
+        <div className="mt-2 grid gap-2 sm:grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]">
+          {buttons.map(({ wallet, method }) => (
+            <button
+              key={`${method.id}:${wallet}`}
+              type="button"
+              disabled={busy}
+              onClick={() => pay(method.id)}
+              data-express-wallet={wallet}
+              className={`inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 text-base font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${WALLET_LOOK[wallet]}`}
+            >
+              {t.express.payWith(WALLET_NAMES[wallet])}
+              {method.mode === "test" && (
+                <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-dark">{t.payment.testTag}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-ink-soft">{t.express.hint}</p>
+        <p className="mt-4 flex items-center gap-3 text-sm font-medium text-ink-soft">
+          <span aria-hidden className="h-px flex-1 bg-line" />
+          {t.express.or}
+          <span aria-hidden className="h-px flex-1 bg-line" />
+        </p>
+      </section>
+    );
   }
 
   return (

@@ -11,6 +11,14 @@ import { isAccountsOffError, isShopperSignedOutError, useShopperApi, useShopperC
 import { ShopperSignIn } from "./ShopperSignIn";
 import { mergeGuestWishlist } from "@/lib/wishlist";
 import { UserIcon } from "./accountIcons";
+// «نقطي» and «رصيدي» (handoff 203, 204): two more tabs, shown when they have something to say.
+import { AccountWalletTabs, isAccountWalletPath } from "./AccountWalletTabs";
+// «مستواي» and «ادعي صحابك» (handoff 218, 222): shown on a store that runs VIP levels / invites.
+import { AccountRewardsTabs, isAccountRewardsPath } from "@/components/rewards/AccountRewardsTabs";
+// «حسابي الآجل» (handoff 229): shown to a shopper the store lets pay later, or who still owes on account.
+import { AccountOnAccountTab, isAccountOnAccountPath } from "@/components/business/AccountOnAccountTab";
+// «الخصوصية» (handoff 235): download my data, delete my account.
+import { AccountPrivacyTab, isAccountPrivacyPath } from "./AccountPrivacyTab";
 
 /**
  * The frame of every account page (`/account`, `/account/addresses`,
@@ -193,7 +201,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
   } else if (!current) {
     body = <ShellSkeleton />;
   } else {
-    const active = pathname.endsWith("/account/wishlist") ? "wishlist" : pathname.endsWith("/account/addresses")
+    const active = isAccountWalletPath(pathname) || isAccountRewardsPath(pathname) || isAccountOnAccountPath(pathname) || isAccountPrivacyPath(pathname) ? null : pathname.endsWith("/account/wishlist") ? "wishlist" : pathname.endsWith("/account/addresses")
       ? "addresses"
       : pathname.endsWith("/account/profile")
         ? "profile"
@@ -225,6 +233,10 @@ export function AccountShell({ children }: { children: ReactNode }) {
                 </li>
               );
             })}
+            <AccountWalletTabs pathname={pathname} />
+            <AccountRewardsTabs pathname={pathname} />
+            <AccountOnAccountTab pathname={pathname} />
+            <AccountPrivacyTab pathname={pathname} />
           </ul>
         </nav>
         <div className="mt-6">{children}</div>

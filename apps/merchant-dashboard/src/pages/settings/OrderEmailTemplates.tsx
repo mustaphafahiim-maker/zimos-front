@@ -1,12 +1,17 @@
 import { useMemo, useState } from "react";
 import { Alert, Button, cn } from "@store-builder/ui";
 import {
-  orderEmailDesignList,
   orderEmailDesignPreview,
   orderEmailDesignRemoveOverride,
   orderEmailDesignSave,
   orderEmailDesignSendTest,
+  orderEmailLocaleList,
+  orderEmailLocalePreview,
+  orderEmailLocaleRemove,
+  orderEmailLocaleSave,
+  orderEmailLocaleSendTest,
   type OrderEmailDesignTemplate,
+  type OrderEmailLocaleTemplate,
   type OrderEmailKey,
   type OrderEmailScope,
 } from "@store-builder/api-client";
@@ -20,6 +25,8 @@ import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { OrderEmailEditor, type EditorApi } from "./OrderEmailEditor";
+// One version of each email per language of the store (handoff 383).
+import { ORDER_EMAIL_LANGUAGE_STRINGS, OrderEmailLanguageNote, OrderEmailLanguageTabs, OrderEmailVersionBadge, orderEmailLanguageDraft, orderEmailLanguageName, orderEmailTextDir } from "./OrderEmailLanguages";
 
 /**
  * The order emails list (SPEC §14.5): each email switched on or off, edited
@@ -55,6 +62,10 @@ const STRINGS = {
     when_subscription_started: "When a subscription or installment plan starts — with the link where the customer changes their card or cancels. On unless you turn it off.",
     name_transfer_rejected: "Transfer rejected",
     when_transfer_rejected: "When you reject a transfer receipt (unless you untick “Tell the customer”) — with a link to send a new one",
+    name_return_approved: "Return approved",
+    when_return_approved: "When you approve a return or exchange request (unless you choose not to tell the customer). On unless you turn it off.",
+    name_return_rejected: "Return rejected",
+    when_return_rejected: "When you reject a return or exchange request (unless you choose not to tell the customer). On unless you turn it off.",
     switchLabel: "Send “{name}”",
     edit: "Edit",
     edited: "Edited",
@@ -104,6 +115,10 @@ const STRINGS = {
     when_subscription_started: "لما اشتراك أو تقسيط يبدأ — برابط صفحة الاشتراك اللي العميل يغيّر منها بطاقته أو يلغي. شغّالة إلا لو قفلتها.",
     name_transfer_rejected: "رفض التحويل",
     when_transfer_rejected: "لما ترفض إيصال تحويل (إلا لو شلت علامة «بلّغ العميل») — برابط لرفع إيصال جديد",
+    name_return_approved: "الموافقة على الإرجاع",
+    when_return_approved: "لما توافق على طلب إرجاع أو استبدال (إلا لو اخترت ما تبلّغش العميل). شغّالة إلا لو قفلتها.",
+    name_return_rejected: "رفض الإرجاع",
+    when_return_rejected: "لما ترفض طلب إرجاع أو استبدال (إلا لو اخترت ما تبلّغش العميل). شغّالة إلا لو قفلتها.",
     switchLabel: "إرسال «{name}»",
     edit: "تعديل",
     edited: "معدّلة",
@@ -156,32 +171,45 @@ export function OrderEmailTemplates({ scope, editorLayout = "modal" }: { scope?:
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [scope?.kind, scope?.id]
   );
-  const { data, error, loading, refresh, setData } = useAsync(() => orderEmailDesignList(apiClient, workspaceId, apiScope), [workspaceId, apiScope]);
+  // The language tab (handoff 383): null = the store's own language, the default version.
+  const [language, setLanguage] = useState<string | null>(null);
+  const lt = useT(ORDER_EMAIL_LANGUAGE_STRINGS);
+  const { data, error, loading, refresh, setData } = useAsync(() => orderEmailLocaleList(apiClient, workspaceId, apiScope, language), [workspaceId, apiScope, language]);
+  const defaultLocale = data?.defaultLocale ?? "ar";
+  // Only a language that is not the store's own has a version of its own.
+  const otherLanguage = language && language !== defaultLocale ? language : null;
   const [busy, setBusy] = useState<string | null>(null);
-  const [editing, setEditing] = useState<OrderEmailDesignTemplate | null>(null);
+  const [editing, setEditing] = useState<OrderEmailLocaleTemplate | null>(null);
   const [confirming, setConfirming] = useState<OrderEmailKey | null>(null);
 
-  const replace = (template: OrderEmailDesignTemplate) =>
+  const replace = (template: OrderEmailLocaleTemplate) =>
     setData((prev) => (prev ? { ...prev, templates: prev.templates.map((x) => (x.key === template.key ? template : x)) } : (prev as never)));
 
   // The editor talks to this funnel's or website's version (the store's by default).
   const editingKey = editing?.key;
   const editorApi = useMemo<EditorApi | undefined>(
     () =>
-      editingKey && apiScope
+      editingKey && otherLanguage
         ? {
-            save: (patch) => orderEmailDesignSave(apiClient, workspaceId, editingKey, patch, apiScope),
-            preview: (draft) => orderEmailDesignPreview(apiClient, workspaceId, editingKey, draft, apiScope),
-            sendTest: (draft) => orderEmailDesignSendTest(apiClient, workspaceId, editingKey, draft, apiScope),
+            save: (patch) => orderEmailLocaleSave(apiClient, workspaceId, editingKey, patch, apiScope, otherLanguage),
+            preview: (draft) => orderEmailLocalePreview(apiClient, workspaceId, editingKey, draft, apiScope, otherLanguage),
+            sendTest: (draft) => orderEmailLocaleSendTest(apiClient, workspaceId, editingKey, draft, apiScope, otherLanguage),
           }
-        : undefined,
-    [editingKey, apiScope, workspaceId]
+        : editingKey && apiScope
+          ? {
+              save: (patch) => orderEmailDesignSave(apiClient, workspaceId, editingKey, patch, apiScope),
+              preview: (draft) => orderEmailDesignPreview(apiClient, workspaceId, editingKey, draft, apiScope),
+              sendTest: (draft) => orderEmailDesignSendTest(apiClient, workspaceId, editingKey, draft, apiScope),
+            }
+          : undefined,
+    [editingKey, apiScope, workspaceId, otherLanguage]
   );
 
   async function toggle(template: OrderEmailDesignTemplate) {
     setBusy(template.key);
     try {
-      const updated = await orderEmailDesignSave(apiClient, workspaceId, template.key, { isEnabled: !template.isEnabled }, apiScope);
+      // One switch per email for every language: in a language tab the answer is still that language's row.
+      const updated = await orderEmailLocaleSave(apiClient, workspaceId, template.key, { isEnabled: !template.isEnabled }, apiScope, otherLanguage);
       replace(updated);
       const message = kind ? pick(t, `${updated.isEnabled ? "enabled" : "disabled"}_${kind}`) : updated.isEnabled ? t.enabled : t.disabled;
       toast.success(fmt(message, { name: orderEmailName(t, template.key) }));
@@ -214,10 +242,25 @@ export function OrderEmailTemplates({ scope, editorLayout = "modal" }: { scope?:
         key={editing.key}
         layout={editorLayout}
         title={fmt(t.editTitle, { name: orderEmailName(t, editing.key) })}
-        template={editing}
+        template={otherLanguage ? orderEmailLanguageDraft(editing) : editing}
         tokens={data.tokens}
         api={editorApi}
-        note={kind ? <p className="rounded-[var(--radius)] bg-primary-soft px-3 py-2 text-xs text-primary-dark">{pick(t, `editorNote_${kind}`)}</p> : undefined}
+        textDir={data.languages && data.languages.length > 1 ? orderEmailTextDir(otherLanguage ?? defaultLocale) : undefined}
+        note={
+          otherLanguage ? (
+            <OrderEmailLanguageNote
+              language={otherLanguage}
+              canRemove={editing.version === "language"}
+              onRemove={async () => {
+                replace(await orderEmailLocaleRemove(apiClient, workspaceId, editing.key, otherLanguage, apiScope));
+                setEditing(null);
+                toast.success(fmt(lt.removed, { language: orderEmailLanguageName(lt, otherLanguage) }));
+              }}
+            />
+          ) : kind ? (
+            <p className="rounded-[var(--radius)] bg-primary-soft px-3 py-2 text-xs text-primary-dark">{pick(t, `editorNote_${kind}`)}</p>
+          ) : undefined
+        }
         simpleNote={kind ? pick(t, `simpleNote_${kind}`) : undefined}
         onClose={() => setEditing(null)}
         onSaved={(updated) => {
@@ -235,7 +278,9 @@ export function OrderEmailTemplates({ scope, editorLayout = "modal" }: { scope?:
 
   return (
     <>
-      <DataState loading={loading} error={error} empty={!loading && !error && (data?.templates.length ?? 0) === 0} emptyMessage={t.noEmails} onRetry={() => void refresh()}>
+      {/* One tab per language of the store, when it has more than one (handoff 383). */}
+      {data?.languages && <OrderEmailLanguageTabs languages={data.languages} defaultLocale={defaultLocale} value={otherLanguage} onChange={setLanguage} />}
+      <DataState loading={loading && !data} error={error} empty={!loading && !error && (data?.templates.length ?? 0) === 0} emptyMessage={t.noEmails} onRetry={() => void refresh()}>
         <ul className="divide-y divide-line">
           {(data?.templates ?? []).map((template) => {
             const name = orderEmailName(t, template.key);
@@ -246,6 +291,7 @@ export function OrderEmailTemplates({ scope, editorLayout = "modal" }: { scope?:
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-ink">
                       {name}
+                      {otherLanguage && <OrderEmailVersionBadge template={template} defaultLocale={defaultLocale} />}
                       {kind ? (
                         <>
                           <StatusBadge value={own ? "custom" : "store"} tone={own ? "info" : "neutral"} text={own ? pick(t, `custom_${kind}`) : t.storeDefault} />
@@ -279,19 +325,20 @@ export function OrderEmailTemplates({ scope, editorLayout = "modal" }: { scope?:
                       aria-label={fmt(t.switchLabel, { name })}
                       disabled={busy === template.key}
                       onClick={() => void toggle(template)}
-                      className="group flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                      className="group flex h-11 w-14 shrink-0 cursor-pointer items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50"
                     >
+                      {/* The same track and thumb as the settings kit's switch (components/settings/SettingsRow.tsx): the thumb moves by transform alone. */}
                       <span
                         aria-hidden
                         className={cn(
-                          "relative h-6 w-11 rounded-full border transition-colors group-focus-visible:ring-2 group-focus-visible:ring-primary/40",
-                          template.isEnabled ? "border-primary bg-primary" : "border-line-strong bg-paper"
+                          "zimos-settings-switch-track relative h-7 w-12 shrink-0 overflow-hidden rounded-full transition-[background-color] duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none",
+                          template.isEnabled ? "bg-primary" : "bg-line-strong"
                         )}
                       >
                         <span
                           className={cn(
-                            "absolute top-0.5 size-4.5 rounded-full bg-paper-raised shadow-sm transition-[inset-inline-start]",
-                            template.isEnabled ? "start-[1.375rem]" : "start-0.5"
+                            "zimos-settings-switch-thumb absolute start-0.5 top-0.5 size-6 rounded-full bg-white shadow-[0_1px_3px_rgb(0_0_0/0.3)] transition-transform duration-[var(--dur-pop)] ease-[var(--ease-pop)] motion-reduce:transition-none",
+                            template.isEnabled && "translate-x-5 rtl:-translate-x-5"
                           )}
                         />
                       </span>

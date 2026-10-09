@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import { Alert, Button, Card, CardContent, Input, Label } from "@store-builder/ui";
+import { IconArrowDown, IconArrowUp, IconDelete, IconPlus } from "@/components/icons";
+import { Alert, Button, Input, Label } from "@store-builder/ui";
 import { CUSTOM_FIELD_LIMITS, customFieldPrice, type CustomField, type CustomFieldType, type PricedCustomField } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -9,6 +9,8 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { CustomFieldPriceInput } from "./CustomFieldPriceInput";
+import { SectionSaveBar } from "../product/saveQueue";
+import { ProductPageCard } from "./ProductPageCard";
 
 /**
  * The fields a shopper fills in when ordering this product — a name to
@@ -153,12 +155,8 @@ export function CustomFieldsSection({
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-4 py-5">
-        <div>
-          <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-          <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-        </div>
+    <ProductPageCard title={t.title} description={t.description}>
+      <div className="space-y-4">
 
         {fields.length === 0 && <p className="text-sm text-ink-soft">{t.empty}</p>}
 
@@ -190,7 +188,7 @@ export function CustomFieldsSection({
               ])
             }
           >
-            <Plus className="size-4" aria-hidden />
+            <IconPlus className="size-4" aria-hidden />
             {t.add}
           </Button>
           {full && <p className="text-xs text-ink-soft">{t.limit}</p>}
@@ -198,27 +196,19 @@ export function CustomFieldsSection({
 
         {error && <Alert variant="danger">{error}</Alert>}
 
-        {dirty && (
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="min-h-11"
-              disabled={busy}
-              onClick={() => {
-                setFields(saved);
-                setError(null);
-              }}
-            >
-              {t.discard}
-            </Button>
-            <Button type="button" className="min-h-11" disabled={busy} onClick={() => void save()}>
-              {busy ? t.saving : t.save}
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        <SectionSaveBar
+          section={t.title}
+          dirty={dirty}
+          saving={busy}
+          error={error}
+          onSave={() => void save()}
+          onDiscard={() => {
+            setFields(saved);
+            setError(null);
+          }}
+        />
+      </div>
+    </ProductPageCard>
   );
 }
 
@@ -257,13 +247,13 @@ function FieldEditor({
           </p>
           <div className="flex items-center">
             <button type="button" className={iconButton} aria-label={fmt(t.moveUp, { n })} disabled={index === 0} onClick={() => onMove(index - 1)}>
-              <ArrowUp className="size-4" aria-hidden />
+              <IconArrowUp className="size-4" aria-hidden />
             </button>
             <button type="button" className={iconButton} aria-label={fmt(t.moveDown, { n })} disabled={index === count - 1} onClick={() => onMove(index + 1)}>
-              <ArrowDown className="size-4" aria-hidden />
+              <IconArrowDown className="size-4" aria-hidden />
             </button>
             <button type="button" className={`${iconButton} hover:bg-danger-soft hover:text-danger`} aria-label={fmt(t.remove, { n })} onClick={onRemove}>
-              <Trash2 className="size-4" aria-hidden />
+              <IconDelete className="size-4" aria-hidden />
             </button>
           </div>
         </div>

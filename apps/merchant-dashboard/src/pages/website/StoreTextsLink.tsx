@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Type } from "lucide-react";
+import { IconText } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 
@@ -14,7 +14,7 @@ export function StoreTextsLink() {
   return (
     <Button asChild variant="outline">
       <Link to="/website/texts">
-        <Type className="size-4" aria-hidden />
+        <IconText className="size-4" aria-hidden />
         {t.storeTexts}
       </Link>
     </Button>

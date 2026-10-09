@@ -1,659 +1,216 @@
-import { useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Alert, Button, Input } from "@store-builder/ui";
-import type { Customer, CustomerAddress, Order } from "@store-builder/api-client";
+import { useParams } from "react-router-dom";
+import { contactsGet, type Customer } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
-import { getErrorMessage, getFieldErrors } from "@/lib/errors";
-import { PageHeader } from "@/components/PageHeader";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { useCachedAsync } from "@/lib/useCachedAsync";
+import { UnsavedGuardProvider } from "@/lib/useUnsavedGuard";
+import { AccordionSection } from "@/components/Accordion";
 import { DataState } from "@/components/DataState";
-import { Modal } from "@/components/Modal";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { TextField, Field } from "@/components/Field";
-import { Textarea } from "@/components/Textarea";
-import { useToast } from "@/components/Toast";
-import { StatusBadge } from "@/components/StatusBadge";
-import { formatDate, formatMoney, placeName } from "@/lib/format";
-import { useT, fmt, useCommon, type Messages } from "@/i18n/LocaleContext";
+import { IconBuilding, IconCoins, IconCrown, IconLoyalty, IconPlace, IconReferrals, IconSale, IconStoreCredit, IconTag, IconUser } from "@/components/icons";
+import { PageHeader } from "@/components/PageHeader";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+// Business customers and paying later on account (handoffs 228, 229).
+import { CustomerBusinessCard } from "@/pages/b2b/CustomerBusinessCard";
+import { CustomerOnAccountCard } from "@/pages/b2b/CustomerOnAccountCard";
+// The customer's invites (handoff 222), points (203), price lists (205), store credit (204) and VIP tier (218).
+import { CustomerInvitesCard } from "@/pages/customerReferrals/CustomerInvitesCard";
+import { dialablePhone } from "@/pages/home/today/OrderQuickLook";
+import { CustomerLoyaltyCard } from "@/pages/loyalty/CustomerLoyaltyCard";
+import { CustomerPriceListHint } from "@/pages/priceLists/CustomerPriceListHint";
+import { CustomerStoreCreditCard } from "@/pages/storeCredit/CustomerStoreCreditCard";
+import { CustomerVipCard } from "@/pages/vipTiers/CustomerVipCard";
 import { ContactInsights } from "./ContactInsights";
+// Everything under the hero (handoffs 209, 250, 237, 248, 235): the sections, the notes, the timeline, `?tab=`.
+import { CustomerCrmTabs } from "./crm/CustomerCrmTabs";
+import { isErasedCustomer } from "./crm/CustomerPrivacyCard";
+import { foldingFrame } from "./detail/CardFrame";
+import { ContactDetailsForm } from "./detail/ContactDetailsForm";
+import type { CustomerContactState } from "./detail/contactState";
+import { CustomerAddresses } from "./detail/CustomerAddresses";
+import { CustomerCallBar } from "./detail/CustomerCallBar";
+import { CustomerHero } from "./detail/CustomerHero";
+import { CustomerSuppressionBanner } from "./suppressions/CustomerSuppressionBanner";
+import { CustomerMoreMenu } from "./detail/CustomerMoreMenu";
+import { CustomerOrders } from "./detail/CustomerOrders";
+import { CustomerPageSkeleton } from "./detail/CustomerPageSkeleton";
+import { SECTION_STRINGS, addressesLineOf, contactLineOf } from "./detail/sectionStrings";
+import { useCustomerBlacklist } from "./detail/useCustomerBlacklist";
 
 const STRINGS = {
   en: {
     customer: "Customer",
     back: "Contacts",
-    summary: "{orders} orders · reliability {score}",
-    ordersTitle: "Orders",
-    ordersDescription: "Every order this customer has placed, newest first.",
-    ordersEmpty: "No orders from this customer yet.",
-    ordersIncomplete: "Only the store’s first 1,000 orders were searched, so this list may be incomplete.",
-    confLabel: "Conf",
-    shipLabel: "Ship",
-    // Order states, worded in English exactly as humanize() prints them.
-    conf_pending: "Pending",
-    conf_confirmed: "Confirmed",
-    conf_rejected: "Rejected",
-    conf_unreachable: "Unreachable",
-    conf_postponed: "Postponed",
-    ful_unfulfilled: "Unfulfilled",
-    ful_partially_fulfilled: "Partially fulfilled",
-    ful_fulfilled: "Fulfilled",
-    ful_returned: "Returned",
-    contactDetails: "Contact details",
-    fullName: "Full name",
-    email: "Email",
-    phone: "Phone",
-    phoneHint: "Set from the storefront / checkout — read-only here.",
-    alternatePhone: "Alternate phone",
-    marketingConsent: "Has consented to marketing",
-    customerUpdated: "Customer updated.",
-    blacklistTitle: "Blacklist",
-    blacklisted: "This customer is blacklisted.",
-    blacklistedReason: "This customer is blacklisted — {reason}.",
-    removeFromBlacklist: "Remove from blacklist",
-    blacklistNote: "Blacklisting stops this customer from checking out.",
-    blacklistCustomer: "Blacklist customer",
-    blacklistConfirmTitle: "Blacklist this customer?",
-    blacklistConfirmDescription: "They won't be able to check out until you remove them from the blacklist.",
-    blacklistConfirm: "Blacklist",
-    working: "Working…",
-    reason: "Reason",
-    reasonPlaceholder: "Repeated failed deliveries",
-    reasonRequired: "Enter a reason for blacklisting this customer.",
-    customerBlacklisted: "Customer blacklisted.",
-    unblacklistTitle: "Remove from blacklist?",
-    unblacklistDescription: "The customer will be able to place orders again.",
-    remove: "Remove",
-    customerUnblacklisted: "Customer removed from the blacklist.",
-    addressesTitle: "Addresses",
-    addAddress: "Add address",
-    noAddresses: "No addresses on file.",
-    defaultBadge: "Default",
-    editAddress: "Edit address",
-    addressSaved: "Address saved.",
-    addressAdded: "Address added.",
-    country: "Country",
-    countryHint: "Two-letter code.",
-    province: "Province",
-    city: "City",
-    postalCode: "Postal code",
-    addressLine: "Address line",
-    notes: "Notes",
-    defaultAddress: "Default address",
-    saveAddress: "Save address",
   },
   ar: {
-    customer: "عميل",
+    customer: "العميل",
     back: "جهات الاتصال",
-    summary: "عدد الطلبات: {orders} · درجة الموثوقية: {score}",
-    ordersTitle: "الطلبات",
-    ordersDescription: "كل طلبات هذا العميل، الأحدث أولًا.",
-    ordersEmpty: "مفيش طلبات من هذا العميل لسه.",
-    ordersIncomplete: "تم البحث في أول 1,000 طلب في المتجر فقط، لذلك قد تكون هذه القائمة غير مكتملة.",
-    confLabel: "التأكيد",
-    shipLabel: "الشحن",
-    conf_pending: "في انتظار المكالمة",
-    conf_confirmed: "مؤكد",
-    conf_rejected: "مرفوض",
-    conf_unreachable: "لم يتم الوصول إليه",
-    conf_postponed: "مؤجل",
-    ful_unfulfilled: "لم يُشحن",
-    ful_partially_fulfilled: "شُحن جزئيًا",
-    ful_fulfilled: "مكتمل",
-    ful_returned: "مرتجع",
-    contactDetails: "بيانات التواصل",
-    fullName: "الاسم بالكامل",
-    email: "البريد الإلكتروني",
-    phone: "الهاتف",
-    phoneHint: "يأتي من المتجر عند إتمام الطلب، ولا يمكن تعديله من هنا.",
-    alternatePhone: "هاتف بديل",
-    marketingConsent: "وافق على استقبال رسائل تسويقية",
-    customerUpdated: "تم تحديث بيانات العميل.",
-    blacklistTitle: "الحظر",
-    blacklisted: "هذا العميل محظور.",
-    blacklistedReason: "هذا العميل محظور — {reason}.",
-    removeFromBlacklist: "إلغاء الحظر",
-    blacklistNote: "الحظر يمنع هذا العميل من إتمام أي طلب.",
-    blacklistCustomer: "حظر العميل",
-    blacklistConfirmTitle: "حظر هذا العميل؟",
-    blacklistConfirmDescription: "لن يتمكن من إتمام أي طلب حتى تلغي حظره.",
-    blacklistConfirm: "حظر",
-    working: "بننفّذ…",
-    reason: "السبب",
-    reasonPlaceholder: "فشل التوصيل أكثر من مرة",
-    reasonRequired: "اكتب سبب حظر هذا العميل.",
-    customerBlacklisted: "تم حظر العميل.",
-    unblacklistTitle: "إلغاء حظر العميل؟",
-    unblacklistDescription: "سيتمكن العميل من الطلب مرة أخرى.",
-    remove: "إلغاء الحظر",
-    customerUnblacklisted: "تم إلغاء حظر العميل.",
-    addressesTitle: "العناوين",
-    addAddress: "إضافة عنوان",
-    noAddresses: "مفيش عناوين مسجّلة.",
-    defaultBadge: "الافتراضي",
-    editAddress: "تعديل العنوان",
-    addressSaved: "تم حفظ العنوان.",
-    addressAdded: "تمت إضافة العنوان.",
-    country: "الدولة",
-    countryHint: "رمز من حرفين.",
-    province: "المحافظة",
-    city: "المدينة",
-    postalCode: "الرمز البريدي",
-    addressLine: "العنوان",
-    notes: "ملاحظات",
-    defaultAddress: "العنوان الافتراضي",
-    saveAddress: "حفظ العنوان",
   },
 } satisfies Messages;
 
-export function CustomerDetailPage() {
-  const t = useT(STRINGS);
-  const { customerId } = useParams<{ customerId: string }>();
-  const workspaceId = useWorkspaceId();
-  const detail = useAsync(
-    () => apiClient.getCustomer(workspaceId, customerId as string),
-    [workspaceId, customerId]
-  );
-  const customer = detail.data;
-  const reload = () => detail.refresh({ silent: true });
-
-  return (
-    <div className="max-w-3xl space-y-6">
-      <PageHeader
-        title={
-          customer
-            ? customer.fullName || customer.phoneRaw || customer.phoneNormalized
-            : t.customer
-        }
-        back={{ to: "/customers", label: t.back }}
-        description={
-          customer
-            ? fmt(t.summary, { orders: customer.totalOrders, score: customer.reliabilityScore })
-            : undefined
-        }
-      />
-
-      <DataState loading={detail.loading} error={detail.error} onRetry={() => detail.refresh()}>
-        {customer && (
-          <div className="space-y-6">
-            <ContactInsights customerId={customer.id} />
-            <ContactForm customer={customer} onSaved={reload} />
-            <OrderHistorySection customer={customer} />
-            <BlacklistSection customer={customer} onChanged={reload} />
-            <AddressesSection customer={customer} onChanged={reload} />
-          </div>
-        )}
-      </DataState>
-    </div>
-  );
-}
-
-const HISTORY_PAGE_SIZE = 50;
-const HISTORY_MAX_PAGES = 20;
-
 /**
- * The customer's orders, newest first.
+ * One customer (/customers/:customerId).
  *
- * The API has no per-customer order list: a customer response carries no
- * orders, and GET /orders filters only by state (paging by id, not date). So
- * this pages through the store's orders and keeps this customer's, stopping as
- * soon as it has found `totalOrders` of them — or after 1,000 orders, in which
- * case it says the list may be incomplete. A customer with no orders costs no
- * request at all.
+ * What used to be three tabs and fifteen always-open cards is a hero, the
+ * customer's orders, and folding sections (docs/ux/REDESIGN_PROMPT.md §6):
+ *
+ *   header   back · «…» with what is done rarely — copy the number, their
+ *            WhatsApp thread, block / unblock          detail/CustomerMoreMenu
+ *   hero     who · the number · call and WhatsApp · their history with the
+ *            store as four facts · the block, when there is one
+ *                                                      detail/CustomerHero
+ *   below    their orders (each opens the order's Quick Look), then notes and
+ *            follow-ups, addresses, contact details, the timeline and the
+ *            rest, each folded to one line that says what is inside
+ *                                                      crm/CustomerCrmTabs
+ *   phone    call and WhatsApp as the bar above the dock
+ *                                                      detail/CustomerCallBar
+ *
+ * This file loads the customer and the contact record of the same person
+ * (one request each, as before — the hero and the tags section now share the
+ * second) and composes those. Each customer gets a page of its own (the key),
+ * so nothing opened or typed on one follows the merchant to the next; a
+ * customer already seen in this session is on screen from the first frame
+ * (lib/useCachedAsync), refreshed behind. Unsaved edits in the page's forms
+ * arm the browser's own "leave?" question (lib/useUnsavedGuard).
  */
-function OrderHistorySection({ customer }: { customer: Customer }) {
-  const t = useT(STRINGS);
+export function CustomerDetailPage() {
+  const { customerId = "" } = useParams<{ customerId: string }>();
   const workspaceId = useWorkspaceId();
-  const history = useAsync(async () => {
-    const found: Order[] = [];
-    if (customer.totalOrders === 0) return { orders: found, complete: true };
-    let cursor: string | undefined;
-    for (let page = 0; page < HISTORY_MAX_PAGES; page++) {
-      const { orders, nextCursor } = await apiClient.listOrders(workspaceId, {
-        limit: HISTORY_PAGE_SIZE,
-        cursor,
-      });
-      found.push(...orders.filter((order) => order.customerId === customer.id));
-      if (!nextCursor || found.length >= customer.totalOrders) {
-        found.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        return { orders: found, complete: true };
-      }
-      cursor = nextCursor;
-    }
-    found.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    return { orders: found, complete: false };
-  }, [workspaceId, customer.id, customer.totalOrders]);
-
-  const orders = history.data?.orders ?? [];
-
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.ordersTitle}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.ordersDescription}</p>
+    <UnsavedGuardProvider key={`${workspaceId}:${customerId}`}>
+      <CustomerPage workspaceId={workspaceId} customerId={customerId} />
+    </UnsavedGuardProvider>
+  );
+}
 
-      <div className="mt-4">
-        <DataState
-          loading={history.loading}
-          error={history.error}
-          empty={orders.length === 0}
-          emptyMessage={t.ordersEmpty}
-          onRetry={() => history.refresh()}
-        >
-          <ul className="divide-y divide-line overflow-hidden rounded-[0.5rem] border border-line">
-            {orders.map((order) => (
-              <li key={order.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <Link to={`/orders/${order.id}`} className="text-sm font-medium text-primary hover:underline">
-                    {order.orderNumber}
-                  </Link>
-                  <p className="text-xs text-ink-soft">{formatDate(order.createdAt)}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusBadge label={t.confLabel} value={order.confirmationState} text={t[`conf_${order.confirmationState}`]} />
-                  <StatusBadge label={t.shipLabel} value={order.fulfillmentState} text={t[`ful_${order.fulfillmentState}`]} />
-                  <span className="text-sm font-medium text-ink">
-                    {formatMoney(order.totalAmount, order.currency)}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+function CustomerPage({ workspaceId, customerId }: { workspaceId: string; customerId: string }) {
+  const t = useT(STRINGS);
+  const detail = useCachedAsync(`customer-page:${workspaceId}:${customerId}`, () => apiClient.getCustomer(workspaceId, customerId), [workspaceId, customerId]);
+  // The contact side of the same person: what they spent, how many parcels they received, their tags.
+  const contact = useCachedAsync(`customer-contact:${workspaceId}:${customerId}`, () => contactsGet(apiClient, workspaceId, customerId), [workspaceId, customerId]);
+  const customer = detail.data;
+
+  if (!customer || detail.error) {
+    return (
+      <div className="max-w-6xl">
+        <PageHeader title={t.customer} back={{ to: "/customers", label: t.back }} />
+        {/* Not found, no permission and a dropped connection each get DataState's own pane. */}
+        <DataState loading={detail.loading} error={detail.error} onRetry={() => void detail.refresh()} skeleton={<CustomerPageSkeleton />}>
+          {null}
         </DataState>
-        {history.data && !history.data.complete && (
-          <p className="mt-2 text-xs text-ink-soft">
-            {t.ordersIncomplete}
-          </p>
-        )}
       </div>
-    </section>
-  );
-}
-
-function ContactForm({ customer, onSaved }: { customer: Customer; onSaved: () => void }) {
-  const t = useT(STRINGS);
-  const common = useCommon();
-  const workspaceId = useWorkspaceId();
-  const toast = useToast();
-  const [fullName, setFullName] = useState(customer.fullName ?? "");
-  const [email, setEmail] = useState(customer.email ?? "");
-  const [alternatePhone, setAlternatePhone] = useState(customer.alternatePhone ?? "");
-  const [marketingConsent, setMarketingConsent] = useState(customer.marketingConsent);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-    setFieldErrors({});
-    setSaving(true);
-    try {
-      await apiClient.updateCustomer(workspaceId, customer.id, {
-        fullName: fullName.trim() || null,
-        email: email.trim() || null,
-        alternatePhone: alternatePhone.trim() || null,
-        marketingConsent,
-      });
-      toast.success(t.customerUpdated);
-      onSaved();
-    } catch (err) {
-      const fields = getFieldErrors(err);
-      setFieldErrors(fields);
-      if (Object.keys(fields).length === 0) setFormError(getErrorMessage(err));
-    } finally {
-      setSaving(false);
-    }
+    );
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.contactDetails}</h2>
-      <form onSubmit={submit} className="mt-4 space-y-4">
-        {formError && <Alert variant="danger">{formError}</Alert>}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <TextField
-            label={t.fullName}
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            error={fieldErrors.fullName}
-          />
-          <TextField
-            label={t.email}
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            error={fieldErrors.email}
-          />
-          <Field label={t.phone} hint={t.phoneHint}>
-            {({ id }) => (
-              <Input id={id} value={customer.phoneRaw || customer.phoneNormalized} disabled />
-            )}
-          </Field>
-          <TextField
-            label={t.alternatePhone}
-            value={alternatePhone}
-            onChange={(e) => setAlternatePhone(e.target.value)}
-            error={fieldErrors.alternatePhone}
-          />
-        </div>
-        <label className="flex items-center gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            checked={marketingConsent}
-            onChange={(e) => setMarketingConsent(e.target.checked)}
-          />
-          {t.marketingConsent}
-        </label>
-        <div className="flex justify-end">
-          <Button type="submit" disabled={saving}>
-            {saving ? common.saving : common.save}
-          </Button>
-        </div>
-      </form>
-    </section>
+    <LoadedCustomer
+      customer={customer}
+      contact={contact}
+      reload={() => detail.refresh({ silent: true })}
+      reloadAll={() => {
+        void contact.refresh({ silent: true });
+        return detail.refresh({ silent: true });
+      }}
+    />
   );
 }
 
-function BlacklistSection({
+function LoadedCustomer({
   customer,
-  onChanged,
+  contact,
+  reload,
+  reloadAll,
 }: {
   customer: Customer;
-  onChanged: () => void;
+  contact: CustomerContactState;
+  /** Reads the customer again after a save on the page. */
+  reload: () => Promise<void>;
+  /** After a merge or an erase: the contact record is another person's worth of figures too. */
+  reloadAll: () => Promise<void>;
 }) {
   const t = useT(STRINGS);
-  const common = useCommon();
-  const workspaceId = useWorkspaceId();
-  const toast = useToast();
-  const [blacklisting, setBlacklisting] = useState(false);
-  const [unblacklisting, setUnblacklisting] = useState(false);
-  const [reason, setReason] = useState("");
+  const s = useT(SECTION_STRINGS);
+  const { currentWorkspace } = useWorkspace();
+  const currency = currentWorkspace?.defaultCurrency ?? "EGP";
+  const blacklist = useCustomerBlacklist(customer, () => void reload());
 
-  async function confirmBlacklist() {
-    if (reason.trim() === "") throw new Error(t.reasonRequired);
-    await apiClient.setCustomerBlacklist(workspaceId, customer.id, {
-      isBlacklisted: true,
-      reason: reason.trim(),
-    });
-    toast.success(t.customerBlacklisted);
-    setBlacklisting(false);
-    setReason("");
-    onChanged();
-  }
-
-  async function confirmRemove() {
-    await apiClient.setCustomerBlacklist(workspaceId, customer.id, { isBlacklisted: false });
-    toast.success(t.customerUnblacklisted);
-    setUnblacklisting(false);
-    onChanged();
-  }
+  // An erased customer has no number: what stands in its place is not shown, dialled or copied.
+  const phoneText = isErasedCustomer(customer) ? null : customer.phoneRaw || customer.phoneNormalized || null;
+  // A number sent masked to this role is shown as it came, and never dialled.
+  const phone = dialablePhone(phoneText);
+  const saved = () => void reload();
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.blacklistTitle}</h2>
-      {customer.isBlacklisted ? (
-        <div className="mt-3 space-y-3">
-          <p className="text-sm text-ink-soft">
-            {customer.blacklistReason
-              ? fmt(t.blacklistedReason, { reason: customer.blacklistReason })
-              : t.blacklisted}
-          </p>
-          <Button variant="outline" size="sm" onClick={() => setUnblacklisting(true)}>
-            {t.removeFromBlacklist}
-          </Button>
-        </div>
-      ) : (
-        <div className="mt-3 space-y-3">
-          <p className="text-sm text-ink-soft">
-            {t.blacklistNote}
-          </p>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => {
-              setReason("");
-              setBlacklisting(true);
-            }}
-          >
-            {t.blacklistCustomer}
-          </Button>
-        </div>
-      )}
-
-      <ConfirmDialog
-        open={blacklisting}
-        title={t.blacklistConfirmTitle}
-        description={t.blacklistConfirmDescription}
-        confirmLabel={t.blacklistConfirm}
-        cancelLabel={common.cancel}
-        busyLabel={t.working}
-        destructive
-        onCancel={() => setBlacklisting(false)}
-        onConfirm={confirmBlacklist}
-      >
-        <Field label={t.reason} required>
-          {({ id }) => (
-            <Textarea
-              id={id}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder={t.reasonPlaceholder}
+    <div className="zimos-customer-page max-w-6xl">
+      {/* The name is the part a row of the customers list travels into (lib/viewTransition.ts). */}
+      <div data-vt-target>
+        <PageHeader
+          title={t.customer}
+          back={{ to: "/customers", label: t.back }}
+          actions={
+            <CustomerMoreMenu
+              customer={customer}
+              phone={phone}
+              conversationId={contact.data?.conversationId ?? null}
+              onBlock={blacklist.askBlock}
+              onUnblock={blacklist.askUnblock}
             />
-          )}
-        </Field>
-      </ConfirmDialog>
-
-      <ConfirmDialog
-        open={unblacklisting}
-        title={t.unblacklistTitle}
-        description={t.unblacklistDescription}
-        confirmLabel={t.remove}
-        cancelLabel={common.cancel}
-        busyLabel={t.working}
-        onCancel={() => setUnblacklisting(false)}
-        onConfirm={confirmRemove}
-      />
-    </section>
-  );
-}
-
-function AddressesSection({
-  customer,
-  onChanged,
-}: {
-  customer: Customer;
-  onChanged: () => void;
-}) {
-  const t = useT(STRINGS);
-  const common = useCommon();
-  const [target, setTarget] = useState<CustomerAddress | "new" | null>(null);
-  const addresses = customer.addresses ?? [];
-
-  return (
-    <section className="rounded-[var(--radius-card)] border border-line p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-medium text-ink">{t.addressesTitle}</h2>
-        <Button size="sm" onClick={() => setTarget("new")}>
-          {t.addAddress}
-        </Button>
+          }
+        />
+        <CustomerHero
+          customer={customer}
+          contact={contact.data?.contact ?? null}
+          contactLoading={contact.loading}
+          currency={currency}
+          phoneText={phoneText}
+          phone={phone}
+          onUnblock={blacklist.askUnblock}
+        />
+        {/* No email reaches this address: it bounced, or the customer marked one as spam (handoff 386). */}
+        <CustomerSuppressionBanner email={isErasedCustomer(customer) ? null : customer.email} />
       </div>
 
-      {addresses.length === 0 ? (
-        <p className="mt-3 text-sm text-ink-soft">{t.noAddresses}</p>
-      ) : (
-        <ul className="mt-3 space-y-2">
-          {addresses.map((a) => (
-            <li
-              key={a.id}
-              className="flex flex-wrap items-start justify-between gap-3 rounded-[0.5rem] border border-line p-3"
-            >
-              <div className="min-w-0 text-sm">
-                <p className="text-ink">
-                  {[a.addressLine, placeName(a.city), placeName(a.province), a.postalCode, a.country === "EG" ? null : a.country]
-                    .filter(Boolean)
-                    .join(", ")}
-                </p>
-                {a.notes && <p className="text-xs text-ink-soft">{a.notes}</p>}
-                {a.isDefault && <p className="text-xs text-primary">{t.defaultBadge}</p>}
-              </div>
-              <Button size="sm" variant="ghost" onClick={() => setTarget(a)}>
-                {common.edit}
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="mt-[var(--bento-gap)]">
+        <CustomerCrmTabs
+          customer={customer}
+          onChanged={reloadAll}
+          orders={<CustomerOrders customer={customer} />}
+          lead={
+            <>
+              <AccordionSection title={s.addressesTitle} icon={IconPlace} summary={addressesLineOf(customer, s)} persistKey="customer:addresses">
+                <CustomerAddresses customer={customer} onChanged={saved} />
+              </AccordionSection>
 
-      <Modal
-        open={target !== null}
-        onClose={() => setTarget(null)}
-        title={target === "new" ? t.addAddress : t.editAddress}
-      >
-        {target !== null && (
-          <AddressForm
-            key={target === "new" ? "new" : target.id}
-            customerId={customer.id}
-            address={target === "new" ? undefined : target}
-            onCancel={() => setTarget(null)}
-            onDone={() => {
-              setTarget(null);
-              onChanged();
-            }}
-          />
-        )}
-      </Modal>
-    </section>
-  );
-}
-
-function AddressForm({
-  customerId,
-  address,
-  onDone,
-  onCancel,
-}: {
-  customerId: string;
-  address?: CustomerAddress;
-  onDone: () => void;
-  onCancel: () => void;
-}) {
-  const t = useT(STRINGS);
-  const common = useCommon();
-  const workspaceId = useWorkspaceId();
-  const toast = useToast();
-  const [country, setCountry] = useState(address?.country ?? "EG");
-  const [province, setProvince] = useState(address?.province ?? "");
-  const [city, setCity] = useState(address?.city ?? "");
-  const [addressLine, setAddressLine] = useState(address?.addressLine ?? "");
-  const [postalCode, setPostalCode] = useState(address?.postalCode ?? "");
-  const [notes, setNotes] = useState(address?.notes ?? "");
-  const [isDefault, setIsDefault] = useState(address?.isDefault ?? false);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-    setFieldErrors({});
-    setSaving(true);
-    try {
-      if (address) {
-        await apiClient.updateCustomerAddress(workspaceId, customerId, address.id, {
-          country: country.trim().toUpperCase(),
-          province: province.trim() || null,
-          city: city.trim(),
-          addressLine: addressLine.trim(),
-          postalCode: postalCode.trim() || null,
-          notes: notes.trim() || null,
-          isDefault,
-        });
-        toast.success(t.addressSaved);
-      } else {
-        await apiClient.addCustomerAddress(workspaceId, customerId, {
-          country: country.trim().toUpperCase(),
-          province: province.trim() || undefined,
-          city: city.trim(),
-          addressLine: addressLine.trim(),
-          postalCode: postalCode.trim() || undefined,
-          notes: notes.trim() || undefined,
-          isDefault,
-        });
-        toast.success(t.addressAdded);
-      }
-      onDone();
-    } catch (err) {
-      const fields = getFieldErrors(err);
-      setFieldErrors(fields);
-      if (Object.keys(fields).length === 0) setFormError(getErrorMessage(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      {formError && <Alert variant="danger">{formError}</Alert>}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TextField
-          label={t.country}
-          required
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-          error={fieldErrors.country}
-          hint={t.countryHint}
-        />
-        <TextField
-          label={t.province}
-          value={province}
-          onChange={(e) => setProvince(e.target.value)}
-          error={fieldErrors.province}
-        />
-        <TextField
-          label={t.city}
-          required
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          error={fieldErrors.city}
-        />
-        <TextField
-          label={t.postalCode}
-          value={postalCode}
-          onChange={(e) => setPostalCode(e.target.value)}
-          error={fieldErrors.postalCode}
-        />
-      </div>
-      <TextField
-        label={t.addressLine}
-        required
-        value={addressLine}
-        onChange={(e) => setAddressLine(e.target.value)}
-        error={fieldErrors.addressLine}
-      />
-      <Field label={t.notes} error={fieldErrors.notes}>
-        {({ id }) => (
-          <Textarea id={id} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        )}
-      </Field>
-      <label className="flex items-center gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
-          checked={isDefault}
-          onChange={(e) => setIsDefault(e.target.checked)}
-        />
-        {t.defaultAddress}
-      </label>
-      <div className="flex justify-end gap-3">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          {common.cancel}
-        </Button>
-        <Button
-          type="submit"
-          disabled={saving || !country.trim() || !city.trim() || !addressLine.trim()}
+              {/* Kept in the page while folded: a half-typed edit survives a fold. */}
+              <AccordionSection title={s.contactTitle} icon={IconUser} summary={contactLineOf(customer, s)} persistKey="customer:contact" keepMounted>
+                <ContactDetailsForm
+                  // What is saved is the form's starting point: a save (or a fresher answer behind a cached one) starts it again.
+                  key={`${customer.fullName ?? ""}|${customer.email ?? ""}|${customer.alternatePhone ?? ""}|${customer.marketingConsent}`}
+                  customer={customer}
+                  onSaved={saved}
+                />
+              </AccordionSection>
+            </>
+          }
         >
-          {saving ? common.saving : address ? t.saveAddress : t.addAddress}
-        </Button>
+          {/* Each of these reads its own data and decides for itself whether it has anything to show: no data, no section. */}
+          <ContactInsights customerId={customer.id} state={contact} frame={foldingFrame({ key: "tags", icon: IconTag, title: s.tagsTitle })} />
+          <CustomerStoreCreditCard customerId={customer.id} frame={foldingFrame({ key: "store-credit", icon: IconStoreCredit })} />
+          <CustomerLoyaltyCard customerId={customer.id} frame={foldingFrame({ key: "loyalty", icon: IconLoyalty })} />
+          <CustomerVipCard customerId={customer.id} frame={foldingFrame({ key: "vip", icon: IconCrown })} />
+          <CustomerInvitesCard customerId={customer.id} frame={foldingFrame({ key: "invites", icon: IconReferrals })} />
+          <CustomerPriceListHint customerId={customer.id} frame={foldingFrame({ key: "price-lists", icon: IconSale, title: s.priceListsTitle })} />
+          {/* Forms: kept in the page while folded. */}
+          <CustomerOnAccountCard customerId={customer.id} frame={foldingFrame({ key: "on-account", icon: IconCoins, keepMounted: true })} />
+          <CustomerBusinessCard customerId={customer.id} frame={foldingFrame({ key: "business", icon: IconBuilding, keepMounted: true })} />
+        </CustomerCrmTabs>
       </div>
-    </form>
+
+      {/* On a phone calling is the bar above the dock: where the thumb is. No number that can be dialled, no bar. */}
+      <CustomerCallBar phone={phone} name={customer.fullName} />
+
+      {blacklist.dialogs}
+    </div>
   );
 }

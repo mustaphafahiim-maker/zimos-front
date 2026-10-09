@@ -1,0 +1,252 @@
+/* Create order as a sheet in three steps — pages/orders/create/*.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables. */
+:root:not([data-glass="off"]) {
+  /* ---------------------------------------------------------------- *
+   * Everything below lies INSIDE the sheet (overlay glass, near solid;
+   * solid on a phone), so nothing here blurs: these are small panes and
+   * tints on that one surface.
+   *
+   * Contrast, by arithmetic from the tokens (store brand #165dff), on
+   * the sheet's own fill:
+   *   current step / chosen chip   on-brand on the brand fill, 5.2:1 at
+   *                                 its weakest end (light), 5:1+ (dark)
+   *   the bead of the current step  the brand on the on-brand colour —
+   *                                 the same pair turned over, 5.2:1
+   *   «ضيف للأوردر», the count chip the deeper primary on a 13% brand
+   *                                 tint: 5.4:1 light, 6:1+ dark
+   *   quiet words                   --lg-ink-soft on a small pane, 4.5:1+
+   * Nothing is dimmed with opacity except a figure that is about to be
+   * replaced (the last total, for the moment a new price is on its way):
+   * 60% of the ink, which on the sheet still reads 4.8:1.
+   * These are sums, not readings from rendered pixels: change a mix only
+   * together with that check.
+   * ---------------------------------------------------------------- */
+
+  /* ---------------------------------------------------------------- *
+   * The stepper: three pills joined by a line. The current one is the
+   * shared selection fill (the main button, the current menu row, the
+   * chosen segment) with its glow; a finished one shows a check in
+   * success; one still to come is quiet.
+   * ---------------------------------------------------------------- */
+  [data-slot="order-step"][data-state="current"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28), var(--lg-brand-glow);
+  }
+  /* Its number: the fill turned inside out, so it reads as a bead set into the pill. */
+  [data-slot="order-step"][data-state="current"] [data-slot="order-step-bead"] {
+    background-color: var(--lg-on-brand);
+    color: var(--lg-brand-solid);
+    box-shadow: 0 1px 2px rgb(10 16 78 / 0.22);
+  }
+  [data-slot="order-step"][data-state="done"] [data-slot="order-step-bead"] {
+    background-color: color-mix(in srgb, var(--color-success) 16%, var(--color-paper-raised));
+    color: var(--lg-text-success);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.6),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-success) 24%, transparent);
+  }
+  &.dark [data-slot="order-step"][data-state="done"] [data-slot="order-step-bead"] {
+    background-color: color-mix(in srgb, var(--color-success) 22%, var(--color-paper-raised));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 34%, transparent);
+  }
+  [data-slot="order-step"][data-state="todo"] {
+    color: var(--lg-ink-soft);
+  }
+  [data-slot="order-step"][data-state="todo"] [data-slot="order-step-bead"] {
+    background-color: var(--lg-control);
+    color: var(--lg-ink-soft);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  /* The line between two pills: a hairline of the ink, filled in success up to the step that was reached. */
+  [data-slot="order-step-line"] {
+    background-color: color-mix(in srgb, var(--color-ink) 12%, transparent);
+  }
+  [data-slot="order-step-line"][data-done] {
+    background-color: color-mix(in srgb, var(--color-success) 64%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The small panes of the body: the lines of the order, the product
+   * list, the breakdown of the total, the quantity track. One recipe —
+   * the control fill, the small rim, a hairline outside.
+   * ---------------------------------------------------------------- */
+  [data-slot="order-lines"],
+  [data-slot="order-products"],
+  [data-slot="order-summary"],
+  [data-slot="order-qty"] {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  [data-slot="order-lines"] > li,
+  [data-slot="order-products"] > li,
+  [data-slot="order-summary"] > div {
+    border-color: var(--lg-hairline);
+  }
+
+  /* A product row: its second line (price, stock) one step deeper, as on every glass pane. */
+  [data-slot="order-product-meta"] {
+    color: var(--lg-ink-soft);
+  }
+  /* The product that is open: lit, with a wash of the brand from the top and a brand mark on its leading edge. */
+  [data-slot="order-product"][data-open] {
+    position: relative;
+    background-color: var(--lg-row-lit);
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--lg-brand-solid) 7%, transparent) 0%, transparent 72%);
+  }
+  [data-slot="order-product"][data-open]::before {
+    content: "";
+    position: absolute;
+    inset-block: 0.75rem;
+    inset-inline-start: 0;
+    width: 3px;
+    border-start-end-radius: 3px;
+    border-end-end-radius: 3px;
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+  }
+  /* «{n} في الأوردر» on a row, and «ضيف للأوردر»: the brand as a tint, the deeper primary as ink. */
+  [data-slot="order-product-count"],
+  [data-slot="order-add"] {
+    background-color: color-mix(in srgb, var(--lg-brand-solid) 13%, var(--color-paper-raised));
+    color: var(--lg-text-primary);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.7),
+      inset 0 0 0 1px color-mix(in srgb, var(--lg-brand-solid) 20%, transparent);
+  }
+  &.dark :is([data-slot="order-product-count"], [data-slot="order-add"]) {
+    background-color: color-mix(in srgb, var(--lg-brand-solid) 18%, var(--color-paper-raised));
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.1),
+      inset 0 0 0 1px color-mix(in srgb, var(--lg-brand-solid) 30%, transparent);
+  }
+  @media (hover: hover) {
+    [data-slot="order-add"]:hover:not(:disabled) {
+      background-color: color-mix(in srgb, var(--lg-brand-solid) 19%, var(--color-paper-raised));
+    }
+    &.dark [data-slot="order-add"]:hover:not(:disabled) {
+      background-color: color-mix(in srgb, var(--lg-brand-solid) 25%, var(--color-paper-raised));
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Variant and offer chips: the pill of a filter chip. At rest a small
+   * lit pane; chosen, the shared selection fill with its glow. The
+   * price after the name is quiet at rest and takes the chip's ink once
+   * chosen, so it never drops under 4.5:1 on the fill.
+   * ---------------------------------------------------------------- */
+  [data-slot="order-chip"] {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  @media (hover: hover) {
+    [data-slot="order-chip"]:not([aria-pressed="true"]):hover {
+      background-color: var(--lg-control-lit);
+    }
+  }
+  [data-slot="order-chip"]:not([aria-pressed="true"]):active {
+    background-color: var(--lg-control-lit);
+  }
+  [data-slot="order-chip"]:not([aria-pressed="true"]) [data-part="detail"] {
+    color: var(--lg-ink-soft);
+  }
+  [data-slot="order-chip"][aria-pressed="true"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28), var(--lg-brand-glow);
+  }
+  [data-slot="order-chip"][aria-pressed="true"] [data-part="detail"] {
+    color: inherit;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Small signals: the tick of a whole mobile number, the strip of a
+   * restored draft.
+   * ---------------------------------------------------------------- */
+  [data-slot="order-phone-ok"] {
+    background-color: color-mix(in srgb, var(--color-success) 16%, var(--color-paper-raised));
+    color: var(--lg-text-success);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 24%, transparent);
+  }
+  [data-slot="order-draft"] {
+    background-color: color-mix(in srgb, var(--lg-brand-solid) 9%, var(--color-paper-raised));
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.7),
+      inset 0 0 0 1px color-mix(in srgb, var(--lg-brand-solid) 16%, transparent);
+  }
+  &.dark [data-slot="order-draft"] {
+    background-color: color-mix(in srgb, var(--lg-brand-solid) 14%, var(--color-paper-raised));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lg-brand-solid) 26%, transparent);
+  }
+  [data-slot="order-draft"] :is(button, svg) {
+    color: var(--lg-text-primary);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The foot: the total and the line under it. While a new price is on
+   * its way the bar under the figure is a thread of the brand; the line
+   * under the total is quiet, or says in the danger shade that the
+   * total could not be worked out.
+   * ---------------------------------------------------------------- */
+  [data-slot="order-total"] [data-part="quiet"] {
+    color: var(--lg-ink-soft);
+  }
+  [data-slot="order-total"] [data-part="quiet"][data-tone="danger"] {
+    color: var(--lg-text-danger);
+  }
+  .zimos-oc-pricing {
+    background-color: color-mix(in srgb, var(--lg-brand-solid) 26%, transparent);
+  }
+
+  /* If forced colours are on while this layer still is: system colours, no gradient. */
+  @media (forced-colors: active) {
+    [data-slot="order-step"][data-state="current"],
+    [data-slot="order-chip"][aria-pressed="true"] {
+      background-color: Highlight;
+      background-image: none;
+      color: HighlightText;
+    }
+    [data-slot="order-step"][data-state="current"] [data-slot="order-step-bead"] {
+      background-color: HighlightText;
+      color: Highlight;
+    }
+    [data-slot="order-product"][data-open] {
+      background-image: none;
+    }
+    [data-slot="order-product"][data-open]::before {
+      background-color: Highlight;
+      background-image: none;
+    }
+  }
+}
+
+/* Motion, not material, so it holds with the glass layer off too. Transform and opacity only; the
+   components ask for these through motion-safe, so nothing moves for people who asked for less. */
+
+/* A step comes in from the side it lies on (--oc-from is set by the panel: its sign follows the
+   direction of travel and the reading direction). */
+@keyframes order-create-step {
+  from {
+    opacity: 0;
+    transform: translateX(var(--oc-from, 0));
+  }
+}
+
+/* What unfolds in place: an opened product, the draft strip, the question before closing. */
+@keyframes order-create-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* A tick or a count that just arrived. */
+@keyframes order-create-pop {
+  from {
+    transform: scale(0.6);
+  }
+}

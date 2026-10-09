@@ -44,7 +44,8 @@ export interface SheetColumnOption {
 
 export interface GoogleSheetsOverview {
   adapter: { available: boolean; name: string | null; sandbox: boolean };
-  account: { connected: boolean; email: string | null };
+  /** `reconnect`: Google took the access away (revoked, a password change, a test app's 7-day token); connecting again resumes the stopped sheets (handoff 393). */
+  account: { connected: boolean; email: string | null; reconnect?: boolean };
   connections: SheetConnection[];
   lostColumns: SheetColumnOption[];
   leadColumns: SheetColumnOption[];
@@ -58,6 +59,8 @@ export interface SheetConnectionInput {
   columns: SheetColumn[];
   groupByOrder?: boolean;
   lang?: "ar" | "en";
+  /** Reuse a spreadsheet ZIMOS created: a pasted link (https://docs.google.com/spreadsheets/d/<id>/…) or the id. 404 SHEETS_NOT_FOUND, 403 SHEETS_PERMISSION_DENIED. */
+  spreadsheetId?: string;
 }
 
 export type SheetConnectionPatch = Partial<Omit<SheetConnectionInput, "dataType">> & { status?: "active" | "paused" };

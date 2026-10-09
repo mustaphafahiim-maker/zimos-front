@@ -136,6 +136,34 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ------------------------------------------------------------------ *
+ * Motion (docs/ux/REDESIGN_PROMPT.md §4.3). Three house curves and three
+ * durations, used by every component that moves: a soft spring for sheets
+ * and moves, the overshoot pop from liquid-glass for small things that
+ * swell (a dock icon, a badge, a toggle), and a plain ease-out for fades
+ * and colour. Transform and opacity only — never width, height, top or
+ * left. Under prefers-reduced-motion every duration is zero.
+ * ------------------------------------------------------------------ */
+:root {
+  --ease-spring: linear(
+    0, 0.006, 0.025 2.6%, 0.101, 0.214 7.5%, 0.46 12.4%, 0.68 17%, 0.84 21.3%,
+    0.945 25.4%, 1.012 29.4%, 1.048 33.5%, 1.056 37.4%, 1.046 41.5%, 1.024 46.4%,
+    1.003 51.7%, 0.991 56.9%, 0.989 62.6%, 0.995 69.8%, 1.001 78.6%, 1.002 88%, 1
+  );
+  --ease-pop: cubic-bezier(0.175, 0.885, 0.32, 2.2);
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fade: 160ms;
+  --dur-move: 320ms;
+  --dur-pop: 360ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fade: 0ms;
+    --dur-move: 0ms;
+    --dur-pop: 0ms;
+  }
+}
+
 @layer base {
   * {
     border-color: var(--color-line);
@@ -430,6 +458,90 @@
 }
 
 /* ------------------------------------------------------------------ *
+ * View transitions (lib/viewTransition.ts). Moving between pages from the
+ * side menu, the dock, Spotlight or a list row: the shell stays still, the
+ * page in the pane fades out and the next one settles in. An element with
+ * its own view-transition-name (a row's title, amount or status chip that
+ * also exists in the detail header) travels between its two places on the
+ * spring. Only while <html data-vt> is set, so nothing is named — and no
+ * stacking context is made — the rest of the time.
+ * ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+  /* The page is named for the snapshot. Its own page-in fade is not switched off (that
+     would start it again the moment the attribute goes): it is given no time, so it is
+     already over when the snapshot is taken and stays over afterwards. */
+  html[data-vt] .page-in {
+    view-transition-name: page;
+    animation-duration: 0s;
+  }
+  /* Shared elements (lib/viewTransition.ts markViewSource): the marked row's title, amount and
+     status chip, and the same three parts in the detail header, are one element to the
+     transition, so they travel between their two places on the spring. */
+  html[data-vt] :is([data-vt-source], [data-vt-target]) [data-vt-part="title"] {
+    view-transition-name: vt-title;
+  }
+  html[data-vt] :is([data-vt-source], [data-vt-target]) [data-vt-part="amount"] {
+    view-transition-name: vt-amount;
+  }
+  html[data-vt] :is([data-vt-source], [data-vt-target]) [data-vt-part="status"] {
+    view-transition-name: vt-status;
+  }
+  ::view-transition-old(vt-title),
+  ::view-transition-new(vt-title),
+  ::view-transition-old(vt-amount),
+  ::view-transition-new(vt-amount),
+  ::view-transition-old(vt-status),
+  ::view-transition-new(vt-status) {
+    /* The text is the same in both places: keep its own size, no stretch. */
+    height: 100%;
+    width: auto;
+    object-fit: contain;
+  }
+  /* What floats over the page keeps floating over its snapshot. */
+  html[data-vt] .glass-topbar {
+    view-transition-name: topbar;
+  }
+  html[data-vt] .zimos-dock {
+    view-transition-name: dock;
+  }
+  ::view-transition-old(topbar),
+  ::view-transition-old(dock) {
+    display: none;
+  }
+  ::view-transition-new(topbar),
+  ::view-transition-new(dock) {
+    animation: none;
+  }
+  /* The shell is the same before and after: no cross-fade over it. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-group(*) {
+    animation-duration: var(--dur-move);
+    animation-timing-function: var(--ease-spring);
+  }
+  ::view-transition-old(page) {
+    animation: vt-page-out 110ms var(--ease-out) both;
+  }
+  ::view-transition-new(page) {
+    animation: vt-page-in 260ms var(--ease-out) both;
+  }
+}
+@keyframes vt-page-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* ------------------------------------------------------------------ *
  * Comfort. Every page inside the dashboard gets room to breathe: wider
  * gutters, a centred column, taller rows and fields, and soft hover
  * states. One layer for all pages, so none has to be restyled on its own.
@@ -438,12 +550,25 @@ html {
   scroll-behavior: smooth;
 }
 .glass-app main {
-  /* Room for the phone tab bar (components/MobileTabBar.tsx) under the page. */
-  padding: 1.25rem 1rem calc(6rem + env(safe-area-inset-bottom));
+  /* Room for the floating phone dock (components/MobileTabBar.tsx) under the page:
+     0.75rem below it, 4rem of dock, and air above. */
+  padding: 1.25rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
 }
 @media (min-width: 40rem) {
   .glass-app main {
-    padding: 1.75rem 2rem 4.5rem;
+    padding: 1.75rem 2rem calc(6.5rem + env(safe-area-inset-bottom));
+  }
+}
+/* A page with its main action in a bar above the dock (PageHeader primaryAction) needs room for that too. */
+@media (max-width: 47.99rem) {
+  .glass-app main:has([data-page-action]) {
+    padding-bottom: calc(10rem + env(safe-area-inset-bottom));
+  }
+}
+/* From md up the side menu replaces the dock. */
+@media (min-width: 48rem) {
+  .glass-app main {
+    padding-bottom: 4.5rem;
   }
 }
 /* On a wide screen the page column sits in the middle, not against one edge. */
@@ -563,14 +688,24 @@ html {
  * when one gets focus. Tiny xs buttons (chips, inline helpers) are left alone.
  */
 @media (pointer: coarse) {
+  /* Plain <input>s too (the apps search, the global search, a few hand-written
+     fields): the same 16px and 44px as the shared Input, minus the kinds that
+     are not text boxes. */
   [data-slot="input"],
   [data-slot="select-trigger"],
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"]),
   select,
   textarea {
     font-size: 16px;
   }
+  /* With the `.glass-app main` prefix too: the 2.5rem comfort rule above is
+     written with it and would otherwise win inside every page. */
+  .glass-app main [data-slot="input"],
+  .glass-app main [data-slot="select-trigger"],
+  .glass-app main select,
   [data-slot="input"],
   [data-slot="select-trigger"],
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"]),
   select {
     min-height: 2.75rem;
   }

@@ -18,6 +18,7 @@ import {
   type Locale,
 } from "./i18n";
 import type { StoreTexts } from "./storeTexts";
+import type { StorefrontHoliday } from "@store-builder/api-client";
 
 export interface StoreInfo {
   /** The route segment the store was reached by — its UUID or its slug. */
@@ -48,6 +49,8 @@ export interface StoreInfo {
   hiddenPlaces?: string[];
   /** The merchant's own wording in this language (GET /store/:ws `storefrontTexts`; lib/storeTexts), laid over `t`. */
   storefrontTexts?: StoreTexts;
+  /** The holiday in force (GET /store/:ws `holiday`, handoff 216; lib/storeHoliday); null or absent while the store is open as usual. */
+  holiday?: StorefrontHoliday | null;
 }
 
 export interface StoreContextValue {

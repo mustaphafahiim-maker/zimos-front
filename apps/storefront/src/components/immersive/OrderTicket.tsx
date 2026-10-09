@@ -53,7 +53,7 @@ export function OrderTicket({
               {t.immersive.ticketOrder}
             </p>
             <p dir="ltr" className="mt-1 text-2xl font-bold tabular-nums">
-              #{orderNumber}
+              {orderNumber}
             </p>
             <p className="mt-2 truncate text-sm text-on-primary/85">{storeName}</p>
           </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Check, Copy, Info } from "lucide-react";
+import { IconCheck, IconCopy, IconInfo } from "@/components/icons";
 import { Alert, Button, Tabs, TabsContent, TabsList, TabsTrigger } from "@store-builder/ui";
 import {
   MCP_DEFAULT_SCOPES,
@@ -190,7 +190,7 @@ export function AiAssistantsPanel({ onKeyCreated }: { onKeyCreated: () => void }
             ))}
           </ul>
           <Alert variant="info" className="mt-3 text-start">
-            <Info aria-hidden />
+            <IconInfo aria-hidden />
             <span>{t.drafts}</span>
           </Alert>
         </div>
@@ -347,7 +347,7 @@ function CopyText({ t, value, label }: { t: T; value: string; label: string }) {
 
   return (
     <Button type="button" size="sm" variant="ghost" className="min-h-11 shrink-0 sm:min-h-8" aria-label={label} title={label} onClick={copy}>
-      {copied ? <Check className="size-4 text-success" aria-hidden /> : <Copy className="size-4" aria-hidden />}
+      {copied ? <IconCheck className="size-4 text-success" aria-hidden /> : <IconCopy className="size-4" aria-hidden />}
       <span aria-live="polite">{copied ? t.copied : t.copy}</span>
     </Button>
   );
@@ -462,7 +462,7 @@ function AiKeyModal({
           {scopeError && <p className="text-xs font-medium text-danger">{scopeError}</p>}
         </fieldset>
         <Alert variant="info" className="text-start">
-          <Info aria-hidden />
+          <IconInfo aria-hidden />
           <span>{t.drafts}</span>
         </Alert>
         {error && (

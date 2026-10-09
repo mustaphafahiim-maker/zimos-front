@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { Download } from "lucide-react";
+import { IconDownload } from "@/components/icons";
 import { Button } from "@store-builder/ui";
 import {
   ApiError,
@@ -25,7 +24,7 @@ import { Select } from "@/components/Select";
 import { StatusBadge } from "@/components/StatusBadge";
 import { CopyButton } from "@/components/CopyButton";
 import { useToast } from "@/components/Toast";
-import { DialectField, SubmitRow, ToolLayout, useGeneration } from "./AiStudioPage";
+import { DialectField, GoLink, SubmitRow, ToolLayout, useGeneration } from "./AiStudioPage";
 import { ApplyPoliciesButton } from "./ApplyPoliciesButton";
 
 /**
@@ -82,6 +81,10 @@ const STRINGS = {
     goPolicies: "Open store policies",
     websiteRequired: "Create your store website first.",
     copy: "Copy",
+    needPage: "Choose what to review first.",
+    needProduct: "Choose a product first.",
+    needNiche: "Type what the store sells and its name first.",
+    scoreOf: "{score} of 100",
   },
   ar: {
     reviewSource: "عايز تقيّم إيه",
@@ -94,7 +97,7 @@ const STRINGS = {
     step: "الخطوة",
     chooseStep: "اختار خطوة…",
     score: "التقييم",
-    reviewNote: "محسوب من الصفحة وآخر 30 يوم. عدّل الصفحة في المحرر وقيّمها تاني.",
+    reviewNote: "محسوب من الصفحة وآخر ٣٠ يوم. عدّل الصفحة في المحرر وقيّمها تاني.",
     severity_high: "مهم",
     severity_medium: "يستاهل",
     severity_low: "إضافة حلوة",
@@ -108,7 +111,7 @@ const STRINGS = {
     texts: "نصوص الإعلان",
     banners: "البانرات",
     noBanners: "ضيف صور للمنتج عشان تطلع بانرات عليها.",
-    download: "تحميل PNG",
+    download: "نزّل PNG",
     downloadFailed: "الصورة دي مينفعش تتحفظ من هنا — خد سكرين شوت للبانر.",
     niche: "المتجر بيبيع إيه",
     storeName: "اسم المتجر",
@@ -129,7 +132,11 @@ const STRINGS = {
     openCollections: "افتح الأقسام",
     goPolicies: "افتح سياسات المتجر",
     websiteRequired: "اعمل موقع متجرك الأول.",
-    copy: "نسخ",
+    copy: "انسخ",
+    needPage: "اختار هتقيّم إيه الأول.",
+    needProduct: "اختار منتج الأول.",
+    needNiche: "اكتب المتجر بيبيع إيه واسمه الأول.",
+    scoreOf: "{score} من 100",
   },
 } satisfies Messages;
 
@@ -224,7 +231,7 @@ export function PageReviewTool({ onDone }: { onDone: () => void }) {
             </>
           )}
           <DialectField value={dialect} onChange={setDialect} />
-          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={!ready} />
+          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={!ready} missing={t.needPage} />
         </form>
       }
       result={
@@ -232,10 +239,10 @@ export function PageReviewTool({ onDone }: { onDone: () => void }) {
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div
-                className={`flex size-16 shrink-0 items-center justify-center rounded-full border-4 text-xl font-bold ${output.score >= 75 ? "border-success text-success" : output.score >= 50 ? "border-accent text-accent-dark" : "border-danger text-danger"}`}
-                aria-label={`${t.score}: ${output.score}/100`}
+                className={`flex size-16 shrink-0 items-center justify-center rounded-full border-4 text-xl font-bold tabular-nums ${output.score >= 75 ? "border-success text-success" : output.score >= 50 ? "border-accent text-accent-dark" : "border-danger text-danger"}`}
+                aria-label={`${t.score}: ${fmt(t.scoreOf, { score: output.score })}`}
               >
-                {output.score}
+                <bdi dir="ltr">{fmt("{n}", { n: output.score })}</bdi>
               </div>
               <p dir="auto" className="text-sm text-ink">
                 {output.summary}
@@ -246,7 +253,7 @@ export function PageReviewTool({ onDone }: { onDone: () => void }) {
             ) : (
               <ol className="space-y-2">
                 {output.recommendations.map((rec, i) => (
-                  <li key={i} className="rounded-[var(--radius-card)] border border-line p-3">
+                  <li key={i} data-slot="sweep-well" className="rounded-2xl bg-paper-sunken px-4 py-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge value={rec.severity} tone={TONE[rec.severity]} text={t[`severity_${rec.severity}`]} />
                       <span dir="auto" className="text-sm font-semibold text-ink">
@@ -374,7 +381,7 @@ export function AdCreativesTool({ onDone }: { onDone: () => void }) {
           </Field>
           <TextField label={t.angle} hint={t.angleHint} value={angle} onChange={(e) => setAngle(e.target.value)} maxLength={300} />
           <DialectField value={dialect} onChange={setDialect} />
-          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={!productId} />
+          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={!productId} missing={t.needProduct} />
         </form>
       }
       result={
@@ -384,7 +391,7 @@ export function AdCreativesTool({ onDone }: { onDone: () => void }) {
               <h3 className="text-sm font-semibold text-ink">{t.headlines}</h3>
               <ul className="mt-2 space-y-1.5">
                 {output.headlines.map((line, i) => (
-                  <li key={i} className="flex items-center justify-between gap-2 rounded-[0.5rem] bg-paper px-3 py-2">
+                  <li key={i} data-slot="sweep-well" className="flex items-center justify-between gap-2 rounded-2xl bg-paper-sunken px-4 py-2">
                     <span dir="auto" className="text-sm text-ink">
                       {line}
                     </span>
@@ -397,7 +404,7 @@ export function AdCreativesTool({ onDone }: { onDone: () => void }) {
               <h3 className="text-sm font-semibold text-ink">{t.texts}</h3>
               <ul className="mt-2 space-y-2">
                 {output.primaryTexts.map((text, i) => (
-                  <li key={i} className="rounded-[0.5rem] bg-paper px-3 py-2">
+                  <li key={i} data-slot="sweep-well" className="rounded-2xl bg-paper-sunken px-4 py-2.5">
                     <div className="flex justify-end">
                       <CopyButton value={text} label={t.copy} />
                     </div>
@@ -427,11 +434,11 @@ export function AdCreativesTool({ onDone }: { onDone: () => void }) {
                       </div>
                       <Button
                         type="button"
-                        size="sm"
                         variant="outline"
+                        className="rounded-full px-4"
                         onClick={() => void downloadBanner(banner, rtl).catch(() => toast.error(t.downloadFailed))}
                       >
-                        <Download className="size-4" aria-hidden /> {t.download}
+                        <IconDownload className="size-4" aria-hidden /> {t.download}
                       </Button>
                     </figure>
                   ))}
@@ -492,7 +499,7 @@ export function StoreBuilderTool({ onDone }: { onDone: () => void }) {
           <Field label={t.color}>
             {(props) => (
               <div className="flex items-center gap-2">
-                <input {...props} type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-9 w-14 cursor-pointer rounded border border-line bg-transparent" />
+                <input {...props} type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-11 w-16 cursor-pointer rounded-[0.875rem] border border-line bg-transparent p-1" />
                 <code dir="ltr" className="text-sm text-ink-soft">
                   {color}
                 </code>
@@ -500,7 +507,7 @@ export function StoreBuilderTool({ onDone }: { onDone: () => void }) {
             )}
           </Field>
           <DialectField value={dialect} onChange={setDialect} />
-          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={niche.trim().length < 2 || !storeName.trim()} />
+          <SubmitRow busy={gen.busy} hasResult={Boolean(gen.job)} disabled={niche.trim().length < 2 || !storeName.trim()} missing={t.needNiche} />
         </form>
       }
       result={
@@ -548,21 +555,15 @@ export function StoreBuilderTool({ onDone }: { onDone: () => void }) {
               {gen.job && <ApplyPoliciesButton key={gen.job.id} jobId={gen.job.id} />}
             </section>
             {applied ? (
-              <div className="flex flex-wrap gap-3 text-sm">
-                <Link to={`/website/${applied.websiteId}/edit`} className="font-medium text-primary hover:underline">
-                  {t.openPage} →
-                </Link>
-                <Link to="/catalog/collections" className="font-medium text-primary hover:underline">
-                  {t.openCollections} →
-                </Link>
-                <Link to="/store-settings" className="font-medium text-primary hover:underline">
-                  {t.goPolicies} →
-                </Link>
+              <div className="flex flex-wrap gap-2">
+                <GoLink to={`/website/${applied.websiteId}/edit`}>{t.openPage}</GoLink>
+                <GoLink to="/catalog/collections">{t.openCollections}</GoLink>
+                <GoLink to="/store-settings">{t.goPolicies}</GoLink>
               </div>
             ) : (
               <div className="space-y-2 border-t border-line pt-4">
                 <p className="text-xs text-ink-soft">{t.draftsHint}</p>
-                <Button type="button" onClick={() => void apply()} disabled={applying}>
+                <Button type="button" className="rounded-full px-5" onClick={() => void apply()} disabled={applying}>
                   {t.createDrafts}
                 </Button>
               </div>

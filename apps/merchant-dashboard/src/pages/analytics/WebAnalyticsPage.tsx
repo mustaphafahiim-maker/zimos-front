@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowDownRight, ArrowUpRight, Globe, X } from "lucide-react";
+import { IconArrowDownRight, IconArrowOut, IconClose, IconGlobe } from "@/components/icons";
 import { Card, cn } from "@store-builder/ui";
 import type { WebAnalyticsCompare, WebAnalyticsFilterKey, WebAnalyticsRangeParams, WebAnalyticsUnit } from "@store-builder/api-client";
 import { PageHeader } from "@/components/PageHeader";
@@ -100,16 +100,16 @@ const STRINGS = {
     description: "من يزور متجرك وماذا يفعل فيه، من تتبّع المتجر نفسه.",
     realtime: "مباشر الآن",
     range: "الفترة",
-    rToday: "اليوم",
-    r24h: "آخر 24 ساعة",
+    rToday: "النهارده",
+    r24h: "آخر ٢٤ ساعة",
     rWeek: "هذا الأسبوع",
-    r7d: "آخر 7 أيام",
+    r7d: "آخر ٧ أيام",
     rMonth: "هذا الشهر",
-    r30d: "آخر 30 يومًا",
-    r90d: "آخر 90 يومًا",
+    r30d: "آخر ٣٠ يوم",
+    r90d: "آخر ٩٠ يوم",
     rYear: "هذا العام",
-    r6m: "آخر 6 أشهر",
-    r12m: "آخر 12 شهرًا",
+    r6m: "آخر ٦ شهور",
+    r12m: "آخر ١٢ شهر",
     rAll: "كل الوقت",
     compare: "المقارنة",
     cNone: "بدون مقارنة",
@@ -152,7 +152,7 @@ const STRINGS = {
     weeklyDesc: "الزوار حسب يوم الأسبوع والساعة، على مدار الفترة.",
     filters: "عوامل التصفية",
     clear: "مسح الكل",
-    noData: "مفيش زيارات في هذه الفترة",
+    noData: "مفيش زيارات في الفترة دي",
     noDataDesc: "يُبلغ المتجر عن كل زيارة بنفسه ولا يحتاج إلى أي إعداد. ستظهر الأرقام مع أول زائر.",
     direct: "مباشر / بدون مصدر",
     fUrl: "الصفحة",
@@ -182,8 +182,8 @@ function Delta({ now, before }: { now: number | null; before: number | null | un
   const down = bp < 0;
   return (
     <span className={cn("ms-2 inline-flex items-center gap-0.5 text-xs font-medium", up && "text-success", down && "text-danger", !up && !down && "text-ink-soft")}>
-      {up && <ArrowUpRight className="size-3.5" aria-hidden />}
-      {down && <ArrowDownRight className="size-3.5" aria-hidden />}
+      {up && <IconArrowOut className="size-3.5" aria-hidden />}
+      {down && <IconArrowDownRight className="size-3.5" aria-hidden />}
       <bdi dir="ltr">{formatPercentValue(Math.abs(bp) / 10000)}</bdi>
     </span>
   );
@@ -365,7 +365,7 @@ export function WebAnalyticsPage() {
             {filterEntries.map(([k, v]) => (
               <button key={k} type="button" onClick={() => set({ [k]: null })} className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-full bg-primary-soft px-3 text-xs font-medium text-primary-dark hover:bg-primary/20 dark:text-primary">
                 <span className="text-ink-soft">{filterLabel[k]}:</span> <bdi dir="ltr">{v}</bdi>
-                <X className="size-3" aria-hidden />
+                <IconClose className="size-3" aria-hidden />
               </button>
             ))}
             <button type="button" onClick={() => set(Object.fromEntries(filterEntries.map(([k]) => [k, null])))} className="cursor-pointer text-xs text-ink-soft hover:text-ink">
@@ -405,7 +405,7 @@ export function WebAnalyticsPage() {
             </Card>
 
             {s.pageviews === 0 ? (
-              <EmptyState icon={<Globe />} title={t.noData} description={t.noDataDesc} />
+              <EmptyState icon={<IconGlobe />} title={t.noData} description={t.noDataDesc} />
             ) : (
               <>
                 <div className="grid gap-4 lg:grid-cols-2">

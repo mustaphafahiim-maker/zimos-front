@@ -8,7 +8,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import { formatDateTime } from "@/lib/format";
 import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
-import { Section } from "@/components/Section";
+import { CardFrame } from "@/pages/orders/detail/CardFrame";
 import { StatusBadge } from "@/components/StatusBadge";
 import { CopyButton } from "@/components/CopyButton";
 import { useToast } from "@/components/Toast";
@@ -37,24 +37,24 @@ const STRINGS = {
   },
   ar: {
     title: "التسليم الرقمي",
-    description: "ما حصل عليه العميل من المنتجات الرقمية في هذا الطلب.",
-    deliverNow: "سلّم الآن",
-    delivered: "تم التسليم.",
-    nothingToDeliver: "مفيش جديد للتسليم: جهّز تسليم المنتج أولًا.",
-    state_active: "فعّال",
+    description: "اللي العميل استلمه من المنتجات الرقمية في الأوردر ده.",
+    deliverNow: "سلّم دلوقتي",
+    delivered: "اتسلّم.",
+    nothingToDeliver: "مفيش جديد يتسلّم: جهّز تسليم المنتج الأول.",
+    state_active: "شغّال",
     state_expired: "منتهي",
     state_used_up: "وصل لحد التحميل",
-    state_revoked: "ملغي",
+    state_revoked: "اتلغى",
     type_file: "ملف",
-    type_link: "رابط",
+    type_link: "لينك",
     type_license_codes: "أكواد ترخيص",
     downloads: "{count} مرة تحميل",
     downloadsOf: "{count} من {max} مرة تحميل",
-    expires: "حتى {date}",
-    codesMissing: "باقي {count} كود لم يُسلَّم — أضف أكوادًا لمخزون المنتج.",
-    copyLink: "نسخ رابط العميل",
-    renew: "تجديد",
-    revoke: "إلغاء",
+    expires: "لحد {date}",
+    codesMissing: "باقي {count} كود ما اتسلّمش — ضيف أكواد لمخزون المنتج.",
+    copyLink: "انسخ لينك العميل",
+    renew: "جدّد",
+    revoke: "الغي",
   },
 } satisfies Messages;
 
@@ -70,7 +70,7 @@ const TONE: Record<DigitalGrantState, "success" | "warning" | "danger" | "neutra
  * digital grant unless it is paid, when "Deliver now" covers a product whose
  * delivery was set up after the sale.
  */
-export function OrderDigitalSection({ orderId, paid }: { orderId: string; paid: boolean }) {
+export function OrderDigitalSection({ orderId, paid, frameless }: { orderId: string; paid: boolean; /** Inside a folding section of the order page: no card and no title of its own. */ frameless?: boolean }) {
   const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -107,12 +107,13 @@ export function OrderDigitalSection({ orderId, paid }: { orderId: string; paid: 
   const link = (grant: DigitalGrant) => `${STOREFRONT_URL}/store/${workspaceId}/downloads/${grant.token}`;
 
   return (
-    <Section
+    <CardFrame
+      frameless={frameless}
       title={t.title}
       description={t.description}
       actions={
         paid && pending > 0 ? (
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => void deliver()}>
+          <Button size="sm" variant="outline" className="min-h-11 rounded-full px-4 pointer-fine:min-h-9" disabled={busy} onClick={() => void deliver()}>
             {t.deliverNow}
           </Button>
         ) : undefined
@@ -159,11 +160,11 @@ export function OrderDigitalSection({ orderId, paid }: { orderId: string; paid: 
             {grant.codesMissing > 0 && <p className="mt-2 text-xs text-danger">{fmt(t.codesMissing, { count: grant.codesMissing })}</p>}
             <div className="mt-2 flex flex-wrap gap-2">
               <CopyButton value={link(grant)} label={t.copyLink} />
-              <Button size="sm" variant="outline" onClick={() => void act(grant, "renew")}>
+              <Button size="sm" variant="outline" className="min-h-11 rounded-full px-4 pointer-fine:min-h-9" onClick={() => void act(grant, "renew")}>
                 {t.renew}
               </Button>
               {grant.state !== "revoked" && (
-                <Button size="sm" variant="outline" onClick={() => void act(grant, "revoke")}>
+                <Button size="sm" variant="outline" className="min-h-11 rounded-full px-4 pointer-fine:min-h-9" onClick={() => void act(grant, "revoke")}>
                   {t.revoke}
                 </Button>
               )}
@@ -171,6 +172,6 @@ export function OrderDigitalSection({ orderId, paid }: { orderId: string; paid: 
           </li>
         ))}
       </ul>
-    </Section>
+    </CardFrame>
   );
 }

@@ -10,6 +10,7 @@ import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { Segmented } from "@/components/Segmented";
 import { useToast } from "@/components/Toast";
 
 const STRINGS = {
@@ -21,11 +22,11 @@ const STRINGS = {
     saved: "Orders will be reported as {value}.",
   },
   ar: {
-    title: "سجّل الطلبات كـ",
-    purchase: "شراء (Purchase)",
+    title: "سجّل الأوردرات كـ",
+    purchase: "شرا (Purchase)",
     lead: "عميل محتمل (Lead)",
-    hint: "الـ Lead مناسب لمتاجر الدفع عند الاستلام اللي بتحسّن الإعلانات على الطلبات.",
-    saved: "الطلبات هتتسجّل كـ {value}.",
+    hint: "الـ Lead مناسب لمتاجر الدفع عند الاستلام اللي بتحسّن الإعلانات على الأوردرات.",
+    saved: "الأوردرات هتتسجّل كـ {value}.",
   },
 } satisfies Messages;
 
@@ -68,33 +69,17 @@ export function ConversionEventChoice({
 
   return (
     <div className="mt-4 border-t border-line pt-4">
-      <h3 id="conversion-event-title" className="text-sm font-semibold text-ink">
-        {t.title}
-      </h3>
-      <div role="radiogroup" aria-labelledby="conversion-event-title" className="mt-2 flex flex-wrap gap-2">
-        {TRACKING_CONVERSION_EVENTS.map((option) => {
-          const checked = shown === option;
-          return (
-            <label
-              key={option}
-              className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-[0.5rem] border px-3 ${
-                checked ? "border-primary bg-primary-soft/40" : "border-line hover:border-line-strong"
-              }`}
-            >
-              <input
-                type="radio"
-                name="conversion-event"
-                className="size-4 cursor-pointer accent-primary"
-                checked={checked}
-                disabled={disabled || pending !== null}
-                onChange={() => void choose(option)}
-              />
-              <span className="text-sm font-medium text-ink">{t[option]}</span>
-            </label>
-          );
-        })}
+      <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+      {/* Two choices: the segmented control. A press saves at once; the thumb waits where it was pressed. */}
+      <div className={disabled || pending !== null ? "pointer-events-none mt-2 opacity-60" : "mt-2"} aria-busy={pending !== null || undefined}>
+        <Segmented
+          label={t.title}
+          value={shown}
+          onChange={(next) => void choose(next)}
+          options={TRACKING_CONVERSION_EVENTS.map((option) => ({ value: option, label: t[option] }))}
+        />
       </div>
-      <p className="mt-2 text-xs text-ink-soft">{t.hint}</p>
+      <p className="mt-2 text-[13px] leading-5 text-ink-soft">{t.hint}</p>
     </div>
   );
 }

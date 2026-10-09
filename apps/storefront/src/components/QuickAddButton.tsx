@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
-import { useCart } from "@/lib/CartProvider";
+import { cartErrorMessage, useCart, type LinePreview } from "@/lib/CartProvider";
 import { useStore } from "@/lib/StoreContext";
 import { CartGlyph, CheckIcon } from "./Icons";
 import { focusRing } from "./ui";
@@ -12,6 +12,11 @@ import { focusRing } from "./ui";
  * drawer opens — the shopper stays on the grid. Sits above the card's
  * stretched link (`relative z-10`) so the tap does not also open the product.
  *
+ * The tap answers at once: the button reads "adding", the drawer opens with
+ * the line already in it (`preview` is the name and photo the card has), and
+ * the server's cart takes over when it answers. A refusal takes the line back
+ * out and the drawer says why.
+ *
  * A product with options gets no such button; its card says "choose options"
  * and the whole card still opens the product page.
  */
@@ -19,12 +24,15 @@ export function QuickAddButton({
   variantId,
   offerId,
   label,
+  preview,
 }: {
   variantId: string;
   offerId?: string;
   label: string;
+  /** What the card knows about the product, for the line shown before the server answers. */
+  preview?: LinePreview;
 }) {
-  const { addItem, openDrawer } = useCart();
+  const { addItem, openDrawer, reportProblem } = useCart();
   const { t } = useStore();
   const [status, setStatus] = useState<"idle" | "loading" | "added" | "error">("idle");
 
@@ -34,24 +42,28 @@ export function QuickAddButton({
     e.stopPropagation();
     if (status === "loading") return;
     setStatus("loading");
+    openDrawer();
     try {
-      await addItem(variantId, offerId, 1);
+      await addItem(variantId, offerId, 1, undefined, preview);
       setStatus("added");
-      openDrawer();
       setTimeout(() => setStatus((s) => (s === "added" ? "idle" : s)), 1500);
-    } catch {
+    } catch (err) {
       setStatus("error");
+      // The drawer is open over the card: it is the one that says why.
+      reportProblem("add", cartErrorMessage(err));
       setTimeout(() => setStatus((s) => (s === "error" ? "idle" : s)), 3000);
     }
   }
 
+  // The `before:` layer makes the thumb's target a few pixels taller than the
+  // button a theme may draw (one draws it 42px), without changing how it looks.
   return (
     <button
       type="button"
       onClick={handleClick}
       disabled={status === "loading"}
       aria-busy={status === "loading"}
-      className={`zt-btn zt-btn-primary relative z-10 mt-4 inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70 ${focusRing}`}
+      className={`zt-btn zt-btn-primary relative z-10 mt-4 inline-flex min-h-11 w-full cursor-pointer touch-manipulation items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors before:absolute before:inset-x-0 before:-inset-y-1 hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70 ${focusRing}`}
     >
       {status === "added" ? <CheckIcon size={18} /> : <CartGlyph size={18} />}
       <span aria-live="polite">

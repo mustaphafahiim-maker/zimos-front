@@ -15,14 +15,26 @@ import { TruckIcon } from "./Icons";
  * «هيوصلك من … لـ …» (handoff 199): the window the API worked out for an
  * address — from the shipping quote in the cart and at checkout, or asked for
  * on the product page. Nothing when the store shows none.
+ *
+ * `tone="quiet"` is the same line in the small grey type of a form's
+ * footnotes (under the product page's order button).
  */
-export function DeliveryEstimateLine({ estimate, className = "" }: { estimate: DeliveryEstimate | null | undefined; className?: string }) {
+export function DeliveryEstimateLine({
+  estimate,
+  className = "",
+  tone = "plain",
+}: {
+  estimate: DeliveryEstimate | null | undefined;
+  className?: string;
+  tone?: "plain" | "quiet";
+}) {
   const { t, intlLocale } = useStore();
   const text = estimate ? deliveryGetText(estimate, t.buyInfo, intlLocale) : "";
   if (!text) return null;
+  const quiet = tone === "quiet";
   return (
-    <p className={`flex items-center gap-1.5 text-sm font-medium text-ink ${className}`} aria-live="polite">
-      <TruckIcon size={16} className="shrink-0 text-primary" />
+    <p className={`flex items-center gap-1.5 ${quiet ? "text-xs text-ink-soft" : "text-sm font-medium text-ink"} ${className}`} aria-live="polite">
+      <TruckIcon size={16} className={quiet ? "shrink-0" : "shrink-0 text-primary"} />
       {text}
     </p>
   );

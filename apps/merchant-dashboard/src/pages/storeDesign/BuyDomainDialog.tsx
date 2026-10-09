@@ -1,10 +1,10 @@
 import { useId, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Store } from "lucide-react";
+import { IconStore, IconWarning } from "@/components/icons";
 import { Alert, Button, buttonVariants, cn } from "@store-builder/ui";
 import {
   apiErrorDetails,
-  domainPurchaseCreate,
+  domainPurchaseCreateWithOwner,
   isApiErrorCode,
   type DomainPrice,
   type DomainPriceChangedDetails,
@@ -13,12 +13,14 @@ import {
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useLocale, useT } from "@/i18n/LocaleContext";
 import { Modal } from "@/components/Modal";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { PURCHASE_STRINGS, formatDomainPrice, yearsLabel } from "./domainPurchaseStrings";
+import { isDomainPurchaseUnavailable, useDomainNameRefusal } from "./DomainPurchaseAvailability";
+// Handoff 326 / 325: the «صاحب الدومين» step where the registrar needs it, and the registrar's and price's refusals.
+import { useDomainOwnerStep, useDomainPurchaseErrorMessage } from "./DomainOwnerStep";
 
 /** The lengths offered when buying (handoff item 176: 1–5 years). */
 const YEARS = [1, 2, 3, 4, 5] as const;
@@ -37,6 +39,8 @@ interface BuyDomainDialogProps {
   onConnectFailed: (domain: string) => void;
   /** Any other failure: the attempt may be on record as a failed purchase with its last error. */
   onFailed: () => void;
+  /** No registrar on this server (503 DOMAIN_PURCHASE_UNAVAILABLE, handoff 305): nothing was attempted; the section says so. */
+  onPurchaseUnavailable: (err: unknown) => void;
 }
 
 /**
@@ -49,11 +53,12 @@ interface BuyDomainDialogProps {
  * but not connected (502 DOMAIN_CONNECT_FAILED) is handed to the section,
  * which says so instead of "nothing was charged".
  */
-export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChanged, onUnavailable, onConnectFailed, onFailed }: BuyDomainDialogProps) {
+export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChanged, onUnavailable, onConnectFailed, onFailed, onPurchaseUnavailable }: BuyDomainDialogProps) {
   const t = useT(PURCHASE_STRINGS);
+  const nameRefusal = useDomainNameRefusal();
   const { intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
-  const errorMessage = useErrorMessage();
+  const errorMessage = useDomainPurchaseErrorMessage();
   const autoRenewHintId = useId();
   const [years, setYears] = useState(1);
   const [autoRenew, setAutoRenew] = useState(true);
@@ -65,38 +70,51 @@ export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChange
   const [notSetUp, setNotSetUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const owner = useDomainOwnerStep({ busy });
 
   const length = yearsLabel(t, years, intlLocale);
 
   async function confirm() {
     if (busy || unavailable || notSetUp) return;
+    // The owner's details, where the registrar needs them; a form with mistakes stops here, on its step.
+    const who = owner.contact();
+    if (!who.ok) return;
     setBusy(true);
     setError(null);
     try {
-      const purchase = await domainPurchaseCreate(apiClient, workspaceId, {
+      const purchase = await domainPurchaseCreateWithOwner(apiClient, workspaceId, {
         domain: result.domain,
         years,
         autoRenew,
         acceptPrice: price,
+        contact: who.contact,
       });
       onBought(purchase);
     } catch (err) {
-      if (isApiErrorCode(err, "DOMAIN_PRICE_CHANGED")) {
+      if (owner.refused(err)) {
+        // Said on the owner step, under the field it is about.
+      } else if (isApiErrorCode(err, "DOMAIN_PRICE_CHANGED")) {
         const next = apiErrorDetails<DomainPriceChangedDetails>(err)?.price ?? null;
         setPrice(next);
         setPriceChanged(true);
         onPriceChanged(result.domain, next);
+        owner.back();
       } else if (isApiErrorCode(err, "DOMAIN_UNAVAILABLE")) {
         setUnavailable(true);
         setError(errorMessage(err));
         onUnavailable(result.domain);
+        owner.back();
       } else if (isApiErrorCode(err, "STORE_NOT_SET_UP")) {
         setNotSetUp(true);
+        owner.back();
       } else if (isApiErrorCode(err, "DOMAIN_CONNECT_FAILED")) {
         // The domain WAS bought: never "nothing was charged", and never offer to buy it again.
         onConnectFailed(result.domain);
+      } else if (isDomainPurchaseUnavailable(err)) {
+        onPurchaseUnavailable(err);
       } else {
-        setError(errorMessage(err));
+        // A name that can't be bought here (422 on `domain`) is said in the merchant's words.
+        setError(nameRefusal(err) ?? errorMessage(err));
         onFailed();
       }
     } finally {
@@ -116,16 +134,27 @@ export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChange
       description={t.dialogDescription}
       footer={
         <>
-          <Button type="button" variant="outline" className="min-h-11 sm:min-h-0" disabled={busy} onClick={close}>
-            {t.cancel}
+          <Button type="button" variant="outline" className="min-h-11 sm:min-h-0" disabled={busy} onClick={owner.onStep ? owner.back : close}>
+            {owner.onStep ? owner.labels.back : t.cancel}
           </Button>
-          <Button type="button" className="min-h-11 sm:min-h-0" disabled={busy || unavailable || notSetUp} onClick={() => void confirm()}>
-            {busy ? t.buying : t.confirm}
+          <Button
+            type="button"
+            className="min-h-11 sm:min-h-0"
+            disabled={busy || unavailable || notSetUp || owner.loading}
+            onClick={() => (owner.required && !owner.onStep ? owner.begin() : void confirm())}
+          >
+            {busy ? t.buying : owner.required && !owner.onStep ? owner.labels.next : t.confirm}
           </Button>
         </>
       }
     >
-      <div className="space-y-4">
+      {owner.onStep && (
+        <div className="space-y-4">
+          {owner.node}
+          {error && <Alert variant="danger">{error}</Alert>}
+        </div>
+      )}
+      <div className={cn("space-y-4", owner.onStep && "hidden")}>
         <div className="rounded-[var(--radius-card)] bg-paper-sunken px-4 py-3">
           <p className="text-xs text-ink-soft">{t.domain}</p>
           <p className="break-words text-lg font-semibold text-ink">
@@ -172,7 +201,7 @@ export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChange
 
         {priceChanged && (
           <Alert className="border-accent/40 bg-accent-soft text-accent-dark">
-            <AlertTriangle aria-hidden />
+            <IconWarning aria-hidden />
             <p className="font-medium">{t.priceChanged}</p>
           </Alert>
         )}
@@ -199,11 +228,11 @@ export function BuyDomainDialog({ open, result, onClose, onBought, onPriceChange
 
         {notSetUp && (
           <Alert className="border-accent/40 bg-accent-soft text-accent-dark">
-            <AlertTriangle aria-hidden />
+            <IconWarning aria-hidden />
             <div className="space-y-2">
               <p className="font-medium">{t.storeNotSetUp}</p>
               <Link to="/website" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "min-h-11 bg-paper-raised sm:min-h-8")}>
-                <Store className="size-4" aria-hidden />
+                <IconStore className="size-4" aria-hidden />
                 {t.setUpWebsite}
               </Link>
             </div>

@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useState } from "react";
 import {
   notificationsGetPreferences,
   notificationsUpdatePreferences,
@@ -12,165 +11,223 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { NOTIFICATION_STRINGS, notificationTypeLabel } from "@/lib/notificationText";
-import { useT, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { AccordionSection } from "@/components/Accordion";
 import { DataState } from "@/components/DataState";
+import { SettingsGroup, SettingsSwitch } from "@/components/settings";
 import { useToast } from "@/components/Toast";
-import { PushDeviceToggle } from "./PushDeviceToggle";
 import { useAuth } from "@/context/AuthContext";
+import { PushDeviceToggle } from "./PushDeviceToggle";
+import { PaneSkeleton, SettingsCard } from "./sections/SettingsCard";
 
 const STRINGS = {
   en: {
-    title: "My notifications",
-    description: "Choose what you are told about in this store and where. These choices are yours alone — each teammate sets their own.",
-    type: "Notify me about",
+    description: "What you are told about in this store, and where. These choices are yours alone — each teammate sets their own.",
+    tableTitle: "Tell me about",
+    type: "Event",
     inApp: "In the dashboard",
-    email: "By email",
+    email: "Email",
     push: "Push",
     whatsapp: "WhatsApp",
     whatsappHint: "WhatsApp messages go to your verified phone number.",
-    whatsappNoPhone: "Verify your phone number under “Your account” to get notifications on WhatsApp.",
+    whatsappNoPhone: "Verify your phone number under “Profile” to get notifications on WhatsApp.",
     sound: "Play a sound when a new order arrives",
     soundHint: "Rings while the dashboard is open in a browser tab.",
-    saved: "Notification settings saved.",
+    saved: "Saved.",
     channelFor: "{channel}: {type}",
+    allOff: "Off",
+    noTypes: "Your role has no notifications to choose from in this store.",
   },
   ar: {
-    title: "إشعاراتي",
-    description: "اختار ما تريد أن يصلك في هذا المتجر وأين. هذه الاختيارات تخصك وحدك، ولكل عضو في الفريق اختياراته.",
-    type: "أبلغني عن",
-    inApp: "داخل لوحة التحكم",
-    email: "بالبريد الإلكتروني",
+    description: "إيه اللي يوصلك عن المتجر ده، وفين. الاختيارات دي بتاعتك إنت بس — كل واحد في الفريق ليه اختياراته.",
+    tableTitle: "بلّغني عن",
+    type: "الحدث",
+    inApp: "جوّه الداشبورد",
+    email: "إيميل",
     push: "إشعار على الجهاز",
     whatsapp: "واتساب",
-    whatsappHint: "رسائل واتساب تصل إلى رقم هاتفك المؤكد.",
-    whatsappNoPhone: "أكّد رقم هاتفك من «حسابك» لتصلك الإشعارات على واتساب.",
-    sound: "تشغيل صوت عند وصول طلب جديد",
-    soundHint: "يعمل طالما لوحة التحكم مفتوحة في المتصفح.",
-    saved: "تم حفظ إعدادات الإشعارات.",
+    whatsappHint: "رسايل واتساب بتوصل على رقم موبايلك الموثّق.",
+    whatsappNoPhone: "وثّق رقم موبايلك من «الملف الشخصي» عشان توصلك الإشعارات على واتساب.",
+    sound: "شغّل صوت لما ييجي أوردر جديد",
+    soundHint: "بيرنّ طول ما الداشبورد مفتوحة في المتصفح.",
+    saved: "اتحفظ.",
     channelFor: "{channel}: {type}",
+    allOff: "مقفول",
+    noTypes: "دورك ملوش إشعارات يختار منها في المتجر ده.",
   },
 } satisfies Messages;
 
-/** Settings → "My notifications": per-teammate types × channels and the new-order sound. */
+type Row = MerchantNotificationPreferences["types"][number];
+type Patch = Parameters<typeof notificationsUpdatePreferences>[2];
+
+/**
+ * Settings → «الإشعارات»: push on this device, the new-order sound, and the
+ * table of what to be told about — events down, channels across. Every tick
+ * saves at once (one PUT, optimistic, put back if it fails) and can be undone
+ * from its toast. On a phone four channels do not fit across: there each event
+ * is one card that folds, with a switch per channel inside.
+ */
 export function NotificationPreferencesSection() {
   const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const nt = useT(NOTIFICATION_STRINGS);
   const toast = useToast();
   const errorMessage = useErrorMessage();
-  const location = useLocation();
-  const ref = useRef<HTMLElement>(null);
-  const [saving, setSaving] = useState(false);
+  // The one tick being saved ("sound", or "<type>:<channel>"): it shows the spinner; a second press waits for it.
+  const [saving, setSaving] = useState<string | null>(null);
 
   const { data, error, loading, refresh, setData } = useAsync<MerchantNotificationPreferences>(
     () => notificationsGetPreferences(apiClient, workspaceId),
     [workspaceId]
   );
+  const { user } = useAuth();
+  const phoneVerified = Boolean(user?.phoneVerifiedAt);
 
-  // The bell's "Notification settings" link lands here.
-  useEffect(() => {
-    if (location.hash === "#notifications" && !loading) ref.current?.scrollIntoView({ block: "start" });
-  }, [location.hash, loading]);
-
-  async function save(patch: Parameters<typeof notificationsUpdatePreferences>[2], optimistic: MerchantNotificationPreferences) {
+  async function save(key: string, patch: Patch, optimistic: MerchantNotificationPreferences, undo?: () => void) {
+    if (saving !== null) return;
     const previous = data;
     setData(optimistic);
-    setSaving(true);
+    setSaving(key);
     try {
       setData(await notificationsUpdatePreferences(apiClient, workspaceId, patch));
-      toast.success(t.saved);
+      if (undo) toast.undo(t.saved, undo);
+      else toast.success(t.saved);
     } catch (err) {
       if (previous) setData(previous);
       toast.error(errorMessage(err));
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
   }
 
-  function toggle(type: MerchantNotificationType, channel: MerchantNotificationChannel, value: boolean) {
-    if (!data) return;
+  function toggle(current: MerchantNotificationPreferences, type: MerchantNotificationType, channel: MerchantNotificationChannel, value: boolean, undoable = true) {
+    const next = { ...current, types: current.types.map((row) => (row.type === type ? { ...row, [channel]: value } : row)) };
     void save(
+      `${type}:${channel}`,
       { types: [{ type, [channel]: value }] },
-      { ...data, types: data.types.map((row) => (row.type === type ? { ...row, [channel]: value } : row)) }
+      next,
+      // The opposite call is the same call with the other value.
+      undoable ? () => toggle(next, type, channel, !value, false) : undefined
     );
+  }
+
+  function toggleSound(current: MerchantNotificationPreferences, value: boolean, undoable = true) {
+    const next = { ...current, soundEnabled: value };
+    void save("sound", { soundEnabled: value }, next, undoable ? () => toggleSound(next, !value, false) : undefined);
   }
 
   const channelLabel = (channel: MerchantNotificationChannel) =>
     channel === "inApp" ? t.inApp : channel === "push" ? t.push : channel === "whatsapp" ? t.whatsapp : t.email;
-  const { user } = useAuth();
-  const phoneVerified = Boolean(user?.phoneVerifiedAt);
+
+  /** «جوّه الداشبورد · إيميل», or «مقفول»: what a folded event card says. */
+  const summaryOf = (row: Row, channels: MerchantNotificationChannel[]) => {
+    const on = channels.filter((channel) => row[channel]).map(channelLabel);
+    return on.length > 0 ? on.join(" · ") : t.allOff;
+  };
 
   return (
-    <section ref={ref} id="notifications" className="scroll-mt-6 rounded-[var(--radius-card)] border border-line p-5">
-      <h2 className="font-display text-lg font-medium text-ink">{t.title}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
+    <>
+      <p className="px-1 text-sm leading-6 text-ink-soft">{t.description}</p>
 
       <PushDeviceToggle />
-      <div className="mt-4">
-        <DataState loading={loading} error={error} onRetry={() => void refresh()}>
-          {data && (
-            <div className="space-y-5">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-line text-ink-soft">
-                      <th scope="col" className="py-2 pe-3 text-start font-medium">
-                        {t.type}
-                      </th>
-                      {data.channels.map((channel) => (
-                        <th key={channel} scope="col" className="px-3 py-2 text-center font-medium">
-                          {channelLabel(channel)}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {data.types.map((row) => {
-                      const label = notificationTypeLabel(nt, row.type);
-                      return (
-                        <tr key={row.type}>
-                          <th scope="row" className="py-3 pe-3 text-start font-normal text-ink">
-                            {label}
+
+      <DataState loading={loading} error={error} onRetry={() => void refresh()} skeleton={<PaneSkeleton rows={5} />}>
+        {data && (
+          <>
+            <SettingsGroup>
+              <SettingsSwitch
+                label={t.sound}
+                hint={t.soundHint}
+                checked={data.soundEnabled}
+                busy={saving === "sound"}
+                onChange={(value) => toggleSound(data, value)}
+              />
+            </SettingsGroup>
+
+            {data.types.length === 0 ? (
+              <SettingsCard>
+                <p className="text-sm text-ink-soft">{t.noTypes}</p>
+              </SettingsCard>
+            ) : (
+              <>
+                {/* From sm up: the table — events down, channels across. */}
+                <SettingsCard id="notifications" flush className="hidden sm:block">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-ink-soft">
+                          <th scope="col" className="px-5 py-3 text-start text-[13px] font-semibold">
+                            {t.tableTitle}
                           </th>
                           {data.channels.map((channel) => (
-                            <td key={channel} className="px-3 py-3 text-center">
-                              <input
-                                type="checkbox"
-                                className="size-4 cursor-pointer accent-primary"
-                                checked={row[channel]}
-                                disabled={saving}
-                                aria-label={t.channelFor.replace("{channel}", channelLabel(channel)).replace("{type}", label)}
-                                onChange={(e) => toggle(row.type, channel, e.target.checked)}
-                              />
-                            </td>
+                            <th key={channel} scope="col" className="px-2 py-3 text-center text-[13px] font-semibold">
+                              {channelLabel(channel)}
+                            </th>
                           ))}
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {data.channels.includes("whatsapp") && (
-                <p className="text-xs text-ink-soft">{phoneVerified ? t.whatsappHint : t.whatsappNoPhone}</p>
-              )}
+                      </thead>
+                      <tbody>
+                        {data.types.map((row) => {
+                          const label = notificationTypeLabel(nt, row.type);
+                          return (
+                            <tr key={row.type} className="border-t border-line">
+                              <th scope="row" className="px-5 py-1 text-start font-medium text-ink">
+                                {label}
+                              </th>
+                              {data.channels.map((channel) => (
+                                <td key={channel} className="px-2 py-1 text-center">
+                                  {/* A 44px target around a 20px box. */}
+                                  <label className="inline-flex size-11 cursor-pointer items-center justify-center rounded-full align-middle transition-colors duration-[var(--dur-fade)] hover:bg-ink/5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary motion-reduce:transition-none">
+                                    <input
+                                      type="checkbox"
+                                      className="size-5 shrink-0 cursor-pointer accent-primary outline-none aria-busy:cursor-progress"
+                                      checked={row[channel]}
+                                      aria-busy={saving === `${row.type}:${channel}` || undefined}
+                                      aria-label={fmt(t.channelFor, { channel: channelLabel(channel), type: label })}
+                                      onChange={(e) => toggle(data, row.type, channel, e.target.checked)}
+                                    />
+                                  </label>
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </SettingsCard>
 
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 size-4 cursor-pointer accent-primary"
-                  checked={data.soundEnabled}
-                  disabled={saving}
-                  onChange={(e) => void save({ soundEnabled: e.target.checked }, { ...data, soundEnabled: e.target.checked })}
-                />
-                <span>
-                  <span className="block text-sm font-medium text-ink">{t.sound}</span>
-                  <span className="block text-xs text-ink-soft">{t.soundHint}</span>
-                </span>
-              </label>
-            </div>
-          )}
-        </DataState>
-      </div>
-    </section>
+                {/* On a phone: one card per event; it folds to a line that says where it reaches you. */}
+                <div className="flex flex-col gap-2 sm:hidden">
+                  <h3 className="px-4 text-[13px] leading-5 font-semibold text-ink-soft">{t.tableTitle}</h3>
+                  {data.types.map((row) => {
+                    const label = notificationTypeLabel(nt, row.type);
+                    return (
+                      <AccordionSection key={row.type} title={label} summary={summaryOf(row, data.channels)} flush className="[--radius-card:1.25rem]">
+                        {data.channels.map((channel) => (
+                          <SettingsSwitch
+                            key={channel}
+                            label={channelLabel(channel)}
+                            checked={row[channel]}
+                            busy={saving === `${row.type}:${channel}`}
+                            // Under the card's title line the first row keeps square top corners.
+                            className="first:rounded-t-none"
+                            onChange={(value) => toggle(data, row.type, channel, value)}
+                          />
+                        ))}
+                      </AccordionSection>
+                    );
+                  })}
+                </div>
+
+                {data.channels.includes("whatsapp") && (
+                  <p className="px-4 text-[13px] leading-5 text-ink-soft">{phoneVerified ? t.whatsappHint : t.whatsappNoPhone}</p>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </DataState>
+    </>
   );
 }
