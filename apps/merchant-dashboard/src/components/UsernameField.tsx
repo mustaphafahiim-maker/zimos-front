@@ -134,7 +134,7 @@ export function UsernameField({
           placeholder="your.name"
         />
         <span className="pointer-events-none absolute inset-y-0 end-0 flex items-center px-3" aria-hidden>
-          {status === "checking" && <IconSpinner className="size-4 animate-spin text-ink-soft" />}
+          {status === "checking" && <IconSpinner className="size-4 animate-spin motion-reduce:animate-none text-ink-soft" />}
           {(status === "available" || status === "current") && <IconCheck className="size-4 text-success" />}
           {bad && <IconClose className="size-4 text-danger" />}
         </span>

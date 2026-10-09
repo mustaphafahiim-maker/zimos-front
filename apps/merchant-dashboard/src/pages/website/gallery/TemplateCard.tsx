@@ -39,7 +39,7 @@ function TemplateThumb({ template }: { template: WebsiteTemplateSummary }) {
     <div className="relative aspect-[3/4] w-full overflow-hidden bg-paper-sunken">
       {url && image !== "broken" ? (
         <>
-          {image === "loading" && <TemplatePlaceholder className="absolute inset-0 motion-safe:animate-pulse" />}
+          {image === "loading" && <TemplatePlaceholder color={template.primaryColor} title={template.name} className="absolute inset-0" />}
           {/* Decorative: the card's button names the template. */}
           <img
             ref={imageRef}
@@ -63,7 +63,7 @@ function TemplateThumb({ template }: { template: WebsiteTemplateSummary }) {
           title={template.name}
           aspect="3/4"
           cardLayout="mobile"
-          fallback={<TemplatePlaceholder />}
+          fallback={<TemplatePlaceholder color={template.primaryColor} title={template.name} />}
         />
       )}
     </div>

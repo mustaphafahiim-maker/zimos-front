@@ -301,7 +301,7 @@ export function TemplateSheet({
             templateId={template.id}
             theme={theme}
             title={fmt(t.livePreview, { name: template.name })}
-            fallback={<TemplatePlaceholder label={t.noPreview} />}
+            fallback={<TemplatePlaceholder color={template.primaryColor} title={template.name} label={t.noPreview} />}
             // What is left of the sheet once its header, the device switch and its footer are counted.
             stageClassName="h-[calc(92dvh_-_17.5rem)] min-h-[20rem] sm:h-[calc(min(85dvh,46rem)_-_15.5rem)]"
           />

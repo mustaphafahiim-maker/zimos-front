@@ -871,3 +871,42 @@ Open (not done or not verified)
 - The demo funnel's cards overlap on the map with their saved positions; «رتّب الخريطة» was not tried.
 - Only a sample of the swept pages was opened in a browser; the rest are typechecked only.
 - `lucide-react` is still in the dashboard's package.json; old unrouted report screens are still in the repo.
+
+### Follow-up pass on the open list (2026-10-09)
+- All 102 parameterless dashboard routes opened on a phone and a desktop: no crash screen, no console error, no
+  failed request, no horizontal scroll (`scratchpad/shots/smoke.cjs`).
+- Storefront: the 404 on checkout is by design (`pickup/locations` and `delivery-slots` answer 404 while the
+  feature is off) and predates the redesign. Contrast measured on six shopper pages: the misses are the demo
+  store's own brand colour (#E4572E as text on white 3.68:1, dark text on it 4.48:1) — a merchant setting the
+  editor already warns about — and text under the sticky order bar, which the script does not exclude there.
+- Reduced motion: three spinners had no guard (the preview's refresh icon, the shared `Spinner` in packages/ui,
+  the username check); the editor now reports nothing running.
+- Offers hub group counts and the apps page on a phone re-measured: clean.
+- Orders board: the two chips still reported sit in a column's bottom fade (a measuring artefact, same as the
+  side menu's); the chips got a white veil under their tint in light mode anyway.
+- English: the Arabic left on `/website` is template category names from the API, and the editor's «Aa أب» is
+  the font sample — data, not untranslated chrome.
+Still open
+- The order-confirmation page was not captured (it needs a test order placed on the demo store).
+- Funnel map: after «رتّب الخريطة» the branch row sits 4px under the first row and an arrow's pill can cover a
+  card's title; the layout constants are pinned by `funnelFlow.test.ts`.
+- The ten `partial` rows in `sweep-table.md`; `lucide-react` still listed in the dashboard's package.json (no
+  imports left; removing it means touching the lockfile); old unrouted report screens still in the repo.
+
+### Editors: font, one-click editing, map smoothness (2026-10-09)
+- **Arabic face**: IBM Plex Sans Arabic (Arabic subset only) with Inter for Latin, replacing Readex Pro in the
+  dashboard (`index.css`; new package `@fontsource/ibm-plex-sans-arabic`). Contrast re-measured on 17 screens
+  (6,050 text runs): clean apart from the merchant brand-colour preview in Settings.
+- **Store editor / step page editor** (`apps/storefront/src/components/preview/PreviewBridge.tsx`): one click on
+  an element picks that element (it used to pick the section first); the section's action bar steps aside while
+  an element is picked, so it no longer covers the text being edited.
+- **Funnel map**: opens at 100% on a desktop (fitted on a phone); the floating bars are no longer blurred and
+  cards use layout containment. Measured on the built dashboard (`vite build`, served on :4173) under a 4x CPU
+  slowdown: panning went from 49 slow frames (>33 ms) to 9 of ~200; dragging a card is still 81 slow frames of
+  277, zooming 15 of 84. Unthrottled it is 60 fps throughout.
+Open
+- Dragging a card on a slow device still stutters; the per-frame React render of the map is the suspect, not
+  yet profiled. The store editor's own smoothness was not measured.
+- Clicking an element inside a funnel step's page was not exercised by script (the editor opens and shows the
+  page; the click test did not find the preview frame).
+- A leftover auto-saved draft from an earlier tidy test on the demo funnel was discarded.

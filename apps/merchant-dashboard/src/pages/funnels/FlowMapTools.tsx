@@ -306,7 +306,8 @@ export function useFlowZoom(containerRef: RefObject<HTMLDivElement | null>, boun
     glide.current = requestAnimationFrame(step);
   }
 
-  const fit = useCallback(() => {
+  // `fixed`: open at that zoom from the first step (the map opens at 100%); without it, shrink until every step shows.
+  const fit = useCallback((fixed?: number) => {
     const el = containerRef.current;
     if (!el || el.clientWidth === 0 || el.clientHeight === 0) return false;
     const b = boundsRef.current;
@@ -316,7 +317,7 @@ export function useFlowZoom(containerRef: RefObject<HTMLDivElement | null>, boun
     const roomY = Math.max(120, el.clientHeight - FIT_TOP - FIT_BOTTOM);
     // A phone-wide box never shrinks the cards past reading size: it shows the start and pans.
     const floor = el.clientWidth < 640 ? READABLE_ZOOM : MIN_ZOOM;
-    const z = clampZoom(Math.max(floor, Math.min(1, roomX / w, roomY / h)));
+    const z = clampZoom(fixed ?? Math.max(floor, Math.min(1, roomX / w, roomY / h)));
     // Centred when the steps fit; otherwise from the first step, with the margin.
     const spareX = Math.max(0, roomX - w * z);
     const spareY = Math.max(0, roomY - h * z);
@@ -340,7 +341,8 @@ export function useFlowZoom(containerRef: RefObject<HTMLDivElement | null>, boun
     if (!el || fitted.current === autoFitKey) return;
     const run = () => {
       if (fitted.current === autoFitKey) return true;
-      if (!fit()) return false;
+      // 100% on a desktop; a phone is too narrow for that (one card and a half), so it fits to reading size.
+      if (!(el.clientWidth >= 640 ? fit(1) : fit())) return false;
       fitted.current = autoFitKey;
       return true;
     };

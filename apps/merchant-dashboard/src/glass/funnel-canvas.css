@@ -52,6 +52,11 @@
     background-color: color-mix(in srgb, var(--color-paper-raised) 86%, var(--lg-brand-solid));
   }
 
+  /* Each card lays out on its own (not "paint": the start badge and the link dots hang over its edge). */
+  .zimos-flow-card {
+    contain: layout style;
+  }
+
   /* The icon tile: the type's own tint (its Tailwind class), lit along the top edge. */
   .zimos-flow-card [data-slot="flow-tile"] {
     background-image: linear-gradient(160deg, rgb(255 255 255 / 0.55) 0%, rgb(255 255 255 / 0) 62%);
@@ -162,10 +167,10 @@
    * The floating bars (period and legend; zoom, fit, tidy): the map
    * passes under them, so they are frosted.
    * ---------------------------------------------------------------- */
+  /* Not blurred: the map scrolls under these on every pan and drag frame, and re-blurring it each frame is what
+     made the map stutter on a slow phone. A nearly solid pane reads the same over a dotted ground. */
   .zimos-flow-bar {
-    background-color: var(--lg-frost);
-    -webkit-backdrop-filter: var(--lg-blur);
-    backdrop-filter: var(--lg-blur);
+    background-color: color-mix(in srgb, var(--color-paper-raised) 94%, transparent);
     --tw-ring-color: var(--lg-edge);
     --tw-inset-shadow: var(--lg-rim-line);
   }

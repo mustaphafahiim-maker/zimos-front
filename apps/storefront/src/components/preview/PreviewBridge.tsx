@@ -641,8 +641,9 @@ export function PreviewBridge({
       const id = section.getAttribute(SECTION_ATTR) ?? "";
       const can = abilitiesRef.current;
 
-      // Inside the section that is already selected, a click picks the element.
-      const marker = can.selectElement && id === selectedRef.current ? target.closest<HTMLElement>(`[${EL_ATTR}]`) : null;
+      // One click picks the element under the pointer, whichever section it is in (its section comes with it):
+      // the merchant edits what they pressed, without first selecting the section around it.
+      const marker = can.selectElement ? target.closest<HTMLElement>(`[${EL_ATTR}]`) : null;
       const elementId = marker?.getAttribute(EL_ATTR) ?? "";
       if (marker && elementId) {
         // The picture of the element that is already picked: replace it.
@@ -653,6 +654,9 @@ export function PreviewBridge({
             return;
           }
         }
+        selectedRef.current = id;
+        setSelected(id);
+        setSelectedShell(null);
         selectedElementRef.current = elementId;
         setSelectedElement(elementId);
         post({
@@ -856,7 +860,8 @@ function SectionOutline({
           }}
         >
           {label && !quiet ? <span data-zc="chip">{label}</span> : <span />}
-          {active && (grip || actions.length > 0) ? (
+          {/* While one element is picked the bar steps aside: it would sit on the very thing being edited. */}
+          {active && !quiet && (grip || actions.length > 0) ? (
             <span data-zc="bar" role="toolbar" aria-label={label || undefined}>
               {grip}
               {grip && actions.length > 0 ? <span data-zc="rule" aria-hidden /> : null}

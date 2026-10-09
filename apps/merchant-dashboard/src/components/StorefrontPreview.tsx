@@ -880,7 +880,7 @@ export function StorefrontPreview({
               title={labels.refresh}
               onClick={() => void post(serialized)}
             >
-              <IconRefresh className={cn("size-4", loading && "animate-spin")} aria-hidden />
+              <IconRefresh className={cn("size-4", loading && "animate-spin motion-reduce:animate-none")} aria-hidden />
             </Button>
             {onClose && (
               <Button type="button" size="icon-sm" variant="ghost" aria-label={labels.close} onClick={onClose}>

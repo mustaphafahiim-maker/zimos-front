@@ -232,7 +232,7 @@ export function TemplateLivePreview({
       )}
     >
       {phase !== "ready" && (
-        <div className={cn("absolute inset-0", phase !== "failed" && "motion-safe:animate-pulse")}>
+        <div className={cn("absolute inset-0", !card && phase !== "failed" && "motion-safe:animate-pulse")}>
           {fallback}
         </div>
       )}

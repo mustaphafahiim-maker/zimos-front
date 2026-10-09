@@ -146,5 +146,5 @@ export function createSlotQueue(limit: number): SlotQueue {
  * calls to verify the session), so only this many load at a time; the rest
  * wait their turn. Frames that have loaded stay, so scrolling back is free.
  */
-export const MAX_LOADING_PREVIEWS = 2;
+export const MAX_LOADING_PREVIEWS = 4;
 export const previewQueue = createSlotQueue(MAX_LOADING_PREVIEWS);

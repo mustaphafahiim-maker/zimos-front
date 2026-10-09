@@ -109,7 +109,7 @@ export function StoreAddressField({
       >
         {state.status === "checking" && (
           <>
-            <IconSpinner className="size-3.5 animate-spin" aria-hidden />
+            <IconSpinner className="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden />
             {t.checking}
           </>
         )}

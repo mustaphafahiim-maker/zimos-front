@@ -2,11 +2,19 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
-@import "@fontsource/readex-pro/400.css";
-@import "@fontsource/readex-pro/500.css";
-@import "@fontsource/readex-pro/600.css";
-@import "@fontsource/readex-pro/700.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-500.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-700.css";
 @import "@store-builder/ui/tokens.css";
+
+/* Type: Inter draws the Latin and the Western digits, IBM Plex Sans Arabic the Arabic (only its Arabic subset is
+   loaded, so it never takes a Latin letter). It is a naskh-like text face that reads the way printed Arabic does;
+   the geometric face used before read as stretched and unnatural. */
+:root {
+  --font-sans: "Inter Variable", "IBM Plex Sans Arabic", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Inter Variable", "IBM Plex Sans Arabic", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+}
 
 /* Tailwind v4 auto-detects template sources from this app's own tree only; it
    never looks inside node_modules, which is where the workspace-linked
