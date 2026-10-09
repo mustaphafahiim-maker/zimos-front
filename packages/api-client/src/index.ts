@@ -20,6 +20,7 @@ export {
   isAreaUnmatchedDetails,
 } from "./types";
 export { formatMoney, formatMoneyRange, parseMoney } from "./money";
+export { SHOPPER_TOKEN_HEADER, isShopperToken, shopperTokenHeaders } from "./shopperToken";
 export {
   apiErrorCode,
   apiErrorDetails,
