@@ -1,5 +1,6 @@
 import type { Product, ProductMedia } from "@store-builder/api-client";
 import { compressImageIfNeeded as compressImage, humanSize } from "@store-builder/image-tools";
+import { shrinkForUpload, type ShrinkResult } from "@/lib/imageResize";
 
 /** Matches the backend's multer limit (5 MB) in modules/media/mediaService.js. */
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -35,15 +36,23 @@ export function validateImageFile(file: File): string | null {
 // ---------------------------------------------------------------------
 
 /**
- * Shrinks an over-limit image in the browser so the merchant does not have to
- * resize it by hand (the shared @store-builder/image-tools, also used by the
- * storefront for shoppers' photos). Files already under the limit — the common
- * case — come back untouched, as do formats a canvas round-trip would damage.
- * If nothing gets under MAX_IMAGE_BYTES the original is returned, so
- * validateImageFile() rejects it exactly as it did before.
+ * Gets an image ready to upload: a big photo is scaled down to
+ * UPLOAD_MAX_EDGE and re-encoded (lib/imageResize), then, if it is somehow
+ * still over MAX_IMAGE_BYTES, shrunk further by the shared
+ * @store-builder/image-tools (also used by the storefront for shoppers'
+ * photos). Icons, GIFs, SVGs and anything that cannot be decoded here come
+ * back untouched; if nothing gets under MAX_IMAGE_BYTES the original comes
+ * back, so validateImageFile() rejects it exactly as it did before.
  */
-export function compressImageIfNeeded(file: File): Promise<File> {
-  return compressImage(file, { maxBytes: MAX_IMAGE_BYTES, debug: import.meta.env.DEV });
+export async function prepareImageForUpload(file: File): Promise<ShrinkResult> {
+  const shrunk = await shrinkForUpload(file);
+  const compressed = await compressImage(shrunk.file, { maxBytes: MAX_IMAGE_BYTES, debug: import.meta.env.DEV });
+  return { file: compressed, savedBytes: Math.max(0, file.size - compressed.size) };
+}
+
+/** prepareImageForUpload for callers that only need the file. */
+export async function compressImageIfNeeded(file: File): Promise<File> {
+  return (await prepareImageForUpload(file)).file;
 }
 
 /**
