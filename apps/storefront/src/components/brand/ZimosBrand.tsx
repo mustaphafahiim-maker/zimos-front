@@ -1,5 +1,5 @@
-import { useId, type CSSProperties } from "react";
-import { CAP, LOCKUP, MARK, MICRO, STEM, WORDMARK, markPaths } from "./geometry";
+import type { CSSProperties } from "react";
+import { CAP, STEM, WORDMARK } from "./geometry";
 
 // A copy of apps/merchant-dashboard/src/brand/ZimosBrand.tsx — keep the two in step.
 const cn = (...classes: Array<string | undefined | false>) => classes.filter(Boolean).join(" ");
@@ -13,74 +13,72 @@ const cn = (...classes: Array<string | undefined | false>) => classes.filter(Boo
  * screen, and from the product's tokens everywhere else.
  */
 
-const MASTER_PATHS = markPaths(MARK);
-const MICRO_PATHS = markPaths(MICRO);
+/**
+ * The sliced Z (brand identity 2026): the letter cut into the five lanes an order travels —
+ * ordered, paid, packed, shipped, delivered. Four lanes take the logo's colour; the middle one,
+ * "where the order is now", takes the accent. In ZIMOS's own palette the accent is Product Blue
+ * on a light surface and Cyan on a dark one (the identity's orange is not used).
+ */
+const Z_BOX = { width: 112, height: 100 };
+const Z_LANES = "M0 0H112V16H0Z M57.44 21H107.44L92.85 37H42.85Z M19.15 63H69.15L54.56 79H4.56Z M0 84H112V100H0Z";
+const Z_NOW = "M38.29 42H88.29L73.71 58H23.71Z";
+/** Space between the Z and the I, in the wordmark's own units. */
+const Z_GAP = 15;
 
-/** Colours per logo version: [mark, wordmark]. */
+/** Colours per logo version: [the lanes and the letters, the accent lane]. */
 const TONES = {
-  color: ["var(--zb-blue, var(--color-primary))", "var(--zb-navy, var(--color-ink))"],
+  color: ["var(--zb-navy, var(--color-ink))", "var(--zb-blue, var(--color-primary))"],
   navy: ["var(--zb-navy, var(--color-ink))", "var(--zb-navy, var(--color-ink))"],
   /** The brand colours themselves, for a surface that is light in both themes. */
-  fixed: ["#165DFF", "#081F5C"],
+  fixed: ["#081F5C", "#165DFF"],
   /** The brand's own colours whatever the host palette: a store or the console has its own primary. */
-  brand: ["#165DFF", "var(--zimos-word, #081F5C)"],
+  brand: ["var(--zimos-word, #081F5C)", "#165DFF"],
   black: ["#000000", "#000000"],
   white: ["#ffffff", "#ffffff"],
-  /** For dark surfaces: the mark keeps its blue, the wordmark turns white. */
-  dark: ["var(--zb-blue, #5b8df6)", "#ffffff"],
+  /** For dark surfaces: white lanes and letters, the accent lane in Cyan. */
+  dark: ["#ffffff", "#12C8DA"],
 } as const;
 export type BrandTone = keyof typeof TONES;
 
 interface MarkProps {
-  /** Rendered size in px. 32 px and below switch to the small-size drawing. */
+  /** Rendered width in px (the Z is a little wider than tall: the height is 100/112 of it). */
   size?: number;
-  /** Force the master or the small-size drawing. */
+  /** Kept for callers of the previous mark; the sliced Z has one drawing. */
   drawing?: "master" | "micro";
-  /** Optional digital treatment: Product Blue to Cyan along the diagonal. */
+  /** Kept for callers of the previous mark; the sliced Z is never drawn as a gradient. */
   gradient?: boolean;
+  /** The accent lane's colour. Defaults to Product Blue; at 16 px and below it takes the lanes' colour. */
+  accent?: string;
   className?: string;
   style?: CSSProperties;
   title?: string;
 }
 
-/** The Z: three modules, filled with the current text colour. */
-export function ZMark({ size = 48, drawing, gradient = false, className, style, title }: MarkProps) {
-  const gradientId = useId();
-  const micro = (drawing ?? (size <= 32 ? "micro" : "master")) === "micro";
-  const box = micro ? MICRO.size : MARK.size;
-  const paths = micro ? MICRO_PATHS : MASTER_PATHS;
+/** The sliced Z: four lanes in the current text colour, the middle lane in the accent. */
+export function ZMark({ size = 48, accent, className, style, title }: MarkProps) {
+  // The identity's rule for 16 px: one colour, the accent would only be a smudge.
+  const now = size <= 16 ? "currentColor" : (accent ?? "var(--zb-blue, #165dff)");
   return (
     <svg
       width={size}
-      height={size}
-      viewBox={`0 0 ${box} ${box}`}
+      height={(size * Z_BOX.height) / Z_BOX.width}
+      viewBox={`0 0 ${Z_BOX.width} ${Z_BOX.height}`}
       className={cn("shrink-0", className)}
       style={style}
       role={title ? "img" : undefined}
       aria-label={title}
       aria-hidden={title ? undefined : true}
     >
-      {gradient && (
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0" stopColor="#165DFF" />
-            <stop offset="1" stopColor="#12C8DA" />
-          </linearGradient>
-        </defs>
-      )}
-      <g fill={gradient ? `url(#${gradientId})` : "currentColor"}>
-        {paths.map((d) => (
-          <path key={d} d={d} />
-        ))}
-      </g>
+      <path d={Z_LANES} fill="currentColor" />
+      <path d={Z_NOW} style={{ fill: now }} />
     </svg>
   );
 }
 
-function WordmarkGlyphs({ color }: { color: string }) {
+function WordmarkGlyphs({ color, glyphs = WORDMARK.glyphs }: { color: string; glyphs?: typeof WORDMARK.glyphs }) {
   return (
     <>
-      {WORDMARK.glyphs.map((glyph) =>
+      {glyphs.map((glyph) =>
         glyph.kind === "fill" ? (
           <path key={glyph.x} d={glyph.d} transform={`translate(${glyph.x} 0)`} style={{ fill: color }} />
         ) : glyph.kind === "stroke" ? (
@@ -129,41 +127,38 @@ interface LogoProps {
   style?: CSSProperties;
 }
 
-/** Primary logo: the mark, then the wordmark. No tagline. */
-export function ZLogo({ height = 40, tone = "color", gradient = false, className, style }: LogoProps) {
-  const gradientId = useId();
-  const [mark, word] = TONES[tone];
-  const offset = (MARK.size - CAP * LOCKUP.scale) / 2;
+/** The letters after the Z, as drawn in geometry.ts, set back to start at zero. */
+const IMOS = WORDMARK.glyphs.slice(1);
+const IMOS_START = IMOS[0]?.x ?? 0;
+const LOGO_WIDTH = Z_BOX.width + Z_GAP + (WORDMARK.width - IMOS_START);
+/** The logo is one line of capitals; it is drawn a little under the asked height so it sits like the old lockup did. */
+const LOGO_SCALE = 0.86;
+
+/**
+ * Primary logo: the sliced Z IS the first letter of the name — Z, then I M O S drawn at the same cap
+ * height — never a symbol beside the word. No tagline.
+ */
+export function ZLogo({ height = 40, tone = "color", className, style }: LogoProps) {
+  const [ink, now] = TONES[tone];
+  const h = height * LOGO_SCALE;
   return (
     <svg
-      height={height}
-      width={(height * LOCKUP.width) / MARK.size}
-      viewBox={`0 0 ${LOCKUP.width} ${MARK.size}`}
+      height={h}
+      width={(h * LOGO_WIDTH) / CAP}
+      viewBox={`0 0 ${LOGO_WIDTH} ${CAP}`}
       className={cn("shrink-0", className)}
       style={style}
       role="img"
       aria-label="ZIMOS"
     >
-      {gradient && (
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="1" x2="1" y2="0" gradientUnits="objectBoundingBox">
-            <stop offset="0" stopColor="#165DFF" />
-            <stop offset="1" stopColor="#12C8DA" />
-          </linearGradient>
-        </defs>
-      )}
-      <g style={{ fill: gradient ? `url(#${gradientId})` : mark }}>
-        {MASTER_PATHS.map((d) => (
-          <path key={d} d={d} />
-        ))}
-      </g>
-      <g transform={`translate(${MARK.size + LOCKUP.gap} ${offset}) scale(${LOCKUP.scale})`}>
-        <WordmarkGlyphs color={word} />
+      <path d={Z_LANES} style={{ fill: ink }} />
+      <path d={Z_NOW} style={{ fill: now }} />
+      <g transform={`translate(${Z_BOX.width + Z_GAP - IMOS_START} 0)`}>
+        <WordmarkGlyphs color={ink} glyphs={IMOS} />
       </g>
     </svg>
   );
 }
-
 /** Secondary lockup. The tagline is never needed to recognise the logo. */
 export function ZTaglineLockup({ height = 40, tone = "color", className }: LogoProps) {
   const soft = tone === "white" || tone === "dark";
@@ -190,17 +185,18 @@ interface AppIconProps {
   className?: string;
 }
 
-/** App icon: the Z alone, centred in a Deep Navy container with half the side as padding. */
+/** App icon: the sliced Z alone, centred in a Deep Navy container; its accent lane is Cyan there. */
 export function ZAppIcon({ size = 96, shape = "squircle", surface = "navy", markRatio = 0.5, className }: AppIconProps) {
   const background = surface === "navy" ? "var(--zb-navy, #081f5c)" : surface === "blue" ? "var(--zb-blue, #165dff)" : "#ffffff";
-  const color = surface === "white" ? "var(--zb-blue, #165dff)" : "#ffffff";
+  const color = surface === "white" ? "var(--zb-navy, #081f5c)" : "#ffffff";
+  const accent = surface === "navy" ? "#12C8DA" : surface === "blue" ? "#081F5C" : "var(--zb-blue, #165dff)";
   return (
     <span
       className={cn("inline-flex shrink-0 items-center justify-center", surface === "white" && "border border-[var(--zb-line,var(--color-line))]", className)}
       style={{ width: size, height: size, background, color, borderRadius: shape === "circle" ? "50%" : size * 0.225 }}
       aria-hidden
     >
-      <ZMark size={Math.round(size * markRatio)} />
+      <ZMark size={Math.round(size * (markRatio + 0.08))} accent={accent} />
     </span>
   );
 }
