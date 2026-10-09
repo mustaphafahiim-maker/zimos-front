@@ -1,5 +1,6 @@
 import type { Product, ProductMedia } from "@store-builder/api-client";
 import { compressImageIfNeeded as compressImage, humanSize } from "@store-builder/image-tools";
+import { shrinkForUpload, type ShrinkResult } from "@/lib/imageResize";
 
 /** Matches the backend's multer limit (5 MB) in modules/media/mediaService.js. */
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -35,40 +36,51 @@ export function validateImageFile(file: File): string | null {
 // ---------------------------------------------------------------------
 
 /**
- * Shrinks an over-limit image in the browser so the merchant does not have to
- * resize it by hand (the shared @store-builder/image-tools, also used by the
- * storefront for shoppers' photos). Files already under the limit — the common
- * case — come back untouched, as do formats a canvas round-trip would damage.
- * If nothing gets under MAX_IMAGE_BYTES the original is returned, so
- * validateImageFile() rejects it exactly as it did before.
+ * Gets an image ready to upload: a big photo is scaled down to
+ * UPLOAD_MAX_EDGE and re-encoded (lib/imageResize), then, if it is somehow
+ * still over MAX_IMAGE_BYTES, shrunk further by the shared
+ * @store-builder/image-tools (also used by the storefront for shoppers'
+ * photos). Icons, GIFs, SVGs and anything that cannot be decoded here come
+ * back untouched; if nothing gets under MAX_IMAGE_BYTES the original comes
+ * back, so validateImageFile() rejects it exactly as it did before.
  */
-export function compressImageIfNeeded(file: File): Promise<File> {
-  return compressImage(file, { maxBytes: MAX_IMAGE_BYTES, debug: import.meta.env.DEV });
+export async function prepareImageForUpload(file: File): Promise<ShrinkResult> {
+  const shrunk = await shrinkForUpload(file);
+  const compressed = await compressImage(shrunk.file, { maxBytes: MAX_IMAGE_BYTES, debug: import.meta.env.DEV });
+  return { file: compressed, savedBytes: Math.max(0, file.size - compressed.size) };
+}
+
+/** prepareImageForUpload for callers that only need the file. */
+export async function compressImageIfNeeded(file: File): Promise<File> {
+  return (await prepareImageForUpload(file)).file;
 }
 
 /**
- * Displayable src for a media entry. Prefer the host-relative `path` so the
- * image loads through the dev proxy (same-origin); fall back to stripping the
- * host off the absolute `url`.
+ * Displayable src for a media entry: its absolute `url` (see imageSrc). The
+ * host-relative `path` is only a last resort — on R2 it is the bare object key
+ * ("/<workspaceId>/<file>"), which no server answers on the dashboard origin.
  */
 export function mediaSrc(media: ProductMedia): string {
-  if (media.path) return media.path;
-  return imageSrc(media.url) ?? media.url;
+  return imageSrc(media.url) ?? media.path ?? "";
 }
 
 /**
- * Same host-stripping for a bare URL — a stored `logoUrl`, say, which the API
- * returns absolute against its own APP_URL. Rendering that directly breaks the
- * image whenever the dashboard is served from another origin (dev, or a
- * separate domain in production), so keep the path and let the proxy serve it.
- * Data and blob URLs are already displayable and pass through untouched.
+ * Displayable src for a stored image URL (a library file, a `logoUrl`...).
+ * Production keeps the absolute URL: the dashboard is a static build with no
+ * proxy, so a host-relative path would ask the dashboard itself for the image
+ * and get its index.html back. The backend marks /uploads cross-origin so the
+ * API's own files load from here, and R2 serves its public domain directly.
+ * On the dev server only, an /uploads/ link is turned into a path so it goes
+ * through Vite's /uploads proxy (an older local backend still sends those
+ * files same-origin only). Data, blob and relative URLs pass through.
  */
-export function imageSrc(url: string | null | undefined): string | null {
+export function imageSrc(url: string | null | undefined, devProxy: boolean = import.meta.env.DEV): string | null {
   if (!url) return null;
   if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("/")) return url;
+  if (!devProxy) return url;
   try {
     const parsed = new URL(url);
-    return `${parsed.pathname}${parsed.search}`;
+    return parsed.pathname.startsWith("/uploads/") ? `${parsed.pathname}${parsed.search}` : url;
   } catch {
     return url;
   }

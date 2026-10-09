@@ -7,7 +7,7 @@ import { useCursorList } from "@/lib/useCursorList";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
-import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
+import { ACCEPTED_IMAGE_ACCEPT, imageSrc, prepareImageForUpload, validateImageFile } from "@/lib/media";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
@@ -18,6 +18,8 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 
 const PAGE_LIMIT = 60;
+// Files sent at once; the rest wait for a free slot.
+const UPLOAD_CONCURRENCY = 3;
 
 const STRINGS = {
   en: {
@@ -26,6 +28,9 @@ const STRINGS = {
       "Every image you've uploaded to this store, newest first. Product photos and website images all land here.",
     upload: "Upload images",
     uploading: "Uploading…",
+    preparing: "Resizing… {done}/{total}",
+    uploadingOf: "Uploading… {done}/{total}",
+    saved: "Resizing saved {size}.",
     uploaded: "{n} image uploaded.",
     uploadedMany: "{n} images uploaded.",
     empty: "No images yet",
@@ -48,6 +53,9 @@ const STRINGS = {
       "كل الصور اللي رفعتها للمتجر ده، الأحدث الأول. صور المنتجات وصور الموقع كلها بتنزل هنا.",
     upload: "ارفع صور",
     uploading: "بنرفع…",
+    preparing: "بنصغّر الصور… {done}/{total}",
+    uploadingOf: "بنرفع… {done}/{total}",
+    saved: "التصغير وفّر {size}.",
     uploaded: "اترفعت {n} صورة.",
     uploadedMany: "اترفعت {n} صورة.",
     empty: "مفيش صور لسه",
@@ -72,19 +80,6 @@ function humanSize(bytes: number, t: Strings): string {
   return fmt(t.size, { kb: Math.max(1, Math.round(bytes / 1024)) });
 }
 
-/**
- * The list endpoint returns no host-relative `path` (unlike a product's media
- * entry), so the absolute URL is trimmed to its pathname. That keeps the image
- * same-origin in dev, where the Vite proxy serves `/uploads`.
- */
-function displaySrc(url: string): string {
-  try {
-    return new URL(url).pathname;
-  } catch {
-    return url;
-  }
-}
-
 function Thumb({
   asset,
   t,
@@ -105,7 +100,7 @@ function Thumb({
           </span>
         ) : (
           <img
-            src={displaySrc(asset.url)}
+            src={imageSrc(asset.url) ?? asset.url}
             alt={t.preview}
             loading="lazy"
             className="size-full object-cover"
@@ -141,6 +136,9 @@ export function MediaLibraryPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ phase: "preparing" | "uploading"; done: number; total: number } | null>(
+    null
+  );
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<MediaAsset | null>(null);
 
@@ -160,15 +158,20 @@ export function MediaLibraryPage() {
     setUploading(true);
     setUploadError(null);
 
-    // Over-limit images are shrunk in the browser first, exactly as the
-    // catalog and the website editor do, so the merchant is not sent away to
-    // resize a photo by hand.
+    // Big photos are scaled down in the browser first (lib/imageResize), and
+    // anything still over the limit shrunk further, exactly as the catalog and
+    // the website editor do: the merchant neither waits for a 10 MB upload nor
+    // resizes a photo by hand.
     const problems: string[] = [];
     const ready: File[] = [];
-    for (const file of files) {
+    let savedBytes = 0;
+    for (const [index, file] of files.entries()) {
+      setProgress({ phase: "preparing", done: index + 1, total: files.length });
       let prepared = file;
       try {
-        prepared = await compressImageIfNeeded(file);
+        const result = await prepareImageForUpload(file);
+        prepared = result.file;
+        savedBytes += result.savedBytes;
       } catch {
         // Undecodable here; let validate + the server have the final say.
       }
@@ -177,26 +180,44 @@ export function MediaLibraryPage() {
       else ready.push(prepared);
     }
 
+    // A few at a time instead of one after another; a failed file no longer
+    // stops the ones after it.
     let uploaded = 0;
-    try {
-      for (const file of ready) {
-        await apiClient.uploadMedia(workspaceId, file);
-        uploaded += 1;
+    let next = 0;
+    setProgress({ phase: "uploading", done: 0, total: ready.length });
+    const worker = async () => {
+      while (next < ready.length) {
+        const file = ready[next];
+        next += 1;
+        try {
+          await apiClient.uploadMedia(workspaceId, file);
+          uploaded += 1;
+          setProgress({ phase: "uploading", done: uploaded, total: ready.length });
+        } catch (err) {
+          problems.push(getErrorMessage(err));
+        }
       }
-    } catch (err) {
-      problems.push(getErrorMessage(err));
+    };
+    try {
+      await Promise.all(Array.from({ length: Math.min(UPLOAD_CONCURRENCY, ready.length) }, worker));
     } finally {
       setUploading(false);
+      setProgress(null);
     }
 
-    setUploadError(problems.length > 0 ? problems.join(" ") : null);
+    setUploadError(problems.length > 0 ? [...new Set(problems)].join(" ") : null);
     if (uploaded > 0) {
-      toast.success(fmt(uploaded === 1 ? t.uploaded : t.uploadedMany, { n: uploaded }));
+      const done = fmt(uploaded === 1 ? t.uploaded : t.uploadedMany, { n: uploaded });
+      toast.success(savedBytes > 0 ? `${done} ${fmt(t.saved, { size: humanSize(savedBytes, t) })}` : done);
       // The upload response is a single asset without `createdAt`, so the list
       // is re-read rather than patched — that also keeps the cursor honest.
       list.reload();
     }
   }
+
+  const progressText = progress
+    ? fmt(progress.phase === "preparing" ? t.preparing : t.uploadingOf, { done: progress.done, total: progress.total })
+    : null;
 
   return (
     <div className="min-w-0 max-w-6xl">
@@ -206,10 +227,16 @@ export function MediaLibraryPage() {
         actions={
           <Button disabled={uploading} onClick={() => inputRef.current?.click()}>
             {uploading ? <Spinner className="size-4" /> : <Upload aria-hidden />}
-            {uploading ? t.uploading : t.upload}
+            {uploading ? (progressText ?? t.uploading) : t.upload}
           </Button>
         }
       />
+
+      {progressText && (
+        <p role="status" className="mb-4 text-sm text-ink-soft tabular-nums">
+          {progressText}
+        </p>
+      )}
 
       <input
         ref={inputRef}

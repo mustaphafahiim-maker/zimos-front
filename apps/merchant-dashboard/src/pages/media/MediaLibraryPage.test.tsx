@@ -35,6 +35,18 @@ describe("MediaLibraryPage", () => {
     expect(screen.getByText("200 KB")).toBeInTheDocument();
   });
 
+  it("shows an R2 image from the bucket's public domain, not the dashboard's", async () => {
+    api.listMedia.mockResolvedValue({
+      media: [{ ...asset, url: "https://media.example.com/ws_1/abc.png" }],
+      nextCursor: null,
+    });
+
+    renderWithProviders(<MediaLibraryPage />, { route: "/media" });
+
+    const image = await screen.findByRole("img", { name: "Uploaded image" });
+    expect(image).toHaveAttribute("src", "https://media.example.com/ws_1/abc.png");
+  });
+
   it("removes an image from the library after confirming", async () => {
     api.listMedia.mockResolvedValue({ media: [asset], nextCursor: null });
     api.deleteMedia.mockResolvedValue({ deleted: true, id: "med_1" });

@@ -16,6 +16,7 @@ import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { ReadOnlyNotice, SettingsFormFooter, ToggleRow } from "./SettingsFormFooter";
 import { useSettingsEditor } from "./useSettingsEditor";
+import { FaviconField } from "./FaviconField";
 
 const COUNTRIES = ["EG", "SA", "AE", "KW", "QA", "BH", "OM", "JO", "IQ", "LY", "MA", "DZ", "TN"] as const;
 
@@ -23,8 +24,6 @@ const STRINGS = {
   en: {
     identity: "Store identity",
     identityDescription: "The small icon browsers show on the tab, and the country your store sells in.",
-    favicon: "Icon link (favicon)",
-    faviconHint: "A square PNG or ICO, at least 32×32. Paste a link from your media library.",
     country: "Country",
     countryNone: "Not set",
     EG: "Egypt",
@@ -62,8 +61,6 @@ const STRINGS = {
   ar: {
     identity: "هوية المتجر",
     identityDescription: "الأيقونة الصغيرة التي تظهر في تبويب المتصفح، والدولة التي يبيع فيها متجرك.",
-    favicon: "رابط الأيقونة (favicon)",
-    faviconHint: "صورة مربعة PNG أو ICO بحجم 32×32 على الأقل. الصق رابطًا من مكتبة الصور.",
     country: "الدولة",
     countryNone: "غير محددة",
     EG: "مصر",
@@ -122,27 +119,11 @@ export function GeneralTab() {
 
         <Section title={t.identity} description={t.identityDescription}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex items-end gap-3">
-              <TextField
-                label={t.favicon}
-                hint={t.faviconHint}
-                className="min-w-0 flex-1"
-                type="url"
-                dir="ltr"
-                maxLength={1000}
-                placeholder="https://"
-                value={draft.favicon_url}
-                disabled={locked}
-                onChange={(e) => setDraft((prev) => ({ ...prev, favicon_url: e.target.value }))}
-              />
-              {/^https?:\/\//i.test(draft.favicon_url) && (
-                <img
-                  src={draft.favicon_url}
-                  alt=""
-                  className="mb-6 size-10 shrink-0 rounded-[0.5rem] border border-line object-contain"
-                />
-              )}
-            </div>
+            <FaviconField
+              value={draft.favicon_url}
+              disabled={locked}
+              onChange={(favicon_url) => setDraft((prev) => ({ ...prev, favicon_url }))}
+            />
             <Field label={t.country}>
               {({ id }) => (
                 <Select

@@ -26,11 +26,28 @@ describe("storeIcons", () => {
     }
   });
 
-  it("keeps the favicon the merchant set over the logo, as before", () => {
+  it("keeps the favicon the merchant set over the logo; an .ico leaves the home-screen icon to the logo", () => {
     expect(storeIcons({ faviconUrl: "https://cdn.example.com/fav.ico", logoUrl: LOGO })).toEqual({
       icon: "https://cdn.example.com/fav.ico",
       shortcut: "https://cdn.example.com/fav.ico",
+      apple: LOGO,
     });
+    expect(storeIcons({ faviconUrl: "https://cdn.example.com/fav.ico" })).toEqual({
+      icon: "https://cdn.example.com/fav.ico",
+      shortcut: "https://cdn.example.com/fav.ico",
+    });
+  });
+
+  it("uses an uploaded PNG favicon for the tab and the home screen", () => {
+    const FAV = "https://media.example.com/ws_1/3f2a.png";
+    expect(storeIcons({ faviconUrl: FAV, logoUrl: LOGO })).toEqual({ icon: FAV, shortcut: FAV, apple: FAV });
+  });
+
+  it("ignores a favicon that is not an http(s) URL and falls back to the logo, then the defaults", () => {
+    for (const faviconUrl of ["", "   ", "/uploads/fav.png", "fav.png", "javascript:alert(1)"]) {
+      expect(storeIcons({ faviconUrl, logoUrl: LOGO })).toEqual({ icon: LOGO, shortcut: LOGO, apple: LOGO });
+      expect(storeIcons({ faviconUrl })).toBeUndefined();
+    }
   });
 });
 
