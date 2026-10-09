@@ -7,6 +7,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  useLayoutEffect,
 } from "react";
 import { IconDelete, IconEdit, IconExpand, IconFlow, IconInfo, IconMagic, IconMinus, IconPlus } from "@/components/icons";
 import { Button, cn } from "@store-builder/ui";
@@ -363,17 +364,26 @@ export function FlowCanvas(props: FlowCanvasProps) {
 
   // --- a card under the hand --------------------------------------------------
 
-  const drag = useRef<{ key: string; id: number; dx: number; dy: number; cx: number; cy: number; touch: boolean; moved: boolean; x: number; y: number } | null>(null);
+  const drag = useRef<{ key: string; id: number; dx: number; dy: number; cx: number; cy: number; touch: boolean; moved: boolean; x: number; y: number; el: HTMLElement; rx: number; ry: number; sent: number } | null>(null);
   const dragFrame = useRef(0);
   /** A drag ends with a click on the card it moved; that click must not select it. */
   const justDragged = useRef(false);
+
+  // React has just drawn the dragged card at dragPos: the translate now only covers what the pointer moved since.
+  useLayoutEffect(() => {
+    const d = drag.current;
+    if (!d || !dragPos || dragPos.key !== d.key) return;
+    d.rx = dragPos.x;
+    d.ry = dragPos.y;
+    d.el.style.translate = `${d.x - d.rx}px ${d.y - d.ry}px`;
+  }, [dragPos]);
 
   const onCardPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>, step: UiStep) => {
       if (e.button !== 0) return;
       justDragged.current = false;
       const p = toMap(e);
-      drag.current = { key: step.key, id: e.pointerId, dx: p.x - step.x, dy: p.y - step.y, cx: e.clientX, cy: e.clientY, touch: e.pointerType === "touch", moved: false, x: step.x, y: step.y };
+      drag.current = { key: step.key, id: e.pointerId, dx: p.x - step.x, dy: p.y - step.y, cx: e.clientX, cy: e.clientY, touch: e.pointerType === "touch", moved: false, x: step.x, y: step.y, el: e.currentTarget, rx: step.x, ry: step.y, sent: 0 };
       try {
         e.currentTarget.setPointerCapture(e.pointerId);
       } catch {
@@ -389,6 +399,8 @@ export function FlowCanvas(props: FlowCanvasProps) {
       if (!d || d.id !== e.pointerId) return;
       // A second finger came down: this is a pinch, the card goes back.
       if (isPinching()) {
+        d.el.style.translate = "";
+        d.el.style.transition = "";
         drag.current = null;
         if (dragFrame.current) cancelAnimationFrame(dragFrame.current);
         dragFrame.current = 0;
@@ -406,7 +418,16 @@ export function FlowCanvas(props: FlowCanvasProps) {
       dragFrame.current = requestAnimationFrame(() => {
         dragFrame.current = 0;
         const now = drag.current;
-        if (now?.moved) setDragPos({ key: now.key, x: now.x, y: now.y });
+        if (!now?.moved) return;
+        // The card itself follows the pointer on the compositor (a translate from where React last drew it);
+        // React — and with it the arrows — catches up about twenty times a second, which keeps a slow phone smooth.
+        now.el.style.transition = "none";
+        now.el.style.translate = `${now.x - now.rx}px ${now.y - now.ry}px`;
+        const t = performance.now();
+        if (t - now.sent >= 48) {
+          now.sent = t;
+          setDragPos({ key: now.key, x: now.x, y: now.y });
+        }
       });
     },
     [toMap, isPinching]
@@ -423,6 +444,8 @@ export function FlowCanvas(props: FlowCanvasProps) {
     }
     if (dragFrame.current) cancelAnimationFrame(dragFrame.current);
     dragFrame.current = 0;
+    d.el.style.translate = "";
+    d.el.style.transition = "";
     if (d.moved) {
       justDragged.current = true;
       if (e.type !== "pointercancel") latest.current.onMove(d.key, d.x, d.y);

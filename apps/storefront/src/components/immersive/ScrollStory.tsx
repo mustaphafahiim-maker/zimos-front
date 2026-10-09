@@ -42,11 +42,14 @@ export function ScrollStory({ steps, title }: { steps: StoryStep[]; title?: stri
   }, [allowed, steps.length]);
 
   if (steps.length === 0) return null;
-  const current = steps[Math.min(active, steps.length - 1)];
+  const index = Math.min(active, steps.length - 1);
+  const current = steps[index];
+  // A story with no pictures at all is told as a list: an empty frame beside it says nothing to a shopper.
+  const pictured = steps.some((step) => step.image);
 
   return (
-    <div className="grid gap-8 md:grid-cols-2 md:items-start">
-      <div className={allowed ? "md:sticky md:top-24" : undefined}>
+    <div className={pictured ? "grid gap-8 md:grid-cols-2 md:items-start" : "mx-auto max-w-2xl"}>
+      <div className={pictured ? (allowed ? "md:sticky md:top-24" : undefined) : "hidden"}>
         <div className="aspect-[4/5] overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper">
           {/* Merchant media are arbitrary remote URLs (no next/image allowlist). */}
           {current.image ? (
@@ -60,7 +63,12 @@ export function ScrollStory({ steps, title }: { steps: StoryStep[]; title?: stri
               className="h-full w-full object-cover transition-opacity duration-500"
               key={current.image}
             />
-          ) : null}
+          ) : (
+            // This step has no picture of its own: its number, quietly.
+            <div aria-hidden className="flex h-full w-full items-center justify-center text-7xl font-bold text-ink-soft/30">
+              {index + 1}
+            </div>
+          )}
         </div>
       </div>
 

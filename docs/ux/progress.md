@@ -910,3 +910,20 @@ Open
 - Clicking an element inside a funnel step's page was not exercised by script (the editor opens and shows the
   page; the click test did not find the preview frame).
 - A leftover auto-saved draft from an earlier tidy test on the demo funnel was discarded.
+
+### New logo, template gallery, picture-less story (2026-10-09)
+- **Logo**: the sliced Z of the 2026 identity (five lanes; the Z is the first letter of the name) in ZIMOS's own
+  palette — navy lanes with a Product Blue lane on light, white with a Cyan lane on dark; the identity's orange,
+  ink and typefaces are NOT adopted. Drawn in `brand/ZimosBrand.tsx` and copied to the storefront, marketing
+  site and admin console; favicons, app icons and the PNG exports in every `public/brand` redrawn.
+- **Template gallery**: a card shows a small store in the template's own colour and name until its live render
+  arrives (it used to be the same grey sketch on all 17); four renders load at a time; the poster stays until
+  the store has painted.
+- **Storefront**: a "scroll story" with no pictures is told as a list instead of beside an empty frame.
+- **Funnel map**: the dragged card follows the pointer by a compositor translate while React re-draws the
+  arrows about 20 times a second. A CPU profile of the drag shows ~1 s of script in 5.4 s; the rest is
+  rendering in a headless browser without a GPU, so the remaining stutter there cannot be judged from here.
+Decisions
+- Template content was left as it is: the seeds already hold ten differently built stores; what makes them
+  look thin is that they ship without pictures (by their own rule) and that a preview uses the store's colour.
+- No store was deleted.

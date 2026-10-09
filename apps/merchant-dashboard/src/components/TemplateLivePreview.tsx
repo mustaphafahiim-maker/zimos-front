@@ -209,8 +209,10 @@ export function TemplateLivePreview({
     } catch {
       // Cross-origin: the storefront has answered.
     }
-    setOutcome((o) => o ?? "ready");
+    // The load event comes before the store has painted its first section (it streams in), and a card would
+    // flash white: the poster stays a moment longer, then the render fades in over it.
     releaseRef.current?.();
+    window.setTimeout(() => setOutcome((o) => o ?? "ready"), card ? 900 : 0);
   }
 
   // Lay the page out at a real viewport width, then scale it into the box.
