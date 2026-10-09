@@ -1,8 +1,18 @@
 import type { NextConfig } from "next";
+import { frameAncestorsPolicy } from "./src/lib/frameAncestors";
 import { parseImageOrigins } from "./src/lib/imageOrigins";
+
+// Who may frame the store's pages (src/lib/frameAncestors.ts): nothing is sent
+// while STOREFRONT_FRAME_ANCESTORS is unset, so any site may, as before.
+const frameAncestors = frameAncestorsPolicy(process.env.STOREFRONT_FRAME_ANCESTORS);
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@store-builder/api-client", "@store-builder/ui", "@store-builder/image-tools"],
+  async headers() {
+    return frameAncestors
+      ? [{ source: "/:path*", headers: [{ key: "Content-Security-Policy", value: frameAncestors }] }]
+      : [];
+  },
   images: {
     // Resized merchant photos only from the origins listed in
     // NEXT_PUBLIC_STORE_IMAGE_ORIGINS (src/lib/imageOrigins.ts); none when it
