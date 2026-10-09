@@ -7,7 +7,7 @@ import { useCursorList } from "@/lib/useCursorList";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getErrorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
-import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
+import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, imageSrc, validateImageFile } from "@/lib/media";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
@@ -72,19 +72,6 @@ function humanSize(bytes: number, t: Strings): string {
   return fmt(t.size, { kb: Math.max(1, Math.round(bytes / 1024)) });
 }
 
-/**
- * The list endpoint returns no host-relative `path` (unlike a product's media
- * entry), so the absolute URL is trimmed to its pathname. That keeps the image
- * same-origin in dev, where the Vite proxy serves `/uploads`.
- */
-function displaySrc(url: string): string {
-  try {
-    return new URL(url).pathname;
-  } catch {
-    return url;
-  }
-}
-
 function Thumb({
   asset,
   t,
@@ -105,7 +92,7 @@ function Thumb({
           </span>
         ) : (
           <img
-            src={displaySrc(asset.url)}
+            src={imageSrc(asset.url) ?? asset.url}
             alt={t.preview}
             loading="lazy"
             className="size-full object-cover"

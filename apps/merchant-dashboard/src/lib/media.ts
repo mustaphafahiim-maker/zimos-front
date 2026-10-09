@@ -47,28 +47,31 @@ export function compressImageIfNeeded(file: File): Promise<File> {
 }
 
 /**
- * Displayable src for a media entry. Prefer the host-relative `path` so the
- * image loads through the dev proxy (same-origin); fall back to stripping the
- * host off the absolute `url`.
+ * Displayable src for a media entry: its absolute `url` (see imageSrc). The
+ * host-relative `path` is only a last resort — on R2 it is the bare object key
+ * ("/<workspaceId>/<file>"), which no server answers on the dashboard origin.
  */
 export function mediaSrc(media: ProductMedia): string {
-  if (media.path) return media.path;
-  return imageSrc(media.url) ?? media.url;
+  return imageSrc(media.url) ?? media.path ?? "";
 }
 
 /**
- * Same host-stripping for a bare URL — a stored `logoUrl`, say, which the API
- * returns absolute against its own APP_URL. Rendering that directly breaks the
- * image whenever the dashboard is served from another origin (dev, or a
- * separate domain in production), so keep the path and let the proxy serve it.
- * Data and blob URLs are already displayable and pass through untouched.
+ * Displayable src for a stored image URL (a library file, a `logoUrl`...).
+ * Production keeps the absolute URL: the dashboard is a static build with no
+ * proxy, so a host-relative path would ask the dashboard itself for the image
+ * and get its index.html back. The backend marks /uploads cross-origin so the
+ * API's own files load from here, and R2 serves its public domain directly.
+ * On the dev server only, an /uploads/ link is turned into a path so it goes
+ * through Vite's /uploads proxy (an older local backend still sends those
+ * files same-origin only). Data, blob and relative URLs pass through.
  */
-export function imageSrc(url: string | null | undefined): string | null {
+export function imageSrc(url: string | null | undefined, devProxy: boolean = import.meta.env.DEV): string | null {
   if (!url) return null;
   if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("/")) return url;
+  if (!devProxy) return url;
   try {
     const parsed = new URL(url);
-    return `${parsed.pathname}${parsed.search}`;
+    return parsed.pathname.startsWith("/uploads/") ? `${parsed.pathname}${parsed.search}` : url;
   } catch {
     return url;
   }
