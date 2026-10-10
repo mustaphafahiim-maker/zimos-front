@@ -12,6 +12,9 @@ import { useAsync } from "@/lib/useAsync";
 import { formatDateTime, humanize } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { Section } from "@/components/Section";
+import { ORDER_MESSAGES_ENABLED } from "@/lib/features";
+// Whether a customer email or SMS really arrived: the chip on a message and the provider's report.
+import { MessageStatusChip, UndeliveredLine } from "./MessageDelivery";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { STAGE_TONE, useOrderLabels } from "../orderLabels";
@@ -44,6 +47,10 @@ const STRINGS = {
     webhook_failed: "failed, will retry",
     webhook_exhausted: "failed",
     courier_update: "{carrier} update",
+    message_email: "Email to the customer",
+    message_sms: "SMS to the customer",
+    message_whatsapp: "WhatsApp to the customer",
+    message_bot: "by the WhatsApp assistant",
     "a_order.update": "Address or notes edited",
     "a_order.meta_update": "Tags or flags changed",
     "a_order.archive": "Order archived",
@@ -88,6 +95,10 @@ const STRINGS = {
     webhook_failed: "فشل وسيُعاد",
     webhook_exhausted: "فشل",
     courier_update: "تحديث من {carrier}",
+    message_email: "بريد إلكتروني إلى العميل",
+    message_sms: "رسالة SMS إلى العميل",
+    message_whatsapp: "رسالة واتساب إلى العميل",
+    message_bot: "من مساعد واتساب",
     "a_order.update": "تعديل العنوان أو الملاحظات",
     "a_order.meta_update": "تغيير التاجز أو العلامات",
     "a_order.archive": "تمت أرشفة الأوردر",
@@ -138,7 +149,8 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
   const t = useT(STRINGS) as Strings;
   const labels = useOrderLabels();
   const timeline = useAsync(() => ordersTimeline(apiClient, workspaceId, order.id), [workspaceId, order.id, refreshKey]);
-  const events = timeline.data ?? [];
+  // The customer's messages are part of the timeline only while their feature is on (lib/features).
+  const events = (timeline.data ?? []).filter((event) => ORDER_MESSAGES_ENABLED || (event.type !== "message" && event.type !== "message_status"));
 
   function body(event: OrderTimelineEvent) {
     const d = event.data;
@@ -208,6 +220,45 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
         </p>
       );
     }
+    // The provider reported back on a message: bounced, not delivered, marked as spam.
+    if (event.type === "message_status") {
+      return (
+        <>
+          <p className="text-sm">
+            <UndeliveredLine channel={d.channel} status={d.status} reason={d.reason} />
+          </p>
+          {typeof d.subject === "string" && d.subject && (
+            <p className="mt-1 text-sm text-ink">
+              <bdi>{d.subject}</bdi>
+            </p>
+          )}
+        </>
+      );
+    }
+    if (event.type === "message") {
+      const channel = lookup(t, `message_${String(d.channel)}`) ?? humanize(String(d.channel));
+      const failed = d.status === "failed";
+      // What the provider reported after sending wins over "sent" when the API tracks it.
+      const shown = typeof d.deliveryStatus === "string" && d.deliveryStatus ? d.deliveryStatus : String(d.status);
+      return (
+        <>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-ink">
+            {channel}
+            <MessageStatusChip status={shown} reason={typeof d.statusReason === "string" ? d.statusReason : null} />
+          </p>
+          {typeof d.subject === "string" && d.subject && (
+            <p className="mt-1 text-sm text-ink">
+              <bdi>{d.subject}</bdi>
+            </p>
+          )}
+          {failed && typeof d.error === "string" && d.error && (
+            <p className="mt-1 text-xs text-ink-soft">
+              <bdi>{d.error}</bdi>
+            </p>
+          )}
+        </>
+      );
+    }
     const action = String(d.action);
     const detail = auditDetail(t, (d.after as Record<string, unknown> | null) ?? null);
     return (
@@ -238,7 +289,7 @@ export function OrderTimelineSection({ order, refreshKey }: { order: Order; refr
               <p className="mt-1 text-xs text-ink-soft">
                 <time dateTime={event.at}>{formatDateTime(event.at)}</time>
                 {" · "}
-                {actorText(t, event.actor)}
+                {event.type === "message" && event.data.bot ? t.message_bot : actorText(t, event.actor)}
               </p>
             </li>
           ))}

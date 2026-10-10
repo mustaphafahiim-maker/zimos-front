@@ -60,6 +60,9 @@ export const GIFT_CARDS_ENABLED = import.meta.env.VITE_GIFT_CARDS_ENABLED === "t
 /** The store blog: posts, categories, and the blog pages. */
 export const BLOG_ENABLED = import.meta.env.VITE_BLOG_ENABLED === "true";
 
+/** The messages a customer was sent about an order (email, SMS, WhatsApp) on its timeline, and whether each arrived. */
+export const ORDER_MESSAGES_ENABLED = import.meta.env.VITE_ORDER_MESSAGES_ENABLED === "true";
+
 /** The language each order email is sent in. */
 export const ORDER_EMAIL_LOCALES_ENABLED = import.meta.env.VITE_ORDER_EMAIL_LOCALES_ENABLED === "true";
 
