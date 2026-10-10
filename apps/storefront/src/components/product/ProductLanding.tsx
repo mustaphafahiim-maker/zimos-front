@@ -62,7 +62,8 @@ import { ProductBuyNotes } from "./ProductBuyNotes";
 import { SizeGuideLink } from "./SizeGuide";
 import { BackInStock } from "../stockAlert/BackInStock";
 import { preorderFor, stepperLimits, takesPreorders } from "@/lib/buyInfo";
-import { PREORDERS_ENABLED, PURCHASE_LIMITS_ENABLED, SIZE_CHARTS_ENABLED, STOCK_ALERTS_ENABLED } from "@/lib/features";
+import { PREORDERS_ENABLED, PURCHASE_LIMITS_ENABLED, SHOPPER_ACCOUNTS_ENABLED, SIZE_CHARTS_ENABLED, STOCK_ALERTS_ENABLED } from "@/lib/features";
+import { WishlistHeart } from "../wishlist/WishlistHeart";
 import { useHoliday } from "@/lib/storeHoliday";
 import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
@@ -512,8 +513,14 @@ export function ProductLanding({
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {/* Title + price */}
-      <div>
-        <h1 className="zt-pdp-title text-2xl font-bold leading-tight text-ink sm:text-3xl">{product.name}</h1>
+      <div className={SHOPPER_ACCOUNTS_ENABLED ? "relative" : undefined}>
+        {/* The heart shows once the store is known to have accounts: its corner is kept from the start, so the title never re-wraps around it. */}
+        {SHOPPER_ACCOUNTS_ENABLED && (
+          <div className="absolute end-0 -top-1.5 sm:-top-1">
+            <WishlistHeart productId={product.id} look="page" />
+          </div>
+        )}
+        <h1 className={`zt-pdp-title${SHOPPER_ACCOUNTS_ENABLED ? " pe-14" : ""} text-2xl font-bold leading-tight text-ink sm:text-3xl`}>{product.name}</h1>
         <div className={`zt-pdp-price mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1${testPending ? " invisible" : ""}`}>
           <span className="text-3xl font-bold text-ink" data-sale={compareAtUnit ? "" : undefined}>{money(unit)}</span>
           {compareAtUnit && (

@@ -11,6 +11,8 @@ import { ArrowIcon, BoxIcon } from "./Icons";
 import { QuickAddButton } from "./QuickAddButton";
 import { StoreImage } from "./StoreImage";
 import { skeleton } from "./ui";
+import { SHOPPER_ACCOUNTS_ENABLED } from "@/lib/features";
+import { WishlistHeart } from "./wishlist/WishlistHeart";
 
 export function ProductCard({
   product,
@@ -173,6 +175,8 @@ export function ProductCard({
             {product.variants.length === 0 ? t.common.unavailable : t.common.outOfStock}
           </span>
         )}
+        {/* The wishlist heart, on a store with shopper accounts (lib/features; it draws nothing otherwise). */}
+        {SHOPPER_ACCOUNTS_ENABLED && <WishlistHeart productId={product.id} className="absolute bottom-2 end-2" />}
       </div>
 
       <div className="flex flex-1 flex-col p-4">

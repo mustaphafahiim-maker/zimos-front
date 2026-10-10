@@ -23,7 +23,8 @@ import { GiftOptionsField, GiftWrapRow, useGiftChoice } from "@/components/gifts
 import { HolidayNote } from "@/components/holiday/HolidayNote";
 import { LimitLineNote, useLimitNotes } from "@/components/checkout/LimitLineNote";
 import { purchaseLimitMessage } from "@/lib/buyInfo";
-import { GIFT_CARDS_ENABLED, PURCHASE_LIMITS_ENABLED } from "@/lib/features";
+import { GIFT_CARDS_ENABLED, PURCHASE_LIMITS_ENABLED, SHOPPER_ACCOUNTS_ENABLED } from "@/lib/features";
+import { CheckoutSavedAddresses } from "@/components/account/CheckoutSavedAddresses";
 import { GiftCardField, useGiftCard } from "@/components/giftCards/GiftCardField";
 import { useHolidayCheckout } from "@/lib/storeHoliday";
 import {
@@ -391,6 +392,8 @@ export default function CheckoutPage() {
               {t.checkout.shipping}
             </h2>
             <div className="mt-4">
+              {/* A signed-in shopper's contact and saved addresses, or one line to sign in (nothing on a store without accounts). */}
+              {SHOPPER_ACCOUNTS_ENABLED && !pickingUp && <CheckoutSavedAddresses values={values} onChange={onFieldChange} />}
               <OrderFormFields
                 idPrefix={FORM_PREFIX}
                 values={values}

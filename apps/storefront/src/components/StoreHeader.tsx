@@ -4,6 +4,7 @@ import { storefrontHeaderCollections } from "@store-builder/api-client";
 import { storefrontDesignMeta, type StorefrontMeta } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { ZimosLogo } from "@/components/ZimosLogo";
+import { AccountHeaderLink, useAccountMenuLink } from "@/components/account/AccountHeaderLink";
 import { brandingRemoved } from "@/components/PoweredByZimos";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { useStoreShell } from "@/lib/StoreShellContext";
@@ -102,6 +103,8 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
     );
   });
 
+  // The shopper's account, on a store that offers accounts (null otherwise, and always while lib/features has them off).
+  const accountLink = useAccountMenuLink();
   // The sheet: the menu (or Home, as always), then the cart and order tracking.
   const sheetLinks: ResolvedShellLink[] = [
     ...(menu ?? [{ key: "home", label: t.common.home, href: "/", external: false }]),
@@ -109,6 +112,7 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
     ...(header.showTrackOrder
       ? [{ key: "track", label: t.common.trackOrder, href: "/track", external: false }]
       : []),
+    ...(accountLink ? [accountLink] : []),
   ];
 
   const logo = (
@@ -172,6 +176,7 @@ export function StoreHeader({ store, locale }: { store: StorefrontMeta; locale: 
           <ThemeToggle />
         </span>
       )}
+      <AccountHeaderLink />
       {header.showCart && <CartIcon />}
       {(sheetLinks.length > 0 || header.showTheme) && (
         <MobileMenu
