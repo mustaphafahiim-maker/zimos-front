@@ -99,6 +99,40 @@ describe("a slide's place and veil", () => {
   });
 });
 
+describe("the slider's height on a phone", () => {
+  it("says nothing for a slider that names none: the phone keeps its 4:5 box", () => {
+    for (const phoneHeight of [undefined, null]) {
+      const { container, unmount } = draw([slideOf({}, false)], { phoneHeight, style: { "--zs-hero-h": "620px" } as React.CSSProperties });
+      const hero = container.querySelector<HTMLElement>(".zs-hero")!;
+      expect(hero.hasAttribute("data-phone-height")).toBe(false);
+      expect(hero.style.getPropertyValue("--zs-hero-h-mobile")).toBe("");
+      expect(hero.style.getPropertyValue("--zs-hero-h")).toBe("620px");
+      unmount();
+    }
+  });
+
+  it("marks the slider and hands the height over, beside the other two", () => {
+    const { container } = draw([slideOf({}, false)], { phoneHeight: 320, style: { "--zs-hero-h": "620px", "--zs-hero-h-tablet": "520px" } as React.CSSProperties });
+    const hero = container.querySelector<HTMLElement>(".zs-hero")!;
+    expect(hero.getAttribute("data-phone-height")).toBe("");
+    expect(hero.style.getPropertyValue("--zs-hero-h-mobile")).toBe("320px");
+    expect(hero.style.getPropertyValue("--zs-hero-h")).toBe("620px");
+    expect(hero.style.getPropertyValue("--zs-hero-h-tablet")).toBe("520px");
+  });
+
+  it("is that height on a phone-wide screen instead of the 4:5 box, and only for a slider that names one", () => {
+    const from = css.indexOf("@media (max-width: 749px) {\n  .zs-hero {");
+    expect(from).toBeGreaterThan(0);
+    const phone = css.slice(from, css.indexOf("\n}\n", from));
+    expect(phone).toMatch(/\.zs-hero \{\s*height: auto;\s*aspect-ratio: 4 \/ 5;\s*\}/);
+    expect(phone).toMatch(/\.zs-hero\[data-phone-height\] \{\s*height: var\(--zs-hero-h-mobile\);\s*aspect-ratio: auto;\s*\}/);
+    // After the 4:5 rule, which it replaces.
+    expect(phone.indexOf(".zs-hero[data-phone-height]")).toBeGreaterThan(phone.indexOf("aspect-ratio: 4 / 5;"));
+    // Nowhere else: a computer and a tablet never read the phone's height.
+    expect(css.split("--zs-hero-h-mobile").length - 1).toBe(1);
+  });
+});
+
 describe("the part of a slide's picture kept in view", () => {
   it("names an edge on the slide, and nothing for the centre", () => {
     const top = draw([slideOf({ focusY: "top" }, false)]);

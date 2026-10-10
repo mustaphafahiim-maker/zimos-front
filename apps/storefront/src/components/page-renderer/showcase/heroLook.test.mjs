@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { HERO_OVERLAY_MAX, heroFocusMarkup, heroLookMarkup, resolveHeroFocus, resolveHeroLook } from "./heroLook.ts";
+import { HERO_OVERLAY_MAX, heroFocusMarkup, heroLookMarkup, heroPhoneHeight, resolveHeroFocus, resolveHeroLook } from "./heroLook.ts";
 
 /**
  * Pins the promise the hero's new settings make: a slide saved before they
@@ -91,6 +91,23 @@ describe("heroLookMarkup", () => {
     assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlay: 40, overlayMobile: 0 }, true)).overlay, { desktop: 0.4, phone: 0 });
     assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 60 }, true)).overlay, { desktop: 0, phone: 0.6 });
     assert.equal(heroLookMarkup(resolveHeroLook({ overlay: 0, overlayMobile: 0 }, true)).overlay, null);
+  });
+});
+
+describe("heroPhoneHeight", () => {
+  it("is nothing for a slider that names none, so a phone keeps its 4:5 box", () => {
+    for (const unset of [undefined, null, "", "  ", "tall", {}, [], true, NaN, 0, -40]) assert.equal(heroPhoneHeight(unset), null);
+  });
+
+  it("is the height that is named, as a whole number of px", () => {
+    assert.equal(heroPhoneHeight(320), 320);
+    assert.equal(heroPhoneHeight("450"), 450);
+    assert.equal(heroPhoneHeight(399.6), 400);
+  });
+
+  it("is held inside 200 to 900", () => {
+    assert.equal(heroPhoneHeight(40), 200);
+    assert.equal(heroPhoneHeight(5000), 900);
   });
 });
 

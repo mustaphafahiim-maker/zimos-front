@@ -6,7 +6,7 @@ import { dirFor, formatNumber, getDictionary, type Locale } from "@/lib/i18n";
 import { firstImage } from "@/lib/product";
 import { EmptyBlock } from "../commerce";
 import { showcaseCopy } from "./copy";
-import { heroFocusMarkup, heroLookMarkup, resolveHeroFocus, resolveHeroLook } from "./heroLook";
+import { heroFocusMarkup, heroLookMarkup, heroPhoneHeight, resolveHeroFocus, resolveHeroLook } from "./heroLook";
 import { HeroSlider, type HeroSlide } from "./HeroSlider";
 import { NeedTabs, type NeedTab } from "./NeedTabs";
 import { RailTrack } from "./RailTrack";
@@ -124,6 +124,8 @@ function HeroSliderElement({ props, locale, editable }: ElementProps) {
       arrows={bool(props, "arrows", true)}
       dots={bool(props, "dots", true)}
       wave={bool(props, "wave", false)}
+      // The computer's and the tablet's heights always have a value; a phone has one only when the slider names it.
+      phoneHeight={heroPhoneHeight(props.heightMobile)}
       rtl={dirFor(locale) === "rtl"}
       label={loc(props, "label", locale) || copy.slider}
       labels={{ previous: copy.previous, next: copy.next, slide: copy.slide }}

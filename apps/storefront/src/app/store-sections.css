@@ -399,6 +399,12 @@ section[data-zt-section]:has(.zs),
     height: auto;
     aspect-ratio: 4 / 5;
   }
+  /* A slider that names its own height on a phone (heroLook.ts) is that tall
+     instead, whatever the screen's width. */
+  .zs-hero[data-phone-height] {
+    height: var(--zs-hero-h-mobile);
+    aspect-ratio: auto;
+  }
   .zs-hero__media {
     overflow: hidden;
     border-radius: 0 0 30px 30px;

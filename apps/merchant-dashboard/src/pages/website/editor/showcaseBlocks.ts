@@ -242,6 +242,15 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
       { key: "wave", label: "Wave along the bottom", kind: "boolean" },
       { key: "height", label: "Height on a computer (px)", kind: "number", min: 240, max: 900 },
       { key: "heightTablet", label: "Height on a tablet (px)", kind: "number", min: 240, max: 900 },
+      // Not in defaultProps: unset, a phone keeps its own box, 4 wide to 5 tall (the storefront's showcase/heroLook.ts).
+      {
+        key: "heightMobile",
+        label: "Height on a phone (px)",
+        kind: "number",
+        min: 200,
+        max: 900,
+        hint: "Leave empty for the slider's usual shape on a phone: 4 wide to 5 tall.",
+      },
     ],
   },
   category_tiles: {

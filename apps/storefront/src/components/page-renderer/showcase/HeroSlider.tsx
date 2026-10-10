@@ -52,6 +52,7 @@ export function HeroSlider({
   arrows,
   dots,
   wave,
+  phoneHeight,
   rtl,
   label,
   labels,
@@ -64,6 +65,8 @@ export function HeroSlider({
   arrows: boolean;
   dots: boolean;
   wave: boolean;
+  /** The slider's own height on a phone, in px; null or absent keeps the phone's 4:5 box (heroLook.ts). */
+  phoneHeight?: number | null;
   rtl: boolean;
   label: string;
   /** `slide` is the word before a slide number: "Slide" → "Slide 2". */
@@ -111,7 +114,8 @@ export function HeroSlider({
     <section
       className="zs zs-hero"
       data-wave={wave ? "" : undefined}
-      style={style}
+      data-phone-height={phoneHeight ? "" : undefined}
+      style={phoneHeight ? ({ ...style, "--zs-hero-h-mobile": `${phoneHeight}px` } as CSSProperties) : style}
       role="region"
       aria-roledescription="carousel"
       aria-label={label}

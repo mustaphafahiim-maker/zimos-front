@@ -28,10 +28,18 @@ function sectionWith(element: PageElement): PageSection {
 const propsOf = (section: PageSection) => section.rows?.[0]?.columns?.[0]?.elements?.[0]?.props as Record<string, unknown>;
 
 describe("an emptied number field", () => {
-  it("covers the picture slider's four numbers, and the other numbers of the editor", () => {
+  it("covers the picture slider's five numbers, and the other numbers of the editor", () => {
     const names = NUMBERS.map((entry) => entry.name);
     expect(names).toEqual(
-      expect.arrayContaining(["hero_slider.seconds", "hero_slider.startDelay", "hero_slider.height", "hero_slider.heightTablet", "product_rail.limit", "image_banner.height"])
+      expect.arrayContaining([
+        "hero_slider.seconds",
+        "hero_slider.startDelay",
+        "hero_slider.height",
+        "hero_slider.heightTablet",
+        "hero_slider.heightMobile",
+        "product_rail.limit",
+        "image_banner.height",
+      ])
     );
     expect(names.length).toBeGreaterThan(20);
   });

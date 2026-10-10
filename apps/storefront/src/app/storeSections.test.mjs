@@ -59,6 +59,14 @@ describe("the picture slider's size", () => {
     assert.match(rule(tablet, ".zs-hero"), /height: var\(--zs-hero-h-tablet, 520px\);/);
   });
 
+  it("is a box 4 wide to 5 tall on a phone, or the height the slider names for a phone", () => {
+    const phone = sections.slice(sections.indexOf("@media (max-width: 749px) {\n  .zs-hero {"));
+    assert.match(rule(phone, ".zs-hero"), /height: auto;\s*aspect-ratio: 4 \/ 5;/);
+    const own = rule(phone, ".zs-hero[data-phone-height]");
+    assert.match(own, /height: var\(--zs-hero-h-mobile\);/);
+    assert.match(own, /aspect-ratio: auto;/);
+  });
+
   it("fills that box with the picture, cropped rather than stretched or letting it grow", () => {
     const media = rule(sections, ".zs-hero__media");
     assert.match(media, /position: absolute;/);

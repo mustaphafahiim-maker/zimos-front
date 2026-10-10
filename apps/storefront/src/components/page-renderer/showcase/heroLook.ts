@@ -115,6 +115,22 @@ export function resolveHeroFocus(slide: Record<string, unknown>): HeroFocus {
   return { x: oneOf(slide.focusX, FOCUS_X) ?? "center", y: oneOf(slide.focusY, FOCUS_Y) ?? "center" };
 }
 
+/** A phone's own height is held inside these, in px: the same range the picture banner's has. */
+export const HERO_PHONE_HEIGHT_MIN = 200;
+export const HERO_PHONE_HEIGHT_MAX = 900;
+
+/**
+ * The slider's own height on a phone, in px (its `heightMobile` prop), or null
+ * while it names none. Null keeps the phone's box as it always was, 4 wide to
+ * 5 tall; a height replaces that box (store-sections.css). Zero and below are
+ * no height at all.
+ */
+export function heroPhoneHeight(value: unknown): number | null {
+  const n = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : NaN;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(HERO_PHONE_HEIGHT_MAX, Math.max(HERO_PHONE_HEIGHT_MIN, Math.round(n)));
+}
+
 /** The edges a slide's markup names (`data-fx`, `data-fy`): nothing for the centre. */
 export interface HeroFocusMarkup {
   focusX?: "start" | "end";
