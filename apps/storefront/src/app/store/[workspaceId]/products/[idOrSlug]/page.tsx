@@ -1,4 +1,10 @@
 import { PixelScope } from "@/components/PixelScope";
+import { Suspense } from "react";
+import { ProductQuestions } from "@/components/product/ProductQuestions";
+import { ProductSpecs } from "@/components/specs/ProductSpecs";
+import { PRODUCT_QUESTIONS_ENABLED, PRODUCT_SPECS_ENABLED } from "@/lib/features";
+import { decodeSegment } from "@/lib/urlRedirects";
+import { redirectIfMoved } from "@/lib/urlRedirectsServer";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
@@ -90,6 +96,8 @@ export default async function ProductPage({ params }: { params: Params }) {
     getStoreMeta(workspaceId),
     getStorefrontProduct(workspaceId, idOrSlug),
   ]);
+  // A product whose address changed goes on to its new one (Store settings, URL redirects).
+  if (store && !product) await redirectIfMoved(workspaceId, `/products/${decodeSegment(idOrSlug)}`);
   if (!store || !product) notFound();
 
   const locale = await getStoreLocale(store);
@@ -230,6 +238,14 @@ export default async function ProductPage({ params }: { params: Params }) {
 
         <ProductContent cms={page.cms} locale={locale} />
 
+        {/* The specifications table, only for a product that has any. Read on its own and streamed in:
+            the photo and the buy box do not wait for it (PRODUCT_SPECS_ENABLED). */}
+        {PRODUCT_SPECS_ENABLED && (
+          <Suspense fallback={null}>
+            <ProductSpecs workspaceId={workspaceId} product={product} locale={locale} />
+          </Suspense>
+        )}
+
         {ps.reviews_enabled && (
           <ProductReviews workspaceId={workspaceId} productId={product.id} {...storefrontProductReviews(product)} />
         )}
@@ -243,6 +259,13 @@ export default async function ProductPage({ params }: { params: Params }) {
             )}
           </aside>
         </div>
+
+        {/* The questions the store answered, and the form to ask one (PRODUCT_QUESTIONS_ENABLED). */}
+        {PRODUCT_QUESTIONS_ENABLED && (
+          <Suspense fallback={null}>
+            <ProductQuestions workspaceId={workspaceId} productId={product.id} />
+          </Suspense>
+        )}
 
         {/* Similar products, unless the page settings hide them. */}
         {!ps.hide_related_products && <RelatedProducts workspaceId={workspaceId} product={product} currency={store.currency} locale={locale} />}

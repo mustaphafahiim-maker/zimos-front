@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
@@ -58,6 +58,12 @@ import { useStoreBasePath } from "../StoreRoute";
 import { StickyActionBar } from "../StickyActionBar";
 import { CustomFieldInputs, useCustomFieldAnswers } from "./CustomFieldInputs";
 import { MenuOptionPicker, useMenuOptions } from "./MenuOptionPicker";
+import { ProductBuyNotes } from "./ProductBuyNotes";
+import { SizeGuideLink } from "./SizeGuide";
+import { BackInStock } from "../stockAlert/BackInStock";
+import { preorderFor, stepperLimits, takesPreorders } from "@/lib/buyInfo";
+import { PREORDERS_ENABLED, PURCHASE_LIMITS_ENABLED, SIZE_CHARTS_ENABLED, STOCK_ALERTS_ENABLED } from "@/lib/features";
+import { useHoliday } from "@/lib/storeHoliday";
 import { AddToCartButton } from "../AddToCartButton";
 import { QuantityStepper } from "../QuantityStepper";
 import { OrderBumpCard } from "../checkout/OrderBumpCard";
@@ -85,6 +91,28 @@ const FORM_PREFIX = "quick";
  * variant pickers → bundle/quantity offer → inline quick order form with an
  * order bump → real COD checkout. "Add to cart" stays as a secondary path.
  */
+/**
+ * The buy buttons, or, while the chosen variant is sold out and the product
+ * takes no pre-orders, the sign-up to hear when it is back in their place.
+ * With STOCK_ALERTS_ENABLED off the buttons are all there is, as before.
+ */
+function RestockOrButtons({
+  product,
+  variant,
+  children,
+}: {
+  product: { id: string; preorder?: unknown };
+  variant: Parameters<typeof BackInStock>[0]["variant"];
+  children: ReactNode;
+}) {
+  if (!STOCK_ALERTS_ENABLED) return <>{children}</>;
+  return (
+    <BackInStock product={product} variant={variant}>
+      {children}
+    </BackInStock>
+  );
+}
+
 export function ProductLanding({
   workspaceId,
   product: listedProduct,
@@ -149,7 +177,13 @@ export function ProductLanding({
   // Options left to choose (auto_select_variant off): no variant yet, and not "out of stock".
   const choosing = !autoSelect && groups.some((g) => !selection[g.name]);
   const variant = groups.length > 0 ? (choosing ? undefined : findVariant(product.variants, selection)) : initialVariant;
-  const available = !!variant?.inStock;
+  // Sold out, but taken as a pre-order with its ship date (PREORDERS_ENABLED; never while it is off).
+  const preorder = PREORDERS_ENABLED ? preorderFor(product, variant) : null;
+  const available = !!variant?.inStock || !!preorder;
+  // A store on holiday pauses its order buttons (HOLIDAY_MODE_ENABLED; open as usual while it is off).
+  const holiday = useHoliday();
+  // The quantity stepper's bounds from the product's purchase limits (PURCHASE_LIMITS_ENABLED).
+  const quantityLimits = PURCHASE_LIMITS_ENABLED ? stepperLimits(product) : {};
   // The gallery leads with the chosen variant's own picture (lib/variantImage).
   const chosenImage = variantImageOf(variant);
   useEffect(() => {
@@ -159,7 +193,7 @@ export function ProductLanding({
   function isValueAvailable(name: string, value: string) {
     return product.variants.some(
       (v) =>
-        v.inStock &&
+        (v.inStock || (PREORDERS_ENABLED && takesPreorders(product))) &&
         v.optionValues?.[name] === value &&
         Object.entries(selection).every(([n, val]) => n === name || v.optionValues?.[n] === val)
     );
@@ -171,7 +205,7 @@ export function ProductLanding({
   const bundle = useMemo(() => storefrontProductBundle(product), [product]);
   const bundleChoice = useBundleSelection({ client, workspaceId, bundle, product, mainVariant: variant });
   const tiers = useMemo(() => (bundle ? [] : bundleTiers(product)), [bundle, product]);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(() => (PURCHASE_LIMITS_ENABLED ? stepperLimits(product).min : undefined) ?? 1);
   const [tierId, setTierId] = useState(
     () => product.offers.find((o) => o.isDefault)?.id ?? tiers[0]?.id ?? ""
   );
@@ -494,7 +528,7 @@ export function ProductLanding({
             </span>
           )}
         </div>
-        <p className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${available ? "text-success" : choosing ? "text-ink-soft" : "text-danger"}`}>
+        <p className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${available ? "text-success" : choosing ? "text-ink-soft" : "text-danger"}${preorder ? " hidden" : ""}`}>
           {available && <CheckIcon size={16} />}
           {available
             ? t.common.inStock
@@ -504,6 +538,8 @@ export function ProductLanding({
               ? t.common.unavailable
               : t.common.outOfStock}
         </p>
+        {/* A pre-order's ship date, the product's purchase limits, a store on holiday: each only with its switch. */}
+        <ProductBuyNotes product={product} preorder={preorder} />
       </div>
 
       {ps.countdown ? <OfferCountdown endsAt={ps.countdown.ends_at} /> : null}
@@ -519,6 +555,9 @@ export function ProductLanding({
           onSelect={(value) => setSelection((prev) => ({ ...prev, [group.name]: value }))}
         />
       ))}
+
+      {/* "Size guide", when a chart reaches this product (SIZE_CHARTS_ENABLED). */}
+      {SIZE_CHARTS_ENABLED && <SizeGuideLink workspaceId={workspaceId} productId={product.id} />}
 
       {bundleChoice && <BundlePicker selection={bundleChoice} product={product} mainVariant={variant} />}
 
@@ -581,7 +620,7 @@ export function ProductLanding({
             {t.product.quantity}
           </span>
           {/* The same stepper the cart page and the cart drawer use. */}
-          <QuantityStepper value={quantity} onChange={setQuantity} labelledBy="qty-label" />
+          <QuantityStepper value={quantity} onChange={setQuantity} labelledBy="qty-label" {...quantityLimits} />
         </div>
       )}
 
@@ -595,14 +634,16 @@ export function ProductLanding({
           {page.specialOfferText}
         </p>
       )}
+      {/* Sold out with no pre-order: the sign-up to hear when it is back takes the buttons' place (STOCK_ALERTS_ENABLED). */}
+      <RestockOrButtons product={product} variant={variant}>
       <div className="grid gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={ps.inline_checkout ? scrollToForm : () => void buyNow()}
-          disabled={!available || buying}
+          disabled={!available || buying || holiday.paused}
           className={`${btnPrimary} w-full`}
         >
-          {buying ? text.buying : buyLabel}
+          {holiday.pausedLabel ?? (buying ? text.buying : preorder ? t.buyInfo.preorder : buyLabel)}
         </button>
         {bundleChoice && custom.fields.length === 0 && !hasMenu ? (
           <BundleAddToCartButton selection={bundleChoice} disabled={!available || !bundleChoice.available} />
@@ -622,6 +663,7 @@ export function ProductLanding({
         />
         )}
       </div>
+      </RestockOrButtons>
 
       <p role="alert" className="text-sm font-medium text-danger empty:hidden">{buyError}</p>
 
@@ -725,7 +767,7 @@ export function ProductLanding({
             )}
           </div>
 
-          <button type="submit" disabled={submitting || !available} className={btnPrimaryLg}>
+          <button type="submit" disabled={submitting || !available || holiday.paused} className={btnPrimaryLg}>
             {redirecting
               ? t.payment.redirecting
               : submitting
@@ -753,11 +795,11 @@ export function ProductLanding({
           <button
             type="button"
             onClick={ps.inline_checkout ? scrollToForm : () => void buyNow()}
-            disabled={!available || buying}
+            disabled={!available || buying || holiday.paused}
             tabIndex={formVisible ? -1 : 0}
             className={`${btnPrimary} flex-1`}
           >
-            {ps.buy_now_text || (ps.inline_checkout ? t.product.stickyOrder : text.buyNow)}
+            {holiday.pausedLabel ?? (preorder ? t.buyInfo.preorder : ps.buy_now_text || (ps.inline_checkout ? t.product.stickyOrder : text.buyNow))}
           </button>
         </div>
       </StickyActionBar>
