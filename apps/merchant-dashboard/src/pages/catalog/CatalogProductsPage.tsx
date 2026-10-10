@@ -30,9 +30,10 @@ import {
   useProductSelection,
   type ProductSelection,
 } from "./components/ProductListBulk";
-import { PREORDERS_ENABLED, STOCK_ALERTS_ENABLED } from "@/lib/features";
+import { PREORDERS_ENABLED, SHOPPER_ACCOUNTS_ENABLED, STOCK_ALERTS_ENABLED } from "@/lib/features";
 import { PreorderBadge } from "./components/PreorderBadge";
 import { WaitingRestockCard } from "./components/WaitingRestockCard";
+import { MostWishedCard } from "./components/MostWishedCard";
 
 const STRINGS = {
   en: {
@@ -47,6 +48,7 @@ const STRINGS = {
     listView: "List view",
     gridView: "Grid view",
     manageCollections: "Manage collections →",
+    insights: "What your shoppers are telling you",
     emptyAll: "No products yet. Create your first one.",
     emptyActive: "No active products.",
     emptyDraft: "No draft products.",
@@ -86,6 +88,7 @@ const STRINGS = {
     listView: "عرض القائمة",
     gridView: "عرض الشبكة",
     manageCollections: "إدارة المجموعات ←",
+    insights: "ما يخبرك به عملاؤك",
     emptyAll: "لا توجد منتجات بعد. أنشئ أول منتج.",
     emptyActive: "لا توجد منتجات نشطة.",
     emptyDraft: "لا توجد منتجات في المسودة.",
@@ -335,8 +338,18 @@ export function CatalogProductsPage() {
         </div>
       </div>
 
-      {/* Sold-out products shoppers asked to hear about (lib/features). */}
-      {STOCK_ALERTS_ENABLED && <WaitingRestockCard />}
+      {/* What shoppers are waiting for and wishing for (lib/features): one slim row, gone when neither has anything to say. */}
+      {(STOCK_ALERTS_ENABLED || SHOPPER_ACCOUNTS_ENABLED) && (
+        <div
+          role="group"
+          aria-label={t.insights}
+          data-slot="catalog-insights"
+          className="flex items-center gap-2 overflow-x-auto overscroll-x-contain py-1 [scrollbar-width:none] empty:hidden max-sm:-mx-4 max-sm:px-4 sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden"
+        >
+          {STOCK_ALERTS_ENABLED && <WaitingRestockCard />}
+          {SHOPPER_ACCOUNTS_ENABLED && <MostWishedCard />}
+        </div>
+      )}
 
       <ProductBulkBar selection={selection} onDone={list.reload} />
 
