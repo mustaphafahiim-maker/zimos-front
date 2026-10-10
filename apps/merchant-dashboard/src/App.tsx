@@ -7,6 +7,7 @@ import { ToastProvider } from "@/components/Toast";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequireWorkspace } from "@/routes/RequireWorkspace";
 import { LazyRoute } from "@/routes/LazyRoute";
+import { RouteCommitSignal } from "@/lib/viewTransition";
 import {
   AI_ENABLED,
   BLOG_ENABLED,
@@ -141,6 +142,8 @@ const MediaLibraryPage = lazy(() =>
 export default function App() {
   return (
     <BrowserRouter>
+      {/* Tells a running view transition that the next page is in the DOM (lib/viewTransition.ts). */}
+      <RouteCommitSignal />
       <LocaleProvider>
         <AuthProvider>
           <WorkspaceProvider>

@@ -1,5 +1,5 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
-import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Alert, Button, Label, cn } from "@store-builder/ui";
 import type {
   InviteMemberPayload,
@@ -23,7 +23,27 @@ import {
   normalizeHex,
   readThemeColor,
 } from "@/lib/brandColors";
-import { PageHeader } from "@/components/PageHeader";
+import { SettingsLayout, SettingsPane, type SettingsSectionDef, type SettingsTone } from "@/components/settings";
+import {
+  IconAccount,
+  IconBell,
+  IconCard,
+  IconClock,
+  IconEmail,
+  IconFilter,
+  IconGift,
+  IconHoliday,
+  IconKey,
+  IconMessage,
+  IconShield,
+  IconStore,
+  IconTeam,
+  IconTheme,
+  IconWhatsApp,
+  type IconComponent,
+} from "@/components/icons";
+import { UnsavedGuardProvider, useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { storeHost } from "@/lib/storeAddress";
 import { DataState } from "@/components/DataState";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -49,42 +69,366 @@ import { HOLIDAY_MODE_ENABLED, STORE_REPORTS_ENABLED, TWO_FACTOR_ENABLED } from 
 import { SummaryReportsSection } from "./SummaryReportsSection";
 import { HolidayModeSection } from "./HolidayModeSection";
 
+const STRINGS = {
+  en: {
+    pageTitle: "Settings",
+    searchPlaceholder: "Search settings…",
+    // The headings of the list.
+    g_store: "The store",
+    g_orders: "Orders",
+    g_messages: "Messages",
+    g_team: "Team",
+    g_billing: "Plan",
+    g_account: "My account",
+    g_developers: "For developers",
+    // Each section: its name in the list, and one line of what it is for.
+    s_identity: "Store identity",
+    d_identity: "Name, logo, tagline and colours",
+    s_account_settings: "Time zone and invoices",
+    d_account_settings: "The store's clock, the contact email and the business on invoices",
+    s_catalog: "Product listing",
+    d_catalog: "Filters and sorting on the store's product pages",
+    s_order_bump: "Offer with the order",
+    d_order_bump: "One add-on offer shown above the order button",
+    s_holiday: "Holiday mode",
+    d_holiday: "Pause orders, or take them and ship later",
+    s_whatsapp_message: "WhatsApp message",
+    d_whatsapp_message: "What the confirmation message says",
+    s_whatsapp: "WhatsApp connection",
+    d_whatsapp: "Your WhatsApp Business number, for the inbox and automations",
+    s_order_emails: "Order emails",
+    d_order_emails: "The emails customers get, and who they are from",
+    s_members: "Members and invites",
+    d_members: "Who can sign in to this store, and inviting more",
+    s_billing: "Plan and billing",
+    d_billing: "Your plan, what is due and this month's usage",
+    s_profile: "Profile",
+    d_profile: "Your name, username, email and phone",
+    s_appearance: "Language and look",
+    d_appearance: "Arabic or English, light or dark, glass",
+    s_notifications: "Notifications",
+    d_notifications: "What you are told about, and where",
+    s_security: "Security",
+    d_security: "Two-step sign-in and password",
+    s_developers: "API keys and webhooks",
+    d_developers: "Connect other systems to this store",
+    storeCardRole: "You are signed in to this store",
+  },
+  ar: {
+    pageTitle: "الإعدادات",
+    searchPlaceholder: "ابحث في الإعدادات…",
+    g_store: "المتجر",
+    g_orders: "الطلبات",
+    g_messages: "الرسائل",
+    g_team: "الفريق",
+    g_billing: "الخطة",
+    g_account: "حسابي",
+    g_developers: "للمطوّرين",
+    s_identity: "هوية المتجر",
+    d_identity: "الاسم والشعار وجملة التعريف والألوان",
+    s_account_settings: "التوقيت والفواتير",
+    d_account_settings: "توقيت المتجر وبريد التواصل وبيانات النشاط على الفواتير",
+    s_catalog: "عرض المنتجات",
+    d_catalog: "الفلاتر والترتيب في صفحات المنتجات بالمتجر",
+    s_order_bump: "عرض مع الطلب",
+    d_order_bump: "عرض إضافي واحد يظهر فوق زر الطلب",
+    s_holiday: "وضع الإجازة",
+    d_holiday: "أوقف الطلبات، أو اقبلها واشحنها لاحقًا",
+    s_whatsapp_message: "رسالة واتساب",
+    d_whatsapp_message: "نص رسالة تأكيد الطلب",
+    s_whatsapp: "ربط واتساب",
+    d_whatsapp: "رقم واتساب للأعمال الخاص بك، للرسائل والأتمتة",
+    s_order_emails: "بريد الطلبات",
+    d_order_emails: "الرسائل التي تصل العميل، وباسم مَن تُرسل",
+    s_members: "الأعضاء والدعوات",
+    d_members: "مَن يستطيع دخول هذا المتجر، ودعوة آخرين",
+    s_billing: "الخطة والفوترة",
+    d_billing: "خطتك، والمبلغ المستحق، واستهلاك الشهر",
+    s_profile: "الملف الشخصي",
+    d_profile: "اسمك واسم المستخدم والبريد الإلكتروني والهاتف",
+    s_appearance: "اللغة والشكل",
+    d_appearance: "عربي أو إنجليزي، فاتح أو داكن، الزجاج",
+    s_notifications: "الإشعارات",
+    d_notifications: "ما الذي يصلك، وأين",
+    s_security: "الأمان",
+    d_security: "الدخول بخطوتين وكلمة المرور",
+    s_developers: "مفاتيح API والـ webhooks",
+    d_developers: "اربط أنظمة أخرى بهذا المتجر",
+    storeCardRole: "أنت داخل على هذا المتجر",
+  },
+} satisfies Messages;
+
+type T = Record<keyof (typeof STRINGS)["en"], string>;
+
+/**
+ * Every section of the page, in the order of the list. The id is what `?tab=`
+ * carries. `key` is the id as it is spelled in the string keys (s_<key>,
+ * d_<key>), `group` the heading it sits under. The sections are the ones this
+ * page always had; the list only says where each one is.
+ */
+const SECTIONS = [
+  { id: "identity", key: "identity", group: "store", icon: IconStore, tone: "blue", words: ["store identity", "store profile", "name", "logo", "tagline", "colours", "colors", "brand", "هوية", "الاسم", "الشعار", "اللوجو", "ألوان"] },
+  { id: "account-settings", key: "account_settings", group: "store", icon: IconClock, tone: "gray", words: ["account settings", "time zone", "timezone", "invoice", "legal", "contact email", "country", "التوقيت", "فاتورة", "الفواتير", "البلد", "العملة"] },
+  { id: "catalog", key: "catalog", group: "store", icon: IconFilter, tone: "purple", words: ["catalog", "listing", "filters", "sort", "products", "الكتالوج", "فلاتر", "ترتيب", "المنتجات"] },
+  { id: "order-bump", key: "order_bump", group: "store", icon: IconGift, tone: "pink", words: ["order bump", "add-on", "upsell", "offer", "checkout", "عرض", "إضافي", "الدفع"] },
+  { id: "holiday", key: "holiday", group: "orders", icon: IconHoliday, tone: "orange", words: ["holiday", "vacation", "pause", "away", "إجازة", "أجازة", "إيقاف"] },
+  { id: "whatsapp-message", key: "whatsapp_message", group: "messages", icon: IconMessage, tone: "green", words: ["whatsapp message", "template", "confirmation", "رسالة", "واتساب", "تأكيد", "قالب"] },
+  { id: "whatsapp", key: "whatsapp", group: "messages", icon: IconWhatsApp, tone: "green", words: ["whatsapp", "cloud api", "meta", "connect", "واتساب", "ربط", "ميتا"] },
+  { id: "order-emails", key: "order_emails", group: "messages", icon: IconEmail, tone: "blue", words: ["emails", "sender", "reply-to", "إيميل", "إيميلات", "بريد", "المرسل"] },
+  { id: "members", key: "members", group: "team", icon: IconTeam, tone: "blue", words: ["team", "members", "invite", "roles", "الفريق", "أعضاء", "دعوة", "دور", "صلاحيات"] },
+  { id: "billing", key: "billing", group: "billing", icon: IconCard, tone: "green", words: ["plan", "billing", "subscription", "pay", "usage", "referral code", "الخطة", "الفوترة", "الفواتير", "اشتراك", "دفع", "استهلاك"] },
+  { id: "profile", key: "profile", group: "account", icon: IconAccount, tone: "blue", words: ["profile", "account", "name", "username", "email", "phone", "اسمي", "اسم المستخدم", "البريد", "الهاتف", "حسابي"] },
+  { id: "appearance", key: "appearance", group: "account", icon: IconTheme, tone: "purple", words: ["language", "theme", "dark", "light", "glass", "appearance", "look", "اللغة", "عربي", "إنجليزي", "داكن", "غامق", "فاتح", "زجاج", "المظهر", "الشكل"] },
+  { id: "notifications", key: "notifications", group: "account", icon: IconBell, tone: "red", words: ["notifications", "sound", "summary reports", "email", "إشعارات", "تنبيهات", "صوت", "تقارير"] },
+  { id: "security", key: "security", group: "account", icon: IconShield, tone: "green", words: ["security", "two-step", "2fa", "two factor", "password", "backup codes", "الأمان", "خطوتين", "كلمة المرور", "رموز احتياطية"] },
+  { id: "developers", key: "developers", group: "developers", icon: IconKey, tone: "gray", words: ["api", "api keys", "webhooks", "developers", "مفاتيح", "ويب هوك", "المطورين"] },
+] as const satisfies ReadonlyArray<{ id: string; key: string; group: string; icon: IconComponent; tone: SettingsTone; words: readonly string[] }>;
+
+type SectionId = (typeof SECTIONS)[number]["id"];
+
+const SECTION_IDS: ReadonlySet<string> = new Set(SECTIONS.map((section) => section.id));
+
+function isSectionId(value: string | null): value is SectionId {
+  return value !== null && SECTION_IDS.has(value);
+}
+
+/** Links written before the page had a list (#whatsapp, #notifications…) still land on the right section. */
+const HASH_SECTION: Record<string, SectionId> = {
+  whatsapp: "whatsapp",
+  notifications: "notifications",
+  "summary-reports": "notifications",
+  "order-emails": "order-emails",
+};
+
+/** A block inside a section that a link may point at: brought into view once the section is drawn. */
+const SCROLL_ANCHORS: ReadonlySet<string> = new Set(["summary-reports"]);
+
+/** Tailwind's `lg`, where SettingsLayout puts the list and the pane side by side. */
+const DESKTOP = "(min-width: 64rem)";
+
+/**
+ * The section in the URL, and the way to change it.
+ *
+ * `?tab=<section id>`; an old `#anchor` is read as the section it means and
+ * the URL is rewritten to say so. `null` = none chosen: a phone shows the
+ * list, a desktop the first section.
+ *
+ * On a phone, going from the list into a section adds a history entry, so the
+ * browser's Back returns to the list; the back row of the pane goes back to
+ * that same entry. Everywhere else the URL is replaced — switching sections
+ * does not pile up history.
+ */
+function useSettingsUrl(): { current: SectionId | null; select: (id: string | null) => void } {
+  const [params] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const raw = params.get("tab");
+  const hash = location.hash.replace("#", "");
+  const current: SectionId | null = isSectionId(raw) ? raw : (HASH_SECTION[hash] ?? null);
+
+  // The block a link pointed at inside its section, kept past the rewrite of the URL below.
+  const anchor = useRef<string | null>(null);
+
+  // An old link: say the section in the URL the way the page writes it now (the other params stay).
+  useEffect(() => {
+    if (current === null || raw === current) return;
+    if (SCROLL_ANCHORS.has(hash)) anchor.current = hash;
+    const next = new URLSearchParams(location.search);
+    next.set("tab", current);
+    navigate({ search: `?${next.toString()}`, hash: "" }, { replace: true, state: location.state });
+  }, [current, raw, hash, location.search, location.state, navigate]);
+
+  useEffect(() => {
+    if (anchor.current === null && SCROLL_ANCHORS.has(hash)) anchor.current = hash;
+    const id = anchor.current;
+    if (!id) return;
+    // Once the section is drawn (the layout scrolls to the top on a switch first).
+    const timer = window.setTimeout(() => {
+      anchor.current = null;
+      document.getElementById(id)?.scrollIntoView({ block: "start" });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [current, hash]);
+
+  const fromList = (location.state as { settingsFromList?: boolean } | null)?.settingsFromList === true;
+
+  const select = useCallback(
+    (id: string | null) => {
+      const phone = !window.matchMedia(DESKTOP).matches;
+      const next = new URLSearchParams(window.location.search);
+      if (id === null) {
+        // Back to the list: the entry it was opened from, when there is one.
+        if (phone && fromList) {
+          navigate(-1);
+          return;
+        }
+        next.delete("tab");
+        const search = next.toString();
+        navigate({ search: search ? `?${search}` : "", hash: "" }, { replace: true });
+        return;
+      }
+      next.set("tab", id);
+      const push = phone && current === null;
+      navigate(
+        { search: `?${next.toString()}`, hash: "" },
+        push ? { state: { settingsFromList: true } } : { replace: true, state: fromList ? { settingsFromList: true } : null }
+      );
+    },
+    [current, fromList, navigate]
+  );
+
+  return { current, select };
+}
+
 export function SettingsPage() {
-  const workspaceId = useWorkspaceId();
   const [params] = useSearchParams();
   // Fawaterak's return links (?payment=…&workspace=…&result=…) were made
   // for this page; the payment is now shown in Subscription, with the same query.
   if (params.get("payment")) return <Navigate to={`/subscription?${params.toString()}`} replace />;
 
   return (
-    <div className="max-w-3xl space-y-10">
-      <PageHeader
-        title="Settings"
-        description="Your store profile and the people who can manage it."
-      />
-      <AccountSection />
-      {/* Two-step sign-in and backup codes; about the person, not the store. */}
-      {TWO_FACTOR_ENABLED && <SecuritySection />}
-      <AppearanceSection />
-      <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
-      <WorkspaceProfileSection key={`profile-${workspaceId}`} />
-      <AccountSettingsSection key={`account-settings-${workspaceId}`} />
-      {/* Pausing orders, or taking them and shipping later (lib/features). */}
-      {HOLIDAY_MODE_ENABLED && <HolidayModeSection key={`holiday-${workspaceId}`} />}
-      <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
-      <CatalogSettingsSection key={`catalog-${workspaceId}`} />
-      <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />
-      {/* The WhatsApp Cloud API connection behind the inbox and automations. */}
-      <WhatsappSection key={`whatsapp-connection-${workspaceId}`} />
-      {/* The emails customers get about their orders. */}
-      <OrderEmailsSection key={`order-emails-${workspaceId}`} />
-      {/* A daily or weekly email of the store's numbers to chosen team members (lib/features). */}
-      {STORE_REPORTS_ENABLED && <SummaryReportsSection key={`summary-reports-${workspaceId}`} />}
-      <SubscriptionLinkSection />
-      <TeamSection key={`team-${workspaceId}`} />
-      <DevelopersSection key={`developers-${workspaceId}`} />
+    <UnsavedGuardProvider>
+      <SettingsScreen />
+    </UnsavedGuardProvider>
+  );
+}
+
+function SettingsScreen() {
+  const t = useT(STRINGS);
+  const workspaceId = useWorkspaceId();
+  const { currentWorkspace } = useWorkspace();
+  const { confirmLeave } = useUnsavedGuard();
+  const { current, select } = useSettingsUrl();
+
+  const role = currentWorkspace?.role;
+  // A section whose switch is off, or that this role has nothing in, is not listed (and not drawn).
+  const hidden = useMemo(() => {
+    const out = new Set<SectionId>();
+    if (!HOLIDAY_MODE_ENABLED) out.add("holiday");
+    if (!TWO_FACTOR_ENABLED) out.add("security");
+    if (!BILLING_ROLES.has(role ?? "")) out.add("billing");
+    return out;
+  }, [role]);
+
+  const sections = useMemo<SettingsSectionDef[]>(
+    () =>
+      SECTIONS.filter((section) => !hidden.has(section.id)).map((section) => ({
+        id: section.id,
+        label: t[`s_${section.key}`],
+        description: t[`d_${section.key}`],
+        icon: section.icon,
+        tone: section.tone,
+        group: t[`g_${section.group}`],
+        keywords: [...section.words],
+      })),
+    [hidden, t]
+  );
+
+  // A desktop with nothing chosen shows the first section (the layout asks for it in the URL too).
+  // A link to a section that is not listed for this build or this role lands on the first one as well.
+  const shownId: SectionId = current !== null && !hidden.has(current) ? current : "identity";
+  const shown = SECTIONS.find((section) => section.id === shownId) ?? SECTIONS[0];
+
+  return (
+    <SettingsLayout
+      title={t.pageTitle}
+      sections={sections}
+      current={current !== null && hidden.has(current) ? "identity" : current}
+      onSelect={select}
+      canLeave={confirmLeave}
+      searchPlaceholder={t.searchPlaceholder}
+      listHeader={<StoreCard t={t} />}
+    >
+      {/* A store switch, like a section switch, starts the section afresh. */}
+      <SectionFrame key={`${shownId}-${workspaceId}`} id={shownId} title={t[`s_${shown.key}`]} description={t[`d_${shown.key}`]} icon={shown.icon} tone={shown.tone} />
+    </SettingsLayout>
+  );
+}
+
+/** Which store these settings belong to: its logo, its name, its address. Over the list. */
+function StoreCard({ t }: { t: T }) {
+  const { currentWorkspace } = useWorkspace();
+  if (!currentWorkspace) return null;
+  return (
+    <div className="flex items-center gap-3 rounded-[1.25rem] bg-card px-4 py-3 shadow-[var(--shadow-card)] ring-1 ring-line lg:rounded-2xl lg:bg-paper-sunken lg:px-3 lg:py-2.5 lg:shadow-none">
+      {currentWorkspace.logoUrl ? (
+        <img src={currentWorkspace.logoUrl} alt="" className="size-11 shrink-0 rounded-xl bg-paper object-contain ring-1 ring-line lg:size-9" />
+      ) : (
+        <span aria-hidden className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-lg font-semibold text-primary lg:size-9 lg:text-base">
+          {(currentWorkspace.name || "?").charAt(0).toUpperCase()}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] leading-5 font-semibold text-ink lg:text-sm">
+          <span className="sr-only">{t.storeCardRole}: </span>
+          <bdi>{currentWorkspace.name}</bdi>
+        </p>
+        {currentWorkspace.slug && (
+          <p className="truncate text-[13px] leading-5 text-ink-soft lg:text-xs">
+            <bdi dir="ltr">{storeHost(currentWorkspace.slug)}</bdi>
+          </p>
+        )}
+      </div>
     </div>
   );
+}
+
+/**
+ * One section in the pane, under the header the list names it by (its icon
+ * tile, its name, one line). Security draws that header itself.
+ */
+function SectionFrame({ id, title, description, icon, tone }: { id: SectionId; title: string; description: string; icon: IconComponent; tone: SettingsTone }) {
+  if (id === "security") return <SecuritySection />;
+  return (
+    <SettingsPane title={title} description={description} icon={icon} tone={tone}>
+      <SectionBody id={id} />
+    </SettingsPane>
+  );
+}
+
+/** The content of one section. Each loads and saves itself. */
+function SectionBody({ id }: { id: Exclude<SectionId, "security"> }): ReactNode {
+  switch (id) {
+    case "identity":
+      return <WorkspaceProfileSection />;
+    case "account-settings":
+      return <AccountSettingsSection />;
+    case "catalog":
+      return <CatalogSettingsSection />;
+    case "order-bump":
+      return <OrderBumpSettingsSection />;
+    // Pausing orders, or taking them and shipping later (lib/features).
+    case "holiday":
+      return <HolidayModeSection />;
+    case "whatsapp-message":
+      return <WhatsAppMessageSection />;
+    // The WhatsApp Cloud API connection behind the inbox and automations.
+    case "whatsapp":
+      return <WhatsappSection />;
+    // The emails customers get about their orders.
+    case "order-emails":
+      return <OrderEmailsSection />;
+    case "members":
+      return <TeamSection />;
+    // The plan itself is in My Plan; this is the way there.
+    case "billing":
+      return <SubscriptionLinkSection />;
+    case "profile":
+      return <AccountSection />;
+    case "appearance":
+      return <AppearanceSection />;
+    case "notifications":
+      return (
+        <>
+          <NotificationPreferencesSection />
+          {/* A daily or weekly email of the store's numbers to chosen team members (lib/features). */}
+          {STORE_REPORTS_ENABLED && <SummaryReportsSection />}
+        </>
+      );
+    case "developers":
+      return <DevelopersSection />;
+  }
 }
 
 /** The plan, payments and referral code moved to the Subscription section. */

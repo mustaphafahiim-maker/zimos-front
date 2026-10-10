@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from "react";
 import { cn } from "@store-builder/ui";
 import { IconCaretRight, IconExternal, IconSpinner, type IconComponent } from "@/components/icons";
-import { Link } from "react-router-dom";
+import { ViewLink } from "@/components/ViewLink";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { SettingsIconTile, type SettingsTone } from "./SettingsPane";
 
@@ -176,7 +176,8 @@ export interface SettingsLinkRowProps {
 
 /**
  * A row that leads somewhere: the whole row is the link, with the current
- * value and a caret at the end.
+ * value and a caret at the end. A dashboard route is a `ViewLink` (fetched
+ * ahead of the press, changed in a view transition).
  */
 export function SettingsLinkRow({ to, label, hint, icon, tone = "blue", value, className }: SettingsLinkRowProps) {
   const t = useT(STRINGS);
@@ -221,9 +222,9 @@ export function SettingsLinkRow({ to, label, hint, icon, tone = "blue", value, c
     );
   }
   return (
-    <Link to={to} data-slot="settings-row" className={rowClass}>
+    <ViewLink to={to} data-slot="settings-row" className={rowClass}>
       {body}
-    </Link>
+    </ViewLink>
   );
 }
 

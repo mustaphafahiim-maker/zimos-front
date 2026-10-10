@@ -1,9 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { Button, Input, Label, Alert } from "@store-builder/ui";
+import { Button, Alert } from "@store-builder/ui";
 import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { AuthBackdrop } from "@/components/AuthBackdrop";
+import { AUTH_SUBMIT, AuthField, AuthHeading, AuthLink, AuthShell } from "./AuthShell";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
@@ -65,61 +64,58 @@ export function ForgotPasswordPage() {
   }
 
   const back = (
-    <Link to="/login" className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">
+    <AuthLink to="/login" back className="mt-4">
       {t.back}
-    </Link>
+    </AuthLink>
   );
 
   return (
-    <div className="auth-glass">
-      <AuthBackdrop />
-      <div className="auth-glass-stage">
-        <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
+    <AuthShell>
+      {sent ? (
+        <>
+          <AuthHeading title={t.title} />
+          <Alert variant="success" className="mt-6" role="status">
+            {t.sent}
+          </Alert>
+          <p className="mt-3 text-xs text-ink-soft">{t.spam}</p>
+          {back}
+        </>
+      ) : (
+        <>
+          <AuthHeading title={t.title}>{t.intro}</AuthHeading>
 
-          {sent ? (
-            <>
-              <Alert variant="success" className="mt-6" role="status">
-                {t.sent}
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            {error && (
+              <Alert variant="danger" role="alert">
+                {error}
               </Alert>
-              <p className="mt-3 text-xs text-ink-soft">{t.spam}</p>
-              {back}
-            </>
-          ) : (
-            <>
-              <p className="mt-2 text-sm text-ink-soft">{t.intro}</p>
+            )}
 
-              <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-                {error && (
-                  <Alert variant="danger" role="alert">
-                    {error}
-                  </Alert>
-                )}
+            <AuthField
+              label={t.email}
+              fieldId="email"
+              type="email"
+              inputMode="email"
+              dir="ltr"
+              autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="send"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="email">{t.email}</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    dir="ltr"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                  />
-                </div>
+            <Button type="submit" className={AUTH_SUBMIT} disabled={submitting}>
+              {submitting ? t.sending : t.send}
+            </Button>
+          </form>
 
-                <Button type="submit" className="min-h-11 w-full" disabled={submitting}>
-                  {submitting ? t.sending : t.send}
-                </Button>
-              </form>
-
-              {back}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+          {back}
+        </>
+      )}
+    </AuthShell>
   );
 }

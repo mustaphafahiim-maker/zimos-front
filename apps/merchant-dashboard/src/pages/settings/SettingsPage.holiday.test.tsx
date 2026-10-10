@@ -17,7 +17,8 @@ describe("Settings and holiday mode", () => {
   it("has no holiday section and never reads it while the switch is off", async () => {
     flags.holiday = false;
     const calls = fakeBackend({});
-    renderWithProviders(<SettingsPage />);
+    // A link to the section of a switch that is off lands on the first section, and asks nothing.
+    renderWithProviders(<SettingsPage />, { route: "/settings?tab=holiday" });
     expect(await screen.findByRole("heading", { name: "Store profile" })).toBeInTheDocument();
     expect(screen.queryByText("Holiday mode")).not.toBeInTheDocument();
     expect(callsTo(calls, "GET", "/holiday-mode")).toHaveLength(0);
@@ -28,7 +29,8 @@ describe("Settings and holiday mode", () => {
     const calls = fakeBackend({
       "GET /holiday-mode": { enabled: false, mode: "pause", from: null, until: null, shipsFrom: null, message: null, activeNow: false },
     });
-    renderWithProviders(<SettingsPage />);
+    renderWithProviders(<SettingsPage />, { route: "/settings?tab=holiday" });
+    expect(screen.getByRole("button", { name: /Holiday mode/ })).toHaveAttribute("aria-current", "page");
     expect(await screen.findByRole("switch", { name: /Turn on holiday mode/ })).toBeInTheDocument();
     await waitFor(() => expect(callsTo(calls, "GET", "/workspaces/ws_1/holiday-mode")).toHaveLength(1));
   });

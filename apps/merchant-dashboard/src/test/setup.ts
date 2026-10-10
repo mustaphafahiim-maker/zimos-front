@@ -47,6 +47,8 @@ if (!window.matchMedia) {
 
 // jsdom doesn't implement the layout APIs some components call.
 if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => undefined;
+// jsdom has the function but only logs "not implemented": a page that scrolls to the top is not an error.
+window.scrollTo = () => undefined;
 if (!Element.prototype.setPointerCapture) Element.prototype.setPointerCapture = () => undefined;
 if (!Element.prototype.releasePointerCapture) Element.prototype.releasePointerCapture = () => undefined;
 

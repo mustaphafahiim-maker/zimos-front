@@ -1,13 +1,24 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Spinner } from "@store-builder/ui";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { BrandPanel } from "@/components/BrandPanel";
-import { AuthBackdrop } from "@/components/AuthBackdrop";
+import { useT, type Messages } from "@/i18n/LocaleContext";
 import { TwoFactorStep } from "@/components/TwoFactorStep";
 import { TWO_FACTOR_ENABLED } from "@/lib/features";
+import { AuthBusy, AuthHeading, AuthShell } from "./AuthShell";
+import { GoogleCallbackError } from "./auth/GoogleCallbackError";
 import { googleCallbackChallenge } from "./auth/googleCallbackChallenge";
+
+const STRINGS = {
+  en: {
+    title: "Signing you in",
+    signingIn: "One moment…",
+  },
+  ar: {
+    title: "جارٍ تسجيل دخولك",
+    signingIn: "لحظة واحدة…",
+  },
+} satisfies Messages;
 
 /**
  * Landing page for the Google OAuth flow. After Google approves, the backend
@@ -16,6 +27,7 @@ import { googleCallbackChallenge } from "./auth/googleCallbackChallenge";
  * the session, then send the merchant to the workspace picker.
  */
 export function AuthCallbackPage() {
+  const t = useT(STRINGS);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
@@ -46,52 +58,29 @@ export function AuthCallbackPage() {
 
   if (challenge && !hasTokens) {
     return (
-      <div className="auth-glass">
-        <AuthBackdrop />
-        <div className="auth-glass-stage">
-          <div className="w-full max-w-sm">
-            <TwoFactorStep
-              challenge={challenge}
-              onBack={() => navigate("/login", { replace: true })}
-              onVerified={async () => {
-                await refreshUser();
-                navigate("/workspaces", { replace: true });
-              }}
-            />
-          </div>
-        </div>
-      </div>
+      <AuthShell>
+        <TwoFactorStep
+          challenge={challenge}
+          onBack={() => navigate("/login", { replace: true })}
+          onVerified={async () => {
+            await refreshUser();
+            navigate("/workspaces", { replace: true });
+          }}
+        />
+      </AuthShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen">
-      <BrandPanel />
-      <div className="flex flex-1 items-center justify-center px-6 py-16">
-        <div className="w-full max-w-sm text-center">
-          {failed ? (
-            <>
-              <h2 className="font-display text-2xl font-medium text-ink">
-                تعذّر تسجيل الدخول بجوجل
-              </h2>
-              <p className="mt-3 text-sm text-ink-soft">
-                حدث خطأ أثناء تسجيل الدخول بحساب جوجل. من فضلك حاول مرة أخرى.
-              </p>
-              <Link
-                to="/login"
-                className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                ← Back to sign in
-              </Link>
-            </>
-          ) : (
-            <div className="flex items-center justify-center gap-3 text-sm text-ink-soft">
-              <Spinner className="size-5" />
-              <span>جارٍ تسجيل الدخول…</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <AuthShell>
+      {failed ? (
+        <GoogleCallbackError code={searchParams.get("error")} />
+      ) : (
+        <>
+          <AuthHeading title={t.title} center />
+          <AuthBusy className="mt-4">{t.signingIn}</AuthBusy>
+        </>
+      )}
+    </AuthShell>
   );
 }

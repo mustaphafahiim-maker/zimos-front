@@ -1,0 +1,197 @@
+/* The account pages of the sweep: the signed-out screens (sign in, sign up, the password and
+   email links, the plan and username steps, the Google landing), the store picker, All my
+   stores, the activity log and Refer & earn — pages/AuthShell.tsx, pages/PlanCards.tsx,
+   pages/*.tsx, pages/stores/*, pages/activity/*, pages/referrals/*.
+   Part of the liquid-glass layer (../liquid-glass.css): with data-glass="off" none of it
+   applies — the sign-in card is the solid white card of index.css (.auth-glass) and every
+   other piece stands on its own solid Tailwind classes.
+
+   The signed-out screens are outside .glass-app, so the aurora and the field / button
+   material are repeated here for .auth-glass, from the same --lg-* variables. The card lies
+   in the page flow with only the still aurora behind it: translucent, no blur. Its fill is
+   78% paper in light and 72% in dark — more than the page pane, since the card sits over the
+   brightest pool — so ink and soft ink hold 4.5:1 and better in both themes. */
+:root:not([data-glass="off"]) {
+  /* The wallpaper: the five pools of the dashboard, pinned to the screen so a long sign-up
+     form scrolls across them. */
+  .auth-glass {
+    isolation: isolate;
+    background: none;
+    --color-ink-soft: var(--lg-ink-soft);
+    --muted-foreground: var(--lg-ink-soft);
+    --shadow-raised: 0 2px 4px rgb(18 44 110 / 0.05), 0 28px 52px -22px rgb(18 44 110 / 0.36);
+  }
+  &.dark .auth-glass {
+    --shadow-raised: 0 28px 52px -20px rgb(0 0 0 / 0.9);
+  }
+  .auth-glass::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 70vw 66vh at 0% 0%, var(--lg-bg-brand) 0%, transparent 72%),
+      radial-gradient(ellipse 62vw 62vh at 100% 0%, var(--lg-bg-violet) 0%, transparent 72%),
+      radial-gradient(ellipse 64vw 64vh at 100% 100%, var(--lg-bg-pink) 0%, transparent 72%),
+      radial-gradient(ellipse 62vw 60vh at 0% 100%, var(--lg-bg-peach) 0%, transparent 70%),
+      radial-gradient(ellipse 46vw 42vh at 48% 46%, var(--lg-bg-sky) 0%, transparent 70%),
+      var(--lg-bg-base);
+  }
+
+  /* The one card. */
+  .auth-glass-stage > * {
+    border-color: var(--lg-edge);
+    border-radius: 1.75rem;
+    background-color: color-mix(in srgb, var(--color-paper-raised) 78%, transparent);
+    background-image: var(--lg-sheen);
+    box-shadow: var(--lg-rim), var(--shadow-raised);
+  }
+  &.dark .auth-glass-stage > * {
+    background-color: color-mix(in srgb, var(--color-paper-raised) 72%, transparent);
+  }
+
+  /* The language switch in the corner sits straight on the wallpaper: a frosted pill. */
+  .auth-glass > div > button,
+  [data-slot="auth-corner"] > button {
+    border-color: var(--lg-edge);
+    background-color: var(--lg-frost);
+    -webkit-backdrop-filter: var(--lg-blur);
+    backdrop-filter: var(--lg-blur);
+    box-shadow: var(--lg-rim-line);
+  }
+
+  /* Fields are lit wells, 0.875rem corners; the one being typed in glows and turns solid. */
+  .auth-glass :where([data-slot="input"], [data-slot="select-trigger"], select) {
+    border-radius: 0.875rem;
+  }
+  .auth-glass :where([data-slot="input"]):not(:disabled) {
+    background-color: var(--lg-control-lit);
+    transition:
+      background-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+  .auth-glass :where([data-slot="input"]):is(:focus-visible, :focus-within) {
+    --lg-focus-glow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 14%, transparent);
+    background-color: var(--color-paper-raised);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow), var(--lg-focus-glow);
+  }
+
+  /* Buttons are pills; the outline ones (Google, WhatsApp) are small lit panes. */
+  .auth-glass [data-slot="button"]:is([data-variant="default"], [data-variant="primary"], [data-variant="outline"]) {
+    border-radius: 9999px;
+  }
+  .auth-glass [data-slot="button"][data-variant="outline"] {
+    border-color: var(--lg-edge);
+    background-color: var(--lg-control-lit);
+    box-shadow: var(--lg-rim-line);
+  }
+  .auth-glass [data-slot="button"][data-variant="outline"]:hover:not(:disabled) {
+    background-color: var(--color-paper-raised);
+  }
+
+  /* Coloured text takes the deeper shade, as in the shell. */
+  .auth-glass :where(.text-primary, .text-primary-dark) {
+    color: var(--lg-text-primary);
+  }
+  .auth-glass :where(.text-success) {
+    color: var(--lg-text-success);
+  }
+  .auth-glass :where(.text-danger) {
+    color: var(--lg-text-danger);
+  }
+
+  /* The tile over the title of a result screen (sent, done, failed). */
+  [data-slot="auth-tile"] {
+    box-shadow: var(--lg-rim-line);
+  }
+
+  /* A plan as a card: a small lit pane; the chosen one wears the brand ring and a brand tint. */
+  [data-slot="plan-card"] {
+    border-color: var(--lg-edge);
+    background-color: var(--lg-control-lit);
+    box-shadow: var(--lg-rim-line);
+  }
+  [data-slot="plan-card"][data-selected] {
+    border-color: var(--lg-brand-solid);
+    background-color: color-mix(in srgb, var(--color-primary-soft) 70%, var(--color-paper-raised));
+    box-shadow:
+      var(--lg-rim-line),
+      0 0 0 1px var(--lg-brand-solid),
+      var(--lg-brand-glow);
+  }
+  &.dark [data-slot="plan-card"][data-selected] {
+    background-color: color-mix(in srgb, var(--color-primary) 16%, var(--lg-control-lit));
+  }
+  /* The tick of the chosen plan: the one brand fill. */
+  [data-slot="plan-card"][data-selected] [data-slot="plan-tick"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28);
+  }
+
+  /* A store in the picker, the link box of a new store, and the summary of the chosen plan. */
+  [data-slot="store-pick"],
+  [data-slot="auth-well"] {
+    border-color: var(--lg-edge);
+    background-color: var(--lg-control-lit);
+    box-shadow: var(--lg-rim-line);
+  }
+  @media (hover: hover) {
+    [data-slot="store-pick"]:hover {
+      background-color: var(--color-paper-raised);
+      border-color: color-mix(in srgb, var(--lg-brand-solid) 55%, transparent);
+    }
+  }
+
+  /* All my stores: the four figures of a store card are small wells; an alert line is an amber bead. */
+  [data-slot="store-figure"] {
+    background-color: var(--lg-control);
+    box-shadow:
+      var(--lg-rim-line),
+      0 0 0 1px var(--lg-edge);
+  }
+  [data-slot="store-alert"] {
+    background-color: color-mix(in srgb, var(--color-accent-soft) 88%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+  &.dark [data-slot="store-alert"] {
+    background-color: color-mix(in srgb, var(--color-accent) 15%, var(--lg-control-lit));
+  }
+
+  /* The activity log: a day is one sheet of rows (the list kit's pane, no blur); the dot of a
+     row and the before / after wells. */
+  [data-slot="activity-day"] {
+    border-color: var(--lg-edge);
+    background-color: var(--lg-fill);
+    background-image: var(--lg-sheen);
+    box-shadow: var(--lg-rim), var(--shadow-card);
+  }
+  [data-slot="activity-day"] > li + li {
+    border-color: var(--lg-hairline);
+  }
+  [data-slot="activity-avatar"] {
+    background-color: var(--lg-control-lit);
+    box-shadow:
+      var(--lg-rim-line),
+      0 0 0 1px var(--lg-edge);
+  }
+  [data-slot="activity-diff"] {
+    background-color: var(--lg-control);
+    box-shadow: inset 0 0 0 1px var(--lg-edge);
+  }
+
+  /* Refer & earn: the link in its well, and a payout line. */
+  [data-slot="referral-link"] {
+    border-color: var(--lg-edge);
+    background-color: var(--lg-control-lit);
+    box-shadow: var(--lg-rim-line);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auth-glass :where([data-slot="input"]) {
+      transition: none;
+    }
+  }
+}

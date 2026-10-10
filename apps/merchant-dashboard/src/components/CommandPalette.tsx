@@ -230,14 +230,28 @@ export function CommandPalette() {
     <>
       <button
         type="button"
+        data-slot="spotlight-trigger"
         onClick={() => setOpen(true)}
         aria-label={t.open}
         aria-keyshortcuts="Control+K Meta+K"
-        className="flex min-h-9 cursor-pointer items-center gap-2 rounded-[0.5rem] border border-line bg-paper px-2.5 text-sm text-ink-soft hover:border-primary/40 hover:text-ink"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        className={cn(
+          "zimos-spotlight-trigger flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-paper-raised text-ink-soft ring-1 ring-line",
+          "transition-[background-color,color,box-shadow,translate,scale] duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none",
+          "hover:bg-paper-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-safe:active:scale-[0.97]",
+          // A round button below lg (36px for a mouse), a search field from lg up.
+          "pointer-fine:max-lg:size-9",
+          "lg:h-9 lg:w-[16.25rem] lg:justify-start lg:gap-2 lg:ps-3 lg:pe-1.5 motion-safe:lg:hover:-translate-y-0.5 lg:pointer-coarse:h-11"
+        )}
       >
-        <Search className="size-4" aria-hidden />
-        <span className="hidden lg:inline">{t.open}</span>
-        <kbd dir="ltr" className="hidden rounded border border-line bg-paper-raised px-1.5 text-[11px] font-medium lg:inline">
+        <Search className="size-5 shrink-0 lg:size-4" aria-hidden />
+        <span className="hidden min-w-0 flex-1 truncate text-start text-sm lg:block">{t.open}</span>
+        <kbd
+          dir="ltr"
+          data-slot="spotlight-keycap"
+          className="hidden h-6 shrink-0 items-center rounded-full bg-paper-sunken px-2 font-sans text-[11px] leading-none font-medium text-ink-soft ring-1 ring-line lg:inline-flex"
+        >
           {isMac ? "⌘K" : "Ctrl K"}
         </kbd>
       </button>

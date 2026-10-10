@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Input, Label, Alert, Spinner } from "@store-builder/ui";
 import {
@@ -11,7 +11,7 @@ import {
 } from "@store-builder/api-client";
 import { useAuth, ApiError } from "@/context/AuthContext";
 import { apiBaseUrl, apiClient } from "@/lib/apiClient";
-import { AuthBackdrop } from "@/components/AuthBackdrop";
+import { AuthDivider, AuthFooter, AuthHeading, AuthLink, AuthShell, GoogleMark } from "./AuthShell";
 import { passwordRuleLabel, unmetPasswordRules } from "@/lib/passwordRules";
 import { UsernameField } from "@/components/UsernameField";
 import { normalizeUsername, usernameSubmittable, type UsernameStatus } from "@/lib/username";
@@ -102,30 +102,6 @@ const STRINGS = {
     loading: "جارٍ تحميل الخطط…",
   },
 } satisfies Messages;
-
-/** Brand-coloured Google "G" — an inline SVG so we don't pull in an icon set. */
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 48 48" width="18" height="18" className="shrink-0" aria-hidden="true">
-      <path
-        fill="#EA4335"
-        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-      />
-      <path
-        fill="#4285F4"
-        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
-      />
-      <path
-        fill="#34A853"
-        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-      />
-    </svg>
-  );
-}
 
 type Step = "plan" | "account" | "code";
 
@@ -285,66 +261,58 @@ export function RegisterPage() {
   const showsAccountForm = !loadingOptions && step !== "plan" && !(step === "code" && challenge);
 
   return (
-    <div className="auth-glass">
-      <AuthBackdrop />
-      <div className="auth-glass-stage">
-        <div className={step === "plan" ? "w-full max-w-xl" : showsAccountForm ? "w-full max-w-sm lg:max-w-4xl" : "w-full max-w-sm"}>
-          {totalSteps > 1 && (
-            <p className="mb-3 text-xs font-medium text-ink-soft">
-              {fmt(t.stepOf, { n: stepNumber, total: totalSteps })}
-            </p>
-          )}
+    <AuthShell size={step === "plan" ? "md" : "sm"} className={showsAccountForm ? "lg:max-w-4xl" : undefined}>
+      {totalSteps > 1 && (
+        <p className="mb-2 text-xs font-medium text-ink-soft tabular-nums">
+          {fmt(t.stepOf, { n: stepNumber, total: totalSteps })}
+        </p>
+      )}
 
-          {loadingOptions ? (
-            <div className="flex items-center gap-2 text-sm text-ink-soft" role="status">
-              <Spinner className="size-4" /> {t.loading}
-            </div>
-          ) : step === "code" && challenge ? (
-            <VerifyCodePanel
-              challenge={challenge}
-              onVerified={async () => {
-                await refreshUser();
-                navigate("/workspaces", { replace: true });
-              }}
-            />
-          ) : step === "plan" ? (
-            <div>
-              <h2 id={planHeadingId} className="font-display text-3xl font-medium text-ink">
-                {t.planStepTitle}
-              </h2>
-              <p className="mt-2 text-sm text-ink-soft">{t.planStepSubtitle}</p>
-              {error && (
-                <Alert variant="danger" className="mt-4">
-                  {error}
-                </Alert>
-              )}
-              <div className="mt-6">
-                <PlanPicker plans={plans} value={choice} onChange={setChoice} labelledBy={planHeadingId} />
-              </div>
-              <Button
-                type="button"
-                className="mt-6 min-h-11 w-full"
-                disabled={!selectedPlan}
-                onClick={() => {
-                  setError(null);
-                  setStep("account");
-                }}
-              >
-                {t.continue}
-              </Button>
-              <p className="mt-6 text-center text-sm text-ink-soft">
-                {t.haveAccount}{" "}
-                <Link to="/login" className="font-medium text-primary hover:underline">
-                  {t.signIn}
-                </Link>
-              </p>
-            </div>
-          ) : (
-            accountForm()
-          )}
+      {loadingOptions ? (
+        <div className="flex items-center gap-2 text-sm text-ink-soft" role="status">
+          <Spinner className="size-4" /> {t.loading}
         </div>
-      </div>
-    </div>
+      ) : step === "code" && challenge ? (
+        <VerifyCodePanel
+          challenge={challenge}
+          onVerified={async () => {
+            await refreshUser();
+            navigate("/workspaces", { replace: true });
+          }}
+        />
+      ) : step === "plan" ? (
+        <div>
+          <AuthHeading id={planHeadingId} title={t.planStepTitle}>
+            {t.planStepSubtitle}
+          </AuthHeading>
+          {error && (
+            <Alert variant="danger" className="mt-4">
+              {error}
+            </Alert>
+          )}
+          <div className="mt-6">
+            <PlanPicker plans={plans} value={choice} onChange={setChoice} labelledBy={planHeadingId} />
+          </div>
+          <Button
+            type="button"
+            className="mt-6 min-h-11 w-full"
+            disabled={!selectedPlan}
+            onClick={() => {
+              setError(null);
+              setStep("account");
+            }}
+          >
+            {t.continue}
+          </Button>
+          <AuthFooter>
+            {t.haveAccount}
+            <AuthLink to="/login">{t.signIn}</AuthLink>
+          </AuthFooter>
+        </div>
+      ) : (
+        accountForm()
+      )}
+    </AuthShell>
   );
 
   // A plain function, not a component: rendered as <AccountForm /> it would be
@@ -352,8 +320,7 @@ export function RegisterPage() {
   function accountForm() {
     return (
       <>
-        <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
-        <p className="mt-2 text-sm text-ink-soft">{t.subtitle}</p>
+        <AuthHeading title={t.title}>{t.subtitle}</AuthHeading>
 
         {planStep && selectedPlan && (
           <div className="mt-6 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
@@ -369,17 +336,12 @@ export function RegisterPage() {
           </div>
         )}
 
-        <div className="mt-8">
-          <Button type="button" variant="outline" className="min-h-11 w-full" onClick={handleGoogleLogin}>
-            <GoogleIcon />
+        <div className="mt-6">
+          <Button type="button" variant="outline" className="min-h-12 w-full text-base" onClick={handleGoogleLogin}>
+            <GoogleMark />
             {t.google}
           </Button>
-
-          <div className="my-5 flex items-center gap-3 text-xs text-ink-soft">
-            <span className="h-px flex-1 bg-line" />
-            {t.or}
-            <span className="h-px flex-1 bg-line" />
-          </div>
+          <AuthDivider>{t.or}</AuthDivider>
         </div>
 
         {/* One column below lg; from lg two, in the fields' order (name | username,
@@ -518,12 +480,10 @@ export function RegisterPage() {
           </Button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-ink-soft">
-          {t.haveAccount}{" "}
-          <Link to="/login" className="font-medium text-primary hover:underline">
-            {t.signIn}
-          </Link>
-        </p>
+        <AuthFooter>
+          {t.haveAccount}
+          <AuthLink to="/login">{t.signIn}</AuthLink>
+        </AuthFooter>
       </>
     );
   }

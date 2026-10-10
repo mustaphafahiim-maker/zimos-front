@@ -126,6 +126,12 @@ export type NavKey =
 /** Group headings. Separate from NavKey so a group and an item may share a name. */
 export type NavGroupKey = "orders" | "products" | "customers" | "marketing" | "store" | "analytics" | "money";
 
+/**
+ * A count of waiting work shown on a row (lib/workCounts.ts): calls due now,
+ * confirmed orders with no courier booked yet, unread messages.
+ */
+export type NavBadge = "toConfirm" | "toShip" | "unread";
+
 export interface NavItem {
   /** Key into NAV_LABELS — the visible label is resolved per locale. */
   key: NavKey;
@@ -137,6 +143,13 @@ export interface NavItem {
    * Entries without it are shown to everyone, as before.
    */
   hiddenForRoles?: ReadonlySet<string>;
+  /**
+   * The entry this one sits under: it is left out of the side menu and its
+   * pages light the parent's row. No entry uses it today.
+   */
+  under?: string;
+  /** A count of waiting work shown on the row (see NavBadge). */
+  badge?: NavBadge;
 }
 
 export interface NavGroup {
@@ -166,8 +179,8 @@ export const NAV_GROUPS: NavGroup[] = [
     id: "orders",
     labelKey: "orders",
     items: [
-      { key: "orders", to: "/orders", icon: ShoppingBag },
-      { key: "confirmationQueue", to: "/confirmation-queue", icon: ClipboardCheck },
+      { key: "orders", to: "/orders", icon: ShoppingBag, badge: "toShip" },
+      { key: "confirmationQueue", to: "/confirmation-queue", icon: ClipboardCheck, badge: "toConfirm" },
       { key: "abandonedCarts", to: "/abandoned-carts", icon: ShoppingCart },
       { key: "returns", to: "/returns", icon: Undo2 },
       { key: "fraud", to: "/fraud", icon: ShieldAlert },
@@ -194,7 +207,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "customers", to: "/customers", icon: Users },
       // Points, levels, invites and store credit: one entry, only while one of them is switched on (lib/features).
       ...(REWARDS_HOME ? [{ key: "loyalty" as const, to: REWARDS_HOME, icon: Medal }] : []),
-      { key: "inbox", to: "/inbox", icon: MessageCircle },
+      { key: "inbox", to: "/inbox", icon: MessageCircle, badge: "unread" },
     ],
   },
   {
@@ -259,6 +272,19 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
 ];
+
+/** Groups that start open. The rest start closed and still show the page you are on. */
+export const NAV_OPEN_BY_DEFAULT: ReadonlySet<string> = new Set(["main", "orders", "products"]);
+
+/** Whether an entry has a row of its own in the side menu (an entry `under` another does not). */
+export function isSidebarItem(item: NavItem): boolean {
+  return !item.under;
+}
+
+/** The row that lights up for an entry: its own, or the one it sits under. */
+export function sidebarHome(item: NavItem | undefined): string | undefined {
+  return item ? (item.under ?? item.to) : undefined;
+}
 
 /** The group an item sits in — the first crumb of the page's breadcrumb. */
 export function findNavGroup(item: NavItem): NavGroup | undefined {

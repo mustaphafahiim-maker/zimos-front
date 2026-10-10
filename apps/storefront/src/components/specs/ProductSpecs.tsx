@@ -1,6 +1,7 @@
 import { storefrontProductSpecs, type StorefrontSpec } from "@store-builder/api-client";
 import { pickText, type Locale } from "@/lib/i18n";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
+import { CompareButton } from "./CompareButton";
 import { SPEC_TEXT, specName, specValue } from "./specText";
 
 /**
@@ -49,6 +50,7 @@ export async function ProductSpecs({
             </table>
           </div>
         </div>
+        <CompareButton product={{ id: product.id, name: product.name, slug: product.slug }} />
       </div>
     </section>
   );

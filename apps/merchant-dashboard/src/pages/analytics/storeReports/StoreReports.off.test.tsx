@@ -37,6 +37,10 @@ describe("store reports, customer groups and extra pixels while switched off", (
     expect(contacts).toContain('...(STORE_REPORTS_ENABLED ? [{ value: "groups" as const, label: t.groups }] : []),');
     expect(contacts).toContain("const group = STORE_REPORTS_ENABLED && isRfmLabel(askedGroup) ? askedGroup : null;");
     expect(read("../../customers/CustomerDetailPage.tsx")).toContain("{STORE_REPORTS_ENABLED && <CustomerRfmCard customerId={customer.id} />}");
-    expect(read("../../settings/SettingsPage.tsx")).toContain("{STORE_REPORTS_ENABLED && <SummaryReportsSection key={`summary-reports-${workspaceId}`} />}");
+    // In Settings the summary reports sit in the Notifications section, still behind the switch
+    // (the open section is keyed by the store, so the card needs no key of its own).
+    const settings = read("../../settings/SettingsPage.tsx");
+    expect(settings).toContain("{STORE_REPORTS_ENABLED && <SummaryReportsSection />}");
+    expect(settings.match(/<SummaryReportsSection/g)).toHaveLength(1);
   });
 });

@@ -9,6 +9,8 @@ import {
 import { CatalogFilters } from "@/components/catalog/CatalogFilters";
 import { FilterDrawer } from "@/components/catalog/FilterDrawer";
 import { SortSelect } from "@/components/catalog/SortSelect";
+import { SpecFilteredResults } from "@/components/specs/SpecFilteredResults";
+import { PRODUCT_SPECS_ENABLED } from "@/lib/features";
 import { ChevronIcon } from "@/components/Icons";
 import { ProductCard } from "@/components/ProductCard";
 import { StoreImage } from "@/components/StoreImage";
@@ -102,6 +104,27 @@ export default async function ProductsPage({ params, searchParams }: { params: P
   const title = state.q ? t.catalog.searchTitle(state.q) : (listing.collection?.name ?? t.catalog.allProducts);
   const clearHref = catalogHref(state, { collection: null, tags: [], min: null, max: null, options: {} });
 
+  // The list as it always was: what the page shows unless a specification filter is ticked.
+  const results = (
+    <>
+      {state.q ? (
+        <SearchResults t={t} state={state} listing={listing} currency={store.currency} locale={locale} />
+      ) : listing.products.length === 0 ? (
+        <EmptyState message={filterCount > 0 ? t.catalog.empty : t.home.empty}>
+          {filterCount > 0 && (
+            <StoreLink href={clearHref} scroll={false} className={btnSecondary}>
+              {t.catalog.clearFilters}
+            </StoreLink>
+          )}
+        </EmptyState>
+      ) : (
+        <ProductGrid products={listing.products} currency={store.currency} locale={locale} />
+      )}
+
+      <Pagination t={t} state={state} listing={listing} />
+    </>
+  );
+
   const filters = sidebar ? (
     <CatalogFilters
       state={state}
@@ -174,21 +197,21 @@ export default async function ProductsPage({ params, searchParams }: { params: P
           )}
 
           <div className="min-w-0">
-            {state.q ? (
-              <SearchResults t={t} state={state} listing={listing} currency={store.currency} locale={locale} />
-            ) : listing.products.length === 0 ? (
-              <EmptyState message={filterCount > 0 ? t.catalog.empty : t.home.empty}>
-                {filterCount > 0 && (
-                  <StoreLink href={clearHref} scroll={false} className={btnSecondary}>
-                    {t.catalog.clearFilters}
-                  </StoreLink>
-                )}
-              </EmptyState>
+            {/* Specification filters (lib/features): once a value is ticked, its matches stand in for the results. */}
+            {PRODUCT_SPECS_ENABLED ? (
+              <SpecFilteredResults
+                key={listing.collection?.id ?? "all"}
+                workspaceId={workspaceId}
+                collectionId={listing.collection?.id ?? null}
+                currency={store.currency}
+                locale={locale}
+                disabled={Boolean(state.q)}
+              >
+                {results}
+              </SpecFilteredResults>
             ) : (
-              <ProductGrid products={listing.products} currency={store.currency} locale={locale} />
+              results
             )}
-
-            <Pagination t={t} state={state} listing={listing} />
           </div>
         </div>
       </div>
