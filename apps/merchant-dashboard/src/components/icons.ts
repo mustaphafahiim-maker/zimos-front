@@ -42,6 +42,7 @@ export {
   Clock as IconClock,
   X as IconClose,
   Coins as IconCoins,
+  Contrast as IconContrast,
   Copy as IconCopy,
   Truck as IconCourier,
   Crown as IconCrown,

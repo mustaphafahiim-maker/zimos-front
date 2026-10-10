@@ -5,8 +5,8 @@
  * catches light along its rim. Same tokens, same markup.
  *
  * Off switch: `data-glass="off"` on <html> (Settings → Language and
- * appearance, and set automatically for reduced transparency or forced
- * colours — components/GlassToggle.tsx and the pre-paint script in
+ * look; set automatically in the Black look and for reduced transparency
+ * or forced colours — lib/appearance.ts and the pre-paint script in
  * index.html). The layer is written under :root:not([data-glass="off"]),
  * so "off" is index.css again; the one rule outside that block, at the
  * end, undoes a side effect the attribute has in packages/ui/styles.css.
@@ -54,11 +54,44 @@
      pane fills and these five are tuned together: change one only with the
      contrast check. */
   --lg-bg-base: #d5defc;
-  --lg-bg-brand: color-mix(in srgb, var(--brand) 40%, white);
-  --lg-bg-violet: #b9a5ff;
-  --lg-bg-pink: #ffa8d4;
-  --lg-bg-peach: #ffc594;
-  --lg-bg-sky: #8fdcff;
+  --lg-own-brand: color-mix(in srgb, var(--brand) 40%, white);
+  --lg-own-violet: #b9a5ff;
+  --lg-own-pink: #ffa8d4;
+  --lg-own-peach: #ffc594;
+  --lg-own-sky: #8fdcff;
+
+  /* Glow colours (Settings → Language and look). The five above are what the
+     pools are by themselves. <html> carries --zimos-glow-left,
+     --zimos-glow-right and --zimos-glow-strength only once the merchant chose
+     them (lib/appearance.ts), and a value built from a variable that is not
+     set is no value at all: each `var(…, …)` below then falls through to the
+     next one, down to the pool's own colour. So with nothing chosen every
+     --lg-bg-* is exactly the colour it always was.
+
+     A chosen colour paints its side of the screen: the left one the top-left
+     and bottom-left pools, the right one the two on the right, and the middle
+     pool is a blend of both. It is mixed toward white here and toward black
+     in dark, and the shares are no more than keeps soft ink and coloured text
+     at 4.5:1 on the page pane over the pool, whatever colour is picked
+     (worked out in theme.test.ts). */
+  --lg-pick-brand: color-mix(in srgb, var(--zimos-glow-left) 26%, white);
+  --lg-pick-peach: color-mix(in srgb, var(--zimos-glow-left) 30%, white);
+  --lg-pick-violet: color-mix(in srgb, var(--zimos-glow-right) 26%, white);
+  --lg-pick-pink: color-mix(in srgb, var(--zimos-glow-right) 30%, white);
+  --lg-pick-both: color-mix(in srgb, var(--lg-pick-brand) 50%, var(--lg-pick-violet));
+  --lg-pick-sky: var(--lg-pick-both, var(--lg-pick-brand, var(--lg-pick-violet)));
+  /* The strength fades every pool toward nothing: at 0% only the ground is left. */
+  --lg-dim-brand: color-mix(in srgb, var(--lg-pick-brand, var(--lg-own-brand)) var(--zimos-glow-strength), transparent);
+  --lg-dim-violet: color-mix(in srgb, var(--lg-pick-violet, var(--lg-own-violet)) var(--zimos-glow-strength), transparent);
+  --lg-dim-pink: color-mix(in srgb, var(--lg-pick-pink, var(--lg-own-pink)) var(--zimos-glow-strength), transparent);
+  --lg-dim-peach: color-mix(in srgb, var(--lg-pick-peach, var(--lg-own-peach)) var(--zimos-glow-strength), transparent);
+  --lg-dim-sky: color-mix(in srgb, var(--lg-pick-sky, var(--lg-own-sky)) var(--zimos-glow-strength), transparent);
+  /* What the backdrop draws (below, and glass/sweep-account.css for the sign-in screens). */
+  --lg-bg-brand: var(--lg-dim-brand, var(--lg-pick-brand, var(--lg-own-brand)));
+  --lg-bg-violet: var(--lg-dim-violet, var(--lg-pick-violet, var(--lg-own-violet)));
+  --lg-bg-pink: var(--lg-dim-pink, var(--lg-pick-pink, var(--lg-own-pink)));
+  --lg-bg-peach: var(--lg-dim-peach, var(--lg-pick-peach, var(--lg-own-peach)));
+  --lg-bg-sky: var(--lg-dim-sky, var(--lg-pick-sky, var(--lg-own-sky)));
   /* The page pane: the one big sheet every page lies on. */
   --lg-panel: color-mix(in srgb, var(--color-paper-raised) 50%, transparent);
   --lg-nav: color-mix(in srgb, var(--color-paper-raised) 54%, transparent);
@@ -111,12 +144,17 @@
     --lg-on-brand: var(--color-paper);
     --lg-brand-grad: linear-gradient(135deg, var(--color-primary) 0%, color-mix(in srgb, var(--color-primary) 70%, #a78bfa) 100%);
     --lg-brand-glow: 0 10px 22px -12px color-mix(in srgb, var(--color-primary) 60%, transparent);
-    --lg-bg-base: #070a16;
-    --lg-bg-brand: color-mix(in srgb, var(--brand) 60%, black);
-    --lg-bg-violet: #43259a;
-    --lg-bg-pink: #7a1d5c;
-    --lg-bg-peach: #6b3414;
-    --lg-bg-sky: #0b5578;
+    /* The ground follows the tone of the Dark look once one is chosen (looks.css). */
+    --lg-bg-base: var(--lg-tone-base, #070a16);
+    --lg-own-brand: color-mix(in srgb, var(--brand) 60%, black);
+    --lg-own-violet: #43259a;
+    --lg-own-pink: #7a1d5c;
+    --lg-own-peach: #6b3414;
+    --lg-own-sky: #0b5578;
+    --lg-pick-brand: color-mix(in srgb, var(--zimos-glow-left) 30%, black);
+    --lg-pick-peach: color-mix(in srgb, var(--zimos-glow-left) 36%, black);
+    --lg-pick-violet: color-mix(in srgb, var(--zimos-glow-right) 30%, black);
+    --lg-pick-pink: color-mix(in srgb, var(--zimos-glow-right) 36%, black);
     --lg-panel: color-mix(in srgb, var(--color-paper-raised) 58%, transparent);
     --lg-nav: color-mix(in srgb, var(--color-paper-raised) 60%, transparent);
 
