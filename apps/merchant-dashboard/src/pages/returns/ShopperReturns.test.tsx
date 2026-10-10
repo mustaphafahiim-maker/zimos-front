@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
-import type { Order, ReturnRequest, TrackingProviderSettings } from "@store-builder/api-client";
+import type { Order, Product, ReturnRequest, TrackingProviderSettings } from "@store-builder/api-client";
 import { callsTo, fakeBackend } from "@/test/fakeBackend";
 import { api, fake } from "@/test/mocks";
 import { renderWithProviders } from "@/test/renderWithProviders";
@@ -45,7 +45,7 @@ const settingsOff = { enabled: false, windowDays: 14, photoRequiredFor: [], exch
 function page(returns: ReturnRequest[], routes: Parameters<typeof fakeBackend>[0] = {}) {
   api.listReturns.mockResolvedValue(returns);
   api.getOrder.mockResolvedValue(order);
-  api.getProduct.mockResolvedValue({ id: "prod_1", variants: [{ id: "var_L", optionValues: { Size: "L" } }] });
+  api.getProduct.mockResolvedValue(fake<Product>({ id: "prod_1", variants: [{ id: "var_L", optionValues: { Size: "L" } }] }));
   const calls = fakeBackend({ "GET /shopper-returns": settingsOff, ...routes });
   return { calls, ...renderWithProviders(<ReturnsPage />) };
 }
