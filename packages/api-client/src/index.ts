@@ -167,6 +167,11 @@ export * from "./endpoints/marketingUnsubscribe";
 // The opt-in step's sign-up (funnels/funnelOptIn.js).
 export * from "./endpoints/funnelOptIn";
 export * from "./endpoints/activityLog";
+// Gift cards and the store blog (STORE_FEATURES gift_cards, blog), with the
+// rich text the blog's blocks are written in.
+export * from "./endpoints/richText";
+export * from "./endpoints/giftCards";
+export * from "./endpoints/blog";
 // Notifications: custom headers on a webhook endpoint, the block designer for
 // order emails, and the addresses that stopped receiving email.
 export * from "./endpoints/webhookHeaders";
