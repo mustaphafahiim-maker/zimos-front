@@ -11,9 +11,11 @@ interface PageHeaderProps {
   /** Renders a "← label" link above the title. */
   back?: { to: string; label: string };
   actions?: ReactNode;
+  /** The page's one creation action; it closes the actions row. */
+  primaryAction?: ReactNode;
 }
 
-export function PageHeader({ title, titleMeta, titleBadge, description, back, actions }: PageHeaderProps) {
+export function PageHeader({ title, titleMeta, titleBadge, description, back, actions, primaryAction }: PageHeaderProps) {
   return (
     <div className="mb-6">
       {back && (
@@ -37,7 +39,12 @@ export function PageHeader({ title, titleMeta, titleBadge, description, back, ac
           </h1>
           {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
         </div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {(actions || primaryAction) && (
+          <div className="flex items-center gap-2">
+            {actions}
+            {primaryAction}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,15 +1,28 @@
 import type { ReactNode } from "react";
 import { cn } from "@store-builder/ui";
 
+type EmptyStateTone = "default" | "success" | "attention";
+
 interface EmptyStateProps {
   title: string;
   description?: string;
   action?: ReactNode;
   icon?: ReactNode;
   className?: string;
+  /**
+   * The tint of the icon tile: the store's colour (default), green for
+   * "all done, nothing waiting", amber for "this needs setting up first".
+   */
+  tone?: EmptyStateTone;
 }
 
-export function EmptyState({ title, description, action, icon, className }: EmptyStateProps) {
+const TILE_TONE: Record<EmptyStateTone, string> = {
+  default: "bg-primary-soft text-primary",
+  success: "bg-success-soft text-success",
+  attention: "bg-accent-soft text-accent-dark",
+};
+
+export function EmptyState({ title, description, action, icon, className, tone = "default" }: EmptyStateProps) {
   return (
     <div
       className={cn(
@@ -18,7 +31,7 @@ export function EmptyState({ title, description, action, icon, className }: Empt
       )}
     >
       {icon && (
-        <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary-soft text-primary [&>svg]:size-6">
+        <div className={cn("mb-4 flex size-12 items-center justify-center rounded-2xl [&>svg]:size-6", TILE_TONE[tone])}>
           {icon}
         </div>
       )}
