@@ -30,7 +30,8 @@ import {
   useProductSelection,
   type ProductSelection,
 } from "./components/ProductListBulk";
-import { STOCK_ALERTS_ENABLED } from "@/lib/features";
+import { PREORDERS_ENABLED, STOCK_ALERTS_ENABLED } from "@/lib/features";
+import { PreorderBadge } from "./components/PreorderBadge";
 import { WaitingRestockCard } from "./components/WaitingRestockCard";
 
 const STRINGS = {
@@ -428,6 +429,7 @@ function ProductTable({ products, t, statusLabel, renderActions, selection }: Ro
                 <span className="inline-flex flex-wrap items-center gap-y-1" title={missingWeight(product) ? t.noWeightHint : undefined}>
                   <StatusBadge value={product.status} text={statusLabel(product.status)} />
                   <NoWeightBadge product={product} t={t} />
+                {PREORDERS_ENABLED && <PreorderBadge product={product} className="ms-1.5" />}
                 </span>
               </td>
               <td className="px-4 py-3 text-ink-soft">{priceRange(product)}</td>
@@ -476,6 +478,7 @@ function ProductGrid({ products, t, statusLabel, renderActions }: RowsProps) {
               <span className="flex shrink-0 flex-col items-end gap-1" title={missingWeight(product) ? t.noWeightHint : undefined}>
                 <StatusBadge value={product.status} text={statusLabel(product.status)} />
                 <NoWeightBadge product={product} t={t} />
+                {PREORDERS_ENABLED && <PreorderBadge product={product} className="ms-1.5" />}
               </span>
             </div>
             <div className="mt-auto space-y-0.5 text-sm text-ink-soft">
