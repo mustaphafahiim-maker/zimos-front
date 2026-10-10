@@ -2,8 +2,8 @@
  * Who may change the catalog: reading needs `products.view`, changing needs
  * `products.manage` (backend core/security/permissions.js). Used by the
  * screens that change products in bulk or through their settings — the sheet
- * update (handoff 243), scheduled sales, product specifications and
- * bought-together (handoff 227, 231, 223).
+ * update, scheduled sales, product specifications and
+ * bought-together (223).
  *
  * The dashboard only sees the role key, so a custom role reads as allowed —
  * the server still decides, and a 403 comes back as DataState's permission

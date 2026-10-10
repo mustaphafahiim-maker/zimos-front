@@ -80,7 +80,7 @@ const toDraft = (l: PurchaseLimits): Draft => ({ min: numberField(l.min), max: n
 const sameDraft = (a: Draft, b: Draft) => KEYS.every((k) => a[k].trim() === b[k].trim());
 
 /**
- * Product page → «حدود الشراء» (handoff 198): minimum and maximum per order
+ * Product page → «حدود الشراء»: minimum and maximum per order
  * and maximum per customer. Empty fields are no limit; saving them all empty
  * clears the limits.
  */

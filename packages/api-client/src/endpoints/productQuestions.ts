@@ -1,6 +1,5 @@
 /**
- * Product questions and answers (backend: frontend-handoff item 212,
- * src/modules/productQuestions).
+ * Product questions and answers (backend: src/modules/productQuestions).
  *
  * A shopper asks on the product page; nothing they write is shown before the
  * store answers and publishes it. The asker's email is private: it is only

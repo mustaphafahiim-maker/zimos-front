@@ -1,7 +1,7 @@
 import type { SizeChart } from "@store-builder/api-client";
 import type { Messages } from "@/i18n/LocaleContext";
 
-/** Size charts (handoff 210): the list, the editor and the product page's line. */
+/** Size charts: the list, the editor and the product page's line. */
 export const SIZE_CHART_STRINGS = {
   en: {
     title: "Size charts",

@@ -8,7 +8,7 @@ const STRINGS = {
 } satisfies Messages;
 
 /**
- * Products list: a product taking pre-orders (handoff 195), read from the
+ * Products list: a product taking pre-orders, read from the
  * list's own product (its saved `preorder` and the variants' stock), and
  * the units sold beyond stock while some are still owed. One of the small
  * chips beside a product (list/ProductFlag.tsx): amber while units are owed.

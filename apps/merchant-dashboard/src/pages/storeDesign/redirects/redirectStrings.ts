@@ -2,9 +2,9 @@ import type { UrlRedirectRefusal, UrlRedirectSource, UrlRedirectStatus } from "@
 import type { Messages } from "@/i18n/LocaleContext";
 
 /**
- * The words of Store settings → URL redirects (frontend-handoff 232), shared
+ * The words of Store settings → URL redirects, shared
  * by the tab, the add / edit dialog and the CSV import. The refusals are the
- * handoff's own sentences.
+ * API's own sentences.
  */
 export const REDIRECT_STRINGS = {
   en: {

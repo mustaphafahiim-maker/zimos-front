@@ -44,7 +44,7 @@ function AttachedChip({ chart }: { chart: SizeChart }) {
 }
 
 /**
- * Products → Size charts (handoff 210, read products.view): every chart with
+ * Products → Size charts (read products.view): every chart with
  * its sizes, its unit and what it is attached to. A row opens a Quick Look of
  * the table itself; "open and edit" inside it — or the chart's name — goes to
  * the editor.

@@ -1,6 +1,5 @@
 /**
- * Product specifications and comparison (backend: frontend-handoff item 231,
- * src/modules/productSpecs).
+ * Product specifications and comparison (backend: src/modules/productSpecs).
  *
  * The store defines its specification keys (a name in Arabic / English, an optional unit,
  * whether shoppers can filter by it, an order) — up to 100 — and each product has one short

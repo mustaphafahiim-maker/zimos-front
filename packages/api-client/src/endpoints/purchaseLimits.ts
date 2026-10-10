@@ -1,5 +1,5 @@
 /**
- * Purchase limits per product (backend handoff 198: src/modules/catalog/purchaseLimits.js).
+ * Purchase limits per product (backend: src/modules/catalog/purchaseLimits.js).
  *
  * Units count every variant and offer line of the product together. Orders
  * staff create are not limited.

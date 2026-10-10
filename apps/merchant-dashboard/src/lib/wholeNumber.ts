@@ -2,7 +2,7 @@ import { getIntlLocale } from "@/i18n/LocaleContext";
 
 /**
  * Small helpers for the number and day fields of the pre-order, purchase
- * limit and delivery time cards (handoff 195/198/199).
+ * limit and delivery time cards.
  */
 
 /** Arabic-Indic and Persian digits typed on a phone keyboard, as ASCII. */

@@ -163,7 +163,7 @@ function toBody(d: Draft): HolidayModeInput {
 }
 
 /**
- * Settings → Orders → «وضع الإجازة» (handoff 216; read orders.view, save
+ * Settings → Orders → «وضع الإجازة» (read orders.view, save
  * workspace.manage): pause the store's checkout, or keep taking orders and
  * ship later, between two dates — with the date orders ship again and a
  * message for the banner. «شغال دلوقتي» shows while the holiday is in force.

@@ -431,7 +431,7 @@ export interface SheetProps {
 
 /**
  * A sheet: create, edit and filter open in one and never leave the list
- * underneath (docs/ux/REDESIGN_PROMPT.md §2.3). On the phone it rises from the
+ * underneath. On the phone it rises from the
  * bottom with a grab handle and can be pulled down to dismiss; from 640px it
  * is a centred dialog, or with `side="end"` a panel on the end edge. Escape,
  * a tap on the dimmed page and the close button close it; the body scrolls

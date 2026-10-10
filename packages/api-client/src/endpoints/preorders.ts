@@ -1,5 +1,5 @@
 /**
- * Pre-orders (backend handoff 195: src/modules/preorders/index.js).
+ * Pre-orders (backend: src/modules/preorders/index.js).
  *
  * A product with `preorder.enabled` keeps selling a variant after it runs
  * out, up to `limit` units beyond its stock per variant (no limit when null).

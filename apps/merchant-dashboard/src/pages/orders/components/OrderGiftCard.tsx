@@ -26,7 +26,7 @@ const STRINGS = {
 } satisfies Messages;
 
 /**
- * Order page, above the items: the shopper's gift choice (handoff 214) for
+ * Order page, above the items: the shopper's gift choice for
  * whoever packs — wrap it, the message to put in, and whether the prices stay
  * out of the parcel. Nothing for an order that is not a gift.
  */

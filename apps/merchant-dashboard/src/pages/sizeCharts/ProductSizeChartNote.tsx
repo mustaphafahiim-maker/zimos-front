@@ -11,7 +11,7 @@ import { ProductPageCard, useProductCardFrame } from "@/pages/catalog/components
 import { SIZE_CHART_STRINGS } from "./sizeChartStrings";
 
 /**
- * The product page's "Size chart" card (handoff 210): which chart the shopper
+ * The product page's "Size chart" card: which chart the shopper
  * gets as "Size guide" on this product and why — attached to the product
  * itself, or «من مجموعة Tops» through one of its collections. Worked out from
  * the store's charts the way the storefront endpoint does it. A store with no

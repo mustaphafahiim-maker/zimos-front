@@ -38,7 +38,7 @@ function Address({ value, className }: { value: string; className?: string }) {
 }
 
 /**
- * Store settings → URL redirects (frontend-handoff 232, website.edit): the
+ * Store settings → URL redirects (website.edit): the
  * store's old address → new address list — typed here, added by itself when a
  * product's or collection's address changes, or imported as CSV — with how
  * often each one was used. Without the permission the list answers 403 and

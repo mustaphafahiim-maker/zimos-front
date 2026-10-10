@@ -11,7 +11,7 @@ import { QUESTION_STRINGS } from "./questionStrings";
 import { useQuestionList } from "./useQuestionList";
 
 /**
- * The product page's «أسئلة» (handoff 212): this product's questions as the
+ * The product page's «أسئلة»: this product's questions as the
  * same rows as the inbox — a card each, with Quick Look and the answer sheet.
  * The page has no tabs, so `?tab=questions` — where the "new question"
  * notification points — brings this section into view instead. A product

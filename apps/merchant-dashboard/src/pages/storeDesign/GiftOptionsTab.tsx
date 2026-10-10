@@ -75,7 +75,7 @@ const STRINGS = {
 } satisfies Messages;
 
 /**
- * Store settings → Gift options (handoff 214): the checkout's "Is this a
+ * Store settings → Gift options: the checkout's "Is this a
  * gift?" with an optional wrap product and a message. Reading needs
  * products.view (a 403 draws the no-permission card), saving
  * products.manage (the save says so).

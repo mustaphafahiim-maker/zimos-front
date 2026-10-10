@@ -115,7 +115,7 @@ const sameDraft = (a: Draft, b: Draft) =>
 const variantName = (v: PreorderVariant) => formatOptions(v.optionValues) || v.sku || v.id.slice(0, 8);
 
 /**
- * Product page → «الطلب المسبق» (handoff 195): keep selling a variant after it
+ * Product page → «الطلب المسبق»: keep selling a variant after it
  * sells out, up to a limit per variant, with the expected ship date and a
  * message for the product page; each variant's units pre-ordered so far.
  * A saved, switched-on setting folds to one line.

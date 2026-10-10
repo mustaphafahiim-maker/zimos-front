@@ -3,9 +3,7 @@ import { cn } from "@store-builder/ui";
 import { IconCaretDown, type IconComponent } from "@/components/icons";
 
 /**
- * A titled section that folds (docs/ux/REDESIGN_PROMPT.md §1, §6: "everything
- * used rarely is one tap away, not on the page"; "long forms are sections, not
- * one scroll"). Closed, it is one 56px row — icon, title, a one-line summary
+ * A titled section that folds. Closed, it is one 56px row — icon, title, a one-line summary
  * of what is inside, an optional count — so a long page reads as a short list
  * and the merchant opens only what they came for.
  *

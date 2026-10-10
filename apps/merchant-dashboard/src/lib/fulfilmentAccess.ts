@@ -1,6 +1,5 @@
 /**
- * Who may change delivery slots, holiday mode and store pickup (handoff 221,
- * 216, 225). Reading all three needs `orders.view`; saving delivery slots and
+ * Who may change delivery slots, holiday mode and store pickup (* 216, 225). Reading all three needs `orders.view`; saving delivery slots and
  * holiday mode needs `workspace.manage`, store pickup `shipping.manage`, and
  * the daily work (move an order's slot, mark a pickup ready, hand it over)
  * `orders.manage` (backend core/security/permissions.js).

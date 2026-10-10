@@ -1,5 +1,5 @@
 /**
- * URL redirects (backend: frontend-handoff item 232, src/modules/urlRedirects).
+ * URL redirects (backend: src/modules/urlRedirects).
  *
  * The store's list of old path → new address. A path is store-relative
  * ("/old-page"; a trailing slash is dropped, a query is kept); a target is a

@@ -102,7 +102,7 @@ async function loadProducts(workspaceId: string): Promise<{ products: Product[];
 }
 
 /**
- * Products → Size charts → one chart (handoff 210, change products.manage):
+ * Products → Size charts → one chart (change products.manage):
  * its name and unit and the sizes as a grid, open; the note with the "how to
  * measure" picture and the products and collections it shows on, each one
  * fold under them with a line saying what is inside. Deleting the chart is in

@@ -1,5 +1,5 @@
 /**
- * Size charts (backend: frontend-handoff item 210, src/modules/sizeCharts).
+ * Size charts (backend: src/modules/sizeCharts).
  *
  * A chart is a table: column headings in Arabic and/or English, rows of text
  * cells ("S", "38–40" and "96" all fit), the unit its numbers are in, an

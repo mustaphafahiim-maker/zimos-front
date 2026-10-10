@@ -1,7 +1,7 @@
 import type { ProductQuestionStatus } from "@store-builder/api-client";
 import type { Messages } from "@/i18n/LocaleContext";
 
-/** Product questions and answers (handoff 212): the inbox, a question's row, its preview, the answer sheet and the product page's section. */
+/** Product questions and answers: the inbox, a question's row, its preview, the answer sheet and the product page's section. */
 export const QUESTION_STRINGS = {
   en: {
     title: "Questions",

@@ -1,5 +1,5 @@
 /**
- * Back-in-stock alerts (backend stockAlerts/, frontend-handoff 194).
+ * Back-in-stock alerts (backend stockAlerts/).
  *
  * Storefront, no sign-in:
  *   POST /store/:ws/stock-alerts { variantId, email | phone (exactly one), locale? }

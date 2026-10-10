@@ -48,7 +48,7 @@ export interface ContextMenuProps {
  * second) on a touch screen, Shift+F10 or the Menu key while the row or
  * something in it has focus — all three from Base UI's ContextMenu, which also
  * gives the arrow keys, Enter, Escape and type-to-find
- * (docs/ux/REDESIGN_PROMPT.md §2.3). It adds nothing to the row's layout.
+ *. It adds nothing to the row's layout.
  *
  * Give the same actions somewhere a thumb finds them without a long press too
  * (Quick Look's footer, a row's own buttons): a context menu is a shortcut,

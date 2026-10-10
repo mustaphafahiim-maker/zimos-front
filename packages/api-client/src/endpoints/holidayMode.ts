@@ -1,5 +1,5 @@
 /**
- * Holiday mode (backend src/modules/holidayMode; frontend-handoff 216).
+ * Holiday mode (backend src/modules/holidayMode).
  *
  * Staff, /workspaces/:ws/holiday-mode:
  *   GET (orders.view)        → HolidayModeSettings (+ `activeNow`)

@@ -59,7 +59,7 @@ function variantName(row: StockAlertVariant): string {
 }
 
 /**
- * Products → «مستنيين يرجع» (frontend-handoff 194): the sold-out variants
+ * Products → «مستنيين يرجع»: the sold-out variants
  * shoppers asked to hear about, most waited first. Restocking sends the
  * messages by itself, so this only says where demand is waiting.
  *

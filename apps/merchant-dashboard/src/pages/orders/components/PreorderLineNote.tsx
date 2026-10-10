@@ -10,7 +10,7 @@ const STRINGS = {
 
 /**
  * Order page, under an item: the line was sold beyond stock as a pre-order
- * and carries its expected ship date (`preorderShipsAt`, handoff 195).
+ * and carries its expected ship date (`preorderShipsAt`).
  */
 export function PreorderLineNote({ item }: { item: unknown }) {
   const t = useT(STRINGS);

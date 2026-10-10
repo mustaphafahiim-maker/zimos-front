@@ -35,7 +35,7 @@ function Own({ children }: { children: ReactNode }) {
 }
 
 /**
- * Products → «المواصفات» / Specifications (handoff 231, read products.view):
+ * Products → «المواصفات» / Specifications (read products.view):
  * the store's own list of specifications — a name in Arabic / English, a
  * unit, whether shoppers can filter by it — in the order shoppers will see
  * them. A row opens its edit sheet; moving one up or down and deleting it are

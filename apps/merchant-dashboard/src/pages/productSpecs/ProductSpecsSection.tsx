@@ -23,7 +23,7 @@ import { ProductPageCard } from "@/pages/catalog/components/ProductPageCard";
 import { SPEC_STRINGS, specKeyName } from "./specStrings";
 
 /**
- * The product page's «المواصفات» (handoff 231): one field per specification
+ * The product page's «المواصفات»: one field per specification
  * the store defined, with the values other products already use offered as
  * suggestions while typing. Saving replaces the product's values as a whole —
  * a field left empty has no value and is not shown to shoppers.

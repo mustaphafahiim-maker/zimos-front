@@ -1,7 +1,7 @@
 import type { SpecKeyName } from "@store-builder/api-client";
 import { getLocale, type Messages } from "@/i18n/LocaleContext";
 
-/** Product specifications (handoff 231): the store's list of specifications and a product's values. */
+/** Product specifications: the store's list of specifications and a product's values. */
 export const SPEC_STRINGS = {
   en: {
     back: "Products",

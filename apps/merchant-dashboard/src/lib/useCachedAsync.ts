@@ -31,7 +31,7 @@ function remember(key: string, data: unknown) {
 }
 
 /**
- * `useAsync` with a memory (docs/ux/REDESIGN_PROMPT.md §2.3, §7): the answer to
+ * `useAsync` with a memory: the answer to
  * `cacheKey` is kept for the session, so a list the merchant comes back to
  * appears at once from cache and refreshes behind, instead of showing a
  * skeleton again. The first visit still loads normally.

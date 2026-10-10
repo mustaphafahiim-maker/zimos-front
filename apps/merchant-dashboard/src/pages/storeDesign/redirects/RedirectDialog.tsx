@@ -33,7 +33,7 @@ type Errors = Partial<Record<"fromPath" | "toPath", string>>;
  * it goes, and whether the move is for good (301) or for a while (302). The
  * two addresses are checked as typed; what only the server can know — the
  * path already redirects, the target leads back to it — comes back on its
- * field in the handoff's words.
+ * field in the API's words.
  */
 export function RedirectDialog({
   open,

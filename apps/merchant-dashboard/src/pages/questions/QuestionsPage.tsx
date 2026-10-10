@@ -22,7 +22,7 @@ function filterOf(value: string | null): Filter {
 }
 
 /**
- * Products → Questions (handoff 212, read products.view): what shoppers asked
+ * Products → Questions (read products.view): what shoppers asked
  * on product pages. It opens on the ones waiting for an answer, with how many
  * there are on their chip. A row opens Quick Look; «رُد» opens the answer
  * sheet, and answering publishes.

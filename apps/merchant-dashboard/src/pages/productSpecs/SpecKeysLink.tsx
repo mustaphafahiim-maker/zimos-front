@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useT } from "@/i18n/LocaleContext";
 import { SPEC_STRINGS } from "./specStrings";
 
-/** The products list's way to Products → Specifications (handoff 231), beside "Collections". */
+/** The products list's way to Products → Specifications, beside "Collections". */
 export function SpecKeysLink() {
   const t = useT(SPEC_STRINGS);
   return (

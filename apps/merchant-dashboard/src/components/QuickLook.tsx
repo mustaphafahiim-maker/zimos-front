@@ -73,7 +73,7 @@ export interface QuickLookProps {
 
 /**
  * Quick Look: from any list, a row opens a preview without leaving the list
- * (docs/ux/REDESIGN_PROMPT.md §2.3). On the phone it is a bottom sheet that
+ *. On the phone it is a bottom sheet that
  * can be pulled down; from 640px a panel on the end edge, the list still in
  * place behind it. The footer is drawn here: the caller's quick actions, then
  * the one link that leaves — "open fully" — which closes the preview and goes
