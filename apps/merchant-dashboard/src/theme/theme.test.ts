@@ -36,10 +36,11 @@ describe("the dashboard's theme", () => {
 
   it("brings no image, font file or stylesheet of its own: colours and shapes only", () => {
     const files = cssFiles("theme");
-    expect(files.length).toBeGreaterThanOrEqual(9);
+    expect(files.length).toBeGreaterThanOrEqual(13);
     for (const file of files) {
       const text = read(file);
-      expect(text, file).not.toMatch(/url\(/);
+      // url(#id) names a filter drawn in the page (the phone dock's lens), not a file.
+      expect(text, file).not.toMatch(/url\((?!#)/);
       expect(text, file).not.toMatch(/@import/);
       expect(text, file).not.toMatch(/@font-face/);
     }
@@ -47,9 +48,30 @@ describe("the dashboard's theme", () => {
 
   it("keeps our logo in the side menu, on the frame the theme styles", () => {
     const layout = read("components/DashboardLayout.tsx");
-    expect(layout).toContain('import { ZimosLogo } from "@/components/ZimosLogo";');
-    expect(layout).toContain("<ZimosLogo height={24} />");
+    const menu = read("components/shell/SidebarNav.tsx");
+    expect(menu).toContain('import { ZimosLogo } from "@/components/ZimosLogo";');
+    expect(menu).toContain("<ZimosLogo height={22} />");
     expect(layout).toContain('data-slot="side-menu"');
     expect(layout).toContain('data-slot="toolbar"');
+  });
+
+  it("draws the shell with icons from the one icon file, all of them lucide", () => {
+    const icons = read("components/icons.ts");
+    expect(icons).toMatch(/\} from "lucide-react";/);
+    expect(icons).not.toMatch(/phosphor/i);
+    for (const file of ["components/shell/SidebarNav.tsx", "components/shell/PhoneMenu.tsx", "components/shell/AccountMenu.tsx", "components/shell/StoreSwitcher.tsx", "components/MobileTabBar.tsx"]) {
+      expect(read(file), file).not.toMatch(/phosphor|weight=/i);
+    }
+  });
+
+  it("can be switched off: the glass layer is written against data-glass, and the page sets it before first paint", () => {
+    for (const file of cssFiles("theme/glass")) expect(read(file), file).toContain(':root:not([data-glass="off"])');
+    expect(read("theme/liquid-glass.css")).toContain(':root:not([data-glass="off"])');
+    const page = readFileSync(join(SRC, "..", "index.html"), "utf8");
+    expect(page).toContain('localStorage.getItem("zimos.glass")');
+    expect(page).toContain('e.setAttribute("data-glass", "off")');
+    // No installable-app or worker wiring came with the shell.
+    expect(page).not.toMatch(/manifest|serviceWorker/);
+    expect(read("main.tsx")).not.toMatch(/serviceWorker|InstallAppPrompt|errorReporting/);
   });
 });
