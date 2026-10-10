@@ -1,5 +1,14 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
+import { Button, Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
+import { twoFactorRecoveryAdminReset, twoFactorRecoveryOfUser } from "@store-builder/api-client";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
+import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/apiClient";
+import { TWO_FACTOR_ENABLED } from "@/lib/features";
+import { P } from "@/lib/permissions";
+import { TWO_FACTOR_STRINGS, modeLabel } from "@/lib/twoFactorStrings";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { DetailRow } from "@/components/Drawer";
@@ -10,9 +19,9 @@ import { UserModerationActions, UserStateBadge } from "@/components/userModerati
 import { useAsync } from "@/lib/useAsync";
 import * as adminApi from "@/lib/adminApi";
 import { formatDate, formatDateTime, formatRelative } from "@/lib/format";
-import { useLocale, useT } from "@/i18n/LocaleContext";
+import { fmt, useLocale, useT } from "@/i18n/LocaleContext";
 import { SITE_TRAFFIC_STRINGS, formatDuration } from "@/lib/siteTrafficStrings";
-import type { AdminUserAcquisition } from "@store-builder/api-client";
+import type { AdminUserAcquisition, AdminUserDetail } from "@store-builder/api-client";
 
 /** Where the account came from on the marketing site (backend user_acquisition). */
 function AcquisitionPanel({ acquisition }: { acquisition: AdminUserAcquisition | null }) {
@@ -47,6 +56,48 @@ function AcquisitionPanel({ acquisition }: { acquisition: AdminUserAcquisition |
 }
 
 /** One account: who they are, and every store they own or work in. */
+/**
+ * A person's second step, and support's reset for someone locked out of it
+ * (POST /admin/users/:id/two-factor/reset, support.manage). The reset is not
+ * offered on your own account, on a deleted one, or when the step is known to
+ * be off; the API applies the rest of the console's target rules.
+ */
+function TwoFactorRow({ user, onReset }: { user: AdminUserDetail; onReset: () => void }) {
+  const t = useT(TWO_FACTOR_STRINGS);
+  const toast = useToast();
+  const { can, user: me } = useAuth();
+  const [resetting, setResetting] = useState(false);
+  const twoFactor = twoFactorRecoveryOfUser(user);
+  const mode = twoFactor ? twoFactor.mode : null;
+  const canReset = can(P.SUPPORT_MANAGE) && me?.id !== user.id && !user.deletedAt && mode !== "off";
+
+  return (
+    <DetailRow label={t.rowLabel}>
+      {modeLabel(t, mode)}
+      {twoFactor?.enabledAt && <span className="ms-2 text-xs text-ink-soft">{fmt(t.since, { date: formatDate(twoFactor.enabledAt) })}</span>}
+      {canReset && (
+        <Button size="sm" variant="outline" className="ms-3" onClick={() => setResetting(true)}>
+          {t.turnOff}
+        </Button>
+      )}
+      <ConfirmDialog
+        open={resetting}
+        title={t.resetTitle}
+        description={t.resetBody}
+        confirmLabel={t.turnOff}
+        destructive
+        onCancel={() => setResetting(false)}
+        onConfirm={async () => {
+          await twoFactorRecoveryAdminReset(apiClient, user.id);
+          setResetting(false);
+          toast.success(t.resetDone);
+          onReset();
+        }}
+      />
+    </DetailRow>
+  );
+}
+
 export function UserDetailPage() {
   const { id = "" } = useParams();
   const { data: user, loading, error, refresh } = useAsync(() => adminApi.getUser(id), [id]);
@@ -104,6 +155,7 @@ export function UserDetailPage() {
                   <span className="ms-2 text-xs text-ink-soft">{formatRelative(user.createdAt)}</span>
                 </DetailRow>
                 <DetailRow label="Last sign-in">{user.lastLoginAt ? formatRelative(user.lastLoginAt) : "—"}</DetailRow>
+                {TWO_FACTOR_ENABLED && <TwoFactorRow user={user} onReset={() => void refresh()} />}
               </dl>
               <div className="mt-4">
                 <UserModerationActions user={user} onChanged={() => void refresh()} />

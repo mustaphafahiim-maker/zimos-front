@@ -2,13 +2,16 @@ import { useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Input, Label, Alert } from "@store-builder/ui";
+import { TwoFactorRequiredError, type TwoFactorChallenge } from "@store-builder/api-client";
 import { useAuth, ApiError } from "@/context/AuthContext";
+import { TwoFactorForm } from "@/components/TwoFactorForm";
+import { TWO_FACTOR_ENABLED } from "@/lib/features";
 import { BrandPanel } from "@/components/BrandPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ZimosLogo } from "@/components/ZimosLogo";
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, verifyCode } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/";
@@ -18,6 +21,8 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // A code is asked first: two-step sign-in, or a browser new to the account (TWO_FACTOR_ENABLED).
+  const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -27,6 +32,10 @@ export function LoginPage() {
       await login({ email, password });
       navigate(from, { replace: true });
     } catch (err) {
+      if (TWO_FACTOR_ENABLED && err instanceof TwoFactorRequiredError) {
+        setChallenge(err.challenge);
+        return;
+      }
       if (err instanceof ApiError) {
         setError(err.status === 401 ? "Incorrect email or password." : err.message);
       } else {
@@ -52,6 +61,19 @@ export function LoginPage() {
             Restricted to Zimos team accounts.
           </p>
 
+          {challenge ? (
+            <TwoFactorForm
+              challenge={challenge}
+              onVerify={async (code) => {
+                await verifyCode({ challengeToken: challenge.challengeToken, code });
+                navigate(from, { replace: true });
+              }}
+              onBack={() => {
+                setChallenge(null);
+                setPassword("");
+              }}
+            />
+          ) : (
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             {error && <Alert variant="danger">{error}</Alert>}
 
@@ -101,6 +123,7 @@ export function LoginPage() {
               {submitting ? "Signing in…" : "Sign in"}
             </Button>
           </form>
+          )}
         </div>
       </div>
     </div>
