@@ -6,7 +6,7 @@ import { dirFor, formatNumber, getDictionary, type Locale } from "@/lib/i18n";
 import { firstImage } from "@/lib/product";
 import { EmptyBlock } from "../commerce";
 import { showcaseCopy } from "./copy";
-import { heroLookMarkup, resolveHeroLook } from "./heroLook";
+import { heroFocusMarkup, heroLookMarkup, resolveHeroFocus, resolveHeroLook } from "./heroLook";
 import { HeroSlider, type HeroSlide } from "./HeroSlider";
 import { NeedTabs, type NeedTab } from "./NeedTabs";
 import { RailTrack } from "./RailTrack";
@@ -105,6 +105,8 @@ function HeroSliderElement({ props, locale, editable }: ElementProps) {
       side: look.desktop.side,
       vertical: look.desktop.vertical,
       ...heroLookMarkup(look),
+      // The edge of the picture kept in view when the box crops it; nothing for the centre.
+      ...heroFocusMarkup(resolveHeroFocus(slide)),
       // A background video over the picture, which stays as its poster; read only while the switch is on.
       video: HERO_MEDIA_ENABLED ? safeUrl(str(slide, "video")) : null,
       contentWidth: num(slide, "contentWidth", 620, 200, 900),

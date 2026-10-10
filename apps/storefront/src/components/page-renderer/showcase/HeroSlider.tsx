@@ -25,6 +25,9 @@ export interface HeroSlide {
   overlay?: { desktop: number; phone: number } | null;
   /** A background video over the picture, which stays as its poster (HeroVideo.tsx); null or absent draws none. */
   video?: string | null;
+  /** The edge of the picture kept in view when the box crops it; absent, the centre (heroLook.ts). */
+  focusX?: "start" | "end";
+  focusY?: "top" | "bottom";
   contentWidth: number;
   text: "dark" | "light";
 }
@@ -131,6 +134,8 @@ export function HeroSlider({
             data-v={slide.vertical}
             data-hm={slide.phoneSide}
             data-vm={slide.phoneVertical}
+            data-fx={slide.focusX}
+            data-fy={slide.focusY}
             data-text={slide.text}
             aria-hidden={on ? undefined : true}
             inert={on ? undefined : true}

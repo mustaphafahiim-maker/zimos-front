@@ -234,8 +234,17 @@ section[data-zt-section]:has(.zs),
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 50% 50%;
+  object-position: var(--zs-fx, 50%) var(--zs-fy, 50%);
 }
+/* The part of a slide's picture kept in view when the box crops it
+   (heroLook.ts): the centre unless the slide names an edge. Start and end
+   follow the page's direction, like the text's place. */
+.zs-hero__slide[data-fx="start"] { --zs-fx: 0%; }
+.zs-hero__slide[data-fx="end"] { --zs-fx: 100%; }
+[dir="rtl"] .zs-hero__slide[data-fx="start"] { --zs-fx: 100%; }
+[dir="rtl"] .zs-hero__slide[data-fx="end"] { --zs-fx: 0%; }
+.zs-hero__slide[data-fy="top"] { --zs-fy: 0%; }
+.zs-hero__slide[data-fy="bottom"] { --zs-fy: 100%; }
 .zs-hero__shell {
   position: relative;
   z-index: 3;
@@ -435,6 +444,8 @@ section[data-zt-section]:has(.zs),
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Held at the same part as the picture under it. */
+  object-position: var(--zs-fx, 50%) var(--zs-fy, 50%);
   opacity: 0;
   transition: opacity 400ms ease;
 }

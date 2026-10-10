@@ -9,16 +9,20 @@
  *   sideMobile, verticalMobile  the phone's place; unset, the computer's
  *   overlay                   the veil in percent, 0 to 60; unset, none
  *   overlayMobile             the phone's veil; unset, the computer's
+ *   focusX, focusY            the part of the picture kept in view when its
+ *                             box crops it; unset, the centre
  *
  * A slide saved before these existed sets none of them: it resolves to the
  * centre and the bottom with no veil on both, which is exactly what the store
- * drew, and `heroLookMarkup` then adds nothing to its markup.
+ * drew, and the markup helpers then add nothing to its markup.
  *
  * No imports on purpose: the node test loads this file as it is.
  */
 
 export type HeroSide = "start" | "center" | "end";
 export type HeroVertical = "top" | "middle" | "bottom";
+export type HeroFocusX = "start" | "center" | "end";
+export type HeroFocusY = "top" | "center" | "bottom";
 
 export interface HeroPlacement {
   side: HeroSide;
@@ -40,6 +44,8 @@ export const HERO_PHONE_MAX_PX = 749;
 
 const SIDES: readonly HeroSide[] = ["start", "center", "end"];
 const VERTICALS: readonly HeroVertical[] = ["top", "middle", "bottom"];
+const FOCUS_X: readonly HeroFocusX[] = ["start", "center", "end"];
+const FOCUS_Y: readonly HeroFocusY[] = ["top", "center", "bottom"];
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | null {
   return typeof value === "string" && (allowed as readonly string[]).includes(value) ? (value as T) : null;
@@ -91,5 +97,33 @@ export function heroLookMarkup(look: HeroLook): HeroLookMarkup {
   };
   if (phone.side !== desktop.side) markup.phoneSide = phone.side;
   if (phone.vertical !== desktop.vertical) markup.phoneVertical = phone.vertical;
+  return markup;
+}
+
+/**
+ * The part of a slide's picture that stays in view when the slider's box is
+ * another shape and crops it. Start and end follow the page's direction, like
+ * the text's place. Anything else than a known edge is the centre, which is
+ * how every picture was held before the setting existed.
+ */
+export interface HeroFocus {
+  x: HeroFocusX;
+  y: HeroFocusY;
+}
+
+export function resolveHeroFocus(slide: Record<string, unknown>): HeroFocus {
+  return { x: oneOf(slide.focusX, FOCUS_X) ?? "center", y: oneOf(slide.focusY, FOCUS_Y) ?? "center" };
+}
+
+/** The edges a slide's markup names (`data-fx`, `data-fy`): nothing for the centre. */
+export interface HeroFocusMarkup {
+  focusX?: "start" | "end";
+  focusY?: "top" | "bottom";
+}
+
+export function heroFocusMarkup(focus: HeroFocus): HeroFocusMarkup {
+  const markup: HeroFocusMarkup = {};
+  if (focus.x !== "center") markup.focusX = focus.x;
+  if (focus.y !== "center") markup.focusY = focus.y;
   return markup;
 }

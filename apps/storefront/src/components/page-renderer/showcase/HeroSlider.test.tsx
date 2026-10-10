@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
-import { heroLookMarkup, resolveHeroLook } from "./heroLook";
+import { heroFocusMarkup, heroLookMarkup, resolveHeroFocus, resolveHeroLook } from "./heroLook";
 import { HeroSlider, type HeroSlide } from "./HeroSlider";
 
 // Read from disk: this runner hands back an empty string for an imported stylesheet.
@@ -38,6 +38,7 @@ function slideOf(props: Record<string, unknown>, enabled: boolean): HeroSlide {
     side: look.desktop.side,
     vertical: look.desktop.vertical,
     ...heroLookMarkup(look),
+    ...heroFocusMarkup(resolveHeroFocus(props)),
     contentWidth: 620,
     text: props.text === "light" ? "light" : "dark",
   };
@@ -95,6 +96,50 @@ describe("a slide's place and veil", () => {
     const { slide } = draw([slideOf({ sideMobile: "end", verticalMobile: "top", overlay: 50, overlayMobile: 10 }, false)]);
     expect(slide.getAttributeNames().sort()).toEqual(["class", "data-h", "data-text", "data-v"]);
     expect(slide.querySelector(".zs-hero__overlay")).toBeNull();
+  });
+});
+
+describe("the part of a slide's picture kept in view", () => {
+  it("names an edge on the slide, and nothing for the centre", () => {
+    const top = draw([slideOf({ focusY: "top" }, false)]);
+    expect(top.slide.getAttribute("data-fy")).toBe("top");
+    expect(top.slide.hasAttribute("data-fx")).toBe(false);
+    top.unmount();
+
+    const corner = draw([slideOf({ focusX: "end", focusY: "bottom" }, false)]);
+    expect(corner.slide.getAttribute("data-fx")).toBe("end");
+    expect(corner.slide.getAttribute("data-fy")).toBe("bottom");
+    corner.unmount();
+
+    const centre = draw([slideOf({ focusX: "center", focusY: "center" }, false)]);
+    expect(centre.slide.getAttributeNames().sort()).toEqual(["class", "data-h", "data-text", "data-v"]);
+  });
+
+  it("holds the picture at the centre unless a slide names an edge", () => {
+    const img = css.slice(css.indexOf(".zs-hero__media img {"), css.indexOf("}", css.indexOf(".zs-hero__media img {")));
+    expect(img).toContain("object-fit: cover;");
+    expect(img).toContain("object-position: var(--zs-fx, 50%) var(--zs-fy, 50%);");
+    for (const rule of [
+      '.zs-hero__slide[data-fx="start"] { --zs-fx: 0%; }',
+      '.zs-hero__slide[data-fx="end"] { --zs-fx: 100%; }',
+      '.zs-hero__slide[data-fy="top"] { --zs-fy: 0%; }',
+      '.zs-hero__slide[data-fy="bottom"] { --zs-fy: 100%; }',
+    ]) {
+      expect(css).toContain(rule);
+    }
+  });
+
+  it("turns start and end round on a right-to-left page, after the rules it overrides", () => {
+    const start = '[dir="rtl"] .zs-hero__slide[data-fx="start"] { --zs-fx: 100%; }';
+    const end = '[dir="rtl"] .zs-hero__slide[data-fx="end"] { --zs-fx: 0%; }';
+    expect(css).toContain(start);
+    expect(css).toContain(end);
+    expect(css.indexOf(start)).toBeGreaterThan(css.indexOf('.zs-hero__slide[data-fx="end"] { --zs-fx: 100%; }'));
+  });
+
+  it("holds a background video at the same part as its picture", () => {
+    const video = css.slice(css.indexOf(".zs-hero__video video {"), css.indexOf("}", css.indexOf(".zs-hero__video video {")));
+    expect(video).toContain("object-position: var(--zs-fx, 50%) var(--zs-fy, 50%);");
   });
 });
 

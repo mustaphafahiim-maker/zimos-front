@@ -81,6 +81,40 @@ const SLIDE_HEIGHTS = [
   { value: "bottom", label: "Bottom", labelAr: "تحت" },
 ];
 
+/**
+ * The part of a slide's picture that stays in view when the slider's box is
+ * another shape and crops it (the storefront's showcase/heroLook.ts). Across,
+ * it is one of SLIDE_SIDES; the centre is what the store draws while nothing
+ * is stored. Plain props of the slide, like the text's place.
+ */
+const FOCUS_HEIGHTS = [
+  { value: "top", label: "Top", labelAr: "الأعلى" },
+  { value: "center", label: "Centre", labelAr: "الوسط" },
+  { value: "bottom", label: "Bottom", labelAr: "الأسفل" },
+];
+const HERO_FOCUS_FIELDS: ItemSubField[] = [
+  {
+    key: "focusY",
+    label: "Part of the picture kept in view (up and down)",
+    labelAr: "الجزء الظاهر من الصورة (رأسيًا)",
+    kind: "choice",
+    fallback: "center",
+    options: FOCUS_HEIGHTS,
+    hint: "The slider's box is rarely the shape of the picture, so part of the picture is cut off. Choose the part that must stay in view.",
+    hintAr: "مساحة السلايدر لا تطابق شكل الصورة غالبًا، فيُقتطع جزء من الصورة. اختر الجزء الذي يجب أن يبقى ظاهرًا.",
+  },
+  {
+    key: "focusX",
+    label: "Part of the picture kept in view (across)",
+    labelAr: "الجزء الظاهر من الصورة (أفقيًا)",
+    kind: "choice",
+    fallback: "center",
+    options: SLIDE_SIDES,
+    hint: "Start is the right side of an Arabic page and the left side of an English one.",
+    hintAr: "البداية هي الجهة اليمنى في الصفحة العربية واليسرى في الصفحة الإنجليزية.",
+  },
+];
+
 /** The first choice of a phone's own setting: it stores nothing, and the store then uses the computer's value. */
 const SAME_AS_COMPUTER = { label: "Same as on a computer", labelAr: "كما على الكمبيوتر" };
 
@@ -161,6 +195,7 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
           { key: "imageEn", label: "Picture (English store)", labelAr: "الصورة (النسخة الإنجليزية)", kind: "image" },
           { key: "mobileImageEn", label: "Phone picture (English store)", labelAr: "صورة الموبايل (النسخة الإنجليزية)", kind: "image" },
           ...HERO_MEDIA_VIDEO_FIELDS,
+          ...HERO_FOCUS_FIELDS,
           { key: "alt", label: "Describes the picture", labelAr: "وصف الصورة", kind: "text" },
           { key: "eyebrow", label: "Small line above the heading", labelAr: "سطر صغير فوق العنوان", kind: "text" },
           { key: "heading", label: "Heading", labelAr: "العنوان", kind: "text" },

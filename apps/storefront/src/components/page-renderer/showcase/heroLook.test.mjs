@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { HERO_OVERLAY_MAX, heroLookMarkup, resolveHeroLook } from "./heroLook.ts";
+import { HERO_OVERLAY_MAX, heroFocusMarkup, heroLookMarkup, resolveHeroFocus, resolveHeroLook } from "./heroLook.ts";
 
 /**
  * Pins the promise the hero's new settings make: a slide saved before they
@@ -91,5 +91,39 @@ describe("heroLookMarkup", () => {
     assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlay: 40, overlayMobile: 0 }, true)).overlay, { desktop: 0.4, phone: 0 });
     assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 60 }, true)).overlay, { desktop: 0, phone: 0.6 });
     assert.equal(heroLookMarkup(resolveHeroLook({ overlay: 0, overlayMobile: 0 }, true)).overlay, null);
+  });
+});
+
+describe("resolveHeroFocus", () => {
+  it("holds a picture at its centre while the slide names no edge, as it always was", () => {
+    assert.deepEqual(resolveHeroFocus({}), { x: "center", y: "center" });
+    assert.deepEqual(resolveHeroFocus({ image: "https://cdn.test/a.jpg", side: "start", vertical: "top" }), { x: "center", y: "center" });
+    assert.deepEqual(resolveHeroFocus({ focusX: "center", focusY: "center" }), { x: "center", y: "center" });
+  });
+
+  it("reads each direction on its own", () => {
+    assert.deepEqual(resolveHeroFocus({ focusY: "top" }), { x: "center", y: "top" });
+    assert.deepEqual(resolveHeroFocus({ focusX: "end" }), { x: "end", y: "center" });
+    assert.deepEqual(resolveHeroFocus({ focusX: "start", focusY: "bottom" }), { x: "start", y: "bottom" });
+  });
+
+  it("reads anything that is not a known edge as the centre", () => {
+    // "middle" and "left" are words of other settings, not of this one.
+    assert.deepEqual(resolveHeroFocus({ focusX: "left", focusY: "middle" }), { x: "center", y: "center" });
+    assert.deepEqual(resolveHeroFocus({ focusX: 0, focusY: null }), { x: "center", y: "center" });
+    assert.deepEqual(resolveHeroFocus({ focusX: "", focusY: ["top"] }), { x: "center", y: "center" });
+  });
+});
+
+describe("heroFocusMarkup", () => {
+  it("adds nothing for the centre", () => {
+    assert.deepEqual(heroFocusMarkup(resolveHeroFocus({})), {});
+    assert.deepEqual(heroFocusMarkup(resolveHeroFocus({ focusX: "center", focusY: "center" })), {});
+  });
+
+  it("names only the edges a slide asks for", () => {
+    assert.deepEqual(heroFocusMarkup(resolveHeroFocus({ focusY: "top" })), { focusY: "top" });
+    assert.deepEqual(heroFocusMarkup(resolveHeroFocus({ focusX: "start" })), { focusX: "start" });
+    assert.deepEqual(heroFocusMarkup(resolveHeroFocus({ focusX: "end", focusY: "bottom" })), { focusX: "end", focusY: "bottom" });
   });
 });
