@@ -18,6 +18,7 @@ import {
   type WebhookDeliveryDto,
   type WebhookEndpointDto,
   type WebhookFilter,
+  webhooksCreateEndpoint,
   webhooksCreateFiltered,
 } from "@store-builder/api-client";
 import { apiClient, apiBaseUrl } from "@/lib/apiClient";
@@ -31,6 +32,8 @@ import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataState } from "@/components/DataState";
 import { WebhookDeliveryLog, WebhookEndpointNotes, WebhookFilterField } from "./WebhookExtras";
+import { EditWebhookEndpointModal, WebhookHeadersField, WebhookHeadersNote, useWebhookHeaders } from "./WebhookEndpointFields";
+import { WEBHOOK_HEADERS_ENABLED } from "@/lib/features";
 import { ApiKeyAccessPicker, EMPTY_ACCESS, countExtraResources, scopesForAccess, type AccessMap } from "./ApiKeyAccessPicker";
 import { TextField } from "@/components/Field";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -113,6 +116,7 @@ const STRINGS = {
     testDelivered: "Test delivered — your server answered {status}.",
     testFailed: "Test not delivered: {error}",
     deliveries: "Deliveries",
+    editEndpoint: "Edit",
     rotate: "Rotate secret",
     rotateTitle: "Rotate the signing secret?",
     rotateBody: "The current secret stops working immediately. Update your server with the new one right after.",
@@ -204,6 +208,7 @@ const STRINGS = {
     testDelivered: "التجربة وصلت — السيرفر رد بـ {status}.",
     testFailed: "التجربة موصلتش: {error}",
     deliveries: "سجل الإرسال",
+    editEndpoint: "تعديل",
     rotate: "تغيير مفتاح التوقيع",
     rotateTitle: "تغيّر مفتاح التوقيع؟",
     rotateBody: "المفتاح الحالي هيبطّل يشتغل فوراً. حدّث السيرفر بتاعك بالجديد على طول.",
@@ -514,6 +519,8 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
   const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
   const [removing, setRemoving] = useState<WebhookEndpointDto | null>(null);
   const [history, setHistory] = useState<WebhookEndpointDto | null>(null);
+  // Editing an endpoint's address, topics and custom headers (WEBHOOK_HEADERS_ENABLED).
+  const [editing, setEditing] = useState<WebhookEndpointDto | null>(null);
 
   const endpoints = hooks.data?.endpoints ?? [];
   const eventLabel = (events: string[]) => (events.includes("*") ? t.allEvents : events.join(", "));
@@ -581,6 +588,7 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
                   </code>
                 </p>
                 <WebhookEndpointNotes endpoint={endpoint} />
+                {WEBHOOK_HEADERS_ENABLED && <WebhookHeadersNote endpoint={endpoint} />}
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" disabled={testing === endpoint.id} onClick={() => sendTest(endpoint)}>
                     {testing === endpoint.id ? t.testing : t.sendTest}
@@ -588,6 +596,11 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
                   <Button size="sm" variant="outline" onClick={() => setHistory(endpoint)}>
                     {t.deliveries}
                   </Button>
+                  {WEBHOOK_HEADERS_ENABLED && (
+                    <Button size="sm" variant="outline" onClick={() => setEditing(endpoint)}>
+                      {t.editEndpoint}
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline" onClick={() => setActive(endpoint, !endpoint.isActive)}>
                     {endpoint.isActive ? t.pause : t.resume}
                   </Button>
@@ -605,6 +618,19 @@ function WebhooksPanel({ t, onForbidden }: { t: T; onForbidden: () => void }) {
       </div>
 
       {endpoints.length > 0 && <WebhookDeliveryLog />}
+
+      {WEBHOOK_HEADERS_ENABLED && editing && (
+        <EditWebhookEndpointModal
+          key={editing.id}
+          endpoint={editing}
+          events={hooks.data?.events ?? []}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void hooks.refresh({ silent: true });
+          }}
+        />
+      )}
 
       <NewEndpointModal
         t={t}
@@ -691,6 +717,8 @@ function NewEndpointModal({
   const [all, setAll] = useState(true);
   const [picked, setPicked] = useState<string[]>([]);
   const [filter, setFilter] = useState<WebhookFilter | null>(null);
+  // Custom headers the receiver asks for; no rows and nothing sent while the feature is off.
+  const headers = useWebhookHeaders();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
@@ -700,6 +728,7 @@ function NewEndpointModal({
     setAll(true);
     setPicked([]);
     setFilter(null);
+    headers.reset();
     setError(null);
     setSecret(null);
     onClose();
@@ -707,17 +736,24 @@ function NewEndpointModal({
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    // Checked before anything is sent: a row with a problem says so in place.
+    const customHeaders = WEBHOOK_HEADERS_ENABLED ? headers.build() : [];
+    if (!customHeaders) return;
     setBusy(true);
     setError(null);
     try {
       const body = { url: url.trim(), events: all ? ["*"] : picked };
-      const created = filter
-        ? await webhooksCreateFiltered(apiClient, workspaceId, { ...body, filter })
-        : await developersCreateWebhook(apiClient, workspaceId, body);
+      const created =
+        customHeaders.length > 0
+          ? await webhooksCreateEndpoint(apiClient, workspaceId, { ...body, ...(filter ? { filter } : {}), customHeaders })
+          : filter
+            ? await webhooksCreateFiltered(apiClient, workspaceId, { ...body, filter })
+            : await developersCreateWebhook(apiClient, workspaceId, body);
       setSecret(created.signingSecret);
       onCreated();
     } catch (err) {
-      setError(errorMessage(err));
+      // A refused header says why on its own row; anything else goes above the buttons.
+      if (!(WEBHOOK_HEADERS_ENABLED && headers.fromServer(err))) setError(errorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -782,6 +818,9 @@ function NewEndpointModal({
           )}
         </fieldset>
         <WebhookFilterField value={filter} onChange={setFilter} />
+        {WEBHOOK_HEADERS_ENABLED && (
+          <WebhookHeadersField rows={headers.rows} errors={headers.errors} onChange={headers.setRows} onErrorsChange={headers.setErrors} />
+        )}
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={close} disabled={busy}>
