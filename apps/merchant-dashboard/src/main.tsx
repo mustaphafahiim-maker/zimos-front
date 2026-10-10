@@ -11,6 +11,7 @@ import './theme/glass/states.css'
 import './theme/glass/stats.css'
 import './theme/glass/list.css'
 import './theme/glass/sheet.css'
+import './theme/glass/settings.css'
 import './theme/glass/motion.css'
 import App from './App.tsx'
 

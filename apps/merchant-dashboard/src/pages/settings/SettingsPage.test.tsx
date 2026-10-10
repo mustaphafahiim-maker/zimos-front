@@ -24,7 +24,7 @@ describe("SettingsPage store profile", () => {
     ]);
     const saved = fake<Workspace>({ id: "ws_1", name: "Nile Store" });
     api.updateWorkspace.mockResolvedValue(saved);
-    const { user } = renderWithProviders(<SettingsPage />);
+    const { user } = renderWithProviders(<SettingsPage />, { route: "/settings?tab=identity" });
 
     await user.click(within(profileSection()).getByRole("button", { name: "Save" }));
 
@@ -49,7 +49,7 @@ describe("SettingsPage store profile", () => {
     });
     api.listWorkspaces.mockResolvedValue([fake<ListedWorkspace>({ id: "ws_1", themeSettings: { storeTheme: "warm" } })]);
     api.updateWorkspace.mockResolvedValue(fake<Workspace>({ id: "ws_1", name: "Nile Store" }));
-    const { user } = renderWithProviders(<SettingsPage />);
+    const { user } = renderWithProviders(<SettingsPage />, { route: "/settings?tab=identity" });
 
     await user.click(within(profileSection()).getByRole("button", { name: "Save" }));
 
@@ -65,7 +65,7 @@ describe("SettingsPage store profile", () => {
   it("saves nothing, and says why, when the store is gone from the account", async () => {
     workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: {} });
     api.listWorkspaces.mockResolvedValue([]);
-    const { user } = renderWithProviders(<SettingsPage />);
+    const { user } = renderWithProviders(<SettingsPage />, { route: "/settings?tab=identity" });
 
     await user.click(within(profileSection()).getByRole("button", { name: "Save" }));
 
@@ -97,7 +97,7 @@ describe("SettingsPage team invitations", () => {
     api.listPendingInvites.mockResolvedValue([]);
     api.listWorkspaceRoles.mockResolvedValue([fake({ id: "role_1", key: "order_operator", name: "Order operator" })]);
     api.inviteMember.mockRejectedValue(refusal);
-    const { user } = renderWithProviders(<SettingsPage />, { locale });
+    const { user } = renderWithProviders(<SettingsPage />, { locale, route: "/settings?tab=members" });
     await user.click(await screen.findByRole("button", { name: "Invite member" }));
     const dialog = screen.getByRole("dialog", { name: "Invite member" });
     await user.type(within(dialog).getByLabelText(/Email/), "new.person@example.com");
