@@ -17,14 +17,15 @@ describe("the shopper's account pages", () => {
     expect(layout).toContain("robots: { index: false, follow: false }");
   });
 
-  it("are the four tabs and an order, and nothing the API does not have yet", () => {
+  it("are the four tabs, an order and the four reward tabs, and nothing the API does not have yet", () => {
     const pages = ["page.tsx", "addresses/page.tsx", "profile/page.tsx", "wishlist/page.tsx", "orders/[orderId]/page.tsx"];
     for (const page of pages) expect(existsSync(path(`${ACCOUNT}${page}`))).toBe(true);
     const folders = readdirSync(path(ACCOUNT), { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort();
-    expect(folders).toEqual(["addresses", "orders", "profile", "wishlist"]);
+    // Points, credit, level and invite each answer not found without their own switch (rewards.guard.test.tsx).
+    expect(folders).toEqual(["addresses", "credit", "invite", "orders", "points", "profile", "vip", "wishlist"]);
   });
 });
 

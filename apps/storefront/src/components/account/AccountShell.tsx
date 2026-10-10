@@ -11,6 +11,10 @@ import { isAccountsOffError, isShopperSignedOutError, useShopperApi, useShopperC
 import { ShopperSignIn } from "./ShopperSignIn";
 import { mergeGuestWishlist } from "@/lib/wishlist";
 import { UserIcon } from "./accountIcons";
+// «نقطي» and «رصيدي», «مستواي» and «ادعي صحابك»: more tabs, each only while its feature is switched on and has something to say.
+import { AccountWalletTabs, isAccountWalletPath } from "./AccountWalletTabs";
+import { AccountRewardsTabs, isAccountRewardsPath } from "@/components/rewards/AccountRewardsTabs";
+import { CUSTOMER_REFERRALS_ENABLED, LOYALTY_ENABLED, STORE_CREDIT_ENABLED, VIP_TIERS_ENABLED } from "@/lib/features";
 
 /**
  * The frame of every account page (`/account`, `/account/wishlist`,
@@ -193,13 +197,15 @@ export function AccountShell({ children }: { children: ReactNode }) {
   } else if (!current) {
     body = <ShellSkeleton />;
   } else {
-    const active = pathname.endsWith("/account/wishlist")
-      ? "wishlist"
-      : pathname.endsWith("/account/addresses")
-        ? "addresses"
-        : pathname.endsWith("/account/profile")
-          ? "profile"
-          : "orders";
+    const active = isAccountWalletPath(pathname) || isAccountRewardsPath(pathname)
+      ? null
+      : pathname.endsWith("/account/wishlist")
+        ? "wishlist"
+        : pathname.endsWith("/account/addresses")
+          ? "addresses"
+          : pathname.endsWith("/account/profile")
+            ? "profile"
+            : "orders";
     const name = current.customer.fullName?.trim();
     body = (
       <AccountContext.Provider value={{ api, me: current, setMe, setAddresses }}>
@@ -227,6 +233,8 @@ export function AccountShell({ children }: { children: ReactNode }) {
                 </li>
               );
             })}
+            {(LOYALTY_ENABLED || STORE_CREDIT_ENABLED) && <AccountWalletTabs pathname={pathname} />}
+            {(VIP_TIERS_ENABLED || CUSTOMER_REFERRALS_ENABLED) && <AccountRewardsTabs pathname={pathname} />}
           </ul>
         </nav>
         <div className="mt-6">{children}</div>
