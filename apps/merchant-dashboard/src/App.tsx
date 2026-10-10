@@ -17,6 +17,7 @@ import {
   PRODUCT_SPECS_ENABLED,
   SIZE_CHARTS_ENABLED,
   STORE_CREDIT_ENABLED,
+  STORE_REPORTS_ENABLED,
   VIP_TIERS_ENABLED,
 } from "@/lib/features";
 import { REWARDS_HOME } from "@/pages/loyalty/RewardsTabs";
@@ -80,6 +81,7 @@ import { SuggestionsPage } from "@/pages/help/SuggestionsPage";
 // element table) with the funnel editor, so it is split off with it.
 const AiStudioPage = lazy(() => import("@/pages/ai/AiStudioPage").then((m) => ({ default: m.AiStudioPage })));
 const WaBotPage = lazy(() => import("@/pages/inbox/WaBotPage").then((m) => ({ default: m.WaBotPage })));
+const StoreReportPage = lazy(() => import("@/pages/analytics/storeReports/StoreReportPage").then((m) => ({ default: m.StoreReportPage })));
 const LoyaltyProgramPage = lazy(() => import("@/pages/loyalty/LoyaltyProgramPage").then((m) => ({ default: m.LoyaltyProgramPage })));
 const VipTiersPage = lazy(() => import("@/pages/vipTiers/VipTiersPage").then((m) => ({ default: m.VipTiersPage })));
 const ReferAFriendPage = lazy(() => import("@/pages/customerReferrals/ReferAFriendPage").then((m) => ({ default: m.ReferAFriendPage })));
@@ -221,6 +223,11 @@ export default function App() {
                       <Route path="/website" element={<WebsitePage />} />
                       <Route path="/funnels" element={<LazyRoute><FunnelsPage /></LazyRoute>} />
                       <Route path="/analytics" element={<LazyRoute><ReportsPage /></LazyRoute>} />
+                      {/* The store reports (tax, stock value, slow stock, order times…): only while switched on (lib/features). */}
+                      <Route
+                        path="/analytics/reports/:report?"
+                        element={STORE_REPORTS_ENABLED ? <LazyRoute><StoreReportPage /></LazyRoute> : <Navigate to="/analytics" replace />}
+                      />
                       <Route path="/analytics/summary" element={<LazyRoute><AnalyticsPage /></LazyRoute>} />
                       <Route path="/analytics/web" element={<LazyRoute><WebAnalyticsPage /></LazyRoute>} />
                       <Route path="/analytics/attribution" element={<LazyRoute><AttributionPage /></LazyRoute>} />

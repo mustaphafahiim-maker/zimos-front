@@ -45,7 +45,8 @@ import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
 import { SecuritySection } from "./SecuritySection";
-import { HOLIDAY_MODE_ENABLED, TWO_FACTOR_ENABLED } from "@/lib/features";
+import { HOLIDAY_MODE_ENABLED, STORE_REPORTS_ENABLED, TWO_FACTOR_ENABLED } from "@/lib/features";
+import { SummaryReportsSection } from "./SummaryReportsSection";
 import { HolidayModeSection } from "./HolidayModeSection";
 
 export function SettingsPage() {
@@ -77,6 +78,8 @@ export function SettingsPage() {
       <WhatsappSection key={`whatsapp-connection-${workspaceId}`} />
       {/* The emails customers get about their orders. */}
       <OrderEmailsSection key={`order-emails-${workspaceId}`} />
+      {/* A daily or weekly email of the store's numbers to chosen team members (lib/features). */}
+      {STORE_REPORTS_ENABLED && <SummaryReportsSection key={`summary-reports-${workspaceId}`} />}
       <SubscriptionLinkSection />
       <TeamSection key={`team-${workspaceId}`} />
       <DevelopersSection key={`developers-${workspaceId}`} />
