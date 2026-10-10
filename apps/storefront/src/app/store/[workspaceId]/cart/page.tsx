@@ -10,6 +10,7 @@ import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
 import { storeCards } from "@/lib/storePromises";
 import { CartShippingSummary } from "@/components/checkout/CartShippingSummary";
+import { HolidayCheckoutGate } from "@/components/holiday/HolidayCheckoutGate";
 import { btnPrimaryLg, btnSecondary, card, container, skeleton } from "@/components/ui";
 import { useCart } from "@/lib/CartProvider";
 import { variantLabel } from "@/lib/product";
@@ -166,9 +167,12 @@ export default function CartPage() {
               <div className="mt-4">
                 <CartShippingSummary workspaceId={workspaceId} cart={cart} />
               </div>
-              <StoreLink href="/checkout" className={`${btnPrimaryLg} mt-5`}>
-                {t.cart.checkout}
-              </StoreLink>
+              {/* On holiday: the same link under its ship date, or a button that is off while orders are paused. */}
+              <HolidayCheckoutGate buttonClassName={`${btnPrimaryLg} mt-5`} noteClassName="mt-4">
+                <StoreLink href="/checkout" className={`${btnPrimaryLg} mt-5`}>
+                  {t.cart.checkout}
+                </StoreLink>
+              </HolidayCheckoutGate>
               <StoreLink
                 href="/"
                 className="mt-2 flex min-h-11 items-center justify-center text-sm font-medium text-primary hover:underline"

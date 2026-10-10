@@ -11,6 +11,7 @@ import { useCatalog } from "@/lib/useCatalog";
 import { useDialog, useSheetPresence } from "@/lib/useDialog";
 import { StoreLink } from "@/components/StoreRoute";
 import { CartShippingSummary } from "@/components/checkout/CartShippingSummary";
+import { HolidayCheckoutGate } from "@/components/holiday/HolidayCheckoutGate";
 import { BoxIcon, CartGlyph, CrossIcon } from "./Icons";
 import { QuantityStepper } from "./QuantityStepper";
 import { StoreImage } from "./StoreImage";
@@ -224,9 +225,12 @@ export function CartDrawer() {
           <div className="shrink-0 border-t border-line bg-paper-raised px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-5">
             <CartShippingSummary workspaceId={workspaceId} cart={cart} enabled={isDrawerOpen} />
             <div className="mt-4 grid gap-2">
-              <StoreLink href="/checkout" className={btnPrimaryLg} data-autofocus="">
-                {t.cart.checkout}
-              </StoreLink>
+              {/* On holiday: the same link under its ship date, or a button that is off while orders are paused. */}
+              <HolidayCheckoutGate buttonClassName={btnPrimaryLg}>
+                <StoreLink href="/checkout" className={btnPrimaryLg} data-autofocus="">
+                  {t.cart.checkout}
+                </StoreLink>
+              </HolidayCheckoutGate>
               <button type="button" onClick={closeDrawer} className={btnSecondary}>
                 {t.common.continueShopping}
               </button>

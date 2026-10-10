@@ -7,6 +7,7 @@ import type {
   LegalPolicyKey,
   StorefrontOrderBump,
   ThankYouPageSettings,
+  StorefrontHoliday,
 } from "@store-builder/api-client";
 import {
   DEFAULT_LOCALE,
@@ -45,6 +46,8 @@ export interface StoreInfo {
   country?: string | null;
   /** Self delivery (GET /store/:ws `delivery`); absent from older APIs. */
   delivery?: StoreDelivery | null;
+  /** A store on holiday (GET /store/:ws `holiday`); null or absent while it is open as usual. Read only with HOLIDAY_MODE_ENABLED. */
+  holiday?: StorefrontHoliday | null;
 }
 
 /** How a store that delivers itself takes orders (GET /store/:ws `delivery`). */
