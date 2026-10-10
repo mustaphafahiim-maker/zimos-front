@@ -65,6 +65,14 @@ section[data-zt-section]:has(.zs),
 .zs *::after {
   box-sizing: border-box;
 }
+/* The page's own ground, kept under a name of its own for the waves below. A
+   strong section (and one theme's opening band) re-points --color-paper, for
+   everything inside it, at a see-through tint of its text colour; a wave
+   filled with that all but vanishes. Read on the store's wrapper, the token
+   is still the page's real colour, whatever look or theme the store wears. */
+.brand-theme {
+  --zs-page: var(--color-paper);
+}
 .zs[data-tone="primary"] { --zs-ground: var(--zs-tone-primary); }
 .zs[data-tone="secondary"] { --zs-ground: var(--zs-tone-secondary); }
 .zs[data-tone="cool"] { --zs-ground: var(--zs-tone-cool); }
@@ -383,7 +391,7 @@ section[data-zt-section]:has(.zs),
   height: 100%;
 }
 .zs-hero__wave path {
-  fill: var(--color-paper);
+  fill: var(--zs-page, var(--color-paper));
 }
 .zs-hero:not([data-wave]) .zs-hero__shell {
   padding-bottom: 50px;
@@ -2172,7 +2180,7 @@ section[data-zt-section]:has(.zs),
   pointer-events: none;
 }
 .zs-banner__wave path {
-  fill: var(--color-paper);
+  fill: var(--zs-page, var(--color-paper));
 }
 @media (max-width: 1024px) {
   .zs-banner {

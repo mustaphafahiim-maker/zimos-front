@@ -92,7 +92,19 @@ describe("the wave under a slider or a banner", () => {
   it("is filled with the page's own background colour, not left black", () => {
     // The page is painted with --color-paper (globals.css, `body`), light or dark, and by every store theme.
     assert.match(globals, /body \{\s*background-color: var\(--color-paper\);/);
-    assert.match(rule(sections, ".zs-hero__wave path"), /fill: var\(--color-paper\);/);
-    assert.match(rule(sections, ".zs-banner__wave path"), /fill: var\(--color-paper\);/);
+    assert.match(rule(sections, ".zs-hero__wave path"), /fill: var\(--zs-page, var\(--color-paper\)\);/);
+    assert.match(rule(sections, ".zs-banner__wave path"), /fill: var\(--zs-page, var\(--color-paper\)\);/);
+  });
+
+  it("keeps that colour inside a strong section, where the token itself turns see-through", () => {
+    // layout.ts re-points --color-paper inside a primary or an ink section, and the bold theme does inside its opening band.
+    const layout = read("../components/page-renderer/layout.ts");
+    assert.match(layout, /\[--color-paper:color-mix\(in_srgb,var\(--zs-fg\)_8%,transparent\)\]/);
+    assert.match(read("./store-themes.css"), /\[data-zimos-hero\]:not\(\[data-zt-bg\]\) > div \{[^}]*--color-paper: color-mix\(in srgb, var\(--zs-fg\) 8%, transparent\);/);
+    // So the wave reads the page's colour from the store's wrapper, above any section, where every theme sets it.
+    assert.match(rule(sections, ".brand-theme"), /--zs-page: var\(--color-paper\);/);
+    assert.match(read("./store-themes.css"), /\.brand-theme\[data-store-theme="bold"\] \{[^}]*--color-paper: #ffffff;/);
+    // Nothing else is given the name, so nothing else moves.
+    assert.equal(sections.split("--zs-page").length - 1, 3);
   });
 });
