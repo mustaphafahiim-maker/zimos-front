@@ -56,7 +56,7 @@ import {
   ToggleElement,
   UpsellActionElement,
 } from "./builderElements";
-import { ShowcaseElement } from "./showcase";
+import { ShowcaseElement, isShowcaseElement } from "./showcase";
 import { columnClasses, heroSectionIndex, openingSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
 import { SPAN_CLASS, propsOf, resolveHref, str } from "./props";
 import { btnPrimary } from "@/components/ui";
@@ -74,10 +74,29 @@ function StyledElement({ element, ctx }: { element: PageElement; ctx: Ctx }) {
   const key = styleKey(element);
   if (!key) return <ElementNode element={element} ctx={ctx} />;
   return (
-    <div data-zs={key}>
+    // `data-zs-band`: the box of a full-width band, which keeps the width of its section whatever width the style names (store-sections.css).
+    <div data-zs={key} data-zs-band={isBand(element) ? "" : undefined}>
       <ElementNode element={element} ctx={ctx} />
     </div>
   );
+}
+
+/**
+ * The full-width showcase bands (./showcase): the picture slider, the category
+ * tiles, the product rails… Each lays itself out for the width of the page, so
+ * wherever one was dropped it is given the whole width of its section: its
+ * column takes the row (`data-zt-band`), its own style box does not narrow it
+ * (`data-zs-band`), and its section is never a store theme's hero, whose
+ * heading and column treatment are meant for the builder's own hero and would
+ * otherwise land on the band's text.
+ */
+function isBand(element: PageElement): boolean {
+  return typeof element?.type === "string" && isShowcaseElement(element.type);
+}
+
+function holdsBand(section: PageSection): boolean {
+  const rows = Array.isArray(section.rows) ? section.rows : [];
+  return rows.some((row) => (Array.isArray(row?.columns) ? row.columns : []).some((column) => (Array.isArray(column?.elements) ? column.elements : []).some(isBand)));
 }
 
 /**
@@ -346,6 +365,8 @@ function editableHiddenOn(element: PageElement): string | undefined {
 function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
   const span = Number.isInteger(column.span) ? Math.min(12, Math.max(1, column.span!)) : 12;
   const elements = Array.isArray(column.elements) ? column.elements : [];
+  // A column that holds a full-width band takes the whole row, whatever its span (store-sections.css).
+  const band = elements.some(isBand) ? "" : undefined;
 
   // `data-zt-col` / `data-zt-span` are store-theme hooks (globals.css); they
   // change nothing on a store without a theme.
@@ -357,6 +378,7 @@ function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
         data-zimos-span={span}
         data-zt-col=""
         data-zt-span={span}
+        data-zt-band={band}
       >
         {elements.map((element) => (
           <div
@@ -375,7 +397,7 @@ function ColumnNode({ column, ctx }: { column: PageColumn; ctx: Ctx }) {
   }
 
   return (
-    <div className={columnClasses(settingsOf(column), SPAN_CLASS[span])} data-zt-col="" data-zt-span={span}>
+    <div className={columnClasses(settingsOf(column), SPAN_CLASS[span])} data-zt-col="" data-zt-span={span} data-zt-band={band}>
       {elements.map((element) => (
         <StyledElement key={element.id} element={element} ctx={ctx} />
       ))}
@@ -411,13 +433,15 @@ function SectionNode({ section, ctx, hero = false }: { section: PageSection; ctx
 
   // The hooks a store theme lays the section out by — its spacing, width and,
   // for the page's opening section, its own hero layout. Attributes only: a
-  // store without a theme renders exactly the classes it always did.
+  // store without a theme renders exactly the classes it always did. A section
+  // that holds a full-width band is never the theme's hero: the band lays
+  // itself out (see isBand).
   return (
     <section
       className={outer}
       style={minHeight === null ? undefined : { minHeight }}
       {...sectionHooks(section.settings)}
-      data-zimos-hero={hero ? "" : undefined}
+      data-zimos-hero={hero && !holdsBand(section) ? "" : undefined}
     >
       <div className={inner}>
         {rows.map((row) => (
