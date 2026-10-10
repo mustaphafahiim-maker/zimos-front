@@ -144,7 +144,7 @@ const HERO_MEDIA_VIDEO_FIELDS: ItemSubField[] = HERO_MEDIA_ENABLED
  * none: HERO_DEFAULT_OVERLAY in the storefront's showcase/heroLook.ts. The two
  * apps share no code, so it is written here again; a test holds them equal.
  */
-export const HERO_DEFAULT_VEIL = 55;
+export const HERO_DEFAULT_VEIL = 45;
 
 /**
  * A slide's settings behind the HERO_MEDIA switch (lib/features): the text's

@@ -483,9 +483,9 @@ section[data-zt-section]:has(.zs),
   background: #000;
 }
 /* While the store's HERO_MEDIA switch is on the slider is marked data-legible.
-   The small lines are then drawn at full strength, so the contrast the default
-   veil is chosen for (heroLook.ts) holds for them as it does for the heading,
-   and the heading is larger on a computer. */
+   The small lines are then drawn at full strength: over the default veil,
+   which is a soft one (heroLook.ts), they need all the contrast they can
+   have. And the heading is larger on a computer. */
 .zs-hero[data-legible] .zs-hero__eyebrow,
 .zs-hero[data-legible] .zs-hero__sub {
   opacity: 1;

@@ -43,13 +43,15 @@ export interface HeroLook {
 /** The strongest veil a slide may ask for, in percent: past it the picture is hardly a picture. */
 export const HERO_OVERLAY_MAX = 60;
 /**
- * The veil a slide with text gets while it sets none, in percent. It is the
- * lowest step of five at which the slide's text reaches 4.5 to 1 against any
- * picture, the two worst being dark text over a black picture (5.1) and light
- * text over a white one (4.8). At 50 they are 4.3 and 4.0; with no veil, 1.2
- * and 1.0. heroLook.test.mjs works them out.
+ * The veil a slide with text gets while it sets none, in percent: soft enough
+ * to leave the picture a picture, and the lowest step of five at which the
+ * heading, being large text, reaches 3 to 1 against any picture. The two worst
+ * are dark text over a black picture (3.58) and light text over a white one
+ * (3.35); at 40 both fall just under 3, and with no veil they are 1.2 and 1.0.
+ * The small lines need 4.5 and do not get it over those two pictures: that
+ * takes 55 (5.08 and 4.76). heroLook.test.mjs works them out.
  */
-export const HERO_DEFAULT_OVERLAY = 55;
+export const HERO_DEFAULT_OVERLAY = 45;
 /** Up to this width the hero draws its phone layout (store-sections.css). */
 export const HERO_PHONE_MAX_PX = 749;
 

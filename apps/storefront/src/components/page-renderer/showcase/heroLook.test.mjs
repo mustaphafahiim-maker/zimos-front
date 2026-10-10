@@ -108,7 +108,7 @@ describe("the default veil of a slide with text", () => {
     const look = resolveHeroLook({ side: "start" }, true, true);
     assert.equal(look.desktop.overlay, HERO_DEFAULT_OVERLAY);
     assert.equal(look.phone.overlay, HERO_DEFAULT_OVERLAY);
-    assert.deepEqual(heroLookMarkup(look).overlay, { desktop: 0.55, phone: 0.55 });
+    assert.deepEqual(heroLookMarkup(look).overlay, { desktop: 0.45, phone: 0.45 });
   });
 
   it("is not drawn for a slide without text, which has nothing to keep readable", () => {
@@ -126,8 +126,8 @@ describe("the default veil of a slide with text", () => {
   });
 
   it("leaves a phone its own veil, and the default where the phone sets none", () => {
-    assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 0 }, true, true)).overlay, { desktop: 0.55, phone: 0 });
-    assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 30 }, true, true)).overlay, { desktop: 0.55, phone: 0.3 });
+    assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 0 }, true, true)).overlay, { desktop: 0.45, phone: 0 });
+    assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 30 }, true, true)).overlay, { desktop: 0.45, phone: 0.3 });
     assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlay: 0 }, true, true)).overlay, null);
   });
 
@@ -169,11 +169,11 @@ describe("the default veil's contrast", () => {
   const veiled = (picture, veil, percent) => picture + (veil - picture) * (percent / 100);
   const darkOnBlack = (percent) => contrast(DARK_TEXT, veiled(BLACK, WHITE, percent));
   const lightOnWhite = (percent) => contrast(LIGHT_TEXT, veiled(WHITE, BLACK, percent));
-  const AA = 4.5; // text of any size
-  const AA_LARGE = 3; // the heading: 50px bold on a computer, 30px bold on a phone
+  const AA = 4.5; // text of any size: what the small lines need (17px on a computer, 15px on a phone)
+  const AA_LARGE = 3; // large text: the heading, 50px bold on a computer and 30px bold on a phone
 
   it("is one of the veil's own steps, inside its range", () => {
-    assert.equal(HERO_DEFAULT_OVERLAY, 55);
+    assert.equal(HERO_DEFAULT_OVERLAY, 45);
     assert.equal(HERO_DEFAULT_OVERLAY % 5, 0);
     assert.ok(HERO_DEFAULT_OVERLAY <= HERO_OVERLAY_MAX);
   });
@@ -183,20 +183,28 @@ describe("the default veil's contrast", () => {
     assert.ok(lightOnWhite(0) < 1.1);
   });
 
-  it("keeps dark text readable over a black picture and light text over a white one", () => {
-    assert.ok(darkOnBlack(HERO_DEFAULT_OVERLAY) >= AA, `dark on black: ${darkOnBlack(HERO_DEFAULT_OVERLAY).toFixed(2)}`);
-    assert.ok(lightOnWhite(HERO_DEFAULT_OVERLAY) >= AA, `light on white: ${lightOnWhite(HERO_DEFAULT_OVERLAY).toFixed(2)}`);
-    assert.equal(darkOnBlack(HERO_DEFAULT_OVERLAY).toFixed(2), "5.08");
-    assert.equal(lightOnWhite(HERO_DEFAULT_OVERLAY).toFixed(2), "4.76");
+  it("keeps a dark heading readable over a black picture and a light one over a white picture", () => {
+    assert.ok(darkOnBlack(HERO_DEFAULT_OVERLAY) >= AA_LARGE, `dark on black: ${darkOnBlack(HERO_DEFAULT_OVERLAY).toFixed(2)}`);
+    assert.ok(lightOnWhite(HERO_DEFAULT_OVERLAY) >= AA_LARGE, `light on white: ${lightOnWhite(HERO_DEFAULT_OVERLAY).toFixed(2)}`);
+    assert.equal(darkOnBlack(HERO_DEFAULT_OVERLAY).toFixed(2), "3.58");
+    assert.equal(lightOnWhite(HERO_DEFAULT_OVERLAY).toFixed(2), "3.35");
   });
 
-  it("is the lowest step that does: five less fails for the small lines", () => {
+  it("is the lowest step that does: five less leaves the heading just under 3 to 1", () => {
     const below = HERO_DEFAULT_OVERLAY - 5;
-    assert.ok(darkOnBlack(below) < AA);
-    assert.ok(lightOnWhite(below) < AA);
-    // The heading alone, being large, would still pass there, and down to 45.
-    assert.ok(darkOnBlack(45) >= AA_LARGE && lightOnWhite(45) >= AA_LARGE);
-    assert.ok(darkOnBlack(40) < AA_LARGE && lightOnWhite(40) < AA_LARGE);
+    assert.ok(darkOnBlack(below) < AA_LARGE);
+    assert.ok(lightOnWhite(below) < AA_LARGE);
+    assert.equal(darkOnBlack(below).toFixed(2), "2.97");
+    assert.equal(lightOnWhite(below).toFixed(2), "2.85");
+  });
+
+  it("does not carry the small lines over those two pictures: that takes a veil of 55", () => {
+    // Known and accepted: the default is the softer veil. A slide whose text is the wrong colour for its picture
+    // has a readable heading, and its small lines want the other text colour or a stronger veil.
+    assert.ok(darkOnBlack(HERO_DEFAULT_OVERLAY) < AA && lightOnWhite(HERO_DEFAULT_OVERLAY) < AA);
+    assert.ok(darkOnBlack(50) < AA && lightOnWhite(50) < AA);
+    assert.equal(darkOnBlack(55).toFixed(2), "5.08");
+    assert.equal(lightOnWhite(55).toFixed(2), "4.76");
   });
 
   it("changes nothing where the text already suits the picture", () => {
@@ -208,8 +216,8 @@ describe("the default veil's contrast", () => {
   it("lifts a mid-grey picture, where neither colour passed, well clear", () => {
     const GREY = 128;
     assert.ok(contrast(DARK_TEXT, GREY) < AA && contrast(LIGHT_TEXT, GREY) < AA);
-    assert.ok(contrast(DARK_TEXT, veiled(GREY, WHITE, HERO_DEFAULT_OVERLAY)) > 9);
-    assert.ok(contrast(LIGHT_TEXT, veiled(GREY, BLACK, HERO_DEFAULT_OVERLAY)) > 11);
+    assert.ok(contrast(DARK_TEXT, veiled(GREY, WHITE, HERO_DEFAULT_OVERLAY)) > 8.5);
+    assert.ok(contrast(LIGHT_TEXT, veiled(GREY, BLACK, HERO_DEFAULT_OVERLAY)) > 9);
   });
 });
 

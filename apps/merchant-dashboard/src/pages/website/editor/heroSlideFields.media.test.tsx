@@ -110,21 +110,21 @@ describe("a slide of the picture slider, with the hero media switch on", () => {
     const match = /export const HERO_DEFAULT_OVERLAY = (\d+);/.exec(storefront);
     expect(match).not.toBeNull();
     expect(HERO_DEFAULT_VEIL).toBe(Number(match?.[1]));
-    expect(HERO_DEFAULT_VEIL).toBe(55);
+    expect(HERO_DEFAULT_VEIL).toBe(45);
   });
 
   it("shows that veil while the field is empty, and says what empty and 0 each mean", () => {
     open();
     const veil = screen.getByLabelText("Veil over the picture (%)");
     expect(veil).toHaveValue(null);
-    expect(veil).toHaveAttribute("placeholder", "55");
-    expect(screen.getByText(/Left empty, a slide with text gets 55 and a slide without text none\. 0 leaves the picture as it is\./)).toBeInTheDocument();
+    expect(veil).toHaveAttribute("placeholder", "45");
+    expect(screen.getByText(/Left empty, a slide with text gets 45 and a slide without text none\. 0 leaves the picture as it is\./)).toBeInTheDocument();
   });
 
   it("starts the veil's steppers from the store's own veil, and stores 0 as a choice", async () => {
     const { user, last } = open();
     await user.click(screen.getByRole("button", { name: "Decrease Veil over the picture (%)" }));
-    expect(last()).toEqual({ image: PICTURE, overlay: 50 });
+    expect(last()).toEqual({ image: PICTURE, overlay: 40 });
 
     const veil = screen.getByLabelText("Veil over the picture (%)");
     await user.clear(veil);
@@ -157,7 +157,7 @@ describe("a slide of the picture slider, with the hero media switch on", () => {
     expect(screen.getByLabelText("ارتفاع النص على الموبايل")).toBeInTheDocument();
     expect(screen.getByLabelText("طبقة فوق الصورة (%)")).toBeInTheDocument();
     expect(screen.getByLabelText("الطبقة على الموبايل (%)")).toBeInTheDocument();
-    expect(screen.getByText(/إذا تُرك فارغًا تأخذ الشريحة التي بها نص 55، والشريحة بلا نص لا تأخذ شيئًا\. الصفر يترك الصورة كما هي\./)).toBeInTheDocument();
+    expect(screen.getByText(/إذا تُرك فارغًا تأخذ الشريحة التي بها نص 45، والشريحة بلا نص لا تأخذ شيئًا\. الصفر يترك الصورة كما هي\./)).toBeInTheDocument();
   });
 });
 
