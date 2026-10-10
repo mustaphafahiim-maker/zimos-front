@@ -59,12 +59,18 @@ describe("the picture slider's size", () => {
     assert.match(rule(tablet, ".zs-hero"), /height: var\(--zs-hero-h-tablet, 520px\);/);
   });
 
-  it("is a box 4 wide to 5 tall on a phone, or the height the slider names for a phone", () => {
-    const phone = sections.slice(sections.indexOf("@media (max-width: 749px) {\n  .zs-hero {"));
-    assert.match(rule(phone, ".zs-hero"), /height: auto;\s*aspect-ratio: 4 \/ 5;/);
+  it("is a box 4 wide to 5 tall on a phone and no taller than 560px, or the height the slider names for a phone", () => {
+    const from = sections.indexOf("@media (max-width: 749px) {\n  /* 4 wide to 5 tall");
+    assert.notEqual(from, -1, "the slider's phone block was not found");
+    const phone = sections.slice(from);
+    assert.match(rule(phone, ".zs-hero"), /height: auto;\s*aspect-ratio: 4 \/ 5;\s*max-height: 560px;/);
+    // The limit is on the height alone: the band's width is set, so the ratio cannot narrow it.
+    assert.match(rule(sections, ".zs"), /width: 100%;/);
     const own = rule(phone, ".zs-hero[data-phone-height]");
     assert.match(own, /height: var\(--zs-hero-h-mobile\);/);
     assert.match(own, /aspect-ratio: auto;/);
+    // A height the slider names may be anything up to 900: the 560 limit is the ratio's, not its.
+    assert.match(own, /max-height: none;/);
   });
 
   it("fills that box with the picture, cropped rather than stretched or letting it grow", () => {

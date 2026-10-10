@@ -166,11 +166,13 @@ describe("the slider's height on a phone", () => {
   });
 
   it("is that height on a phone-wide screen instead of the 4:5 box, and only for a slider that names one", () => {
-    const from = css.indexOf("@media (max-width: 749px) {\n  .zs-hero {");
+    const from = css.indexOf("@media (max-width: 749px) {\n  /* 4 wide to 5 tall");
     expect(from).toBeGreaterThan(0);
     const phone = css.slice(from, css.indexOf("\n}\n", from));
-    expect(phone).toMatch(/\.zs-hero \{\s*height: auto;\s*aspect-ratio: 4 \/ 5;\s*\}/);
-    expect(phone).toMatch(/\.zs-hero\[data-phone-height\] \{\s*height: var\(--zs-hero-h-mobile\);\s*aspect-ratio: auto;\s*\}/);
+    // Unset: the ratio, held to 560px so the box stops growing on a wide phone.
+    expect(phone).toMatch(/\.zs-hero \{\s*height: auto;\s*aspect-ratio: 4 \/ 5;\s*max-height: 560px;\s*\}/);
+    // Set: that height and nothing else, the ratio and its limit both dropped.
+    expect(phone).toMatch(/\.zs-hero\[data-phone-height\] \{\s*height: var\(--zs-hero-h-mobile\);\s*aspect-ratio: auto;\s*max-height: none;\s*\}/);
     // After the 4:5 rule, which it replaces.
     expect(phone.indexOf(".zs-hero[data-phone-height]")).toBeGreaterThan(phone.indexOf("aspect-ratio: 4 / 5;"));
     // Nowhere else: a computer and a tablet never read the phone's height.

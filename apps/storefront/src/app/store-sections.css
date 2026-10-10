@@ -403,15 +403,21 @@ section[data-zt-section]:has(.zs),
   }
 }
 @media (max-width: 749px) {
+  /* 4 wide to 5 tall, and no taller than 560px: the box stops growing with the
+     screen at 448px wide. Left to the ratio alone it is 936px at 749px, more
+     than such a screen is tall. Its width is set (`.zs`), so the limit holds
+     the height and leaves the width alone. */
   .zs-hero {
     height: auto;
     aspect-ratio: 4 / 5;
+    max-height: 560px;
   }
   /* A slider that names its own height on a phone (heroLook.ts) is that tall
      instead, whatever the screen's width. */
   .zs-hero[data-phone-height] {
     height: var(--zs-hero-h-mobile);
     aspect-ratio: auto;
+    max-height: none;
   }
   .zs-hero__media {
     overflow: hidden;

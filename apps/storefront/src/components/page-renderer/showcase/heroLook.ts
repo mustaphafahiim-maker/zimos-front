@@ -143,9 +143,9 @@ export const HERO_PHONE_HEIGHT_MAX = 900;
 
 /**
  * The slider's own height on a phone, in px (its `heightMobile` prop), or null
- * while it names none. Null keeps the phone's box as it always was, 4 wide to
- * 5 tall; a height replaces that box (store-sections.css). Zero and below are
- * no height at all.
+ * while it names none. Null keeps the phone's own box, 4 wide to 5 tall and
+ * no taller than 560px; a height replaces that box (store-sections.css). Zero
+ * and below are no height at all.
  */
 export function heroPhoneHeight(value: unknown): number | null {
   const n = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : NaN;

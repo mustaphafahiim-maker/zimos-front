@@ -42,7 +42,7 @@ describe("the picture slider's height on a phone", () => {
     const { user, rerender } = renderWithProviders(<ElementField elementType="hero_slider" spec={heightField("heightMobile")} props={{ height: 620 }} onChange={onChange} />);
     const input = screen.getByLabelText("Height on a phone (px)");
     expect(input).toHaveValue(null);
-    expect(screen.getByText("Leave empty for the slider's usual shape on a phone: 4 wide to 5 tall.")).toBeInTheDocument();
+    expect(screen.getByText("Leave empty for the slider's usual shape on a phone: 4 wide to 5 tall, and no taller than 560px.")).toBeInTheDocument();
 
     await user.type(input, "320");
     expect(onChange).toHaveBeenLastCalledWith("heightMobile", 320);
@@ -74,6 +74,6 @@ describe("the picture slider's height on a phone", () => {
         <ElementField elementType="hero_slider" spec={heightField("heightMobile")} props={{}} onChange={() => undefined} />
       </EditorLocaleContext.Provider>
     );
-    expect(screen.getByText("اتركه فارغًا ليأخذ السلايدر شكله المعتاد على الموبايل: ٤ عرضًا إلى ٥ ارتفاعًا.")).toBeInTheDocument();
+    expect(screen.getByText("اتركه فارغًا ليأخذ السلايدر شكله المعتاد على الموبايل: ٤ عرضًا إلى ٥ ارتفاعًا، وبحد أقصى ٥٦٠ بكسل.")).toBeInTheDocument();
   });
 });
