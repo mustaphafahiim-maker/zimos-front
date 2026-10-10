@@ -167,6 +167,12 @@ export * from "./endpoints/marketingUnsubscribe";
 // The opt-in step's sign-up (funnels/funnelOptIn.js).
 export * from "./endpoints/funnelOptIn";
 export * from "./endpoints/activityLog";
+// Returns a shopper asks for, exchanges (STORE_FEATURES shopper_returns,
+// return_exchanges), a parcel that came back and tracking for manual waybills
+// (tracking_provider).
+export * from "./endpoints/shopperReturns";
+export * from "./endpoints/returnHandling";
+export * from "./endpoints/shipmentTracking";
 // What rewards a returning customer (STORE_FEATURES loyalty, vip_tiers,
 // store_credit, customer_referrals): points, levels, credit and invites.
 export * from "./endpoints/loyalty";
