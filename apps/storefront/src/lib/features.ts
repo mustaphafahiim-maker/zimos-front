@@ -40,3 +40,9 @@ export const PURCHASE_LIMITS_ENABLED = process.env.NEXT_PUBLIC_PURCHASE_LIMITS_E
 
 /** Gift wrap and a gift message at checkout. */
 export const GIFT_OPTIONS_ENABLED = process.env.NEXT_PUBLIC_GIFT_OPTIONS_ENABLED === "true";
+
+/** Paying part of an order with a gift card (cash on delivery only), and the balance page. */
+export const GIFT_CARDS_ENABLED = process.env.NEXT_PUBLIC_GIFT_CARDS_ENABLED === "true";
+
+/** The store blog: the posts list and each post's page. */
+export const BLOG_ENABLED = process.env.NEXT_PUBLIC_BLOG_ENABLED === "true";
