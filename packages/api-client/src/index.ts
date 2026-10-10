@@ -167,6 +167,17 @@ export * from "./endpoints/marketingUnsubscribe";
 // The opt-in step's sign-up (funnels/funnelOptIn.js).
 export * from "./endpoints/funnelOptIn";
 export * from "./endpoints/activityLog";
+// Store features that ship behind the API's STORE_FEATURES list. The dashboard
+// and the storefront show none of one unless its own switch is on.
+export * from "./endpoints/sizeCharts";
+export * from "./endpoints/productQuestions";
+export * from "./endpoints/productSpecs";
+export * from "./endpoints/stockAlerts";
+export * from "./endpoints/preorders";
+export * from "./endpoints/holidayMode";
+export * from "./endpoints/urlRedirects";
+export * from "./endpoints/purchaseLimits";
+export * from "./endpoints/giftOptions";
 // Sending a store's other domains to its primary one (domains/domainSettings.js).
 export * from "./endpoints/domainRedirect";
 // Two-step sign-in: the code step, its settings, backup codes, the console reset.
