@@ -450,7 +450,11 @@ export function DashboardLayout() {
   return (
     <div className="glass-app flex min-h-screen" data-focus={focus ? "on" : undefined}>
       <KeyboardShortcuts />
-      <aside className="zimos-glass zimos-glass-panel glass-nav sticky top-3 my-3 ms-3 hidden h-[calc(100dvh-1.5rem)] w-[264px] shrink-0 md:flex md:flex-col">
+      {/* The side menu's frame as the theme draws it (theme/glass/menu.css): its hooks and its width. */}
+      <aside
+        data-slot="side-menu"
+        className="zimos-glass zimos-glass-panel glass-nav zimos-menu sticky top-3 my-3 ms-3 hidden h-[calc(100dvh-1.5rem)] w-[248px] shrink-0 md:flex md:flex-col"
+      >
         <SidebarContent />
       </aside>
 
@@ -479,7 +483,10 @@ export function DashboardLayout() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="zimos-glass glass-nav glass-topbar sticky top-0 z-30 flex h-14 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-5 md:top-3 md:mx-3 md:mt-3">
+        <header
+          data-slot="toolbar"
+          className="zimos-glass glass-nav glass-topbar zimos-toolbar sticky top-0 z-30 flex h-14 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-5 md:top-3 md:mx-3 md:mt-3"
+        >
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
