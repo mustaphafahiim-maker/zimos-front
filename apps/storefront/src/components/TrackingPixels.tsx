@@ -5,6 +5,7 @@ import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { track } from "@/lib/track";
 import { registerPixels, type PurchaseTiming, type StorePixel } from "@/lib/adPixels";
+import { AdPlatformTags } from "./AdPlatformTags";
 
 /**
  * Loads the tracking pixels the merchant configured (dashboard → Marketing →
@@ -32,6 +33,7 @@ export function TrackingPixels({ pixels, purchaseTiming }: { pixels: StorePixel[
   const google = of("google");
   const gtm = of("gtm");
   const clarity = of("clarity");
+  const pinterest = of("pinterest");
 
   const pathname = usePathname();
   const search = useSearchParams();
@@ -50,6 +52,17 @@ export function TrackingPixels({ pixels, purchaseTiming }: { pixels: StorePixel[
 
   return (
     <>
+      {/* X, Taboola, Outbrain, Kwai, Reddit and Microsoft Ads: loaded from lib/adPlatformTags.ts. */}
+      <AdPlatformTags pixels={pixels} />
+      {pinterest.length > 0 && (
+        // Like Snap, a Pinterest event goes to every loaded tag: the store-wide
+        // ones load here, scoped ones on first match (lib/adPixels.ts).
+        <Script id="zimos-pinterest-tag" strategy="afterInteractive">
+          {`!function(e){if(!window.pintrk){window.pintrk=function(){window.pintrk.queue.push(Array.prototype.slice.call(arguments))};var n=window.pintrk;n.queue=[],n.version="3.0";var t=document.createElement("script");t.async=!0,t.src=e;var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r)}}("https://s.pinimg.com/ct/core.js");${storeWide(pinterest)
+            .map((p) => `pintrk('load','${p.pixelId}');`)
+            .join("")}${storeWide(pinterest).length ? "pintrk('page');" : ""}`}
+        </Script>
+      )}
       {meta.length > 0 && (
         <Script id="zimos-meta-pixel" strategy="afterInteractive">
           {`!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');${meta

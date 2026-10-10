@@ -61,3 +61,6 @@ export const CUSTOMER_REFERRALS_ENABLED = process.env.NEXT_PUBLIC_CUSTOMER_REFER
 
 /** A shopper asks for a return (or an exchange) from the tracking page and from their account's order. */
 export const SHOPPER_RETURNS_ENABLED = process.env.NEXT_PUBLIC_SHOPPER_RETURNS_ENABLED === "true";
+
+/** The extra ad platforms' pixels: Pinterest, X, Taboola, Outbrain, Kwai, Reddit and Microsoft Ads. */
+export const AD_PIXELS_ENABLED = process.env.NEXT_PUBLIC_AD_PIXELS_ENABLED === "true";

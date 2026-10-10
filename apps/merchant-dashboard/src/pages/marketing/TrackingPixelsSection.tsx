@@ -1,3 +1,18 @@
+import {
+  AD_PLATFORM_PIXEL_IDS,
+  PINTEREST_AD_ACCOUNT_ID,
+  X_CAPI_TOKEN,
+  isAdPlatformPixel,
+  pinterestAdAccountIdOf,
+  pinterestPixelConfig,
+  xEventIdProblems,
+  xEventIdsOf,
+  xPixelConfig,
+  type XPixelEvent,
+} from "@store-builder/api-client";
+import { AD_PIXELS_ENABLED } from "@/lib/features";
+import { AdPlatformCapiFields, BrowserOnlyPixelNote, XEventIdsField, isServerAdPlatform, useAdPlatformIdField } from "./AdPlatformPixelFields";
+import { PinterestCapiFields } from "./PinterestCapiFields";
 import { useMemo, useState, type FormEvent } from "react";
 import { Pencil, Plus, Radio, Send, Trash2 } from "lucide-react";
 import { Alert, Button, Card } from "@store-builder/ui";
@@ -41,7 +56,13 @@ const PLATFORM_META: Record<TrackingPixelPlatform, { name: string; pattern: RegE
   google: { name: "Google (GA4 / Ads)", pattern: /^(G|AW|GT)-[A-Z0-9]{4,20}$/, example: "G-ABC123XYZ" },
   gtm: { name: "Google Tag Manager", pattern: /^GTM-[A-Z0-9]{4,12}$/, example: "GTM-ABC1234" },
   clarity: { name: "Microsoft Clarity", pattern: /^[a-z0-9]{6,20}$/, example: "abcd1234ef" },
+  pinterest: { name: "Pinterest", pattern: /^\d{10,16}$/, example: "2612345678901" },
+  // X, Taboola, Outbrain, Kwai, Reddit, Microsoft Ads.
+  ...AD_PLATFORM_PIXEL_IDS,
 };
+
+/** The platforms behind the API's extra_pixels: offered here only while their switch is on (lib/features). */
+const isExtraPlatform = (platform: TrackingPixelPlatform) => platform === "pinterest" || isAdPlatformPixel(platform);
 
 const STRINGS = {
   en: {
@@ -185,6 +206,10 @@ interface FormState {
   capiToken: string;
   testEventCode: string;
   adsConversionLabel: string;
+  /** Pinterest's Conversions API needs the ad account (config.adAccountId). */
+  adAccountId: string;
+  /** X's event ID per standard event (config.eventIds). */
+  xEventIds: Record<XPixelEvent, string>;
   scopeType: TrackingPixelScopeType;
   scopeIds: string[];
 }
@@ -197,6 +222,8 @@ const emptyForm = (): FormState => ({
   capiToken: "",
   testEventCode: "",
   adsConversionLabel: "",
+  adAccountId: "",
+  xEventIds: xEventIdsOf(null),
   scopeType: "all",
   scopeIds: [],
 });
@@ -209,6 +236,8 @@ const formOf = (p: TrackingPixelDto): FormState => ({
   capiToken: "",
   testEventCode: p.testEventCode ?? "",
   adsConversionLabel: p.config.adsConversionLabel ?? "",
+  adAccountId: pinterestAdAccountIdOf(p),
+  xEventIds: xEventIdsOf(p),
   scopeType: p.scope.type,
   scopeIds: p.scope.ids,
 });
@@ -429,6 +458,23 @@ function PixelDialog({
   const tokenSaved = Boolean(pixel?.capiTokenSet);
   const tokenMissing = form.capiEnabled && capiPossible && !tokenSaved && form.capiToken.trim() === "";
   const scopeMissing = form.scopeType !== "all" && form.scopeIds.length === 0;
+  // X, Reddit and Microsoft Ads: X's token is four keys joined, and its event IDs have one shape.
+  const idField = useAdPlatformIdField(form.platform);
+  const xTokenBad = form.platform === "x" && form.capiEnabled && capiPossible && form.capiToken !== "" && !X_CAPI_TOKEN.test(form.capiToken);
+  const adPlatformBad = xTokenBad || (form.platform === "x" && xEventIdProblems(form.xEventIds).length > 0);
+  const pinterest = form.platform === "pinterest";
+  const adAccount = form.adAccountId.trim();
+  // Checked here before saving; the server's own refusal (config.adAccountId) shows the same words.
+  const adAccountBad: "missing" | "invalid" | null = !pinterest
+    ? null
+    : adAccount !== "" && !PINTEREST_AD_ACCOUNT_ID.test(adAccount)
+      ? "invalid"
+      : form.capiEnabled && capiPossible && adAccount === ""
+        ? "missing"
+        : null;
+  const adAccountProblem = adAccountBad ?? (fieldErrors["config.adAccountId"] ? "missing" : null);
+  // The extra platforms are offered only while their switch is on; a pixel already on one keeps its own.
+  const offered = platforms.filter((item) => AD_PIXELS_ENABLED || !isExtraPlatform(item.name) || item.name === form.platform);
 
   // The scope lists load only when that scope is picked.
   const funnels = useAsync(
@@ -448,18 +494,26 @@ function PixelDialog({
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (id === "" || idBad || tokenMissing || scopeMissing) return;
+    if (id === "" || idBad || tokenMissing || scopeMissing || adAccountBad || adPlatformBad) return;
     setSaving(true);
     setFormError(null);
     setFieldErrors({});
-    const token = form.capiToken.trim();
+    // X's four keys are only sent whole: a half-typed set left behind a switched-off section is dropped.
+    const token = form.platform === "x" && !X_CAPI_TOKEN.test(form.capiToken) ? "" : form.capiToken.trim();
     const shared = {
       pixelId: id,
       label: form.label.trim() || null,
       capiEnabled: form.capiEnabled && capiPossible,
       testEventCode: info?.testEventCode ? form.testEventCode.trim() || null : undefined,
       scope: { type: form.scopeType, ids: form.scopeType === "all" ? [] : form.scopeIds },
-      config: form.platform === "google" ? { adsConversionLabel: isAdsId ? form.adsConversionLabel.trim() || null : null } : undefined,
+      config:
+        form.platform === "google"
+          ? { adsConversionLabel: isAdsId ? form.adsConversionLabel.trim() || null : null }
+          : pinterest
+            ? pinterestPixelConfig(form.adAccountId)
+            : form.platform === "x"
+              ? xPixelConfig(form.xEventIds)
+              : undefined,
       ...(token ? { capiToken: token } : {}),
     };
     try {
@@ -484,7 +538,11 @@ function PixelDialog({
           <Button variant="outline" onClick={onClose} disabled={saving}>
             {t.cancel}
           </Button>
-          <Button type="submit" form="tracking-pixel-form" disabled={saving || id === "" || idBad || tokenMissing || scopeMissing}>
+          <Button
+            type="submit"
+            form="tracking-pixel-form"
+            disabled={saving || id === "" || idBad || tokenMissing || scopeMissing || Boolean(adAccountBad) || adPlatformBad}
+          >
             {saving ? t.saving : t.save}
           </Button>
         </>
@@ -501,7 +559,7 @@ function PixelDialog({
               disabled={Boolean(pixel)}
               onChange={(e) => setForm((prev) => ({ ...prev, platform: e.target.value as TrackingPixelPlatform, capiEnabled: false }))}
             >
-              {platforms.map((p) => (
+              {offered.map((p) => (
                 <option key={p.name} value={p.name}>
                   {PLATFORM_META[p.name]?.name ?? p.name}
                 </option>
@@ -517,11 +575,16 @@ function PixelDialog({
           autoComplete="off"
           value={form.pixelId}
           placeholder={meta.example}
+          hint={idField?.hint}
           onChange={(e) => set("pixelId", e.target.value)}
           error={idBad ? t.invalid : fieldErrors.pixelId}
         />
 
         <TextField label={t.label} value={form.label} maxLength={120} hint={t.labelHint} onChange={(e) => set("label", e.target.value)} />
+
+        {form.platform === "x" && (
+          <XEventIdsField pixelId={id} value={form.xEventIds} onChange={(next) => set("xEventIds", next)} serverErrors={fieldErrors} />
+        )}
 
         {isAdsId && (
           <TextField
@@ -535,7 +598,48 @@ function PixelDialog({
           />
         )}
 
-        {capiPossible && (
+        {capiPossible && pinterest && (
+          <PinterestCapiFields
+            enabled={form.capiEnabled}
+            onEnabledChange={(next) => set("capiEnabled", next)}
+            adAccountId={form.adAccountId}
+            onAdAccountIdChange={(next) => {
+              set("adAccountId", next);
+              setFieldErrors((prev) => ({ ...prev, "config.adAccountId": "" }));
+            }}
+            adAccountProblem={adAccountProblem}
+            token={form.capiToken}
+            onTokenChange={(next) => set("capiToken", next)}
+            tokenMissing={tokenMissing}
+            tokenError={fieldErrors.capiToken}
+            tokenMask={tokenSaved ? (pixel?.capiTokenMask ?? "••••") : null}
+            testEventCode={form.testEventCode}
+            onTestEventCodeChange={(next) => set("testEventCode", next)}
+            warning={t.capiWarning}
+            serverMode={info?.serverMode}
+          />
+        )}
+        <BrowserOnlyPixelNote platform={form.platform} hasServerApi={Boolean(info?.capi)} />
+        {capiPossible && isServerAdPlatform(form.platform) && (
+          <AdPlatformCapiFields
+            key={form.platform}
+            platform={form.platform}
+            serverMode={info?.serverMode}
+            enabled={form.capiEnabled}
+            onEnabledChange={(next) => set("capiEnabled", next)}
+            token={form.capiToken}
+            onTokenChange={(next) => {
+              set("capiToken", next);
+              setFieldErrors((prev) => ({ ...prev, capiToken: "" }));
+            }}
+            tokenProblem={tokenMissing ? "missing" : xTokenBad || fieldErrors.capiToken ? "invalid" : null}
+            tokenMask={tokenSaved ? (pixel?.capiTokenMask ?? "••••") : null}
+            testEventCode={form.testEventCode}
+            onTestEventCodeChange={(next) => set("testEventCode", next)}
+            warning={t.capiWarning}
+          />
+        )}
+        {capiPossible && !pinterest && !isServerAdPlatform(form.platform) && (
           <div className="space-y-3 rounded-[0.5rem] border border-line p-3">
             <label className="flex cursor-pointer items-start gap-3">
               <input
