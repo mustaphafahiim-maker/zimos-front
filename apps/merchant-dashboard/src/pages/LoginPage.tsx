@@ -7,7 +7,9 @@ import { apiBaseUrl, apiClient } from "@/lib/apiClient";
 import { AuthBackdrop } from "@/components/AuthBackdrop";
 import { VerifyCodePanel } from "@/components/VerifyCodePanel";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
-import type { VerificationChallenge } from "@store-builder/api-client";
+import { TwoFactorRequiredError, type TwoFactorChallenge, type VerificationChallenge } from "@store-builder/api-client";
+import { TwoFactorStep } from "@/components/TwoFactorStep";
+import { TWO_FACTOR_ENABLED } from "@/lib/features";
 
 /** Brand-coloured Google "G" — an inline SVG so we don't pull in an icon set. */
 function GoogleIcon() {
@@ -89,6 +91,9 @@ export function LoginPage() {
   // An account that still has to confirm its sign-up code gets the code
   // screen here instead of being signed in.
   const [challenge, setChallenge] = useState<VerificationChallenge | null>(null);
+  // An account with two-step sign-in, or a browser new to it, is asked for a
+  // code before it is signed in (TWO_FACTOR_ENABLED).
+  const [twoFactor, setTwoFactor] = useState<TwoFactorChallenge | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: Location })?.from?.pathname ?? "/";
@@ -125,6 +130,10 @@ export function LoginPage() {
       }
       navigate(from, { replace: true });
     } catch (err) {
+      if (TWO_FACTOR_ENABLED && err instanceof TwoFactorRequiredError) {
+        setTwoFactor(err.challenge);
+        return;
+      }
       if (err instanceof ApiError) {
         setError(err.status === 401 ? t.wrong : err.message);
         if (err.code === "ACCOUNT_INACTIVE") setNeedsVerification(true);
@@ -149,6 +158,29 @@ export function LoginPage() {
     } finally {
       setResending(false);
     }
+  }
+
+  if (twoFactor) {
+    return (
+      <div className="auth-glass">
+        <AuthBackdrop />
+        <div className="auth-glass-stage">
+          <div className="w-full max-w-sm">
+            <TwoFactorStep
+              challenge={twoFactor}
+              onBack={() => {
+                setTwoFactor(null);
+                setPassword("");
+              }}
+              onVerified={async () => {
+                await refreshUser();
+                navigate(from, { replace: true });
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (challenge) {

@@ -4,6 +4,10 @@ import { Spinner } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
 import { BrandPanel } from "@/components/BrandPanel";
+import { AuthBackdrop } from "@/components/AuthBackdrop";
+import { TwoFactorStep } from "@/components/TwoFactorStep";
+import { TWO_FACTOR_ENABLED } from "@/lib/features";
+import { googleCallbackChallenge } from "./auth/googleCallbackChallenge";
 
 /**
  * Landing page for the Google OAuth flow. After Google approves, the backend
@@ -22,6 +26,9 @@ export function AuthCallbackPage() {
   // directly) — either way the sign-in didn't go through.
   const hasTokens = Boolean(accessToken && refreshToken);
 
+  // An account with two-step sign-in is not signed in yet: it finishes with its code.
+  const [challenge] = useState(() => (TWO_FACTOR_ENABLED ? googleCallbackChallenge(searchParams) : null));
+
   const [refreshFailed, setRefreshFailed] = useState(false);
   const handled = useRef(false);
 
@@ -36,6 +43,26 @@ export function AuthCallbackPage() {
   }, [accessToken, refreshToken, navigate, refreshUser]);
 
   const failed = !hasTokens || refreshFailed;
+
+  if (challenge && !hasTokens) {
+    return (
+      <div className="auth-glass">
+        <AuthBackdrop />
+        <div className="auth-glass-stage">
+          <div className="w-full max-w-sm">
+            <TwoFactorStep
+              challenge={challenge}
+              onBack={() => navigate("/login", { replace: true })}
+              onVerified={async () => {
+                await refreshUser();
+                navigate("/workspaces", { replace: true });
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen">
