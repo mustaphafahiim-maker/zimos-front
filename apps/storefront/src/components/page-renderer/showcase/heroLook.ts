@@ -7,14 +7,17 @@
  *
  *   side, vertical            the computer's place — what a slide always had
  *   sideMobile, verticalMobile  the phone's place; unset, the computer's
- *   overlay                   the veil in percent, 0 to 60; unset, none
+ *   overlay                   the veil in percent, 0 to 60; unset, the default
+ *                             veil for a slide with text and none without
  *   overlayMobile             the phone's veil; unset, the computer's
  *   focusX, focusY            the part of the picture kept in view when its
  *                             box crops it; unset, the centre
  *
- * A slide saved before these existed sets none of them: it resolves to the
- * centre and the bottom with no veil on both, which is exactly what the store
- * drew, and the markup helpers then add nothing to its markup.
+ * A slide saved before these existed sets none of them: with the switch off it
+ * resolves to the centre and the bottom with no veil on both, which is exactly
+ * what the store drew, and the markup helpers then add nothing to its markup.
+ * With the switch on, the one thing that changes for such a slide is the
+ * default veil, when it has text.
  *
  * No imports on purpose: the node test loads this file as it is.
  */
@@ -39,6 +42,14 @@ export interface HeroLook {
 
 /** The strongest veil a slide may ask for, in percent: past it the picture is hardly a picture. */
 export const HERO_OVERLAY_MAX = 60;
+/**
+ * The veil a slide with text gets while it sets none, in percent. It is the
+ * lowest step of five at which the slide's text reaches 4.5 to 1 against any
+ * picture, the two worst being dark text over a black picture (5.1) and light
+ * text over a white one (4.8). At 50 they are 4.3 and 4.0; with no veil, 1.2
+ * and 1.0. heroLook.test.mjs works them out.
+ */
+export const HERO_DEFAULT_OVERLAY = 55;
 /** Up to this width the hero draws its phone layout (store-sections.css). */
 export const HERO_PHONE_MAX_PX = 749;
 
@@ -49,6 +60,11 @@ const FOCUS_Y: readonly HeroFocusY[] = ["top", "center", "bottom"];
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | null {
   return typeof value === "string" && (allowed as readonly string[]).includes(value) ? (value as T) : null;
+}
+
+/** Whether any of a slide's lines of text (the small line, the heading, the line under it) shows a shopper something. */
+export function heroHasText(...lines: string[]): boolean {
+  return lines.some((line) => line.trim() !== "");
 }
 
 /** A stored veil: a number (or a number typed as text), rounded and held inside 0–60. Null for anything else: not set. */
@@ -62,12 +78,16 @@ function overlayOf(value: unknown): number | null {
  * A slide's look on both devices. `enabled` is the store's HERO_MEDIA switch:
  * off, the phone's own values and the veil are not read at all and the slide
  * resolves as it did before they existed.
+ *
+ * `hasText` says the slide shows a small line, a heading or a line under it.
+ * Such a slide gets the default veil while it sets none of its own; a veil it
+ * does set, 0 included, is the one drawn.
  */
-export function resolveHeroLook(slide: Record<string, unknown>, enabled: boolean): HeroLook {
+export function resolveHeroLook(slide: Record<string, unknown>, enabled: boolean, hasText = false): HeroLook {
   const desktop: HeroPlacement = {
     side: oneOf(slide.side, SIDES) ?? "center",
     vertical: oneOf(slide.vertical, VERTICALS) ?? "bottom",
-    overlay: enabled ? (overlayOf(slide.overlay) ?? 0) : 0,
+    overlay: enabled ? (overlayOf(slide.overlay) ?? (hasText ? HERO_DEFAULT_OVERLAY : 0)) : 0,
   };
   if (!enabled) return { desktop, phone: { ...desktop } };
   return {

@@ -78,6 +78,16 @@ describe("the picture slider's size", () => {
   });
 });
 
+describe("the colours the slider's text is read against", () => {
+  // The four the default veil's contrast is worked out from (showcase/heroLook.test.mjs).
+  it("are dark text over a white veil, and white text over a black one", () => {
+    assert.match(rule(sections, ".zs-hero__content"), /color: #1c1c1c;/);
+    assert.match(rule(sections, '.zs-hero__slide[data-text="light"] .zs-hero__content'), /color: #fff;/);
+    assert.match(rule(sections, ".zs-hero__overlay"), /background: #fff;/);
+    assert.match(rule(sections, '.zs-hero__slide[data-text="light"] .zs-hero__overlay'), /background: #000;/);
+  });
+});
+
 describe("the wave under a slider or a banner", () => {
   it("is filled with the page's own background colour, not left black", () => {
     // The page is painted with --color-paper (globals.css, `body`), light or dark, and by every store theme.

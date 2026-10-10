@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
-import { heroFocusMarkup, heroLookMarkup, resolveHeroFocus, resolveHeroLook } from "./heroLook";
+import { HERO_DEFAULT_OVERLAY, heroFocusMarkup, heroHasText, heroLookMarkup, resolveHeroFocus, resolveHeroLook } from "./heroLook";
 import { HeroSlider, type HeroSlide } from "./HeroSlider";
 
 // Read from disk: this runner hands back an empty string for an imported stylesheet.
@@ -22,16 +22,16 @@ afterEach(cleanup);
 
 const PICTURE = "https://cdn.zimos.test/hero.jpg";
 
-/** A slide as showcase/index.tsx hands it over, from the props a merchant saved. */
-function slideOf(props: Record<string, unknown>, enabled: boolean): HeroSlide {
-  const look = resolveHeroLook(props, enabled);
+/** A slide as showcase/index.tsx hands it over, from the props a merchant saved. `heading` "" is a slide with no text. */
+function slideOf(props: Record<string, unknown>, enabled: boolean, heading = "Summer"): HeroSlide {
+  const look = resolveHeroLook(props, enabled, heroHasText("", heading, ""));
   return {
     key: "0",
     image: PICTURE,
     mobileImage: null,
     alt: "",
     eyebrow: "",
-    heading: "Summer",
+    heading,
     subheading: "",
     buttonLabel: "",
     buttonHref: null,
@@ -64,16 +64,33 @@ function draw(slides: HeroSlide[], more: Partial<ComponentProps<typeof HeroSlide
 }
 
 describe("a slide's place and veil", () => {
-  it("draws a slide saved before them exactly as it was: no new attribute, no veil", () => {
-    for (const enabled of [true, false]) {
-      const { slide, unmount } = draw([slideOf({ side: "start", vertical: "top" }, enabled)]);
-      expect(slide.getAttributeNames().sort()).toEqual(["class", "data-h", "data-text", "data-v"]);
-      expect(slide.getAttribute("data-h")).toBe("start");
-      expect(slide.getAttribute("data-v")).toBe("top");
-      expect(slide.querySelector(".zs-hero__overlay")).toBeNull();
-      expect(Array.from(slide.querySelector(".zs-hero__media")!.children, (child) => child.tagName)).toEqual(["PICTURE"]);
-      unmount();
-    }
+  it("draws a slide saved before them exactly as it was while the switch is off: no new attribute, no veil", () => {
+    const { container, slide } = draw([slideOf({ side: "start", vertical: "top" }, false)]);
+    expect(slide.getAttributeNames().sort()).toEqual(["class", "data-h", "data-text", "data-v"]);
+    expect(slide.getAttribute("data-h")).toBe("start");
+    expect(slide.getAttribute("data-v")).toBe("top");
+    expect(slide.querySelector(".zs-hero__overlay")).toBeNull();
+    expect(Array.from(slide.querySelector(".zs-hero__media")!.children, (child) => child.tagName)).toEqual(["PICTURE"]);
+    // Nor anything new on the slider itself.
+    expect(container.querySelector(".zs-hero")!.getAttributeNames().sort()).toEqual(["aria-label", "aria-roledescription", "class", "role"]);
+  });
+
+  it("adds only the default veil to such a slide once the switch is on, because it has text", () => {
+    const { slide } = draw([slideOf({ side: "start", vertical: "top" }, true)]);
+    expect(slide.getAttributeNames().sort()).toEqual(["class", "data-h", "data-text", "data-v"]);
+    const veil = slide.querySelector<HTMLElement>(".zs-hero__overlay")!;
+    expect(veil.style.getPropertyValue("--zs-ov")).toBe(String(HERO_DEFAULT_OVERLAY / 100));
+    expect(veil.style.getPropertyValue("--zs-ov-m")).toBe(String(HERO_DEFAULT_OVERLAY / 100));
+    expect(Array.from(slide.querySelector(".zs-hero__media")!.children, (child) => child.tagName)).toEqual(["PICTURE", "SPAN"]);
+  });
+
+  it("draws no default veil over a slide without text, or one that asks for none", () => {
+    const bare = draw([slideOf({}, true, "")]);
+    expect(bare.slide.querySelector(".zs-hero__overlay")).toBeNull();
+    bare.unmount();
+
+    const none = draw([slideOf({ overlay: 0 }, true)]);
+    expect(none.slide.querySelector(".zs-hero__overlay")).toBeNull();
   });
 
   it("names the phone's place only where it differs, and draws the veil with an opacity for each device", () => {
@@ -96,6 +113,34 @@ describe("a slide's place and veil", () => {
     const { slide } = draw([slideOf({ sideMobile: "end", verticalMobile: "top", overlay: 50, overlayMobile: 10 }, false)]);
     expect(slide.getAttributeNames().sort()).toEqual(["class", "data-h", "data-text", "data-v"]);
     expect(slide.querySelector(".zs-hero__overlay")).toBeNull();
+  });
+});
+
+describe("the slider's text while the switch is on", () => {
+  it("marks the slider only then", () => {
+    const off = draw([slideOf({}, false)]);
+    expect(off.container.querySelector(".zs-hero")!.hasAttribute("data-legible")).toBe(false);
+    off.unmount();
+
+    const on = draw([slideOf({}, true)], { legible: true });
+    expect(on.container.querySelector(".zs-hero")!.getAttribute("data-legible")).toBe("");
+  });
+
+  it("draws the small lines at full strength, so the default veil's contrast holds for them too", () => {
+    // As they always were: a little see-through.
+    expect(css).toMatch(/\.zs-hero__eyebrow \{[^}]*opacity: 0\.9;/);
+    expect(css).toMatch(/\.zs-hero__sub \{[^}]*opacity: 0\.92;/);
+    expect(css).toMatch(/\.zs-hero\[data-legible\] \.zs-hero__eyebrow,\s*\.zs-hero\[data-legible\] \.zs-hero__sub \{\s*opacity: 1;\s*\}/);
+  });
+
+  it("makes the heading larger on a computer only, and never smaller than it was", () => {
+    expect(css).toMatch(/\.zs-hero__heading \{[^}]*font-size: 50px;/);
+    const from = css.indexOf("@media (min-width: 1025px) {\n  .zs-hero[data-legible] .zs-hero__heading {");
+    expect(from).toBeGreaterThan(0);
+    expect(css.slice(from, css.indexOf("\n}\n", from))).toContain("font-size: clamp(50px, 4vw, 60px);");
+    // A tablet and a phone keep their sizes: the rule starts where the tablet's layout ends.
+    expect(css).toContain("@media (max-width: 1024px) {\n  .zs-hero {");
+    expect(css).toMatch(/\.zs-hero__heading \{ font-size: 30px; \}/);
   });
 });
 

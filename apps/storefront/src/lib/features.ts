@@ -72,7 +72,9 @@ export const AD_PIXELS_ENABLED = process.env.NEXT_PUBLIC_AD_PIXELS_ENABLED === "
 
 /**
  * The hero slider's newer settings: where the text sits on a phone, the veil
- * over the picture, and a background video. Off, a slide is drawn exactly as
- * before whatever its props hold. Pairs with the dashboard's VITE_HERO_MEDIA_ENABLED.
+ * over the picture, and a background video. With it on, a slide that has text
+ * and sets no veil also gets a default one, and the heading is larger on a
+ * computer. Off, none of these is read or drawn, whatever a slide's props
+ * hold. Pairs with the dashboard's VITE_HERO_MEDIA_ENABLED.
  */
 export const HERO_MEDIA_ENABLED = process.env.NEXT_PUBLIC_HERO_MEDIA_ENABLED === "true";

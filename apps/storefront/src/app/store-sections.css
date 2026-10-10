@@ -474,6 +474,19 @@ section[data-zt-section]:has(.zs),
 .zs-hero__slide[data-text="light"] .zs-hero__overlay {
   background: #000;
 }
+/* While the store's HERO_MEDIA switch is on the slider is marked data-legible.
+   The small lines are then drawn at full strength, so the contrast the default
+   veil is chosen for (heroLook.ts) holds for them as it does for the heading,
+   and the heading is larger on a computer. */
+.zs-hero[data-legible] .zs-hero__eyebrow,
+.zs-hero[data-legible] .zs-hero__sub {
+  opacity: 1;
+}
+@media (min-width: 1025px) {
+  .zs-hero[data-legible] .zs-hero__heading {
+    font-size: clamp(50px, 4vw, 60px);
+  }
+}
 /* A phone's own veil and its own place for the text; each is set only where it
    differs from the computer's, so a slide without them keeps the rules above. */
 @media (max-width: 749px) {

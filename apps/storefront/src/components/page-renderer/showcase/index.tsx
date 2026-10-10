@@ -6,7 +6,7 @@ import { dirFor, formatNumber, getDictionary, type Locale } from "@/lib/i18n";
 import { firstImage } from "@/lib/product";
 import { EmptyBlock } from "../commerce";
 import { showcaseCopy } from "./copy";
-import { heroFocusMarkup, heroLookMarkup, heroPhoneHeight, resolveHeroFocus, resolveHeroLook } from "./heroLook";
+import { heroFocusMarkup, heroHasText, heroLookMarkup, heroPhoneHeight, resolveHeroFocus, resolveHeroLook } from "./heroLook";
 import { HeroSlider, type HeroSlide } from "./HeroSlider";
 import { NeedTabs, type NeedTab } from "./NeedTabs";
 import { RailTrack } from "./RailTrack";
@@ -90,15 +90,19 @@ function HeroSliderElement({ props, locale, editable }: ElementProps) {
   items(props, "slides", 8).forEach((slide, i) => {
     const image = localizedImage(slide, "image", locale);
     if (!image) return;
-    const look = resolveHeroLook(slide, HERO_MEDIA_ENABLED);
+    const eyebrow = loc(slide, "eyebrow", locale);
+    const heading = loc(slide, "heading", locale);
+    const subheading = loc(slide, "subheading", locale);
+    // A slide with text gets a default veil while the switch is on and it sets none of its own.
+    const look = resolveHeroLook(slide, HERO_MEDIA_ENABLED, heroHasText(eyebrow, heading, subheading));
     slides.push({
       key: `${i}`,
       image,
       mobileImage: localizedImage(slide, "mobileImage", locale),
       alt: str(slide, "alt"),
-      eyebrow: loc(slide, "eyebrow", locale),
-      heading: loc(slide, "heading", locale),
-      subheading: loc(slide, "subheading", locale),
+      eyebrow,
+      heading,
+      subheading,
       buttonLabel: loc(slide, "buttonLabel", locale),
       buttonHref: linkOf(slide, "buttonHref"),
       // The computer's place as it always was; the phone's own place and the veil only while the switch is on (heroLook.ts).
@@ -126,6 +130,8 @@ function HeroSliderElement({ props, locale, editable }: ElementProps) {
       wave={bool(props, "wave", false)}
       // The computer's and the tablet's heights always have a value; a phone has one only when the slider names it.
       phoneHeight={heroPhoneHeight(props.heightMobile)}
+      // The larger heading and the full-strength small lines, only while the switch is on.
+      legible={HERO_MEDIA_ENABLED}
       rtl={dirFor(locale) === "rtl"}
       label={loc(props, "label", locale) || copy.slider}
       labels={{ previous: copy.previous, next: copy.next, slide: copy.slide }}

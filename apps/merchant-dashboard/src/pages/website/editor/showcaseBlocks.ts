@@ -140,6 +140,13 @@ const HERO_MEDIA_VIDEO_FIELDS: ItemSubField[] = HERO_MEDIA_ENABLED
   : [];
 
 /**
+ * The veil the store draws over a slide that has text while the slide sets
+ * none: HERO_DEFAULT_OVERLAY in the storefront's showcase/heroLook.ts. The two
+ * apps share no code, so it is written here again; a test holds them equal.
+ */
+export const HERO_DEFAULT_VEIL = 55;
+
+/**
  * A slide's settings behind the HERO_MEDIA switch (lib/features): the text's
  * place on a phone and the veil over the picture. They are plain props of the
  * slide (the storefront reads them in showcase/heroLook.ts), so the server
@@ -157,9 +164,10 @@ const HERO_MEDIA_SLIDE_FIELDS: ItemSubField[] = HERO_MEDIA_ENABLED
         min: 0,
         max: 60,
         step: 5,
-        startAt: 0,
-        hint: "Makes the text easier to read: dark under light text, light under dark text. Empty or 0 leaves the picture as it is.",
-        hintAr: "تسهّل قراءة النص: داكنة تحت النص الفاتح، وفاتحة تحت النص الداكن. الفراغ أو الصفر يترك الصورة كما هي.",
+        // Empty is the store's own veil, so that is what the field shows and where its steppers start.
+        startAt: HERO_DEFAULT_VEIL,
+        hint: `Makes the text easier to read: dark under light text, light under dark text. Left empty, a slide with text gets ${HERO_DEFAULT_VEIL} and a slide without text none. 0 leaves the picture as it is.`,
+        hintAr: `تسهّل قراءة النص: داكنة تحت النص الفاتح، وفاتحة تحت النص الداكن. إذا تُرك فارغًا تأخذ الشريحة التي بها نص ${HERO_DEFAULT_VEIL}، والشريحة بلا نص لا تأخذ شيئًا. الصفر يترك الصورة كما هي.`,
       },
       {
         key: "overlayMobile",

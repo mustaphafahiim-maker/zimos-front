@@ -1,6 +1,15 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { HERO_OVERLAY_MAX, heroFocusMarkup, heroLookMarkup, heroPhoneHeight, resolveHeroFocus, resolveHeroLook } from "./heroLook.ts";
+import {
+  HERO_DEFAULT_OVERLAY,
+  HERO_OVERLAY_MAX,
+  heroFocusMarkup,
+  heroHasText,
+  heroLookMarkup,
+  heroPhoneHeight,
+  resolveHeroFocus,
+  resolveHeroLook,
+} from "./heroLook.ts";
 
 /**
  * Pins the promise the hero's new settings make: a slide saved before they
@@ -91,6 +100,116 @@ describe("heroLookMarkup", () => {
     assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlay: 40, overlayMobile: 0 }, true)).overlay, { desktop: 0.4, phone: 0 });
     assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 60 }, true)).overlay, { desktop: 0, phone: 0.6 });
     assert.equal(heroLookMarkup(resolveHeroLook({ overlay: 0, overlayMobile: 0 }, true)).overlay, null);
+  });
+});
+
+describe("the default veil of a slide with text", () => {
+  it("is drawn on both devices while the switch is on and the slide sets none", () => {
+    const look = resolveHeroLook({ side: "start" }, true, true);
+    assert.equal(look.desktop.overlay, HERO_DEFAULT_OVERLAY);
+    assert.equal(look.phone.overlay, HERO_DEFAULT_OVERLAY);
+    assert.deepEqual(heroLookMarkup(look).overlay, { desktop: 0.55, phone: 0.55 });
+  });
+
+  it("is not drawn for a slide without text, which has nothing to keep readable", () => {
+    assert.deepEqual(resolveHeroLook({}, true, false), OLD);
+    assert.equal(heroLookMarkup(resolveHeroLook({}, true, false)).overlay, null);
+  });
+
+  it("gives way to the veil a slide sets, none included", () => {
+    assert.equal(resolveHeroLook({ overlay: 0 }, true, true).desktop.overlay, 0);
+    assert.equal(heroLookMarkup(resolveHeroLook({ overlay: 0 }, true, true)).overlay, null);
+    assert.equal(resolveHeroLook({ overlay: 20 }, true, true).desktop.overlay, 20);
+    assert.equal(resolveHeroLook({ overlay: 60 }, true, true).phone.overlay, 60);
+    // A value that is not a veil is not a choice: the default still applies.
+    assert.equal(resolveHeroLook({ overlay: "lots" }, true, true).desktop.overlay, HERO_DEFAULT_OVERLAY);
+  });
+
+  it("leaves a phone its own veil, and the default where the phone sets none", () => {
+    assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 0 }, true, true)).overlay, { desktop: 0.55, phone: 0 });
+    assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 30 }, true, true)).overlay, { desktop: 0.55, phone: 0.3 });
+    assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlay: 0 }, true, true)).overlay, null);
+  });
+
+  it("is never drawn while the switch is off: a slide with text is as it always was", () => {
+    assert.deepEqual(resolveHeroLook({}, false, true), OLD);
+    assert.deepEqual(resolveHeroLook({ heading: "Summer", overlay: 40 }, false, true), OLD);
+    assert.deepEqual(heroLookMarkup(resolveHeroLook({}, false, true)), { overlay: null });
+  });
+
+  it("counts a small line, a heading or a line under it as text, and blanks as none", () => {
+    assert.equal(heroHasText("", "Summer", ""), true);
+    assert.equal(heroHasText("New", "", ""), true);
+    assert.equal(heroHasText("", "", "Free delivery"), true);
+    assert.equal(heroHasText("", "", ""), false);
+    assert.equal(heroHasText(" ", "\n", "\t"), false);
+    assert.equal(heroHasText(), false);
+  });
+});
+
+/**
+ * How readable the slide's text is over a picture, by the WCAG contrast ratio.
+ * The veil is white under dark text and black under light text, laid over the
+ * picture at the veil's strength (store-sections.css; storeSections.test.mjs
+ * pins those four colours). The two pictures that are hardest on the text are
+ * a black one under dark text and a white one under light text.
+ */
+describe("the default veil's contrast", () => {
+  const DARK_TEXT = 0x1c; // #1c1c1c
+  const LIGHT_TEXT = 255; // #fff
+  const BLACK = 0;
+  const WHITE = 255;
+  /** Relative luminance of a grey, from its 0–255 level. */
+  const luminance = (level) => {
+    const s = level / 255;
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + 0.05) / (Math.min(luminance(a), luminance(b)) + 0.05);
+  /** The grey a shopper sees where a veil of `percent` lies over a picture. */
+  const veiled = (picture, veil, percent) => picture + (veil - picture) * (percent / 100);
+  const darkOnBlack = (percent) => contrast(DARK_TEXT, veiled(BLACK, WHITE, percent));
+  const lightOnWhite = (percent) => contrast(LIGHT_TEXT, veiled(WHITE, BLACK, percent));
+  const AA = 4.5; // text of any size
+  const AA_LARGE = 3; // the heading: 50px bold on a computer, 30px bold on a phone
+
+  it("is one of the veil's own steps, inside its range", () => {
+    assert.equal(HERO_DEFAULT_OVERLAY, 55);
+    assert.equal(HERO_DEFAULT_OVERLAY % 5, 0);
+    assert.ok(HERO_DEFAULT_OVERLAY <= HERO_OVERLAY_MAX);
+  });
+
+  it("is needed: with no veil, text of the wrong colour for its picture cannot be read", () => {
+    assert.ok(darkOnBlack(0) < 1.3);
+    assert.ok(lightOnWhite(0) < 1.1);
+  });
+
+  it("keeps dark text readable over a black picture and light text over a white one", () => {
+    assert.ok(darkOnBlack(HERO_DEFAULT_OVERLAY) >= AA, `dark on black: ${darkOnBlack(HERO_DEFAULT_OVERLAY).toFixed(2)}`);
+    assert.ok(lightOnWhite(HERO_DEFAULT_OVERLAY) >= AA, `light on white: ${lightOnWhite(HERO_DEFAULT_OVERLAY).toFixed(2)}`);
+    assert.equal(darkOnBlack(HERO_DEFAULT_OVERLAY).toFixed(2), "5.08");
+    assert.equal(lightOnWhite(HERO_DEFAULT_OVERLAY).toFixed(2), "4.76");
+  });
+
+  it("is the lowest step that does: five less fails for the small lines", () => {
+    const below = HERO_DEFAULT_OVERLAY - 5;
+    assert.ok(darkOnBlack(below) < AA);
+    assert.ok(lightOnWhite(below) < AA);
+    // The heading alone, being large, would still pass there, and down to 45.
+    assert.ok(darkOnBlack(45) >= AA_LARGE && lightOnWhite(45) >= AA_LARGE);
+    assert.ok(darkOnBlack(40) < AA_LARGE && lightOnWhite(40) < AA_LARGE);
+  });
+
+  it("changes nothing where the text already suits the picture", () => {
+    // Dark text over a white picture and light text over a black one: the veil is the picture's own colour.
+    assert.equal(contrast(DARK_TEXT, veiled(WHITE, WHITE, HERO_DEFAULT_OVERLAY)).toFixed(1), "17.0");
+    assert.equal(contrast(LIGHT_TEXT, veiled(BLACK, BLACK, HERO_DEFAULT_OVERLAY)).toFixed(1), "21.0");
+  });
+
+  it("lifts a mid-grey picture, where neither colour passed, well clear", () => {
+    const GREY = 128;
+    assert.ok(contrast(DARK_TEXT, GREY) < AA && contrast(LIGHT_TEXT, GREY) < AA);
+    assert.ok(contrast(DARK_TEXT, veiled(GREY, WHITE, HERO_DEFAULT_OVERLAY)) > 9);
+    assert.ok(contrast(LIGHT_TEXT, veiled(GREY, BLACK, HERO_DEFAULT_OVERLAY)) > 11);
   });
 });
 
