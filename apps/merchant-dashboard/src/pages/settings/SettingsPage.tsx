@@ -45,7 +45,8 @@ import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
 import { SecuritySection } from "./SecuritySection";
-import { TWO_FACTOR_ENABLED } from "@/lib/features";
+import { HOLIDAY_MODE_ENABLED, TWO_FACTOR_ENABLED } from "@/lib/features";
+import { HolidayModeSection } from "./HolidayModeSection";
 
 export function SettingsPage() {
   const workspaceId = useWorkspaceId();
@@ -67,6 +68,8 @@ export function SettingsPage() {
       <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
       <AccountSettingsSection key={`account-settings-${workspaceId}`} />
+      {/* Pausing orders, or taking them and shipping later (lib/features). */}
+      {HOLIDAY_MODE_ENABLED && <HolidayModeSection key={`holiday-${workspaceId}`} />}
       <OrderBumpSettingsSection key={`order-bump-${workspaceId}`} />
       <CatalogSettingsSection key={`catalog-${workspaceId}`} />
       <WhatsAppMessageSection key={`whatsapp-${workspaceId}`} />

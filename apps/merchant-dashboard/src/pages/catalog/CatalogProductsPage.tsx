@@ -30,6 +30,8 @@ import {
   useProductSelection,
   type ProductSelection,
 } from "./components/ProductListBulk";
+import { STOCK_ALERTS_ENABLED } from "@/lib/features";
+import { WaitingRestockCard } from "./components/WaitingRestockCard";
 
 const STRINGS = {
   en: {
@@ -331,6 +333,9 @@ export function CatalogProductsPage() {
           </Link>
         </div>
       </div>
+
+      {/* Sold-out products shoppers asked to hear about (lib/features). */}
+      {STOCK_ALERTS_ENABLED && <WaitingRestockCard />}
 
       <ProductBulkBar selection={selection} onDone={list.reload} />
 

@@ -7,7 +7,7 @@ import { ToastProvider } from "@/components/Toast";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequireWorkspace } from "@/routes/RequireWorkspace";
 import { LazyRoute } from "@/routes/LazyRoute";
-import { AI_ENABLED } from "@/lib/features";
+import { AI_ENABLED, PRODUCT_QUESTIONS_ENABLED, PRODUCT_SPECS_ENABLED, SIZE_CHARTS_ENABLED } from "@/lib/features";
 import { LoginPage } from "@/pages/LoginPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { RegisterPage } from "@/pages/RegisterPage";
@@ -68,6 +68,11 @@ import { SuggestionsPage } from "@/pages/help/SuggestionsPage";
 // element table) with the funnel editor, so it is split off with it.
 const AiStudioPage = lazy(() => import("@/pages/ai/AiStudioPage").then((m) => ({ default: m.AiStudioPage })));
 const WaBotPage = lazy(() => import("@/pages/inbox/WaBotPage").then((m) => ({ default: m.WaBotPage })));
+const SizeChartsPage = lazy(() => import("@/pages/sizeCharts/SizeChartsPage").then((m) => ({ default: m.SizeChartsPage })));
+const SizeChartEditorPage = lazy(() => import("@/pages/sizeCharts/SizeChartEditorPage").then((m) => ({ default: m.SizeChartEditorPage })));
+const QuestionsPage = lazy(() => import("@/pages/questions/QuestionsPage").then((m) => ({ default: m.QuestionsPage })));
+const ProductLinkRedirect = lazy(() => import("@/pages/questions/ProductQuestionsSection").then((m) => ({ default: m.ProductLinkRedirect })));
+const SpecKeysPage = lazy(() => import("@/pages/productSpecs/SpecKeysPage").then((m) => ({ default: m.SpecKeysPage })));
 const ActivityLogPage = lazy(() => import("@/pages/activity/ActivityLogPage").then((m) => ({ default: m.ActivityLogPage })));
 const FunnelsPage = lazy(() => import("@/pages/funnels/FunnelsPage").then((m) => ({ default: m.FunnelsPage })));
 const FunnelEditorPage = lazy(() =>
@@ -152,6 +157,13 @@ export default function App() {
                       <Route path="/catalog/:productId" element={<ProductEditPage />} />
 
                       <Route path="/reviews" element={<ReviewsPage />} />
+                      {/* Size charts, shoppers' questions and the specifications list (lib/features): off, these addresses go home. */}
+                      <Route path="/size-charts" element={SIZE_CHARTS_ENABLED ? <LazyRoute><SizeChartsPage /></LazyRoute> : <Navigate to="/" replace />} />
+                      <Route path="/size-charts/new" element={SIZE_CHARTS_ENABLED ? <LazyRoute><SizeChartEditorPage /></LazyRoute> : <Navigate to="/" replace />} />
+                      <Route path="/size-charts/:chartId" element={SIZE_CHARTS_ENABLED ? <LazyRoute><SizeChartEditorPage /></LazyRoute> : <Navigate to="/" replace />} />
+                      <Route path="/questions" element={PRODUCT_QUESTIONS_ENABLED ? <LazyRoute><QuestionsPage /></LazyRoute> : <Navigate to="/" replace />} />
+                      <Route path="/products/:productId" element={PRODUCT_QUESTIONS_ENABLED ? <LazyRoute><ProductLinkRedirect /></LazyRoute> : <Navigate to="/" replace />} />
+                      <Route path="/catalog/specifications" element={PRODUCT_SPECS_ENABLED ? <LazyRoute><SpecKeysPage /></LazyRoute> : <Navigate to="/catalog" replace />} />
                       <Route path="/customers" element={<ContactsPage />} />
                       <Route path="/form-submissions" element={<FormSubmissionsPage />} />
                       <Route path="/digital" element={<DigitalProductsPage />} />

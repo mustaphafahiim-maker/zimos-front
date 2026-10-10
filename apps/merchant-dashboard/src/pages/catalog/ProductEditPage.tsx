@@ -16,6 +16,18 @@ import { OffersSection } from "./components/OffersSection";
 import { ProductCollectionsSection } from "./components/ProductCollectionsSection";
 import { CustomFieldsSection } from "./components/CustomFieldsSection";
 import { MenuOptionsSection } from "./components/MenuOptionsSection";
+import { PreorderSection } from "./components/PreorderSection";
+import { PurchaseLimitsSection } from "./components/PurchaseLimitsSection";
+import { ProductSizeChartNote } from "@/pages/sizeCharts/ProductSizeChartNote";
+import { ProductSpecsSection } from "@/pages/productSpecs/ProductSpecsSection";
+import { ProductQuestionsSection } from "@/pages/questions/ProductQuestionsSection";
+import {
+  PREORDERS_ENABLED,
+  PRODUCT_QUESTIONS_ENABLED,
+  PRODUCT_SPECS_ENABLED,
+  PURCHASE_LIMITS_ENABLED,
+  SIZE_CHARTS_ENABLED,
+} from "@/lib/features";
 import type { CatalogProduct } from "@store-builder/api-client";
 import { ProductPageSettingsSection } from "./components/ProductPageSettingsSection";
 import { ProductSeoSection } from "./components/ProductSeoSection";
@@ -128,6 +140,12 @@ export function ProductEditPage() {
             />
             <MenuOptionsSection productId={data.id} />
             <CustomFieldsSection productId={data.id} fields={data.customFields ?? []} onChanged={reload} />
+            {/* Store features, each only while its switch is on (lib/features). */}
+            {SIZE_CHARTS_ENABLED && <ProductSizeChartNote productId={data.id} collections={data.collections ?? []} />}
+            {PREORDERS_ENABLED && <PreorderSection productId={data.id} />}
+            {PURCHASE_LIMITS_ENABLED && <PurchaseLimitsSection productId={data.id} />}
+            {PRODUCT_SPECS_ENABLED && <ProductSpecsSection productId={data.id} />}
+            {PRODUCT_QUESTIONS_ENABLED && <ProductQuestionsSection productId={data.id} />}
             <ProductTestSection productId={data.id} variants={data.variants ?? []} media={data.media ?? []} onProductChanged={reload} />
             {/* The same product, read with the page fields added. */}
             <ProductOptionsDisplaySection

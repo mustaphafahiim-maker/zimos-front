@@ -8,6 +8,8 @@ import { useOrderLabels } from "../orderLabels";
 import { CustomizationList } from "./CustomizationList";
 import { OrderAddressTools, OrderContactTools } from "./OrderCustomerTools";
 import { ShippingOptionNote } from "./ShippingOptionNote";
+import { PreorderLineNote } from "./PreorderLineNote";
+import { PREORDERS_ENABLED } from "@/lib/features";
 
 const STRINGS = {
   en: {
@@ -172,6 +174,8 @@ export function OrderSummary({ order, onChanged }: { order: Order; onChanged?: (
                         </div>
                       )}
                       <CustomizationList customizations={item.customizations} className="mt-2" currency={c} />
+                      {/* Sold beyond stock as a pre-order: when it ships (lib/features). */}
+                      {PREORDERS_ENABLED && <PreorderLineNote item={item} />}
                     </td>
                     <td className="py-2 pe-3 text-ink-soft">{item.quantity}</td>
                     <td className="py-2 pe-3 text-ink-soft">{formatMoney(item.unitPriceAmount, c)}</td>

@@ -10,6 +10,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderSummary } from "./components/OrderSummary";
+import { OrderGiftCard } from "./components/OrderGiftCard";
+import { GIFT_OPTIONS_ENABLED } from "@/lib/features";
 import { OrderActions } from "./components/OrderActions";
 import { WhatsappConfirmButton } from "./components/WhatsappConfirmButton";
 import { OrderDiscountsCard } from "./components/OrderDiscountsCard";
@@ -128,6 +130,9 @@ export function OrderDetailPage() {
             )}
 
             <ConfirmationPanel order={data} onChanged={reload} />
+
+            {/* The order is a gift: wrap, message, hidden prices (lib/features). */}
+            {GIFT_OPTIONS_ENABLED && <OrderGiftCard order={data} />}
 
             <OrderSummary order={data} onChanged={reload} />
 

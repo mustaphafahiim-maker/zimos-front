@@ -24,8 +24,10 @@ import {
   Lightbulb,
   Megaphone,
   MessageCircle,
+  CircleQuestionMark,
   Package,
   PiggyBank,
+  Ruler,
   Settings,
   ShieldAlert,
   ShoppingBag,
@@ -42,7 +44,7 @@ import {
 } from "lucide-react";
 import type { Messages } from "@/i18n/LocaleContext";
 import { NO_ANALYTICS_ROLES } from "@/lib/analyticsAccess";
-import { AI_ENABLED } from "@/lib/features";
+import { AI_ENABLED, PRODUCT_QUESTIONS_ENABLED, SIZE_CHARTS_ENABLED } from "@/lib/features";
 
 /**
  * System roles without billing.manage (owner '*' and accountant hold it, see
@@ -59,6 +61,8 @@ export type NavKey =
   | "abandonedCarts"
   | "catalog"
   | "reviews"
+  | "productQuestions"
+  | "sizeCharts"
   | "customers"
   | "discounts"
   | "offers"
@@ -148,6 +152,9 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "catalog", to: "/catalog", icon: Package },
       { key: "reviews", to: "/reviews", icon: Star },
+      // Shoppers' questions and size charts, each only while its feature is switched on (lib/features).
+      ...(PRODUCT_QUESTIONS_ENABLED ? [{ key: "productQuestions" as const, to: "/questions", icon: CircleQuestionMark }] : []),
+      ...(SIZE_CHARTS_ENABLED ? [{ key: "sizeCharts" as const, to: "/size-charts", icon: Ruler }] : []),
       { key: "digital", to: "/digital", icon: FileDown },
       { key: "courses", to: "/courses", icon: GraduationCap },
       { key: "media", to: "/media", icon: Images },
@@ -257,6 +264,8 @@ export const NAV_LABELS = {
     abandonedCarts: "Lost orders",
     catalog: "Products",
     reviews: "Reviews",
+    productQuestions: "Questions",
+    sizeCharts: "Size charts",
     customers: "Customers",
     discounts: "Discounts",
     offers: "Offers",
@@ -299,6 +308,8 @@ export const NAV_LABELS = {
     abandonedCarts: "الطلبات المفقودة",
     catalog: "المنتجات",
     reviews: "التقييمات",
+    productQuestions: "الأسئلة",
+    sizeCharts: "جداول المقاسات",
     customers: "العملاء",
     discounts: "الخصومات",
     offers: "العروض",
