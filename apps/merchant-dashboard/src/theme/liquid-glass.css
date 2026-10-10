@@ -1,0 +1,622 @@
+/* ------------------------------------------------------------------ *
+ * Liquid glass in the merchant dashboard. One removable layer over the calm surfaces of index.css:
+ * the page gets a soft backdrop in the brand colours, and every sheet on
+ * it — cards, tables, tiles, the frame — becomes a translucent pane that
+ * catches light along its rim. Same tokens, same markup.
+ *
+ * Off switch: `data-glass="off"` on <html> (Settings → Language and
+ * appearance, and set automatically for reduced transparency or forced
+ * colours — components/GlassToggle.tsx and the pre-paint script in
+ * index.html). The layer is written under :root:not([data-glass="off"]),
+ * so "off" is index.css again; the one rule outside that block, at the
+ * end, undoes a side effect the attribute has in packages/ui/styles.css.
+ *
+ * Where blur is used: only on what content passes beneath — the top bar,
+ * the phone tab bar, menus, dialogs and toasts. Sheets in the page flow
+ * have nothing but the still backdrop behind them, so they are translucent
+ * without blur: a page of tables costs nothing extra to draw, and no sheet
+ * becomes a containing block for a fixed child.
+ *
+ * Text contrast was measured on the rendered pixels in both themes
+ * in both themes; change the fills or the backdrop
+ * strength only together with that check.
+ * ------------------------------------------------------------------ */
+:root:not([data-glass="off"]) {
+  /* Fills. Sheets sit in the page with only the backdrop behind them. Frost
+     (the bars) and overlay (menus, dialogs) float over arbitrary content — a
+     product photo, the brand tile — so they stay near solid: below this their
+     labels lose 4.5:1 over a white or a black image. */
+  --lg-fill: color-mix(in srgb, var(--color-paper-raised) 58%, transparent);
+  --lg-control: color-mix(in srgb, var(--color-paper-raised) 70%, transparent);
+  --lg-control-lit: color-mix(in srgb, var(--color-paper-raised) 94%, transparent);
+  --lg-frost: color-mix(in srgb, var(--color-paper-raised) 88%, transparent);
+  --lg-overlay: color-mix(in srgb, var(--color-paper-raised) 90%, transparent);
+  --lg-blur: blur(22px) saturate(180%);
+  --lg-blur-overlay: blur(28px) saturate(160%);
+
+  /* Light on the pane. The edge is a darker hairline outside; inside, a bright
+     line, and on large panes a glow that fades in from the top with a faint
+     shade along the bottom, which gives the pane its thickness. All of it adds
+     light, never takes contrast. */
+  --lg-edge: color-mix(in srgb, var(--color-primary-dark) 13%, transparent);
+  --lg-rim-line: inset 0 1px 0 0 rgb(255 255 255 / 0.98), inset 0 0 0 1px rgb(255 255 255 / 0.62);
+  --lg-rim: var(--lg-rim-line), inset 0 18px 28px -22px rgb(255 255 255 / 0.95), inset 0 -14px 22px -20px rgb(18 44 110 / 0.14);
+  --lg-sheen: linear-gradient(142deg, rgb(255 255 255 / 0.62) 0%, rgb(255 255 255 / 0.14) 24%, rgb(255 255 255 / 0) 50%, rgb(255 255 255 / 0) 78%, rgb(255 255 255 / 0.16) 100%);
+
+  /* Tables: one sheet, a tinted head, hairlines that take the pane's colour. */
+  --lg-thead: color-mix(in srgb, var(--color-paper-raised) 46%, transparent);
+  --lg-hairline: color-mix(in srgb, var(--color-primary-dark) 10%, transparent);
+  --lg-row-lit: color-mix(in srgb, var(--color-paper-raised) 78%, transparent);
+
+  /* The aurora behind everything: the store's own colour, then violet, pink,
+     peach and sky. Nothing is written straight on it — the side menu, the top
+     bar and the page pane each sit over it — so it can be real colour. The
+     pane fills and these five are tuned together: change one only with the
+     contrast check. */
+  --lg-bg-base: #d5defc;
+  --lg-bg-brand: color-mix(in srgb, var(--brand) 40%, white);
+  --lg-bg-violet: #b9a5ff;
+  --lg-bg-pink: #ffa8d4;
+  --lg-bg-peach: #ffc594;
+  --lg-bg-sky: #8fdcff;
+  /* The page pane: the one big sheet every page lies on. */
+  --lg-panel: color-mix(in srgb, var(--color-paper-raised) 50%, transparent);
+  --lg-nav: color-mix(in srgb, var(--color-paper-raised) 54%, transparent);
+  /* What is selected and what is the main action: the store's colour running
+     into violet. Both ends hold white text above 5:1 in either theme. */
+  --lg-brand-solid: var(--brand);
+  --lg-on-brand: #fff;
+  --lg-brand-grad: linear-gradient(135deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 66%, #5b21b6) 100%);
+  --lg-brand-glow: 0 10px 22px -10px color-mix(in srgb, var(--brand) 70%, transparent);
+
+  /* The main action's gloss. */
+  --lg-gloss: linear-gradient(180deg, rgb(255 255 255 / 0.18) 0%, rgb(255 255 255 / 0) 52%);
+  --lg-gloss-rim: inset 0 1px 0 0 rgb(255 255 255 / 0.36), inset 0 -1px 0 0 rgb(0 0 0 / 0.1);
+
+  /* Text on a tinted pane. Secondary ink and the three coloured text shades
+     go one step deeper than on a white card, so they hold 4.5:1 over the
+     strongest part of the backdrop as well. The destructive token is set here,
+     on the root, so the delete button of a dialog (portalled outside the app
+     shell) takes it too. */
+  --lg-ink-soft: color-mix(in srgb, var(--color-ink-soft) 86%, var(--color-ink));
+  --lg-text-primary: color-mix(in srgb, var(--color-primary) 86%, black);
+  --lg-text-success: color-mix(in srgb, var(--color-success) 86%, black);
+  --lg-text-danger: color-mix(in srgb, var(--color-danger) 88%, black);
+  --destructive: var(--lg-text-danger);
+
+  &.dark {
+    --lg-text-primary: color-mix(in srgb, var(--color-primary) 86%, white);
+    --lg-text-success: color-mix(in srgb, var(--color-success) 90%, white);
+    --lg-text-danger: color-mix(in srgb, var(--color-danger) 86%, white);
+    --destructive: var(--lg-text-danger);
+
+    --lg-fill: color-mix(in srgb, var(--color-paper-raised) 46%, transparent);
+    --lg-control: color-mix(in srgb, var(--color-paper-raised) 58%, transparent);
+    --lg-control-lit: color-mix(in srgb, var(--color-paper-sunken) 92%, transparent);
+    --lg-frost: color-mix(in srgb, var(--color-paper-raised) 88%, transparent);
+    /* A dark dialog sits on a light scrim (ink at 40%), so more of what is beneath
+       would reach it: at less than this its delete button drops under 4.5:1. */
+    --lg-overlay: color-mix(in srgb, var(--color-paper-raised) 94%, transparent);
+
+    --lg-edge: rgb(255 255 255 / 0.1);
+    --lg-rim-line: inset 0 1px 0 0 rgb(255 255 255 / 0.16), inset 0 0 0 1px rgb(255 255 255 / 0.04);
+    --lg-rim: var(--lg-rim-line), inset 0 18px 28px -22px rgb(255 255 255 / 0.1), inset 0 -14px 22px -20px rgb(0 0 0 / 0.45);
+    --lg-sheen: linear-gradient(142deg, rgb(255 255 255 / 0.04) 0%, rgb(255 255 255 / 0.012) 26%, rgb(255 255 255 / 0) 52%, rgb(255 255 255 / 0) 80%, rgb(255 255 255 / 0.018) 100%);
+
+    --lg-thead: rgb(255 255 255 / 0.035);
+    --lg-hairline: rgb(255 255 255 / 0.075);
+    --lg-row-lit: rgb(255 255 255 / 0.05);
+
+    --lg-brand-solid: var(--color-primary);
+    --lg-on-brand: var(--color-paper);
+    --lg-brand-grad: linear-gradient(135deg, var(--color-primary) 0%, color-mix(in srgb, var(--color-primary) 70%, #a78bfa) 100%);
+    --lg-brand-glow: 0 10px 22px -12px color-mix(in srgb, var(--color-primary) 60%, transparent);
+    --lg-bg-base: #070a16;
+    --lg-bg-brand: color-mix(in srgb, var(--brand) 60%, black);
+    --lg-bg-violet: #43259a;
+    --lg-bg-pink: #7a1d5c;
+    --lg-bg-peach: #6b3414;
+    --lg-bg-sky: #0b5578;
+    --lg-panel: color-mix(in srgb, var(--color-paper-raised) 58%, transparent);
+    --lg-nav: color-mix(in srgb, var(--color-paper-raised) 60%, transparent);
+
+    --lg-gloss: linear-gradient(180deg, rgb(255 255 255 / 0.22) 0%, rgb(255 255 255 / 0) 52%);
+    --lg-gloss-rim: inset 0 1px 0 0 rgb(255 255 255 / 0.42), inset 0 -1px 0 0 rgb(0 0 0 / 0.14);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The backdrop: still light in the brand colours, pinned to the
+   * screen on its own layer so scrolling never repaints it.
+   * ---------------------------------------------------------------- */
+  .glass-app {
+    isolation: isolate;
+    --card: var(--lg-fill);
+    --radius-card: 1.5rem;
+    --color-ink-soft: var(--lg-ink-soft);
+    --muted-foreground: var(--lg-ink-soft);
+    --shadow-card: 0 1px 1px rgb(18 44 110 / 0.04), 0 18px 40px -20px rgb(18 44 110 / 0.26);
+    --shadow-raised: 0 2px 4px rgb(18 44 110 / 0.05), 0 28px 52px -22px rgb(18 44 110 / 0.36);
+  }
+  &.dark .glass-app {
+    --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.02), 0 20px 44px -22px rgb(0 0 0 / 0.8);
+    --shadow-raised: 0 28px 52px -20px rgb(0 0 0 / 0.9);
+  }
+  /* A phone list is a card per row, fifty to a page: there the pane keeps its
+     two crisp rim lines and drops the two soft inner glows, which are the
+     costly part to draw and too small to see on a card that size. */
+  @media (max-width: 47.99rem) {
+    .glass-app {
+      --lg-rim: var(--lg-rim-line);
+    }
+  }
+  /* Outlines drawn in the card colour (the live map's markers and borders) stay solid. */
+  .glass-app .stroke-card {
+    stroke: var(--color-paper-raised);
+  }
+  /* Five pools of colour over a periwinkle ground, pinned to the screen: the
+     page scrolls across them, they never repaint. Gradients only, so there is
+     nothing to blur and nothing to download. */
+  .glass-app::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 70vw 66vh at 0% 0%, var(--lg-bg-brand) 0%, transparent 72%),
+      radial-gradient(ellipse 62vw 62vh at 100% 0%, var(--lg-bg-violet) 0%, transparent 72%),
+      radial-gradient(ellipse 64vw 64vh at 100% 100%, var(--lg-bg-pink) 0%, transparent 72%),
+      radial-gradient(ellipse 62vw 60vh at 0% 100%, var(--lg-bg-peach) 0%, transparent 70%),
+      radial-gradient(ellipse 46vw 42vh at 48% 46%, var(--lg-bg-sky) 0%, transparent 70%),
+      var(--lg-bg-base);
+  }
+
+  /* The page pane. From md up it floats like the side menu and the top bar:
+     three panes of one glass over the aurora. On a phone it runs edge to edge. */
+  .glass-app main {
+    background-color: var(--lg-panel);
+  }
+  @media (min-width: 48rem) {
+    .glass-app main {
+      margin: 0.75rem;
+      border: 1px solid var(--lg-edge);
+      border-radius: 1.75rem;
+      background-image: var(--lg-sheen);
+      box-shadow: var(--lg-rim), var(--shadow-card);
+    }
+  }
+
+  /* Coloured text in the shell takes the deeper shade. An element that names
+     a different hover colour keeps the plain token, so that hover still shows. */
+  .glass-app :where(.text-primary):not([class*="hover:text-"]),
+  .glass-app :where(.text-primary)[class~="hover:text-primary"] {
+    color: var(--lg-text-primary);
+  }
+  .glass-app :where(.text-success):not([class*="hover:text-"]),
+  .glass-app :where(.text-success)[class~="hover:text-success"] {
+    color: var(--lg-text-success);
+  }
+  .glass-app :where(.text-danger):not([class*="hover:text-"]),
+  .glass-app :where(.text-danger)[class~="hover:text-danger"] {
+    color: var(--lg-text-danger);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The frame. The side menu has only the backdrop behind it, so it is
+   * translucent without blur — its store switcher keeps a full-screen
+   * click-catcher that a backdrop-filter would trap inside the menu.
+   * The top bar has the page passing beneath it: that one is frosted.
+   * ---------------------------------------------------------------- */
+  .zimos-glass.glass-nav {
+    background-color: var(--lg-nav);
+    background-image: var(--lg-sheen);
+    border-color: var(--lg-edge);
+    box-shadow: var(--lg-rim), var(--shadow-card);
+  }
+  .zimos-glass.glass-nav.glass-topbar {
+    background-color: var(--lg-frost);
+    -webkit-backdrop-filter: var(--lg-blur);
+    backdrop-filter: var(--lg-blur);
+  }
+  /* On a phone the tab bar is already a blurred bar; the top bar stays solid
+     there, so a cheap GPU re-blurs one strip per scrolled frame, not two. */
+  @media (max-width: 47.99rem) {
+    .zimos-glass.glass-nav.glass-topbar {
+      background-color: var(--color-paper-raised);
+      background-image: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+  /* Where you are: a filled pill in the store's colour, white on it. */
+  .glass-app .glass-nav nav a {
+    border-radius: 9999px;
+  }
+  .glass-app .glass-nav nav a[aria-current="page"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28), var(--lg-brand-glow);
+  }
+  .glass-app .glass-nav nav a[aria-current="page"] svg {
+    color: var(--lg-on-brand);
+  }
+  .glass-app .glass-nav nav a[aria-current="page"] > span[aria-hidden] {
+    display: none;
+  }
+  /* A list that drops out of the frame (the store switcher). */
+  .glass-app .zimos-glass:not(.glass-nav) {
+    background-color: var(--lg-overlay);
+    -webkit-backdrop-filter: var(--lg-blur-overlay);
+    backdrop-filter: var(--lg-blur-overlay);
+    border-color: var(--lg-edge);
+    box-shadow: var(--lg-rim-line), var(--shadow-pop);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Sheets in the page: the shared Card (Section, KpiCard) through
+   * --card, and the cards pages draw by hand with the same recipe
+   * (a raised fill plus a card-sized radius). Anything that floats
+   * (sticky, fixed, absolute) keeps its solid fill, and so does a chat
+   * bubble (the one-corner radius of the inbox).
+   * ---------------------------------------------------------------- */
+  .glass-app [data-slot="card"] {
+    --tw-ring-color: var(--lg-edge);
+    --tw-inset-shadow: var(--lg-rim);
+    background-image: var(--lg-sheen);
+  }
+  .glass-app main :where([class~="bg-paper-raised"]):where([class*="rounded-[var(--radius-card)]"], [class~="rounded-2xl"], [class~="rounded-xl"]):not(.sticky, .fixed, .absolute, [class~="rounded-es-sm"]) {
+    background-color: var(--lg-fill);
+    background-image: var(--lg-sheen);
+    --tw-inset-shadow: var(--lg-rim);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  /* The same sheet where a page only gives it its surface from md up (lists that are cards on a phone). */
+  @media (min-width: 48rem) {
+    .glass-app main :where([class~="md:bg-paper-raised"]):where([class*="md:rounded-[var(--radius-card)]"]) {
+      background-color: var(--lg-fill);
+      background-image: var(--lg-sheen);
+      --tw-inset-shadow: var(--lg-rim);
+      box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+    }
+  }
+  /* A raised box of any radius that holds a table is that table's sheet. */
+  .glass-app main :where([class~="bg-paper-raised"]):has(table):not(.sticky, .fixed, .absolute) {
+    background-color: var(--lg-fill);
+  }
+  /* Their hairline takes the pane's colour; a ring that means something (selected, error) keeps its own. */
+  .glass-app main :where([class~="bg-paper-raised"], [class~="md:bg-paper-raised"]):where([class~="ring-line"], [class~="md:ring-line"]) {
+    --tw-ring-color: var(--lg-edge);
+  }
+  /* Same for a border — except while a card that names its own hover border is pointed at. */
+  .glass-app main :where([class~="bg-paper-raised"]):where([class~="border-line"]):where([class*="rounded-[var(--radius-card)]"], [class~="rounded-2xl"], [class~="rounded-xl"]):not(.sticky, .fixed, .absolute):not([class*="hover:border-"]:hover) {
+    border-color: var(--lg-edge);
+  }
+  /* Sections and lists that are only an outline (a card-sized radius and a
+     hairline, no fill of their own) are panes too, so their text sits on glass,
+     not on the raw backdrop. No drop shadow: many of them are boxes inside a card. */
+  .glass-app main :where(section, div, ul, ol, li, details, form, article, fieldset)[class*="rounded-[var(--radius-card)]"][class~="border"][class~="border-line"]:not([class*="bg-"], [class~="border-dashed"], .sticky, .fixed, .absolute) {
+    background-color: var(--lg-fill);
+    background-image: var(--lg-sheen);
+    border-color: var(--lg-edge);
+    box-shadow: var(--lg-rim);
+  }
+  /* A strip of figures joined by hairlines (the reports' KPI row): the gaps
+     are the box's own fill showing between the cells. */
+  .glass-app main :where([class~="bg-line"][class~="gap-px"]) {
+    background-color: var(--lg-edge);
+  }
+  .glass-app main :where([class~="bg-line"][class~="gap-px"]) > [class~="bg-paper-raised"] {
+    background-color: var(--lg-fill);
+  }
+
+  /* The brand tile catches light on its top edge. The fill stays flat under
+     the words, so white on brand keeps its contrast. */
+  .glass-app main :where([class~="bg-primary"]):where([class*="rounded-[var(--radius-card)]"]) {
+    background-image: var(--lg-brand-grad);
+    --tw-inset-shadow: var(--lg-gloss-rim);
+    --tw-shadow: 0 22px 44px -22px color-mix(in srgb, var(--lg-brand-solid) 80%, transparent);
+  }
+  /* Tinted tiles (attention, success, danger) let a little of the backdrop through. */
+  .glass-app main :where([class*="rounded-[var(--radius-card)]"])[class~="bg-accent-soft"] {
+    background-color: color-mix(in srgb, var(--color-accent-soft) 82%, transparent);
+    --tw-inset-shadow: var(--lg-rim);
+  }
+  .glass-app main :where([class*="rounded-[var(--radius-card)]"])[class~="bg-success-soft"] {
+    background-color: color-mix(in srgb, var(--color-success-soft) 82%, transparent);
+    --tw-inset-shadow: var(--lg-rim);
+  }
+  .glass-app main :where([class*="rounded-[var(--radius-card)]"])[class~="bg-danger-soft"] {
+    background-color: color-mix(in srgb, var(--color-danger-soft) 82%, transparent);
+    --tw-inset-shadow: var(--lg-rim);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Tables: one sheet of glass. The surface is the card or wrapper the
+   * table sits in (above); here the head becomes a tint of that pane
+   * instead of an opaque band, the lines go translucent, and the row
+   * under the pointer lights up.
+   * ---------------------------------------------------------------- */
+  /* A bordered box that holds a table with no surface of its own becomes the sheet.
+     No drop shadow: several of these sit inside a card that already has one. */
+  .glass-app main :where([class~="border"][class~="border-line"]):where([class*="rounded-"]):has(> table):not([class*="bg-"]) {
+    background-color: var(--lg-fill);
+    background-image: var(--lg-sheen);
+    border-color: var(--lg-edge);
+    box-shadow: var(--lg-rim);
+  }
+  .glass-app main table :where(thead)[class*="bg-paper"] {
+    background-color: transparent;
+  }
+  .glass-app main table :where(thead) > tr[class*="bg-paper"],
+  .glass-app main table :where(thead)[class*="bg-paper"] > tr {
+    background-color: var(--lg-thead);
+  }
+  .glass-app main table :where(thead, tbody, tfoot, tr, th, td)[class~="border-line"],
+  .glass-app main [data-slot="table"] :where([data-slot="table-row"], [data-slot="table-header"] tr) {
+    border-color: var(--lg-hairline);
+  }
+  .glass-app main [data-slot="table-footer"] {
+    background-color: var(--lg-thead);
+    border-color: var(--lg-hairline);
+  }
+  /* A selected row keeps its brand tint under the pointer. */
+  .glass-app main tbody tr:hover:not([class*="bg-primary-soft"]) {
+    background: var(--lg-row-lit);
+  }
+  .glass-app main tbody tr[class*="bg-primary-soft"]:hover {
+    background: color-mix(in srgb, var(--color-primary-soft) 70%, transparent);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Controls. Secondary buttons and segmented tracks are small panes;
+   * the main action stays the flat brand fill with a gloss on top.
+   * ---------------------------------------------------------------- */
+  .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass) {
+    background-color: var(--lg-control);
+    --tw-inset-shadow: var(--lg-rim-line);
+    --tw-shadow: 0 1px 2px rgb(20 22 26 / 0.05);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass):hover:not(:disabled),
+  .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass)[aria-expanded="true"] {
+    background-color: var(--lg-control-lit);
+  }
+  /* Buttons are pills, square ones are circles. */
+  .glass-app [data-slot="button"],
+  .glass-app main :where(a, button):where([class~="inline-flex"], [class~="flex"]):where([class~="h-8"], [class~="h-9"], [class~="h-10"], [class~="h-11"], [class~="min-h-11"]):where([class*="rounded-[var(--radius)]"], [class~="rounded-md"], [class~="rounded-lg"], [class~="rounded-[0.5rem]"]) {
+    border-radius: 9999px;
+  }
+  .glass-app main :where([data-slot="input"], [data-slot="select-trigger"], select) {
+    border-radius: 0.875rem;
+  }
+  /* Tab strips and filter chips: a pill track, pill tabs, the chosen one filled. */
+  .glass-app main [role="group"][class~="bg-paper-raised"] {
+    border-radius: 1.25rem;
+  }
+  .glass-app main [role="group"][class~="bg-paper-raised"] > button {
+    border-radius: 9999px;
+  }
+  .glass-app main [role="group"][class~="bg-paper-raised"] > button[aria-pressed="true"],
+  .glass-app main [role="tablist"] > [role="tab"][aria-selected="true"] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28), var(--lg-brand-glow);
+  }
+  .glass-app main [role="tablist"] > [role="tab"]:not([aria-selected="true"]) {
+    background-color: var(--lg-control);
+    --tw-ring-color: var(--lg-edge);
+  }
+  [data-slot="button"]:is([data-variant="default"], [data-variant="primary"]) {
+    background-color: var(--lg-brand-solid);
+    background-image: linear-gradient(112deg, transparent 38%, rgb(255 255 255 / 0.34) 50%, transparent 62%), var(--lg-gloss), var(--lg-brand-grad);
+    background-size: 260% 100%, auto, auto;
+    background-position: 160% 0, 0 0, 0 0;
+    background-repeat: no-repeat;
+    --tw-inset-shadow: var(--lg-gloss-rim);
+    --tw-shadow: var(--lg-brand-glow);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    [data-slot="button"]:is([data-variant="default"], [data-variant="primary"]) {
+      transition: background-position 650ms cubic-bezier(0.2, 0.7, 0.2, 1), transform 140ms ease, box-shadow 160ms ease;
+    }
+    [data-slot="button"]:is([data-variant="default"], [data-variant="primary"]):hover:not(:disabled) {
+      background-position: -60% 0, 0 0, 0 0;
+    }
+  }
+  [data-slot="button"]:is([data-variant="default"], [data-variant="primary"]):disabled {
+    --tw-shadow: 0 0 #0000;
+  }
+  .glass-app main [role="group"][class~="bg-paper-raised"] {
+    background-color: var(--lg-control);
+    border-color: var(--lg-edge);
+    box-shadow: var(--lg-rim-line);
+  }
+  /* A text field is a lit well: on the page it would otherwise show the raw
+     backdrop. A field that names its own paper fill keeps it — a page may use
+     that fill to say something (grey for "inherited", white for "set"). */
+  .glass-app main :where([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):not(:disabled, [class~="bg-paper"], [class~="bg-paper-raised"], [class~="bg-paper-sunken"]) {
+    background-color: var(--lg-control);
+    transition: background-color 160ms ease, box-shadow 160ms ease;
+  }
+  /* The field being typed in glows in the brand colour, so the eye lands on it.
+     The glow is added UNDER the field's own ring stack (the shared Input's focus
+     ring, the red ring of a field in error), never in place of it. */
+  .glass-app main :where([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):is(:focus-visible, :focus-within) {
+    --lg-focus-glow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 14%, transparent);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow), var(--lg-focus-glow);
+  }
+  /* And turns solid — except a field whose fill says something (the grey "inherited" wells). */
+  .glass-app main :where([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):is(:focus-visible, :focus-within):not([class~="bg-paper"], [class~="bg-paper-raised"], [class~="bg-paper-sunken"]) {
+    background-color: var(--color-paper-raised);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .glass-app main :where([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]) {
+      transition: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * What floats over the page: menus, selects, popovers, dialogs, and
+   * the pop-up surfaces the dashboard draws itself (Modal, the command
+   * bar, toasts — a raised fill with the pop shadow). Frosted, and solid
+   * enough that a form inside reads like one on a card.
+   * ---------------------------------------------------------------- */
+  [data-slot="dropdown-menu-content"],
+  [data-slot="select-content"],
+  [data-slot="popover-content"],
+  [data-slot="dialog-content"],
+  [data-slot="sheet-content"],
+  .zimos-glass.glass-dialog,
+  [class~="bg-paper-raised"][class~="shadow-[var(--shadow-pop)]"] {
+    background-color: var(--lg-overlay);
+    -webkit-backdrop-filter: var(--lg-blur-overlay);
+    backdrop-filter: var(--lg-blur-overlay);
+    --tw-inset-shadow: var(--lg-rim-line);
+  }
+  [data-slot="dropdown-menu-content"],
+  [data-slot="select-content"],
+  [data-slot="popover-content"],
+  [data-slot="dialog-content"],
+  [data-slot="sheet-content"],
+  .zimos-glass.glass-dialog {
+    box-shadow: var(--lg-rim-line), var(--shadow-pop);
+  }
+  /* A heading that sticks to the top of a scrolling dialog is the same pane as the dialog. */
+  [class~="bg-paper-raised"][class~="shadow-[var(--shadow-pop)]"] .sticky[class~="bg-paper-raised"] {
+    background-color: var(--lg-overlay);
+    -webkit-backdrop-filter: var(--lg-blur-overlay);
+    backdrop-filter: var(--lg-blur-overlay);
+  }
+  /* A phone sheet (Modal, the command bar) covers most of the screen over a page
+     that is dimmed and not scrolling: nothing passes beneath it, so it stays
+     solid and costs no blur while it slides in or its form scrolls. */
+  @media (max-width: 39.99rem) {
+    [role="dialog"][class~="bg-paper-raised"][class~="shadow-[var(--shadow-pop)]"],
+    [role="dialog"][class~="bg-paper-raised"][class~="shadow-[var(--shadow-pop)]"] .sticky[class~="bg-paper-raised"] {
+      background-color: var(--color-paper-raised);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Stat tiles settle in one after another when a page of figures
+   * arrives: the home bento and rows of KPI cards. Short, once, and
+   * not at all for anyone who asked for less motion.
+   * ---------------------------------------------------------------- */
+  @media (prefers-reduced-motion: no-preference) {
+    .glass-app main .grid > :nth-child(1) { --lg-i: 0; }
+    .glass-app main .grid > :nth-child(2) { --lg-i: 1; }
+    .glass-app main .grid > :nth-child(3) { --lg-i: 2; }
+    .glass-app main .grid > :nth-child(4) { --lg-i: 3; }
+    .glass-app main .grid > :nth-child(5) { --lg-i: 4; }
+    .glass-app main .grid > :nth-child(6) { --lg-i: 5; }
+    .glass-app main .grid > :nth-child(n + 7) { --lg-i: 6; }
+
+    .glass-app main .grid-flow-row-dense > :where(section, a),
+    .glass-app main .grid [data-kpi] {
+      animation: lg-settle 340ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+      animation-delay: calc(var(--lg-i, 0) * 40ms);
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .glass-app [data-slot="button"],
+    .glass-app .glass-nav nav a {
+      transition: transform 140ms ease, background-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+    }
+    .glass-app [data-slot="button"]:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .glass-app main :where(a[class*="rounded-[var(--radius-card)]"], a > [data-slot="card"]) {
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+    .glass-app main :where(a[class*="rounded-[var(--radius-card)]"], a > [data-slot="card"]):hover {
+      transform: translateY(-2px);
+    }
+  }
+  /* A KPI tile takes the colour of its trend under the pointer. */
+  @media (hover: hover) {
+    .glass-app main [data-kpi][data-trend="up"]:hover {
+      --tw-ring-color: color-mix(in srgb, var(--color-success) 45%, transparent);
+      background-color: color-mix(in srgb, var(--color-success-soft) 62%, transparent);
+    }
+    .glass-app main [data-kpi][data-trend="down"]:hover {
+      --tw-ring-color: color-mix(in srgb, var(--color-danger) 45%, transparent);
+      background-color: color-mix(in srgb, var(--color-danger-soft) 62%, transparent);
+    }
+  }
+}
+
+/* The shell pieces of the redesign (side menu, dock, Spotlight, sheets, menus,
+   segmented control, toasts, Notification Centre, stat cards, page motion) are
+   the same layer, one file each, in ./glass/ — imported after this file in
+   main.tsx and written under the same :root:not([data-glass="off"]) switch. */
+
+@keyframes lg-settle {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Belt and braces for the same preferences the off switch follows: if the
+   attribute was not set (script blocked, or the device setting changed while
+   the dashboard was open), the panes still turn solid. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root:not([data-glass="off"]) {
+    --lg-fill: var(--color-paper-raised);
+    --lg-control: var(--color-paper-raised);
+    --lg-control-lit: var(--color-paper-sunken);
+    --lg-frost: var(--color-paper-raised);
+    --lg-overlay: var(--color-paper-raised);
+    --lg-blur: none;
+    --lg-blur-overlay: none;
+    --lg-sheen: none;
+    --lg-thead: var(--color-paper-sunken);
+    --lg-hairline: var(--color-line);
+    --lg-row-lit: var(--color-paper-sunken);
+    --lg-bg-base: var(--color-paper);
+    --lg-bg-brand: transparent;
+    --lg-bg-violet: transparent;
+    --lg-bg-pink: transparent;
+    --lg-bg-peach: transparent;
+    --lg-bg-sky: transparent;
+    --lg-panel: transparent;
+    --lg-nav: var(--color-paper-raised);
+    --lg-gloss: none;
+  }
+  :root:not([data-glass="off"]).dark {
+    --lg-fill: var(--color-paper-raised);
+    --lg-control: var(--color-paper-raised);
+    --lg-control-lit: var(--color-paper-sunken);
+    --lg-frost: var(--color-paper-raised);
+    --lg-overlay: var(--color-paper-raised);
+    --lg-sheen: none;
+    --lg-thead: var(--color-paper-sunken);
+    --lg-hairline: var(--color-line);
+    --lg-row-lit: var(--color-paper-sunken);
+    --lg-bg-base: var(--color-paper);
+    --lg-bg-brand: transparent;
+    --lg-bg-violet: transparent;
+    --lg-bg-pink: transparent;
+    --lg-bg-peach: transparent;
+    --lg-bg-sky: transparent;
+    --lg-panel: transparent;
+    --lg-nav: var(--color-paper-raised);
+    --lg-gloss: none;
+  }
+}
+
+/* The one rule for the off state. packages/ui/styles.css strips the shadow from
+   `[data-glass="off"] .zimos-glass`; the store switcher's list is the only such
+   element in the shell without .glass-nav, and it keeps the calm shadow it had
+   before this attribute was ever set here. */
+:root[data-glass="off"] .glass-app .zimos-glass:not(.glass-nav, .glass-dialog) {
+  box-shadow: var(--shadow-card);
+}
