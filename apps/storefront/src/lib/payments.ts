@@ -159,6 +159,7 @@ export async function placeOnlineOrder({
   cartToken,
   visitorId,
   returnTo,
+  shopperToken,
 }: {
   client: ApiClient;
   workspaceId: string;
@@ -170,6 +171,8 @@ export async function placeOnlineOrder({
   visitorId?: string;
   /** A store-relative path the payment page sends the shopper on to once paid (a funnel's next step). */
   returnTo?: string;
+  /** The signed-in shopper's token, when the order uses their level or invite; nothing is sent without one. */
+  shopperToken?: string | null;
 }): Promise<{ result: CheckoutResult; next: string; external: boolean }> {
   const previewToken = getPreviewToken(workspaceId);
   const token = cartToken;
@@ -188,7 +191,7 @@ export async function placeOnlineOrder({
     client.placeCheckout(
       workspaceId,
       { ...body, ...otp, returnUrl: paymentPageUrl(basePath, "{orderId}") },
-      { cartToken: token, previewToken, visitorId }
+      { cartToken: token, previewToken, visitorId, shopperToken }
     )
   );
 

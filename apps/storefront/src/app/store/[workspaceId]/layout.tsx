@@ -11,6 +11,8 @@ import { HideInFunnel } from "@/components/HideInFunnel";
 import { MobileCategoryStrip } from "@/components/MobileCategoryStrip";
 import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
 import { HolidayBanner } from "@/components/holiday/HolidayBanner";
+import { InviteBanner } from "@/components/rewards/InviteBanner";
+import { CUSTOMER_REFERRALS_ENABLED } from "@/lib/features";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
@@ -214,6 +216,12 @@ export default async function StoreLayout({
             <PaymentsPreviewBanner workspaceId={workspaceId} />
             {/* The band across the top while the store is on holiday; on funnel pages too (HOLIDAY_MODE_ENABLED). */}
             <HolidayBanner />
+            {/* A friend's invite from a `?ref=` link, above the store (lib/features); funnel pages keep their own path. */}
+            {CUSTOMER_REFERRALS_ENABLED && (
+              <HideInFunnel>
+                <InviteBanner />
+              </HideInFunnel>
+            )}
             <HideInFunnel>
               <StoreHeader store={store} locale={locale} />
               <MobileCategoryStrip collections={collections} t={t} />

@@ -23,7 +23,21 @@ import { GiftOptionsField, GiftWrapRow, useGiftChoice } from "@/components/gifts
 import { HolidayNote } from "@/components/holiday/HolidayNote";
 import { LimitLineNote, useLimitNotes } from "@/components/checkout/LimitLineNote";
 import { purchaseLimitMessage } from "@/lib/buyInfo";
-import { GIFT_CARDS_ENABLED, PURCHASE_LIMITS_ENABLED, SHOPPER_ACCOUNTS_ENABLED } from "@/lib/features";
+import {
+  CUSTOMER_REFERRALS_ENABLED,
+  GIFT_CARDS_ENABLED,
+  LOYALTY_ENABLED,
+  PURCHASE_LIMITS_ENABLED,
+  SHOPPER_ACCOUNTS_ENABLED,
+  STORE_CREDIT_ENABLED,
+  VIP_TIERS_ENABLED,
+} from "@/lib/features";
+import { CheckoutTenders, useCheckoutTenders } from "@/components/tenders/CheckoutTenders";
+import { CheckoutPerks, useCheckoutPerks } from "@/components/rewards/CheckoutPerks";
+
+/** Points and store credit at checkout, and the level's perks and a friend's invite under the totals: each only while switched on. */
+const TENDERS_ON = SHOPPER_ACCOUNTS_ENABLED && (LOYALTY_ENABLED || STORE_CREDIT_ENABLED);
+const PERKS_ON = VIP_TIERS_ENABLED || CUSTOMER_REFERRALS_ENABLED;
 import { CheckoutSavedAddresses } from "@/components/account/CheckoutSavedAddresses";
 import { GiftCardField, useGiftCard } from "@/components/giftCards/GiftCardField";
 import { useHolidayCheckout } from "@/lib/storeHoliday";
@@ -200,6 +214,12 @@ export default function CheckoutPage() {
   const total = subtotal + bumpInTotals + gift.wrapAmount + shipping.amount - automaticOff;
   // A gift card pays part of a cash-on-delivery order (lib/features; inert while off: no method, so no card).
   const giftCard = useGiftCard({ client, workspaceId, method: GIFT_CARDS_ENABLED && !manualChosen ? method : undefined, total, currency });
+  // A signed-in shopper's points and store credit pay part of a cash-on-delivery order (inert while off: no method, nothing read).
+  const tenders = useCheckoutTenders({ method: TENDERS_ON && !manualChosen ? method : undefined, total, currency, giftCard });
+  // The signed-in shopper's VIP level and a friend's invite, which the API takes off when the order is placed.
+  const perks = useCheckoutPerks({ enabled: PERKS_ON });
+  // Sent with the order only when one of these is in play, so every other order goes out as it always did.
+  const shopperToken = TENDERS_ON || PERKS_ON ? (tenders.shopperToken ?? perks.shopperToken ?? undefined) : undefined;
 
   // --- progress ------------------------------------------------------------
   // Contact → Address → Confirm above the form, from the same validation the
@@ -248,6 +268,13 @@ export default function CheckoutPage() {
       }
     }
 
+    // Points typed under the minimum or over the balance: said beside the field (which takes focus), before anything is sent.
+    const pointsProblem = TENDERS_ON ? tenders.check() : null;
+    if (pointsProblem) {
+      setFormError(pointsProblem);
+      return;
+    }
+
     const systemNotes: string[] = [];
 
     setSubmitting(true);
@@ -262,6 +289,8 @@ export default function CheckoutPage() {
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
         ...gift.payload,
         ...giftCard.payload,
+        ...(TENDERS_ON ? tenders.payload : {}),
+        ...(PERKS_ON ? perks.payload : {}),
       };
       if (manualChosen) {
         const { order } = await placeManualOrder({
@@ -272,7 +301,9 @@ export default function CheckoutPage() {
           proof,
           cartToken: cart.guestToken,
           visitorId: getVisitorId(workspaceId),
+          shopperToken,
         });
+        if (PERKS_ON) perks.onPlaced();
         clearCart();
         router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
         return;
@@ -286,7 +317,9 @@ export default function CheckoutPage() {
           method,
           cartToken: cart.guestToken,
           visitorId: getVisitorId(workspaceId),
+          shopperToken,
         });
+        if (PERKS_ON) perks.onPlaced();
         clearCart();
         if (external) {
           setRedirecting(true);
@@ -302,7 +335,9 @@ export default function CheckoutPage() {
         payload: payload as CheckoutPayload,
         cartToken: cart.guestToken,
         visitorId: getVisitorId(workspaceId),
+        shopperToken,
       });
+      if (PERKS_ON) perks.onPlaced();
       clearCart();
       router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
     } catch (err) {
@@ -329,7 +364,12 @@ export default function CheckoutPage() {
         // dropped: said in the shopper's words. Each is null while its feature is off.
         if (PURCHASE_LIMITS_ENABLED) limitNotes.capture(err);
         const featureRefusal =
-          holiday.onError(err) ?? (PURCHASE_LIMITS_ENABLED ? purchaseLimitMessage(err, locale) : null) ?? gift.onError(err) ?? giftCard.onError(err);
+          holiday.onError(err) ??
+          (PURCHASE_LIMITS_ENABLED ? purchaseLimitMessage(err, locale) : null) ??
+          gift.onError(err) ??
+          giftCard.onError(err) ??
+          (TENDERS_ON ? tenders.onError(err) : null) ??
+          (PERKS_ON ? perks.onError(err) : null);
         setFormError(featureRefusal ?? orderErrorMessage(err, t.form.errors));
         setSubmitting(false);
       }
@@ -544,7 +584,11 @@ export default function CheckoutPage() {
               </div>
             </dl>
             {/* "Have a gift card?": its code, what it takes off, and what the courier collects. */}
-            {GIFT_CARDS_ENABLED && <GiftCardField state={giftCard} />}
+            {GIFT_CARDS_ENABLED && <GiftCardField state={giftCard} remainder={!TENDERS_ON} />}
+            {/* "Use your store credit", "Use your points", and what is left for the courier once any of them pays part. */}
+            {TENDERS_ON && <CheckoutTenders state={tenders} />}
+            {/* The VIP level's perks and a friend's invite, as they will come off the order. */}
+            {PERKS_ON && <CheckoutPerks state={perks} />}
             <MinimumOrderNotice extras={shipping.extras} currency={currency} className="mt-3" />
             <FreeShippingHint
               progress={shipping.freeShipping}

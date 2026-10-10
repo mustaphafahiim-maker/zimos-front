@@ -62,7 +62,8 @@ import { ProductBuyNotes } from "./ProductBuyNotes";
 import { SizeGuideLink } from "./SizeGuide";
 import { BackInStock } from "../stockAlert/BackInStock";
 import { preorderFor, stepperLimits, takesPreorders } from "@/lib/buyInfo";
-import { PREORDERS_ENABLED, PURCHASE_LIMITS_ENABLED, SHOPPER_ACCOUNTS_ENABLED, SIZE_CHARTS_ENABLED, STOCK_ALERTS_ENABLED } from "@/lib/features";
+import { LOYALTY_ENABLED, PREORDERS_ENABLED, PURCHASE_LIMITS_ENABLED, SHOPPER_ACCOUNTS_ENABLED, SIZE_CHARTS_ENABLED, STOCK_ALERTS_ENABLED } from "@/lib/features";
+import { EarnPointsNote } from "../tenders/EarnPointsNote";
 import { WishlistHeart } from "../wishlist/WishlistHeart";
 import { useHoliday } from "@/lib/storeHoliday";
 import { AddToCartButton } from "../AddToCartButton";
@@ -535,6 +536,8 @@ export function ProductLanding({
             </span>
           )}
         </div>
+        {/* What one unit of this product earns in points, on a store with a loyalty programme (lib/features). */}
+        {LOYALTY_ENABLED && <EarnPointsNote unitMinor={unit} />}
         <p className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${available ? "text-success" : choosing ? "text-ink-soft" : "text-danger"}${preorder ? " hidden" : ""}`}>
           {available && <CheckIcon size={16} />}
           {available

@@ -64,6 +64,7 @@ export async function placeManualOrder({
   proof,
   cartToken,
   visitorId,
+  shopperToken,
 }: {
   client: ApiClient;
   workspaceId: string;
@@ -72,6 +73,8 @@ export async function placeManualOrder({
   proof: ProofDraft;
   cartToken?: string;
   visitorId?: string;
+  /** The signed-in shopper's token, when the order uses their level or invite; nothing is sent without one. */
+  shopperToken?: string | null;
 }): Promise<{ order: Order; proofSent: boolean }> {
   const body: CheckoutPayload = {
     ...payload,
@@ -81,7 +84,7 @@ export async function placeManualOrder({
     ...adMatchFields(workspaceId),
   };
   const result = await withCheckoutOtp(workspaceId, body.contact.phone, (otp) =>
-    client.placeCheckout(workspaceId, { ...body, ...otp }, { cartToken, visitorId })
+    client.placeCheckout(workspaceId, { ...body, ...otp }, { cartToken, visitorId, shopperToken })
   );
   const order = result.order;
   if (result.paymentToken) savePaymentToken(workspaceId, order.id, result.paymentToken);
