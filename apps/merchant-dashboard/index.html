@@ -28,6 +28,17 @@
               window.matchMedia("(prefers-color-scheme: dark)").matches);
           e.classList.toggle("dark", d);
           e.style.colorScheme = d ? "dark" : "light";
+          // Glass surfaces: off when the merchant turned them off, or the device asks for solid ones.
+          var g = null;
+          try {
+            g = localStorage.getItem("zimos.glass");
+          } catch (_) {}
+          if (
+            g === "off" ||
+            window.matchMedia("(prefers-reduced-transparency: reduce)").matches ||
+            window.matchMedia("(forced-colors: active)").matches
+          )
+            e.setAttribute("data-glass", "off");
         } catch (_) {}
       })();
     </script>
