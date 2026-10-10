@@ -33,6 +33,9 @@ export const SIZE_CHARTS_ENABLED = import.meta.env.VITE_SIZE_CHARTS_ENABLED === 
 /** Shoppers' questions on products, and the team's answers. */
 export const PRODUCT_QUESTIONS_ENABLED = import.meta.env.VITE_PRODUCT_QUESTIONS_ENABLED === "true";
 
+/** Staff notes and follow-ups on a customer, and the open follow-ups tab. Pairs with the API's customer_notes. */
+export const CUSTOMER_NOTES_ENABLED = import.meta.env.VITE_CUSTOMER_NOTES_ENABLED === "true";
+
 /** A variant's prices over time on its product page. Pairs with the API's price_history. */
 export const PRICE_HISTORY_ENABLED = import.meta.env.VITE_PRICE_HISTORY_ENABLED === "true";
 

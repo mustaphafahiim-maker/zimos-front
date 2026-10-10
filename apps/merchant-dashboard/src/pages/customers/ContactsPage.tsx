@@ -7,10 +7,11 @@ import { FilterTabs } from "@/components/FilterTabs";
 import { ContactsAllTab } from "./ContactsAllTab";
 import { SegmentsTab } from "./SegmentsTab";
 import { EmailSuppressionsTab, useSuppressedContactTab } from "./suppressions/EmailSuppressionsTab";
-import { EMAIL_SUPPRESSIONS_ENABLED, STORE_REPORTS_ENABLED } from "@/lib/features";
+import { CUSTOMER_NOTES_ENABLED, EMAIL_SUPPRESSIONS_ENABLED, STORE_REPORTS_ENABLED } from "@/lib/features";
 import { isRfmLabel } from "@store-builder/api-client";
 import { RfmGroupList } from "./crm/RfmGroupList";
 import { RfmGroupsTab } from "./crm/RfmGroupsTab";
+import { MyFollowupsTab } from "./crm/MyFollowupsTab";
 
 const STRINGS = {
   en: {
@@ -20,6 +21,7 @@ const STRINGS = {
     all: "All",
     segments: "Segments",
     groups: "Customer groups",
+    followups: "Follow-ups",
     forms: "Form submissions",
   },
   ar: {
@@ -29,11 +31,12 @@ const STRINGS = {
     all: "الكل",
     segments: "الشرائح",
     groups: "مجموعات العملاء",
+    followups: "المتابعات",
     forms: "رسائل النماذج",
   },
 } satisfies Messages;
 
-type Tab = "all" | "segments" | "suppressed" | "groups";
+type Tab = "all" | "segments" | "suppressed" | "groups" | "followups";
 
 /**
  * Contacts (SPEC §18.4): the customers list grown into leads + customers with
@@ -56,7 +59,9 @@ export function ContactsPage() {
         ? "suppressed"
         : STORE_REPORTS_ENABLED && asked === "groups"
           ? "groups"
-          : "all";
+          : CUSTOMER_NOTES_ENABLED && asked === "followups"
+            ? "followups"
+            : "all";
   const segmentId = searchParams.get("segment") ?? "";
 
   const go = (next: { tab?: Tab; segment?: string }) => {
@@ -88,9 +93,12 @@ export function ContactsPage() {
           { value: "segments", label: t.segments },
           ...(EMAIL_SUPPRESSIONS_ENABLED ? [{ value: "suppressed" as const, label: suppressed.label }] : []),
           ...(STORE_REPORTS_ENABLED ? [{ value: "groups" as const, label: t.groups }] : []),
+          ...(CUSTOMER_NOTES_ENABLED ? [{ value: "followups" as const, label: t.followups }] : []),
         ]}
       />
-      {tab === "groups" ? (
+      {tab === "followups" ? (
+        <MyFollowupsTab />
+      ) : tab === "groups" ? (
         <RfmGroupsTab />
       ) : tab === "all" && group ? (
         <RfmGroupList label={group} />

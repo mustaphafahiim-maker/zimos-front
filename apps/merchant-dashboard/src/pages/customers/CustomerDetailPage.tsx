@@ -4,10 +4,12 @@ import {
   EMAIL_SUPPRESSIONS_ENABLED,
   LOYALTY_ENABLED,
   STORE_CREDIT_ENABLED,
+  CUSTOMER_NOTES_ENABLED,
   STORE_REPORTS_ENABLED,
   VIP_TIERS_ENABLED,
 } from "@/lib/features";
 import { CustomerRfmCard } from "./crm/CustomerRfmCard";
+import { CustomerNotesCard } from "./crm/CustomerNotesCard";
 import { CustomerInvitesCard } from "@/pages/customerReferrals/CustomerInvitesCard";
 import { CustomerLoyaltyCard } from "@/pages/loyalty/CustomerLoyaltyCard";
 import { CustomerStoreCreditCard } from "@/pages/storeCredit/CustomerStoreCreditCard";
@@ -200,6 +202,8 @@ export function CustomerDetailPage() {
             {CUSTOMER_REFERRALS_ENABLED && <CustomerInvitesCard customerId={customer.id} />}
             {/* The customer's RFM group: how recently, how often and how much they buy (lib/features). */}
             {STORE_REPORTS_ENABLED && <CustomerRfmCard customerId={customer.id} />}
+            {/* What the team wrote about the customer, and who gets back to them (lib/features). */}
+            {CUSTOMER_NOTES_ENABLED && <CustomerNotesCard customerId={customer.id} />}
             <ContactForm customer={customer} onSaved={reload} />
             <OrderHistorySection customer={customer} />
             <BlacklistSection customer={customer} onChanged={reload} />

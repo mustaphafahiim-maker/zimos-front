@@ -206,6 +206,7 @@ export * from "./endpoints/emailSuppressions";
 // and the storefront show none of one unless its own switch is on.
 export * from "./endpoints/sizeCharts";
 export * from "./endpoints/priceHistory";
+export * from "./endpoints/customerNotes";
 export * from "./endpoints/productQuestions";
 export * from "./endpoints/productSpecs";
 export * from "./endpoints/stockAlerts";
