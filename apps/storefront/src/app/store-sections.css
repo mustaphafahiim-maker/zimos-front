@@ -65,6 +65,14 @@ section[data-zt-section]:has(.zs),
 .zs *::after {
   box-sizing: border-box;
 }
+/* The page's own ground, kept under a name of its own for the waves below. A
+   strong section (and one theme's opening band) re-points --color-paper, for
+   everything inside it, at a see-through tint of its text colour; a wave
+   filled with that all but vanishes. Read on the store's wrapper, the token
+   is still the page's real colour, whatever look or theme the store wears. */
+.brand-theme {
+  --zs-page: var(--color-paper);
+}
 .zs[data-tone="primary"] { --zs-ground: var(--zs-tone-primary); }
 .zs[data-tone="secondary"] { --zs-ground: var(--zs-tone-secondary); }
 .zs[data-tone="cool"] { --zs-ground: var(--zs-tone-cool); }
@@ -234,8 +242,17 @@ section[data-zt-section]:has(.zs),
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 50% 50%;
+  object-position: var(--zs-fx, 50%) var(--zs-fy, 50%);
 }
+/* The part of a slide's picture kept in view when the box crops it
+   (heroLook.ts): the centre unless the slide names an edge. Start and end
+   follow the page's direction, like the text's place. */
+.zs-hero__slide[data-fx="start"] { --zs-fx: 0%; }
+.zs-hero__slide[data-fx="end"] { --zs-fx: 100%; }
+[dir="rtl"] .zs-hero__slide[data-fx="start"] { --zs-fx: 100%; }
+[dir="rtl"] .zs-hero__slide[data-fx="end"] { --zs-fx: 0%; }
+.zs-hero__slide[data-fy="top"] { --zs-fy: 0%; }
+.zs-hero__slide[data-fy="bottom"] { --zs-fy: 100%; }
 .zs-hero__shell {
   position: relative;
   z-index: 3;
@@ -374,7 +391,7 @@ section[data-zt-section]:has(.zs),
   height: 100%;
 }
 .zs-hero__wave path {
-  fill: var(--color-paper);
+  fill: var(--zs-page, var(--color-paper));
 }
 .zs-hero:not([data-wave]) .zs-hero__shell {
   padding-bottom: 50px;
@@ -386,9 +403,21 @@ section[data-zt-section]:has(.zs),
   }
 }
 @media (max-width: 749px) {
+  /* 4 wide to 5 tall, and no taller than 560px: the box stops growing with the
+     screen at 448px wide. Left to the ratio alone it is 936px at 749px, more
+     than such a screen is tall. Its width is set (`.zs`), so the limit holds
+     the height and leaves the width alone. */
   .zs-hero {
     height: auto;
     aspect-ratio: 4 / 5;
+    max-height: 560px;
+  }
+  /* A slider that names its own height on a phone (heroLook.ts) is that tall
+     instead, whatever the screen's width. */
+  .zs-hero[data-phone-height] {
+    height: var(--zs-hero-h-mobile);
+    aspect-ratio: auto;
+    max-height: none;
   }
   .zs-hero__media {
     overflow: hidden;
@@ -435,6 +464,8 @@ section[data-zt-section]:has(.zs),
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Held at the same part as the picture under it. */
+  object-position: var(--zs-fx, 50%) var(--zs-fy, 50%);
   opacity: 0;
   transition: opacity 400ms ease;
 }
@@ -456,6 +487,19 @@ section[data-zt-section]:has(.zs),
 }
 .zs-hero__slide[data-text="light"] .zs-hero__overlay {
   background: #000;
+}
+/* While the store's HERO_MEDIA switch is on the slider is marked data-legible.
+   The small lines are then drawn at full strength: over the default veil,
+   which is a soft one (heroLook.ts), they need all the contrast they can
+   have. And the heading is larger on a computer. */
+.zs-hero[data-legible] .zs-hero__eyebrow,
+.zs-hero[data-legible] .zs-hero__sub {
+  opacity: 1;
+}
+@media (min-width: 1025px) {
+  .zs-hero[data-legible] .zs-hero__heading {
+    font-size: clamp(50px, 4vw, 60px);
+  }
 }
 /* A phone's own veil and its own place for the text; each is set only where it
    differs from the computer's, so a slide without them keeps the rules above. */
@@ -2142,7 +2186,7 @@ section[data-zt-section]:has(.zs),
   pointer-events: none;
 }
 .zs-banner__wave path {
-  fill: var(--color-paper);
+  fill: var(--zs-page, var(--color-paper));
 }
 @media (max-width: 1024px) {
   .zs-banner {

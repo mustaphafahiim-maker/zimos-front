@@ -1,6 +1,15 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { HERO_OVERLAY_MAX, heroLookMarkup, resolveHeroLook } from "./heroLook.ts";
+import {
+  HERO_DEFAULT_OVERLAY,
+  HERO_OVERLAY_MAX,
+  heroFocusMarkup,
+  heroHasText,
+  heroLookMarkup,
+  heroPhoneHeight,
+  resolveHeroFocus,
+  resolveHeroLook,
+} from "./heroLook.ts";
 
 /**
  * Pins the promise the hero's new settings make: a slide saved before they
@@ -91,5 +100,174 @@ describe("heroLookMarkup", () => {
     assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlay: 40, overlayMobile: 0 }, true)).overlay, { desktop: 0.4, phone: 0 });
     assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 60 }, true)).overlay, { desktop: 0, phone: 0.6 });
     assert.equal(heroLookMarkup(resolveHeroLook({ overlay: 0, overlayMobile: 0 }, true)).overlay, null);
+  });
+});
+
+describe("the default veil of a slide with text", () => {
+  it("is drawn on both devices while the switch is on and the slide sets none", () => {
+    const look = resolveHeroLook({ side: "start" }, true, true);
+    assert.equal(look.desktop.overlay, HERO_DEFAULT_OVERLAY);
+    assert.equal(look.phone.overlay, HERO_DEFAULT_OVERLAY);
+    assert.deepEqual(heroLookMarkup(look).overlay, { desktop: 0.45, phone: 0.45 });
+  });
+
+  it("is not drawn for a slide without text, which has nothing to keep readable", () => {
+    assert.deepEqual(resolveHeroLook({}, true, false), OLD);
+    assert.equal(heroLookMarkup(resolveHeroLook({}, true, false)).overlay, null);
+  });
+
+  it("gives way to the veil a slide sets, none included", () => {
+    assert.equal(resolveHeroLook({ overlay: 0 }, true, true).desktop.overlay, 0);
+    assert.equal(heroLookMarkup(resolveHeroLook({ overlay: 0 }, true, true)).overlay, null);
+    assert.equal(resolveHeroLook({ overlay: 20 }, true, true).desktop.overlay, 20);
+    assert.equal(resolveHeroLook({ overlay: 60 }, true, true).phone.overlay, 60);
+    // A value that is not a veil is not a choice: the default still applies.
+    assert.equal(resolveHeroLook({ overlay: "lots" }, true, true).desktop.overlay, HERO_DEFAULT_OVERLAY);
+  });
+
+  it("leaves a phone its own veil, and the default where the phone sets none", () => {
+    assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 0 }, true, true)).overlay, { desktop: 0.45, phone: 0 });
+    assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlayMobile: 30 }, true, true)).overlay, { desktop: 0.45, phone: 0.3 });
+    assert.deepEqual(heroLookMarkup(resolveHeroLook({ overlay: 0 }, true, true)).overlay, null);
+  });
+
+  it("is never drawn while the switch is off: a slide with text is as it always was", () => {
+    assert.deepEqual(resolveHeroLook({}, false, true), OLD);
+    assert.deepEqual(resolveHeroLook({ heading: "Summer", overlay: 40 }, false, true), OLD);
+    assert.deepEqual(heroLookMarkup(resolveHeroLook({}, false, true)), { overlay: null });
+  });
+
+  it("counts a small line, a heading or a line under it as text, and blanks as none", () => {
+    assert.equal(heroHasText("", "Summer", ""), true);
+    assert.equal(heroHasText("New", "", ""), true);
+    assert.equal(heroHasText("", "", "Free delivery"), true);
+    assert.equal(heroHasText("", "", ""), false);
+    assert.equal(heroHasText(" ", "\n", "\t"), false);
+    assert.equal(heroHasText(), false);
+  });
+});
+
+/**
+ * How readable the slide's text is over a picture, by the WCAG contrast ratio.
+ * The veil is white under dark text and black under light text, laid over the
+ * picture at the veil's strength (store-sections.css; storeSections.test.mjs
+ * pins those four colours). The two pictures that are hardest on the text are
+ * a black one under dark text and a white one under light text.
+ */
+describe("the default veil's contrast", () => {
+  const DARK_TEXT = 0x1c; // #1c1c1c
+  const LIGHT_TEXT = 255; // #fff
+  const BLACK = 0;
+  const WHITE = 255;
+  /** Relative luminance of a grey, from its 0–255 level. */
+  const luminance = (level) => {
+    const s = level / 255;
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + 0.05) / (Math.min(luminance(a), luminance(b)) + 0.05);
+  /** The grey a shopper sees where a veil of `percent` lies over a picture. */
+  const veiled = (picture, veil, percent) => picture + (veil - picture) * (percent / 100);
+  const darkOnBlack = (percent) => contrast(DARK_TEXT, veiled(BLACK, WHITE, percent));
+  const lightOnWhite = (percent) => contrast(LIGHT_TEXT, veiled(WHITE, BLACK, percent));
+  const AA = 4.5; // text of any size: what the small lines need (17px on a computer, 15px on a phone)
+  const AA_LARGE = 3; // large text: the heading, 50px bold on a computer and 30px bold on a phone
+
+  it("is one of the veil's own steps, inside its range", () => {
+    assert.equal(HERO_DEFAULT_OVERLAY, 45);
+    assert.equal(HERO_DEFAULT_OVERLAY % 5, 0);
+    assert.ok(HERO_DEFAULT_OVERLAY <= HERO_OVERLAY_MAX);
+  });
+
+  it("is needed: with no veil, text of the wrong colour for its picture cannot be read", () => {
+    assert.ok(darkOnBlack(0) < 1.3);
+    assert.ok(lightOnWhite(0) < 1.1);
+  });
+
+  it("keeps a dark heading readable over a black picture and a light one over a white picture", () => {
+    assert.ok(darkOnBlack(HERO_DEFAULT_OVERLAY) >= AA_LARGE, `dark on black: ${darkOnBlack(HERO_DEFAULT_OVERLAY).toFixed(2)}`);
+    assert.ok(lightOnWhite(HERO_DEFAULT_OVERLAY) >= AA_LARGE, `light on white: ${lightOnWhite(HERO_DEFAULT_OVERLAY).toFixed(2)}`);
+    assert.equal(darkOnBlack(HERO_DEFAULT_OVERLAY).toFixed(2), "3.58");
+    assert.equal(lightOnWhite(HERO_DEFAULT_OVERLAY).toFixed(2), "3.35");
+  });
+
+  it("is the lowest step that does: five less leaves the heading just under 3 to 1", () => {
+    const below = HERO_DEFAULT_OVERLAY - 5;
+    assert.ok(darkOnBlack(below) < AA_LARGE);
+    assert.ok(lightOnWhite(below) < AA_LARGE);
+    assert.equal(darkOnBlack(below).toFixed(2), "2.97");
+    assert.equal(lightOnWhite(below).toFixed(2), "2.85");
+  });
+
+  it("does not carry the small lines over those two pictures: that takes a veil of 55", () => {
+    // Known and accepted: the default is the softer veil. A slide whose text is the wrong colour for its picture
+    // has a readable heading, and its small lines want the other text colour or a stronger veil.
+    assert.ok(darkOnBlack(HERO_DEFAULT_OVERLAY) < AA && lightOnWhite(HERO_DEFAULT_OVERLAY) < AA);
+    assert.ok(darkOnBlack(50) < AA && lightOnWhite(50) < AA);
+    assert.equal(darkOnBlack(55).toFixed(2), "5.08");
+    assert.equal(lightOnWhite(55).toFixed(2), "4.76");
+  });
+
+  it("changes nothing where the text already suits the picture", () => {
+    // Dark text over a white picture and light text over a black one: the veil is the picture's own colour.
+    assert.equal(contrast(DARK_TEXT, veiled(WHITE, WHITE, HERO_DEFAULT_OVERLAY)).toFixed(1), "17.0");
+    assert.equal(contrast(LIGHT_TEXT, veiled(BLACK, BLACK, HERO_DEFAULT_OVERLAY)).toFixed(1), "21.0");
+  });
+
+  it("lifts a mid-grey picture, where neither colour passed, well clear", () => {
+    const GREY = 128;
+    assert.ok(contrast(DARK_TEXT, GREY) < AA && contrast(LIGHT_TEXT, GREY) < AA);
+    assert.ok(contrast(DARK_TEXT, veiled(GREY, WHITE, HERO_DEFAULT_OVERLAY)) > 8.5);
+    assert.ok(contrast(LIGHT_TEXT, veiled(GREY, BLACK, HERO_DEFAULT_OVERLAY)) > 9);
+  });
+});
+
+describe("heroPhoneHeight", () => {
+  it("is nothing for a slider that names none, so a phone keeps its 4:5 box", () => {
+    for (const unset of [undefined, null, "", "  ", "tall", {}, [], true, NaN, 0, -40]) assert.equal(heroPhoneHeight(unset), null);
+  });
+
+  it("is the height that is named, as a whole number of px", () => {
+    assert.equal(heroPhoneHeight(320), 320);
+    assert.equal(heroPhoneHeight("450"), 450);
+    assert.equal(heroPhoneHeight(399.6), 400);
+  });
+
+  it("is held inside 200 to 900", () => {
+    assert.equal(heroPhoneHeight(40), 200);
+    assert.equal(heroPhoneHeight(5000), 900);
+  });
+});
+
+describe("resolveHeroFocus", () => {
+  it("holds a picture at its centre while the slide names no edge, as it always was", () => {
+    assert.deepEqual(resolveHeroFocus({}), { x: "center", y: "center" });
+    assert.deepEqual(resolveHeroFocus({ image: "https://cdn.test/a.jpg", side: "start", vertical: "top" }), { x: "center", y: "center" });
+    assert.deepEqual(resolveHeroFocus({ focusX: "center", focusY: "center" }), { x: "center", y: "center" });
+  });
+
+  it("reads each direction on its own", () => {
+    assert.deepEqual(resolveHeroFocus({ focusY: "top" }), { x: "center", y: "top" });
+    assert.deepEqual(resolveHeroFocus({ focusX: "end" }), { x: "end", y: "center" });
+    assert.deepEqual(resolveHeroFocus({ focusX: "start", focusY: "bottom" }), { x: "start", y: "bottom" });
+  });
+
+  it("reads anything that is not a known edge as the centre", () => {
+    // "middle" and "left" are words of other settings, not of this one.
+    assert.deepEqual(resolveHeroFocus({ focusX: "left", focusY: "middle" }), { x: "center", y: "center" });
+    assert.deepEqual(resolveHeroFocus({ focusX: 0, focusY: null }), { x: "center", y: "center" });
+    assert.deepEqual(resolveHeroFocus({ focusX: "", focusY: ["top"] }), { x: "center", y: "center" });
+  });
+});
+
+describe("heroFocusMarkup", () => {
+  it("adds nothing for the centre", () => {
+    assert.deepEqual(heroFocusMarkup(resolveHeroFocus({})), {});
+    assert.deepEqual(heroFocusMarkup(resolveHeroFocus({ focusX: "center", focusY: "center" })), {});
+  });
+
+  it("names only the edges a slide asks for", () => {
+    assert.deepEqual(heroFocusMarkup(resolveHeroFocus({ focusY: "top" })), { focusY: "top" });
+    assert.deepEqual(heroFocusMarkup(resolveHeroFocus({ focusX: "start" })), { focusX: "start" });
+    assert.deepEqual(heroFocusMarkup(resolveHeroFocus({ focusX: "end", focusY: "bottom" })), { focusX: "end", focusY: "bottom" });
   });
 });

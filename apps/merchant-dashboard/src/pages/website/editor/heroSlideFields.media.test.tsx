@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
@@ -5,7 +7,7 @@ import type { MediaAsset } from "@store-builder/api-client";
 import { MediaPicker } from "@/components/MediaPicker";
 import { EditorLocaleContext } from "./editorLocale";
 import { ItemListField, type ItemSubField } from "./ItemListField";
-import { SHOWCASE_ELEMENT_SPECS } from "./showcaseBlocks";
+import { HERO_DEFAULT_VEIL, SHOWCASE_ELEMENT_SPECS } from "./showcaseBlocks";
 import { HEAVY_VIDEO_BYTES } from "./VideoField";
 import { api, fake } from "@/test/mocks";
 import { renderWithProviders } from "@/test/renderWithProviders";
@@ -102,6 +104,36 @@ describe("a slide of the picture slider, with the hero media switch on", () => {
     expect(screen.getByRole("button", { name: "Increase Veil over the picture (%)" })).toBeEnabled();
   });
 
+  it("knows the veil the store draws over a slide with text that sets none", () => {
+    // The storefront's own number: the two apps share no code, so this holds them equal.
+    const storefront = readFileSync(resolve(__dirname, "../../../../../storefront/src/components/page-renderer/showcase/heroLook.ts"), "utf8");
+    const match = /export const HERO_DEFAULT_OVERLAY = (\d+);/.exec(storefront);
+    expect(match).not.toBeNull();
+    expect(HERO_DEFAULT_VEIL).toBe(Number(match?.[1]));
+    expect(HERO_DEFAULT_VEIL).toBe(45);
+  });
+
+  it("shows that veil while the field is empty, and says what empty and 0 each mean", () => {
+    open();
+    const veil = screen.getByLabelText("Veil over the picture (%)");
+    expect(veil).toHaveValue(null);
+    expect(veil).toHaveAttribute("placeholder", "45");
+    expect(screen.getByText(/Left empty, a slide with text gets 45 and a slide without text none\. 0 leaves the picture as it is\./)).toBeInTheDocument();
+  });
+
+  it("starts the veil's steppers from the store's own veil, and stores 0 as a choice", async () => {
+    const { user, last } = open();
+    await user.click(screen.getByRole("button", { name: "Decrease Veil over the picture (%)" }));
+    expect(last()).toEqual({ image: PICTURE, overlay: 40 });
+
+    const veil = screen.getByLabelText("Veil over the picture (%)");
+    await user.clear(veil);
+    expect(last()).toEqual({ image: PICTURE });
+    await user.type(veil, "0");
+    // No veil at all is stored as 0: it is not the same as leaving the field empty.
+    expect(last()).toEqual({ image: PICTURE, overlay: 0 });
+  });
+
   it("keeps 0 on a phone as a value of its own, and an emptied field as \"same as on a computer\"", async () => {
     const { user, last } = open({ image: PICTURE, overlay: 40 });
     const phone = screen.getByLabelText("Veil on a phone (%)");
@@ -125,6 +157,7 @@ describe("a slide of the picture slider, with the hero media switch on", () => {
     expect(screen.getByLabelText("ارتفاع النص على الموبايل")).toBeInTheDocument();
     expect(screen.getByLabelText("طبقة فوق الصورة (%)")).toBeInTheDocument();
     expect(screen.getByLabelText("الطبقة على الموبايل (%)")).toBeInTheDocument();
+    expect(screen.getByText(/إذا تُرك فارغًا تأخذ الشريحة التي بها نص 45، والشريحة بلا نص لا تأخذ شيئًا\. الصفر يترك الصورة كما هي\./)).toBeInTheDocument();
   });
 });
 

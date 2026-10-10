@@ -6,7 +6,7 @@ import { dirFor, formatNumber, getDictionary, type Locale } from "@/lib/i18n";
 import { firstImage } from "@/lib/product";
 import { EmptyBlock } from "../commerce";
 import { showcaseCopy } from "./copy";
-import { heroLookMarkup, resolveHeroLook } from "./heroLook";
+import { heroFocusMarkup, heroHasText, heroLookMarkup, heroPhoneHeight, resolveHeroFocus, resolveHeroLook } from "./heroLook";
 import { HeroSlider, type HeroSlide } from "./HeroSlider";
 import { NeedTabs, type NeedTab } from "./NeedTabs";
 import { RailTrack } from "./RailTrack";
@@ -90,21 +90,27 @@ function HeroSliderElement({ props, locale, editable }: ElementProps) {
   items(props, "slides", 8).forEach((slide, i) => {
     const image = localizedImage(slide, "image", locale);
     if (!image) return;
-    const look = resolveHeroLook(slide, HERO_MEDIA_ENABLED);
+    const eyebrow = loc(slide, "eyebrow", locale);
+    const heading = loc(slide, "heading", locale);
+    const subheading = loc(slide, "subheading", locale);
+    // A slide with text gets a default veil while the switch is on and it sets none of its own.
+    const look = resolveHeroLook(slide, HERO_MEDIA_ENABLED, heroHasText(eyebrow, heading, subheading));
     slides.push({
       key: `${i}`,
       image,
       mobileImage: localizedImage(slide, "mobileImage", locale),
       alt: str(slide, "alt"),
-      eyebrow: loc(slide, "eyebrow", locale),
-      heading: loc(slide, "heading", locale),
-      subheading: loc(slide, "subheading", locale),
+      eyebrow,
+      heading,
+      subheading,
       buttonLabel: loc(slide, "buttonLabel", locale),
       buttonHref: linkOf(slide, "buttonHref"),
       // The computer's place as it always was; the phone's own place and the veil only while the switch is on (heroLook.ts).
       side: look.desktop.side,
       vertical: look.desktop.vertical,
       ...heroLookMarkup(look),
+      // The edge of the picture kept in view when the box crops it; nothing for the centre.
+      ...heroFocusMarkup(resolveHeroFocus(slide)),
       // A background video over the picture, which stays as its poster; read only while the switch is on.
       video: HERO_MEDIA_ENABLED ? safeUrl(str(slide, "video")) : null,
       contentWidth: num(slide, "contentWidth", 620, 200, 900),
@@ -122,6 +128,10 @@ function HeroSliderElement({ props, locale, editable }: ElementProps) {
       arrows={bool(props, "arrows", true)}
       dots={bool(props, "dots", true)}
       wave={bool(props, "wave", false)}
+      // The computer's and the tablet's heights always have a value; a phone has one only when the slider names it.
+      phoneHeight={heroPhoneHeight(props.heightMobile)}
+      // The larger heading and the full-strength small lines, only while the switch is on.
+      legible={HERO_MEDIA_ENABLED}
       rtl={dirFor(locale) === "rtl"}
       label={loc(props, "label", locale) || copy.slider}
       labels={{ previous: copy.previous, next: copy.next, slide: copy.slide }}

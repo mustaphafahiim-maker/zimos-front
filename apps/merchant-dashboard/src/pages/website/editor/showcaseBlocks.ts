@@ -81,6 +81,40 @@ const SLIDE_HEIGHTS = [
   { value: "bottom", label: "Bottom", labelAr: "تحت" },
 ];
 
+/**
+ * The part of a slide's picture that stays in view when the slider's box is
+ * another shape and crops it (the storefront's showcase/heroLook.ts). Across,
+ * it is one of SLIDE_SIDES; the centre is what the store draws while nothing
+ * is stored. Plain props of the slide, like the text's place.
+ */
+const FOCUS_HEIGHTS = [
+  { value: "top", label: "Top", labelAr: "الأعلى" },
+  { value: "center", label: "Centre", labelAr: "الوسط" },
+  { value: "bottom", label: "Bottom", labelAr: "الأسفل" },
+];
+const HERO_FOCUS_FIELDS: ItemSubField[] = [
+  {
+    key: "focusY",
+    label: "Part of the picture kept in view (up and down)",
+    labelAr: "الجزء الظاهر من الصورة (رأسيًا)",
+    kind: "choice",
+    fallback: "center",
+    options: FOCUS_HEIGHTS,
+    hint: "The slider's box is rarely the shape of the picture, so part of the picture is cut off. Choose the part that must stay in view.",
+    hintAr: "مساحة السلايدر لا تطابق شكل الصورة غالبًا، فيُقتطع جزء من الصورة. اختر الجزء الذي يجب أن يبقى ظاهرًا.",
+  },
+  {
+    key: "focusX",
+    label: "Part of the picture kept in view (across)",
+    labelAr: "الجزء الظاهر من الصورة (أفقيًا)",
+    kind: "choice",
+    fallback: "center",
+    options: SLIDE_SIDES,
+    hint: "Start is the right side of an Arabic page and the left side of an English one.",
+    hintAr: "البداية هي الجهة اليمنى في الصفحة العربية واليسرى في الصفحة الإنجليزية.",
+  },
+];
+
 /** The first choice of a phone's own setting: it stores nothing, and the store then uses the computer's value. */
 const SAME_AS_COMPUTER = { label: "Same as on a computer", labelAr: "كما على الكمبيوتر" };
 
@@ -106,6 +140,13 @@ const HERO_MEDIA_VIDEO_FIELDS: ItemSubField[] = HERO_MEDIA_ENABLED
   : [];
 
 /**
+ * The veil the store draws over a slide that has text while the slide sets
+ * none: HERO_DEFAULT_OVERLAY in the storefront's showcase/heroLook.ts. The two
+ * apps share no code, so it is written here again; a test holds them equal.
+ */
+export const HERO_DEFAULT_VEIL = 45;
+
+/**
  * A slide's settings behind the HERO_MEDIA switch (lib/features): the text's
  * place on a phone and the veil over the picture. They are plain props of the
  * slide (the storefront reads them in showcase/heroLook.ts), so the server
@@ -123,9 +164,10 @@ const HERO_MEDIA_SLIDE_FIELDS: ItemSubField[] = HERO_MEDIA_ENABLED
         min: 0,
         max: 60,
         step: 5,
-        startAt: 0,
-        hint: "Makes the text easier to read: dark under light text, light under dark text. Empty or 0 leaves the picture as it is.",
-        hintAr: "تسهّل قراءة النص: داكنة تحت النص الفاتح، وفاتحة تحت النص الداكن. الفراغ أو الصفر يترك الصورة كما هي.",
+        // Empty is the store's own veil, so that is what the field shows and where its steppers start.
+        startAt: HERO_DEFAULT_VEIL,
+        hint: `Makes the text easier to read: dark under light text, light under dark text. Left empty, a slide with text gets ${HERO_DEFAULT_VEIL} and a slide without text none. 0 leaves the picture as it is.`,
+        hintAr: `تسهّل قراءة النص: داكنة تحت النص الفاتح، وفاتحة تحت النص الداكن. إذا تُرك فارغًا تأخذ الشريحة التي بها نص ${HERO_DEFAULT_VEIL}، والشريحة بلا نص لا تأخذ شيئًا. الصفر يترك الصورة كما هي.`,
       },
       {
         key: "overlayMobile",
@@ -161,6 +203,7 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
           { key: "imageEn", label: "Picture (English store)", labelAr: "الصورة (النسخة الإنجليزية)", kind: "image" },
           { key: "mobileImageEn", label: "Phone picture (English store)", labelAr: "صورة الموبايل (النسخة الإنجليزية)", kind: "image" },
           ...HERO_MEDIA_VIDEO_FIELDS,
+          ...HERO_FOCUS_FIELDS,
           { key: "alt", label: "Describes the picture", labelAr: "وصف الصورة", kind: "text" },
           { key: "eyebrow", label: "Small line above the heading", labelAr: "سطر صغير فوق العنوان", kind: "text" },
           { key: "heading", label: "Heading", labelAr: "العنوان", kind: "text" },
@@ -207,6 +250,15 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
       { key: "wave", label: "Wave along the bottom", kind: "boolean" },
       { key: "height", label: "Height on a computer (px)", kind: "number", min: 240, max: 900 },
       { key: "heightTablet", label: "Height on a tablet (px)", kind: "number", min: 240, max: 900 },
+      // Not in defaultProps: unset, a phone keeps its own box, 4 wide to 5 tall and no taller than 560px (the storefront's store-sections.css).
+      {
+        key: "heightMobile",
+        label: "Height on a phone (px)",
+        kind: "number",
+        min: 200,
+        max: 900,
+        hint: "Leave empty for the slider's usual shape on a phone: 4 wide to 5 tall, and no taller than 560px.",
+      },
     ],
   },
   category_tiles: {

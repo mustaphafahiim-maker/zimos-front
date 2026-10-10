@@ -144,6 +144,9 @@ const FIELD_LABEL_AR: Record<string, string> = {
   themLabel: "اسم العمود الثاني",
   "comparison.rows": "الصفوف",
   "gallery.layout": "شكل العرض",
+  "hero_slider.height": "الارتفاع على الكمبيوتر (بكسل)",
+  "hero_slider.heightTablet": "الارتفاع على التابلت (بكسل)",
+  "hero_slider.heightMobile": "الارتفاع على الموبايل (بكسل)",
 };
 
 const FIELD_HINT_AR: Record<string, string> = {
@@ -160,6 +163,7 @@ const FIELD_HINT_AR: Record<string, string> = {
   "product_card.productId": "اتركه فارغًا ليُعرض أحدث منتج.",
   "shoppable_image.imageId": "انسخه من الكتالوج ← الصور التفاعلية.",
   "shader_hero.height": "تتحرك الخلفية بألوان متجرك نفسه.",
+  "hero_slider.heightMobile": "اتركه فارغًا ليأخذ السلايدر شكله المعتاد على الموبايل: ٤ عرضًا إلى ٥ ارتفاعًا، وبحد أقصى ٥٦٠ بكسل.",
   "product_3d.productId": "اتركه فارغًا ليُعرض أحدث منتج.",
   "product_3d.modelUrl":
     "اتركه فارغًا لاستخدام ملف GLB المرفوع مع صور المنتج. بدون ملف يُخفى هذا القسم.",

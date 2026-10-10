@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { EditorLocaleContext } from "./editorLocale";
 import { ItemListField, type ItemSubField } from "./ItemListField";
 import { SHOWCASE_ELEMENT_SPECS } from "./showcaseBlocks";
@@ -131,6 +131,53 @@ describe("a slide of the picture slider", () => {
   it("leaves a slide saved before these fields exactly as it was until one of them is touched", () => {
     const { onChange } = open({ image: PICTURE, heading: "Summer", side: "start", vertical: "top" });
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("offers the part of the picture to keep in view, right after the pictures", () => {
+    const keys = slideFields().map((field) => field.key);
+    expect(keys.slice(keys.indexOf("mobileImageEn") + 1, keys.indexOf("alt"))).toEqual(["focusY", "focusX"]);
+
+    const fields = slideFields();
+    const upDown = fields.find((field) => field.key === "focusY");
+    const across = fields.find((field) => field.key === "focusX");
+    if (upDown?.kind !== "choice" || across?.kind !== "choice") throw new Error("unexpected field kinds");
+    // The values the storefront's heroLook.ts reads; the centre is what it draws while nothing is stored.
+    expect(upDown.options.map((option) => option.value)).toEqual(["top", "center", "bottom"]);
+    expect(across.options.map((option) => option.value)).toEqual(["start", "center", "end"]);
+    expect(upDown.fallback).toBe("center");
+    expect(across.fallback).toBe("center");
+  });
+
+  it("shows the centre while nothing is stored, and stores the edge that is picked", async () => {
+    const { user, onChange, last } = open();
+    const upDown = screen.getByRole("radiogroup", { name: "Part of the picture kept in view (up and down)" });
+    const across = screen.getByRole("radiogroup", { name: "Part of the picture kept in view (across)" });
+    expect(within(upDown).getByRole("radio", { name: "Centre" })).toBeChecked();
+    expect(within(across).getByRole("radio", { name: "Centre" })).toBeChecked();
+    expect(onChange).not.toHaveBeenCalled();
+
+    await user.click(within(upDown).getByRole("radio", { name: "Top" }));
+    expect(last()).toEqual({ image: PICTURE, focusY: "top" });
+    expect(within(upDown).getByRole("radio", { name: "Top" })).toBeChecked();
+
+    await user.click(within(across).getByRole("radio", { name: "End" }));
+    expect(last()).toEqual({ image: PICTURE, focusY: "top", focusX: "end" });
+
+    await user.click(within(upDown).getByRole("radio", { name: "Centre" }));
+    expect(last()).toEqual({ image: PICTURE, focusY: "center", focusX: "end" });
+  });
+
+  it("names the part of the picture to keep in Arabic", () => {
+    renderWithProviders(
+      <EditorLocaleContext.Provider value="ar">
+        <Slides start={[{ image: PICTURE }]} onChange={() => undefined} />
+      </EditorLocaleContext.Provider>
+    );
+    const upDown = screen.getByRole("radiogroup", { name: "الجزء الظاهر من الصورة (رأسيًا)" });
+    expect(within(upDown).getByRole("radio", { name: "الأعلى" })).toBeInTheDocument();
+    expect(within(upDown).getByRole("radio", { name: "الوسط" })).toBeChecked();
+    const across = screen.getByRole("radiogroup", { name: "الجزء الظاهر من الصورة (أفقيًا)" });
+    expect(within(across).getByRole("radio", { name: "البداية" })).toBeInTheDocument();
   });
 
   it("names the three fields in Arabic", () => {

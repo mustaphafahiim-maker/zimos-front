@@ -25,6 +25,9 @@ export interface HeroSlide {
   overlay?: { desktop: number; phone: number } | null;
   /** A background video over the picture, which stays as its poster (HeroVideo.tsx); null or absent draws none. */
   video?: string | null;
+  /** The edge of the picture kept in view when the box crops it; absent, the centre (heroLook.ts). */
+  focusX?: "start" | "end";
+  focusY?: "top" | "bottom";
   contentWidth: number;
   text: "dark" | "light";
 }
@@ -49,6 +52,8 @@ export function HeroSlider({
   arrows,
   dots,
   wave,
+  phoneHeight,
+  legible,
   rtl,
   label,
   labels,
@@ -61,6 +66,10 @@ export function HeroSlider({
   arrows: boolean;
   dots: boolean;
   wave: boolean;
+  /** The slider's own height on a phone, in px; null or absent keeps the phone's 4:5 box (heroLook.ts). */
+  phoneHeight?: number | null;
+  /** The store's HERO_MEDIA switch: a larger heading on a computer and the small lines at full strength (store-sections.css). */
+  legible?: boolean;
   rtl: boolean;
   label: string;
   /** `slide` is the word before a slide number: "Slide" → "Slide 2". */
@@ -108,7 +117,9 @@ export function HeroSlider({
     <section
       className="zs zs-hero"
       data-wave={wave ? "" : undefined}
-      style={style}
+      data-phone-height={phoneHeight ? "" : undefined}
+      data-legible={legible ? "" : undefined}
+      style={phoneHeight ? ({ ...style, "--zs-hero-h-mobile": `${phoneHeight}px` } as CSSProperties) : style}
       role="region"
       aria-roledescription="carousel"
       aria-label={label}
@@ -131,6 +142,8 @@ export function HeroSlider({
             data-v={slide.vertical}
             data-hm={slide.phoneSide}
             data-vm={slide.phoneVertical}
+            data-fx={slide.focusX}
+            data-fy={slide.focusY}
             data-text={slide.text}
             aria-hidden={on ? undefined : true}
             inert={on ? undefined : true}
