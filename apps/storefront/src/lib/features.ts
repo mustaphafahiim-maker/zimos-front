@@ -46,3 +46,15 @@ export const GIFT_CARDS_ENABLED = process.env.NEXT_PUBLIC_GIFT_CARDS_ENABLED ===
 
 /** The store blog: the posts list and each post's page. */
 export const BLOG_ENABLED = process.env.NEXT_PUBLIC_BLOG_ENABLED === "true";
+
+/** Loyalty points: the points tab of the account, earning notes, and points at checkout (cash on delivery). Needs shopper accounts. */
+export const LOYALTY_ENABLED = process.env.NEXT_PUBLIC_LOYALTY_ENABLED === "true";
+
+/** VIP levels: the level tab of the account and the level's perks said at checkout. Needs shopper accounts. */
+export const VIP_TIERS_ENABLED = process.env.NEXT_PUBLIC_VIP_TIERS_ENABLED === "true";
+
+/** Store credit: the credit tab of the account and paying with it at checkout (cash on delivery). Needs shopper accounts. */
+export const STORE_CREDIT_ENABLED = process.env.NEXT_PUBLIC_STORE_CREDIT_ENABLED === "true";
+
+/** Shoppers inviting friends: the invite tab, the banner of a `?ref=` link and the invite at checkout. Needs shopper accounts. */
+export const CUSTOMER_REFERRALS_ENABLED = process.env.NEXT_PUBLIC_CUSTOMER_REFERRALS_ENABLED === "true";
