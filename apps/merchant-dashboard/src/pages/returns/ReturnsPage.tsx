@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Alert, Button, Card } from "@store-builder/ui";
-import type {
-  Order,
-  ReturnItemLine,
-  ReturnReasonCode,
-  ReturnRequest,
-  ReturnStatus,
+import {
+  returnDecide,
+  returnPhotosOf,
+  returnSourceOf,
+  type Order,
+  type ReturnDecisionPayload,
+  type ReturnItemLine,
+  type ReturnReasonCode,
+  type ReturnRequest,
+  type ReturnStatus,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -19,6 +23,11 @@ import { DataState } from "@/components/DataState";
 import { FilterTabs, type FilterTab } from "@/components/FilterTabs";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
+import { SHOPPER_RETURNS_ENABLED } from "@/lib/features";
+import { ReturnDecisionSheet } from "./ReturnDecisionSheet";
+import { ReturnPhotos, ReturnSourceBadge } from "./ReturnExtras";
+import { ReturnExchangeBadge, ReturnHandling } from "./ReturnHandling";
+import { ReturnSettingsSheet, useShopperReturnsSettings } from "./ReturnSettingsSheet";
 
 /** "" is the All tab — the backend simply omits the status filter. */
 type StatusFilter = "" | ReturnStatus;
@@ -57,6 +66,9 @@ const STRINGS = {
     reasonOther: "Other",
     approve: "Approve",
     reject: "Reject",
+    shopperReturns: "Returns from customers",
+    shopperReturnsOn: "Returns from customers: on",
+    shopperReturnsOff: "Returns from customers: off",
     restock: "Restock units",
     restockedAt: "Restocked {date}",
     saving: "Saving…",
@@ -97,6 +109,9 @@ const STRINGS = {
     reasonOther: "سبب آخر",
     approve: "قبول",
     reject: "رفض",
+    shopperReturns: "المرتجعات من العملاء",
+    shopperReturnsOn: "المرتجعات من العملاء: مفعّلة",
+    shopperReturnsOff: "المرتجعات من العملاء: متوقفة",
     restock: "إعادة إلى المخزون",
     restockedAt: "أُعيد إلى المخزون {date}",
     saving: "جارٍ الحفظ…",
@@ -243,7 +258,8 @@ export function ReturnsPage() {
 
   return (
     <div className="max-w-3xl">
-      <PageHeader title={t.title} description={t.description} />
+      {/* Whether customers may ask for a return themselves, behind one header button (lib/features). */}
+      <PageHeader title={t.title} description={t.description} actions={SHOPPER_RETURNS_ENABLED ? <ShopperReturnsButton /> : undefined} />
 
       <div className="mb-4">
         <FilterTabs tabs={tabs} value={status} onChange={setStatus} label={t.filterLabel} />
@@ -263,6 +279,7 @@ export function ReturnsPage() {
               returnRequest={ret}
               orderEntry={orders[ret.orderId]}
               onUpdated={applyUpdate}
+              onPhotosExpired={() => void list.refresh({ silent: true })}
             />
           ))}
         </div>
@@ -271,20 +288,45 @@ export function ReturnsPage() {
   );
 }
 
+/**
+ * The header's way into the shopper-returns setting: it says whether customers
+ * can ask for a return from their tracking page, and opens the sheet that
+ * changes it. Drawn only while the feature is switched on, so its read is too.
+ */
+function ShopperReturnsButton() {
+  const t = useT(STRINGS);
+  const settings = useShopperReturnsSettings();
+  const [open, setOpen] = useState(false);
+  const label = !settings.data ? t.shopperReturns : settings.data.enabled ? t.shopperReturnsOn : t.shopperReturnsOff;
+  return (
+    <>
+      <Button type="button" variant="outline" className="min-h-11" onClick={() => setOpen(true)}>
+        {label}
+      </Button>
+      <ReturnSettingsSheet open={open} onClose={() => setOpen(false)} settings={settings} />
+    </>
+  );
+}
+
 function ReturnCard({
   returnRequest: ret,
   orderEntry,
   onUpdated,
+  onPhotosExpired,
 }: {
   returnRequest: ReturnRequest;
   orderEntry: OrderEntry | undefined;
   onUpdated: (updated: ReturnRequest) => void;
+  /** The photos' signed links ran out: the list is read again for fresh ones. */
+  onPhotosExpired: () => void;
 }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const t = useT(STRINGS);
   const [busy, setBusy] = useState<"approve" | "reject" | "restock" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // With shopper returns on, a decision goes through a sheet: a message for the customer, and an exchange's shipping.
+  const [deciding, setDeciding] = useState<{ action: "approve" | "reject"; open: boolean } | null>(null);
 
   const order = orderEntry?.status === "ready" ? orderEntry.order : null;
   const { code, detail } = splitReason(ret.reason);
@@ -328,6 +370,15 @@ function ReturnCard({
     }
   }
 
+  async function decide(payload: ReturnDecisionPayload) {
+    const updated = await returnDecide(apiClient, workspaceId, ret.id, payload);
+    toast.success(payload.action === "approve" ? t.toastApproved : t.toastRejected);
+    setDeciding((current) => (current ? { ...current, open: false } : current));
+    onUpdated(updated);
+  }
+  const moderate = (action: "approve" | "reject") => (SHOPPER_RETURNS_ENABLED ? setDeciding({ action, open: true }) : void run(action));
+  const photos = SHOPPER_RETURNS_ENABLED ? returnPhotosOf(ret) : [];
+
   // The backend moderates only a `requested` return and restocks only an
   // approved (or received) one that hasn't been restocked yet — so these
   // buttons are absent, not disabled, whenever the call could only 409.
@@ -355,7 +406,11 @@ function ReturnCard({
               : formatDate(ret.createdAt)}
           </p>
         </div>
-        <StatusBadge value={ret.status} text={statusText} />
+        <div className="flex flex-wrap items-center gap-2">
+          {SHOPPER_RETURNS_ENABLED && returnSourceOf(ret) === "shopper" && <ReturnSourceBadge />}
+          {SHOPPER_RETURNS_ENABLED && <ReturnExchangeBadge ret={ret} />}
+          <StatusBadge value={ret.status} text={statusText} />
+        </div>
       </div>
 
       <div className="text-sm">
@@ -386,6 +441,10 @@ function ReturnCard({
         </ul>
       </div>
 
+      {/* What the customer attached and asked for: photos, the exchange («M → L»), the message they were sent. */}
+      {photos.length > 0 && <ReturnPhotos photos={photos} onExpired={onPhotosExpired} />}
+      {SHOPPER_RETURNS_ENABLED && <ReturnHandling ret={ret} order={order} className="space-y-2 text-sm" />}
+
       {ret.restockedAt && (
         <p className="text-sm text-ink-soft">
           {fmt(t.restockedAt, { date: formatDateTime(ret.restockedAt) })}
@@ -398,13 +457,13 @@ function ReturnCard({
         <div className="flex flex-wrap gap-2">
           {canModerate && (
             <>
-              <Button size="sm" onClick={() => run("approve")} disabled={busy !== null}>
+              <Button size="sm" onClick={() => moderate("approve")} disabled={busy !== null}>
                 {busy === "approve" ? t.saving : t.approve}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => run("reject")}
+                onClick={() => moderate("reject")}
                 disabled={busy !== null}
               >
                 {busy === "reject" ? t.saving : t.reject}
@@ -417,6 +476,18 @@ function ReturnCard({
             </Button>
           )}
         </div>
+      )}
+
+      {SHOPPER_RETURNS_ENABLED && (
+        <ReturnDecisionSheet
+          ret={ret}
+          action={deciding?.action ?? "approve"}
+          open={Boolean(deciding?.open)}
+          who={order ? [order.contactSnapshot?.fullName, order.orderNumber].filter(Boolean).join(" · ") : undefined}
+          currency={order?.currency}
+          onClose={() => setDeciding((current) => (current ? { ...current, open: false } : current))}
+          onConfirm={decide}
+        />
       )}
     </Card>
   );
