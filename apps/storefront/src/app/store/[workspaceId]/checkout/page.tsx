@@ -19,6 +19,12 @@ import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useCart } from "@/lib/CartProvider";
 import { orderBumpOf } from "@/lib/commerce";
 import { focusField } from "@/lib/focusField";
+import { GiftOptionsField, GiftWrapRow, useGiftChoice } from "@/components/gifts/GiftOptionsField";
+import { HolidayNote } from "@/components/holiday/HolidayNote";
+import { LimitLineNote, useLimitNotes } from "@/components/checkout/LimitLineNote";
+import { purchaseLimitMessage } from "@/lib/buyInfo";
+import { PURCHASE_LIMITS_ENABLED } from "@/lib/features";
+import { useHolidayCheckout } from "@/lib/storeHoliday";
 import {
   FIELD_ORDER,
   formOptionsOf,
@@ -67,6 +73,11 @@ export default function CheckoutPage() {
   const [client] = useState(() => createStorefrontApiClient());
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
   const { byVariant } = useCatalog(workspaceId);
+  // Store features, each inert while its switch is off (lib/features): a store on holiday,
+  // what a product's purchase limits refused, and the gift wrap and message.
+  const holiday = useHolidayCheckout({ client, workspaceId });
+  const limitNotes = useLimitNotes(cart);
+  const gift = useGiftChoice({ client, workspaceId });
 
   // The form starts on the store's country (dashboard → General → Country).
   const storeCountry = useStoreCountry();
@@ -165,6 +176,8 @@ export default function CheckoutPage() {
   const quoteLines = items.map((l) => ({ variantId: l.variantId, offerId: l.offerId, quantity: l.quantity }));
   if (bumpOn && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   for (const b of cartBumps.selected) quoteLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
+  // The gift wrap is a product the server adds: its weight counts toward the parcel too.
+  if (gift.quoteLine) quoteLines.push(gift.quoteLine);
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
   const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: quoteLines }));
   // Pickup from the store (when offered): no delivery fee; the server charges none either.
@@ -182,7 +195,7 @@ export default function CheckoutPage() {
       : shippingChoice.state;
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
-  const total = subtotal + bumpInTotals + shipping.amount - automaticOff;
+  const total = subtotal + bumpInTotals + gift.wrapAmount + shipping.amount - automaticOff;
 
   // --- progress ------------------------------------------------------------
   // Contact → Address → Confirm above the form, from the same validation the
@@ -243,6 +256,7 @@ export default function CheckoutPage() {
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
+        ...gift.payload,
       };
       if (manualChosen) {
         const { order } = await placeManualOrder({
@@ -306,14 +320,20 @@ export default function CheckoutPage() {
         });
         focusField(fieldId(FORM_PREFIX, invalid[0]));
       } else {
-        setFormError(orderErrorMessage(err, t.form.errors));
+        // A store that went on holiday, a product over its purchase limit, a gift option the store
+        // dropped: said in the shopper's words. Each is null while its feature is off.
+        if (PURCHASE_LIMITS_ENABLED) limitNotes.capture(err);
+        const featureRefusal = holiday.onError(err) ?? (PURCHASE_LIMITS_ENABLED ? purchaseLimitMessage(err, locale) : null) ?? gift.onError(err);
+        setFormError(featureRefusal ?? orderErrorMessage(err, t.form.errors));
         setSubmitting(false);
       }
       autosave.resume();
     }
   }
 
-  const submitLabel = redirecting
+  const submitLabel = holiday.pausedLabel
+    ? holiday.pausedLabel
+    : redirecting
     ? t.payment.redirecting
     : submitting
       ? t.checkout.placing
@@ -324,7 +344,7 @@ export default function CheckoutPage() {
   const storeClosed = store?.delivery?.hours ? !store.delivery.hours.openNow : false;
   // Closed by the weekly hours: when it opens next (lib/storeHours).
   const nextOpen = storeClosed ? (store?.delivery?.hours?.nextOpen ?? null) : null;
-  const submitDisabled = submitting || items.length === 0 || storeClosed;
+  const submitDisabled = submitting || items.length === 0 || storeClosed || holiday.paused;
   // The estimated delivery time: the chosen zone's, else the store's.
   const etaMinutes = pickingUp ? null : (zoneChosen?.etaMinutes ?? store?.delivery?.etaMinutes ?? null);
 
@@ -342,6 +362,8 @@ export default function CheckoutPage() {
       <div className="mt-6 max-w-xl">
         <CheckoutProgress done={progressDone} current={progressCurrent} />
       </div>
+      {/* A store on holiday: when the order ships, or that orders are paused. */}
+      <HolidayNote view={holiday} className="mt-3 max-w-xl" />
 
       <form
         onSubmit={handleSubmit}
@@ -377,6 +399,9 @@ export default function CheckoutPage() {
               {!pickingUp && !storeZones && <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />}
             </div>
           </section>
+
+          {/* "Is this a gift?": wrap, message, hidden prices, when the store offers them. */}
+          <GiftOptionsField state={gift} idPrefix={FORM_PREFIX} />
 
           <section className={`${card} p-5 sm:p-6`} aria-labelledby="payment-title">
             <h2 id="payment-title" className="text-lg font-semibold text-ink">
@@ -415,6 +440,7 @@ export default function CheckoutPage() {
                         <LineOptions options={line.options} />
                           <LineCustomizations customizations={line.customizations} />
                         <span className="text-xs"> × {line.quantity}</span>
+                        <LimitLineNote notes={limitNotes} productId={product?.id} />
                       </span>
                       <span className="shrink-0 font-medium text-ink">{money(line.lineTotal, currency)}</span>
                     </li>
@@ -496,6 +522,7 @@ export default function CheckoutPage() {
                   <dd className="text-ink">{money(b.priceAmount, currency)}</dd>
                 </div>
               ))}
+              <GiftWrapRow state={gift} currency={currency} />
               {!appliedCode && <DiscountRows extras={shipping.extras} coupon={null} currency={currency} />}
               <div className="flex justify-between gap-3">
                 <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
