@@ -1,4 +1,5 @@
 import { createLocalStorageTokenStorage, type TokenStorage } from "./tokenStorage";
+import type { TwoFactorChallenge } from "./endpoints/twoFactor";
 import type {
   CustomerUpload,
   ShopperManualPayment,
@@ -619,12 +620,14 @@ export class ApiClient {
     // `email`: the dashboard can deploy before the API.
     const identifier = payload.identifier?.trim();
     const body = identifier && identifier.includes("@") && !payload.email ? { ...payload, email: identifier } : payload;
-    const result = await this.request<(AuthTokens & { user: AuthUser }) | VerificationChallenge>("/auth/login", {
+    const result = await this.request<(AuthTokens & { user: AuthUser }) | VerificationChallenge | TwoFactorChallenge>("/auth/login", {
       method: "POST",
       body,
       auth: false,
     });
     if ("verificationRequired" in result) return result;
+    // Two-step sign-in (endpoints/twoFactor.ts): a challenge, no tokens yet.
+    if ("twoFactorRequired" in result) return result;
     this.setTokens({ accessToken: result.accessToken, refreshToken: result.refreshToken });
     return result;
   }
