@@ -104,6 +104,6 @@ describe("DomainsTab and the redirect to the primary domain", () => {
     flags.redirect = true;
     serve([domain()]);
     renderWithProviders(<DomainsTab />, { locale: "ar" });
-    expect(await screen.findByLabelText(/تحويل الزوار إلى النطاق الأساسي/)).toBeChecked();
+    expect(await screen.findByLabelText(/تحويل الزوار إلى الدومين الأساسي/)).toBeChecked();
   });
 });

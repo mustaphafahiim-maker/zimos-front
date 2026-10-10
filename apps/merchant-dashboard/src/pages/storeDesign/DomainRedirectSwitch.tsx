@@ -8,8 +8,8 @@ const STRINGS = {
     hint: "Off: the store opens on this domain too (useful for a domain dedicated to a funnel).",
   },
   ar: {
-    label: "تحويل الزوار إلى النطاق الأساسي",
-    hint: "عند الإيقاف: يفتح المتجر على هذا النطاق أيضًا (مفيد لنطاق مخصص لمسار بيع).",
+    label: "تحويل الزوار إلى الدومين الأساسي",
+    hint: "عند الإيقاف: يفتح المتجر على هذا الدومين أيضًا (مفيد لدومين مخصص لمسار بيع).",
   },
 } satisfies Messages;
 
