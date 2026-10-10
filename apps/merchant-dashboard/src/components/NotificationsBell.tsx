@@ -166,7 +166,8 @@ export function NotificationsBell() {
         aria-label={unreadCount > 0 ? t.openUnread.replace("{n}", String(unreadCount)) : t.open}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="relative cursor-pointer rounded-md p-2 text-ink-soft hover:bg-primary-soft hover:text-ink"
+        data-slot="notifications-bell"
+        className="relative flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-[scale,background-color,color] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-primary-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-primary active:scale-[0.97] aria-expanded:bg-primary-soft aria-expanded:text-primary-dark motion-reduce:transition-none dark:aria-expanded:text-primary pointer-coarse:size-11"
       >
         <Bell className="size-5" aria-hidden />
         {unreadCount > 0 && (
@@ -375,7 +376,7 @@ function NotificationsDrawer({
             type="button"
             onClick={() => {
               onClose();
-              navigate("/settings#notifications");
+              navigate("/settings?tab=notifications");
             }}
             className="cursor-pointer text-sm text-primary hover:underline"
           >
