@@ -23,7 +23,8 @@ import { GiftOptionsField, GiftWrapRow, useGiftChoice } from "@/components/gifts
 import { HolidayNote } from "@/components/holiday/HolidayNote";
 import { LimitLineNote, useLimitNotes } from "@/components/checkout/LimitLineNote";
 import { purchaseLimitMessage } from "@/lib/buyInfo";
-import { PURCHASE_LIMITS_ENABLED } from "@/lib/features";
+import { GIFT_CARDS_ENABLED, PURCHASE_LIMITS_ENABLED } from "@/lib/features";
+import { GiftCardField, useGiftCard } from "@/components/giftCards/GiftCardField";
 import { useHolidayCheckout } from "@/lib/storeHoliday";
 import {
   FIELD_ORDER,
@@ -196,6 +197,8 @@ export default function CheckoutPage() {
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
   const total = subtotal + bumpInTotals + gift.wrapAmount + shipping.amount - automaticOff;
+  // A gift card pays part of a cash-on-delivery order (lib/features; inert while off: no method, so no card).
+  const giftCard = useGiftCard({ client, workspaceId, method: GIFT_CARDS_ENABLED && !manualChosen ? method : undefined, total, currency });
 
   // --- progress ------------------------------------------------------------
   // Contact → Address → Confirm above the form, from the same validation the
@@ -257,6 +260,7 @@ export default function CheckoutPage() {
         ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
         ...gift.payload,
+        ...giftCard.payload,
       };
       if (manualChosen) {
         const { order } = await placeManualOrder({
@@ -323,7 +327,8 @@ export default function CheckoutPage() {
         // A store that went on holiday, a product over its purchase limit, a gift option the store
         // dropped: said in the shopper's words. Each is null while its feature is off.
         if (PURCHASE_LIMITS_ENABLED) limitNotes.capture(err);
-        const featureRefusal = holiday.onError(err) ?? (PURCHASE_LIMITS_ENABLED ? purchaseLimitMessage(err, locale) : null) ?? gift.onError(err);
+        const featureRefusal =
+          holiday.onError(err) ?? (PURCHASE_LIMITS_ENABLED ? purchaseLimitMessage(err, locale) : null) ?? gift.onError(err) ?? giftCard.onError(err);
         setFormError(featureRefusal ?? orderErrorMessage(err, t.form.errors));
         setSubmitting(false);
       }
@@ -535,6 +540,8 @@ export default function CheckoutPage() {
                 <dd>{money(total, currency)}</dd>
               </div>
             </dl>
+            {/* "Have a gift card?": its code, what it takes off, and what the courier collects. */}
+            {GIFT_CARDS_ENABLED && <GiftCardField state={giftCard} />}
             <MinimumOrderNotice extras={shipping.extras} currency={currency} className="mt-3" />
             <FreeShippingHint
               progress={shipping.freeShipping}
