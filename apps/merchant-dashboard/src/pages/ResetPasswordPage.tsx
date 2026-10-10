@@ -1,10 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
-import { Button, Input, Label, Alert } from "@store-builder/ui";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Button, Alert } from "@store-builder/ui";
 import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { AuthBackdrop } from "@/components/AuthBackdrop";
+import { AUTH_SUBMIT, AuthHeading, AuthLink, AuthPasswordField, AuthRules, AuthShell } from "./AuthShell";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { MIN_PASSWORD_LENGTH, isPasswordStrong, passwordRuleLabel, unmetPasswordRules } from "@/lib/passwordRules";
 
@@ -67,8 +66,6 @@ export function ResetPasswordPage() {
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [linkDead, setLinkDead] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -111,127 +108,88 @@ export function ResetPasswordPage() {
   }
 
   const askAgain = (
-    <Link to="/forgot-password" className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">
+    <AuthLink to="/forgot-password" className="mt-4">
       {t.askAgain}
-    </Link>
+    </AuthLink>
   );
 
   return (
-    <div className="auth-glass">
-      <AuthBackdrop />
-      <div className="auth-glass-stage">
-        <div className="w-full max-w-sm">
-          <h2 className="font-display text-3xl font-medium text-ink">{t.title}</h2>
+    <AuthShell>
+      {!token ? (
+        <>
+          <AuthHeading title={t.title} />
+          <Alert variant="danger" className="mt-6" role="alert">
+            {t.invalidLink}
+          </Alert>
+          {askAgain}
+        </>
+      ) : linkDead ? (
+        <>
+          <AuthHeading title={t.title} />
+          <Alert variant="danger" className="mt-6" role="alert">
+            {t.expired}
+          </Alert>
+          {askAgain}
+        </>
+      ) : done ? (
+        <>
+          <AuthHeading title={t.title} />
+          <Alert variant="success" className="mt-6" role="status">
+            {t.done}
+          </Alert>
+          <Button type="button" className={`mt-6 ${AUTH_SUBMIT}`} onClick={() => navigate("/login", { replace: true })}>
+            {t.signIn}
+          </Button>
+        </>
+      ) : (
+        <>
+          <AuthHeading title={t.title}>{t.intro}</AuthHeading>
 
-          {!token ? (
-            <>
-              <Alert variant="danger" className="mt-6" role="alert">
-                {t.invalidLink}
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            {error && (
+              <Alert variant="danger" role="alert">
+                {error}
               </Alert>
-              {askAgain}
-            </>
-          ) : linkDead ? (
-            <>
-              <Alert variant="danger" className="mt-6" role="alert">
-                {t.expired}
-              </Alert>
-              {askAgain}
-            </>
-          ) : done ? (
-            <>
-              <Alert variant="success" className="mt-6" role="status">
-                {t.done}
-              </Alert>
-              <Button type="button" className="mt-6 min-h-11 w-full" onClick={() => navigate("/login", { replace: true })}>
-                {t.signIn}
-              </Button>
-            </>
-          ) : (
-            <>
-              <p className="mt-2 text-sm text-ink-soft">{t.intro}</p>
+            )}
 
-              <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-                {error && (
-                  <Alert variant="danger" role="alert">
-                    {error}
-                  </Alert>
-                )}
+            <AuthPasswordField
+              label={t.password}
+              fieldId="password"
+              autoComplete="new-password"
+              enterKeyHint="next"
+              required
+              minLength={MIN_PASSWORD_LENGTH}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t.passwordPlaceholder}
+              aria-describedby={password.length > 0 && unmetRules.length > 0 ? "password-rules" : undefined}
+            >
+              {/* What is still missing, while the password is being typed. */}
+              {password.length > 0 && <AuthRules id="password-rules" rules={unmetRules.map((rule) => passwordRuleLabel(rule, locale))} />}
+            </AuthPasswordField>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="password">{t.password}</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      required
-                      minLength={MIN_PASSWORD_LENGTH}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={t.passwordPlaceholder}
-                      className="pe-10"
-                      aria-describedby="password-rules"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? t.hide : t.show}
-                      aria-pressed={showPassword}
-                      className="absolute inset-y-0 end-0 flex cursor-pointer items-center px-3 text-ink-soft transition-colors hover:text-ink"
-                    >
-                      {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-                    </button>
-                  </div>
-                  {password.length > 0 && unmetRules.length > 0 && (
-                    <ul id="password-rules" className="mt-1 space-y-1 text-xs text-ink-soft">
-                      {unmetRules.map((rule) => (
-                        <li key={rule.id} className="flex items-center gap-1.5">
-                          <span aria-hidden>•</span>
-                          {passwordRuleLabel(rule, locale)}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+            <AuthPasswordField
+              label={t.confirm}
+              fieldId="confirm"
+              autoComplete="new-password"
+              enterKeyHint="done"
+              required
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="••••••••"
+              error={confirm.length > 0 && password !== confirm ? t.mismatch : undefined}
+            />
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirm">{t.confirm}</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirm"
-                      type={showConfirm ? "text" : "password"}
-                      autoComplete="new-password"
-                      required
-                      value={confirm}
-                      onChange={(e) => setConfirm(e.target.value)}
-                      placeholder="••••••••"
-                      className="pe-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm((v) => !v)}
-                      aria-label={showConfirm ? t.hide : t.show}
-                      aria-pressed={showConfirm}
-                      className="absolute inset-y-0 end-0 flex cursor-pointer items-center px-3 text-ink-soft transition-colors hover:text-ink"
-                    >
-                      {showConfirm ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-                    </button>
-                  </div>
-                  {confirm.length > 0 && password !== confirm && <p className="mt-1 text-xs text-danger">{t.mismatch}</p>}
-                </div>
+            <Button type="submit" className={AUTH_SUBMIT} disabled={submitting}>
+              {submitting ? t.saving : t.save}
+            </Button>
+          </form>
 
-                <Button type="submit" className="min-h-11 w-full" disabled={submitting}>
-                  {submitting ? t.saving : t.save}
-                </Button>
-              </form>
-
-              <Link to="/login" className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">
-                {t.back}
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+          <AuthLink to="/login" back className="mt-4">
+            {t.back}
+          </AuthLink>
+        </>
+      )}
+    </AuthShell>
   );
 }

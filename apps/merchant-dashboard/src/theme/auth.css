@@ -1,0 +1,74 @@
+/* The screens outside the dashboard (pages/AuthShell.tsx): the page ground, the
+   ZIMOS mark at the top, the language switch in the corner and ONE card in the
+   middle. Loaded after index.css, whose older rules for `.auth-glass` (a palette
+   of their own, pill fields, a blurred card) these replace; with the glass layer
+   on, theme/glass/sweep-account.css draws the ground as the aurora and the card
+   as a pane on top of this. */
+
+/* The same colours and display face as the rest of the dashboard. */
+.auth-glass {
+  --font-display: inherit;
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 0%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 70%),
+    var(--color-paper);
+}
+html:not(.dark) .auth-glass {
+  --color-ink: inherit;
+  --color-ink-soft: inherit;
+  --color-paper: inherit;
+  --color-line: inherit;
+  --color-line-strong: inherit;
+  --color-primary: inherit;
+  --color-primary-dark: inherit;
+  --color-primary-soft: inherit;
+  --foreground: inherit;
+  --primary: inherit;
+  --ring: inherit;
+  --border: inherit;
+  --input: inherit;
+  --muted-foreground: inherit;
+  --secondary: inherit;
+  --secondary-foreground: inherit;
+  color: var(--color-ink);
+}
+
+/* The card: solid, on the page ground. */
+.auth-glass-stage > * {
+  padding: 1.5rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-paper-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--shadow-raised);
+}
+@media (min-width: 40rem) {
+  .auth-glass-stage > * {
+    padding: 2.25rem;
+  }
+}
+
+/* Comfortable touch targets on the sign-in forms; the field and the button keep
+   the shape and the fill they have everywhere else. */
+.auth-glass [data-slot="input"] {
+  height: 2.875rem;
+  border-radius: var(--radius);
+  padding-inline: revert-layer;
+  background: revert-layer;
+  box-shadow: revert-layer;
+}
+.auth-glass [data-slot="button"][data-variant="default"],
+.auth-glass [data-slot="button"][data-variant="primary"],
+.auth-glass [data-slot="button"][data-variant="outline"] {
+  min-height: 2.875rem;
+  border-radius: var(--radius);
+  box-shadow: revert-layer;
+}
+.auth-glass [data-slot="button"][data-variant="outline"] {
+  background: revert-layer;
+}
+
+/* The decorative shapes of the old backdrop are retired. */
+.auth-blob {
+  display: none;
+}
