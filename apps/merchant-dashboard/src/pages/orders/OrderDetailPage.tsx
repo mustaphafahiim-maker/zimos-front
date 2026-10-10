@@ -11,7 +11,8 @@ import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderSummary } from "./components/OrderSummary";
 import { OrderGiftCard } from "./components/OrderGiftCard";
-import { GIFT_OPTIONS_ENABLED } from "@/lib/features";
+import { GIFT_OPTIONS_ENABLED, HOLIDAY_MODE_ENABLED } from "@/lib/features";
+import { OrderFulfilmentPlan } from "./components/OrderFulfilmentPlan";
 import { OrderActions } from "./components/OrderActions";
 import { WhatsappConfirmButton } from "./components/WhatsappConfirmButton";
 import { OrderDiscountsCard } from "./components/OrderDiscountsCard";
@@ -95,6 +96,9 @@ export function OrderDetailPage() {
           ) : undefined
         }
       />
+
+      {/* An order taken during a holiday: when the customer was told it ships (lib/features). */}
+      {HOLIDAY_MODE_ENABLED && data && <OrderFulfilmentPlan order={data} />}
 
       <DataState loading={order.loading} error={order.error} onRetry={() => order.refresh()}>
         {data && (
