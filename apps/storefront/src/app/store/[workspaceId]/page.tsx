@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import type { StorefrontCollection } from "@store-builder/api-client";
+import { LatestPosts } from "@/components/blog/LatestPosts";
 import { ArrowIcon } from "@/components/Icons";
 import { PageRenderer } from "@/components/page-renderer";
 import { ProductCard } from "@/components/ProductCard";
@@ -9,6 +10,7 @@ import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
 import { storeCards } from "@/lib/storePromises";
 import { btnPrimary, btnSecondary, container } from "@/components/ui";
+import { BLOG_ENABLED } from "@/lib/features";
 import { getDictionary } from "@/lib/i18n";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { storeHref } from "@/lib/storeHref";
@@ -189,6 +191,9 @@ export default async function StoreHomePage({
           </div>
         )}
       </section>
+
+      {/* The three newest blog posts, when the store has any; only while the blog is switched on (lib/features). */}
+      {BLOG_ENABLED && <LatestPosts workspaceId={workspaceId} t={t} locale={locale} />}
     </main>
   );
 }
