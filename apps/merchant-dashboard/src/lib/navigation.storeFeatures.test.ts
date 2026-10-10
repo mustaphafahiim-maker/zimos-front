@@ -56,3 +56,26 @@ describe("menu entries of gift cards and the blog", () => {
     expect(blog.NAV_LABELS.ar.blog).toBe("المدونة");
   });
 });
+
+describe("the menu entry of loyalty and rewards", () => {
+  it("is not there while its four programmes are off", async () => {
+    expect(keysOf(await navWith({}))).not.toContain("loyalty");
+  });
+
+  it("opens the first programme that is switched on", async () => {
+    const all = await navWith({ LOYALTY_ENABLED: true, VIP_TIERS_ENABLED: true, CUSTOMER_REFERRALS_ENABLED: true, STORE_CREDIT_ENABLED: true });
+    expect(all.NAV_ITEMS.find((item) => item.key === "loyalty")?.to).toBe("/loyalty");
+    expect(all.NAV_LABELS.en.loyalty).toBe("Loyalty & rewards");
+    expect(all.NAV_LABELS.ar.loyalty).toBe("الولاء والمكافآت");
+
+    const vip = await navWith({ VIP_TIERS_ENABLED: true, STORE_CREDIT_ENABLED: true });
+    expect(vip.NAV_ITEMS.find((item) => item.key === "loyalty")?.to).toBe("/loyalty/vip");
+
+    const invites = await navWith({ CUSTOMER_REFERRALS_ENABLED: true });
+    expect(invites.NAV_ITEMS.find((item) => item.key === "loyalty")?.to).toBe("/loyalty/referrals");
+
+    const credit = await navWith({ STORE_CREDIT_ENABLED: true });
+    expect(credit.NAV_ITEMS.find((item) => item.key === "loyalty")?.to).toBe("/store-credit");
+    expect(keysOf(credit).filter((key) => key === "loyalty")).toHaveLength(1);
+  });
+});

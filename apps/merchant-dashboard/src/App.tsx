@@ -7,7 +7,19 @@ import { ToastProvider } from "@/components/Toast";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequireWorkspace } from "@/routes/RequireWorkspace";
 import { LazyRoute } from "@/routes/LazyRoute";
-import { AI_ENABLED, BLOG_ENABLED, GIFT_CARDS_ENABLED, PRODUCT_QUESTIONS_ENABLED, PRODUCT_SPECS_ENABLED, SIZE_CHARTS_ENABLED } from "@/lib/features";
+import {
+  AI_ENABLED,
+  BLOG_ENABLED,
+  CUSTOMER_REFERRALS_ENABLED,
+  GIFT_CARDS_ENABLED,
+  LOYALTY_ENABLED,
+  PRODUCT_QUESTIONS_ENABLED,
+  PRODUCT_SPECS_ENABLED,
+  SIZE_CHARTS_ENABLED,
+  STORE_CREDIT_ENABLED,
+  VIP_TIERS_ENABLED,
+} from "@/lib/features";
+import { REWARDS_HOME } from "@/pages/loyalty/RewardsTabs";
 import { LoginPage } from "@/pages/LoginPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { RegisterPage } from "@/pages/RegisterPage";
@@ -68,6 +80,10 @@ import { SuggestionsPage } from "@/pages/help/SuggestionsPage";
 // element table) with the funnel editor, so it is split off with it.
 const AiStudioPage = lazy(() => import("@/pages/ai/AiStudioPage").then((m) => ({ default: m.AiStudioPage })));
 const WaBotPage = lazy(() => import("@/pages/inbox/WaBotPage").then((m) => ({ default: m.WaBotPage })));
+const LoyaltyProgramPage = lazy(() => import("@/pages/loyalty/LoyaltyProgramPage").then((m) => ({ default: m.LoyaltyProgramPage })));
+const VipTiersPage = lazy(() => import("@/pages/vipTiers/VipTiersPage").then((m) => ({ default: m.VipTiersPage })));
+const ReferAFriendPage = lazy(() => import("@/pages/customerReferrals/ReferAFriendPage").then((m) => ({ default: m.ReferAFriendPage })));
+const StoreCreditPage = lazy(() => import("@/pages/storeCredit/StoreCreditPage").then((m) => ({ default: m.StoreCreditPage })));
 const GiftCardsPage = lazy(() => import("@/pages/giftCards/GiftCardsPage").then((m) => ({ default: m.GiftCardsPage })));
 const GiftCardDetailPage = lazy(() => import("@/pages/giftCards/GiftCardDetailPage").then((m) => ({ default: m.GiftCardDetailPage })));
 const BlogPostsPage = lazy(() => import("@/pages/blog/BlogPostsPage").then((m) => ({ default: m.BlogPostsPage })));
@@ -178,6 +194,11 @@ export default function App() {
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
                       {/* Gift cards and the store blog (lib/features): off, these addresses go home. */}
+                      {/* Loyalty & rewards: each programme only while it is switched on; an address that is off opens the first that is on. */}
+                      <Route path="/loyalty" element={LOYALTY_ENABLED ? <LazyRoute><LoyaltyProgramPage /></LazyRoute> : <Navigate to={REWARDS_HOME ?? "/"} replace />} />
+                      <Route path="/loyalty/vip" element={VIP_TIERS_ENABLED ? <LazyRoute><VipTiersPage /></LazyRoute> : <Navigate to={REWARDS_HOME ?? "/"} replace />} />
+                      <Route path="/loyalty/referrals" element={CUSTOMER_REFERRALS_ENABLED ? <LazyRoute><ReferAFriendPage /></LazyRoute> : <Navigate to={REWARDS_HOME ?? "/"} replace />} />
+                      <Route path="/store-credit" element={STORE_CREDIT_ENABLED ? <LazyRoute><StoreCreditPage /></LazyRoute> : <Navigate to={REWARDS_HOME ?? "/"} replace />} />
                       <Route path="/gift-cards" element={GIFT_CARDS_ENABLED ? <LazyRoute><GiftCardsPage /></LazyRoute> : <Navigate to="/" replace />} />
                       <Route path="/gift-cards/:giftCardId" element={GIFT_CARDS_ENABLED ? <LazyRoute><GiftCardDetailPage /></LazyRoute> : <Navigate to="/" replace />} />
                       <Route path="/blog" element={BLOG_ENABLED ? <LazyRoute><BlogPostsPage /></LazyRoute> : <Navigate to="/" replace />} />

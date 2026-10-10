@@ -22,6 +22,7 @@ import {
   LineChart,
   LifeBuoy,
   Lightbulb,
+  Medal,
   Megaphone,
   MessageCircle,
   Newspaper,
@@ -46,7 +47,28 @@ import {
 } from "lucide-react";
 import type { Messages } from "@/i18n/LocaleContext";
 import { NO_ANALYTICS_ROLES } from "@/lib/analyticsAccess";
-import { AI_ENABLED, BLOG_ENABLED, GIFT_CARDS_ENABLED, PRODUCT_QUESTIONS_ENABLED, SIZE_CHARTS_ENABLED } from "@/lib/features";
+import {
+  AI_ENABLED,
+  BLOG_ENABLED,
+  CUSTOMER_REFERRALS_ENABLED,
+  GIFT_CARDS_ENABLED,
+  LOYALTY_ENABLED,
+  PRODUCT_QUESTIONS_ENABLED,
+  SIZE_CHARTS_ENABLED,
+  STORE_CREDIT_ENABLED,
+  VIP_TIERS_ENABLED,
+} from "@/lib/features";
+
+/** Where "Loyalty & rewards" opens: the first of its four programmes that is switched on; null while none is. */
+const REWARDS_HOME = LOYALTY_ENABLED
+  ? "/loyalty"
+  : VIP_TIERS_ENABLED
+    ? "/loyalty/vip"
+    : CUSTOMER_REFERRALS_ENABLED
+      ? "/loyalty/referrals"
+      : STORE_CREDIT_ENABLED
+        ? "/store-credit"
+        : null;
 
 /**
  * System roles without billing.manage (owner '*' and accountant hold it, see
@@ -69,6 +91,7 @@ export type NavKey =
   | "discounts"
   | "giftCards"
   | "blog"
+  | "loyalty"
   | "offers"
   | "shipping"
   | "payments"
@@ -169,6 +192,8 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "customers",
     items: [
       { key: "customers", to: "/customers", icon: Users },
+      // Points, levels, invites and store credit: one entry, only while one of them is switched on (lib/features).
+      ...(REWARDS_HOME ? [{ key: "loyalty" as const, to: REWARDS_HOME, icon: Medal }] : []),
       { key: "inbox", to: "/inbox", icon: MessageCircle },
     ],
   },
@@ -278,6 +303,7 @@ export const NAV_LABELS = {
     discounts: "Discounts",
     giftCards: "Gift cards",
     blog: "Blog",
+    loyalty: "Loyalty & rewards",
     offers: "Offers",
     shipping: "Shipping & Tax",
     payments: "Payments",
@@ -324,6 +350,7 @@ export const NAV_LABELS = {
     discounts: "الخصومات",
     giftCards: "بطاقات الهدايا",
     blog: "المدونة",
+    loyalty: "الولاء والمكافآت",
     offers: "العروض",
     shipping: "الشحن والضرائب",
     payments: "المدفوعات",
