@@ -1,9 +1,10 @@
-import { useSyncExternalStore } from "react";
 import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
-import { IconMoon, IconSun } from "@/components/icons";
+import { IconContrast, IconMoon, IconSun } from "@/components/icons";
 import { Segmented } from "@/components/Segmented";
-import { useGlassState } from "@/components/GlassToggle";
 import { SettingsGroup, SettingsRow, SettingsSwitch } from "@/components/settings";
+import { setGlass, setLook, setTone, useAppearance } from "@/lib/appearance";
+import { GlowColours } from "./GlowColours";
+import { ToneSlider } from "./ToneSlider";
 
 const STRINGS = {
   en: {
@@ -11,86 +12,54 @@ const STRINGS = {
     languageHint: "The whole dashboard switches at once.",
     arabic: "عربي",
     english: "English",
-    theme: "Light or dark",
-    themeHint: "Dark is easier on the eyes at night.",
+    look: "Look",
+    lookHint: "Light, pure black for OLED screens, or dark with a tone you choose.",
     light: "Light",
+    black: "Black",
     dark: "Dark",
+    tone: "Tone",
+    toneHint: "From midnight blue to slate. The middle is the dark look as it always was.",
     glass: "Glass surfaces",
     glassHint: "Tables and cards let the background show through. Turn it off for plain solid surfaces.",
     glassSystem: "Your device asks for solid surfaces, so glass stays off here.",
-    deviceNote: "These three are kept on this device.",
+    glassBlack: "The Black look is plain: no glass and no glows. Choose Light or Dark to turn glass on.",
+    glow: "Glow colours",
+    glowHint: "The coloured light behind the glass, on each side of the screen.",
+    deviceNote: "These choices are kept on this device.",
   },
   ar: {
     language: "اللغة",
     languageHint: "تتحوّل لوحة التحكم كلها مرة واحدة.",
     arabic: "عربي",
     english: "English",
-    theme: "فاتح أو داكن",
-    themeHint: "الوضع الداكن أريح للعين ليلًا.",
+    look: "المظهر",
+    lookHint: "فاتح، أو أسود خالص لشاشات OLED، أو داكن بدرجة تختارها.",
     light: "فاتح",
+    black: "أسود",
     dark: "داكن",
+    tone: "درجة اللون",
+    toneHint: "من الأزرق الليلي إلى الرمادي الأردوازي. المنتصف هو المظهر الداكن كما كان دائمًا.",
     glass: "الأسطح الزجاجية",
     glassHint: "تُظهر الجداول والبطاقات الخلفية من ورائها. أوقفها إذا أردت أسطحًا مصمتة.",
     glassSystem: "جهازك يطلب أسطحًا مصمتة، لذلك يبقى الزجاج متوقفًا هنا.",
-    deviceNote: "هذه الخيارات الثلاثة محفوظة على هذا الجهاز.",
+    glassBlack: "المظهر الأسود بلا زجاج ولا توهّج. اختر الفاتح أو الداكن لتشغيل الزجاج.",
+    glow: "ألوان التوهّج",
+    glowHint: "الضوء الملوّن خلف الزجاج، على كل جانب من الشاشة.",
+    deviceNote: "هذه الخيارات محفوظة على هذا الجهاز.",
   },
 } satisfies Messages;
 
-type Theme = "light" | "dark";
-
-/** The same key and the same two steps as components/ThemeToggle.tsx and the pre-paint script in index.html. */
-const THEME_KEY = "theme";
-/** components/GlassToggle.tsx keeps its choice here; "off" is the only value it stores. */
-const GLASS_KEY = "zimos.glass";
-
-function domTheme(): Theme {
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
-}
-
-/** The theme is the `dark` class on <html>: whoever changes it (this control, the side menu's toggle, the OS), this follows. */
-function subscribeTheme(onChange: () => void): () => void {
-  const observer = new MutationObserver(onChange);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-  return () => observer.disconnect();
-}
-
-function setTheme(theme: Theme) {
-  const el = document.documentElement;
-  el.classList.toggle("dark", theme === "dark");
-  el.style.colorScheme = theme;
-  try {
-    localStorage.setItem(THEME_KEY, theme);
-  } catch {
-    /* private mode — the pre-paint script falls back to the system theme */
-  }
-}
-
 /**
- * Turns glass on or off the way GlassToggle does: the choice is its storage
- * key, and the `storage` event is what its own store listens to, so the
- * attribute on <html> and every `useGlassState` reader follow at once.
- */
-function setGlass(on: boolean) {
-  try {
-    if (on) localStorage.removeItem(GLASS_KEY);
-    else localStorage.setItem(GLASS_KEY, "off");
-    window.dispatchEvent(new StorageEvent("storage", { key: GLASS_KEY }));
-  } catch {
-    // Storage is blocked: the attribute alone, for this visit.
-    if (on) document.documentElement.removeAttribute("data-glass");
-    else document.documentElement.setAttribute("data-glass", "off");
-  }
-}
-
-/**
- * Settings → "Language and look": the language, light or dark, and the glass switch.
- * All three are kept on this device and change at once — nothing to save.
+ * Settings → "Language and look": the language, one of three looks (Light,
+ * Black, Dark), the tone of the dark one, the glass switch and the colours
+ * the glass glows in. All of it is kept on this device and changes at once —
+ * nothing to save. The look itself is lib/appearance.ts, the same store the
+ * toolbar's sun / moon switch uses.
  */
 export function AppearanceSection() {
   const t = useT(STRINGS);
   const { locale, setLocale } = useLocale();
-  const theme = useSyncExternalStore<Theme>(subscribeTheme, domTheme, () => "light");
-  const glass = useGlassState();
+  const { look, tone, glass } = useAppearance();
 
   return (
     <SettingsGroup footer={t.deviceNote}>
@@ -109,29 +78,39 @@ export function AppearanceSection() {
           />
         }
       />
+      {/* Three segments do not fit beside the label on a phone: the control takes its own line. */}
       <SettingsRow
-        label={t.theme}
-        hint={t.themeHint}
+        label={t.look}
+        hint={t.lookHint}
+        stacked
         control={
           <Segmented
-            label={t.theme}
-            value={theme}
-            onChange={setTheme}
+            label={t.look}
+            value={look}
+            onChange={setLook}
+            className="sm:self-start"
             options={[
               { value: "light", label: t.light, icon: IconSun },
+              { value: "black", label: t.black, icon: IconContrast },
               { value: "dark", label: t.dark, icon: IconMoon },
             ]}
           />
         }
       />
-      {/* A switch the device holds off says why, in words, not only by looking dimmed. */}
+      {/* The tone belongs to Dark alone: Light and Black have one ground each. */}
+      {look === "dark" && (
+        <SettingsRow label={t.tone} hint={t.toneHint} stacked control={<ToneSlider value={tone} onChange={setTone} />} />
+      )}
+      {/* A switch that is held off says why, in words, not only by looking dimmed. */}
       <SettingsSwitch
         label={t.glass}
-        hint={glass === "system" ? t.glassSystem : t.glassHint}
+        hint={glass === "system" ? t.glassSystem : glass === "black" ? t.glassBlack : t.glassHint}
         checked={glass === "on"}
-        disabled={glass === "system"}
+        disabled={glass === "system" || glass === "black"}
         onChange={setGlass}
       />
+      {/* The glows are part of the glass backdrop: without glass there is nothing to colour. */}
+      {glass === "on" && <SettingsRow label={t.glow} hint={t.glowHint} stacked control={<GlowColours />} />}
     </SettingsGroup>
   );
 }
