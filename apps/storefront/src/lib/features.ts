@@ -7,3 +7,36 @@
 
 /** Shopper accounts (sign-in, account pages, wishlist). Off, no shopper token is kept, read or sent. */
 export const SHOPPER_ACCOUNTS_ENABLED = process.env.NEXT_PUBLIC_SHOPPER_ACCOUNTS_ENABLED === "true";
+
+/*
+ * The store side of the features ported from zimos-additions. Each pairs with
+ * the dashboard's VITE_ switch of the same name and with its name in the
+ * API's STORE_FEATURES list; off, the store shows and sends nothing of it.
+ */
+
+/** The "Size guide" link on a product page. */
+export const SIZE_CHARTS_ENABLED = process.env.NEXT_PUBLIC_SIZE_CHARTS_ENABLED === "true";
+
+/** Shoppers' questions and the store's answers on a product page. */
+export const PRODUCT_QUESTIONS_ENABLED = process.env.NEXT_PUBLIC_PRODUCT_QUESTIONS_ENABLED === "true";
+
+/** The specifications table on a product page. */
+export const PRODUCT_SPECS_ENABLED = process.env.NEXT_PUBLIC_PRODUCT_SPECS_ENABLED === "true";
+
+/** "Tell me when it is back" on a sold-out product (email or SMS, no push). */
+export const STOCK_ALERTS_ENABLED = process.env.NEXT_PUBLIC_STOCK_ALERTS_ENABLED === "true";
+
+/** Ordering a sold-out product ahead, with its ship date. */
+export const PREORDERS_ENABLED = process.env.NEXT_PUBLIC_PREORDERS_ENABLED === "true";
+
+/** The holiday banner, and paused or late-shipping orders. */
+export const HOLIDAY_MODE_ENABLED = process.env.NEXT_PUBLIC_HOLIDAY_MODE_ENABLED === "true";
+
+/** Following the store's redirects from an address that is not there. */
+export const URL_REDIRECTS_ENABLED = process.env.NEXT_PUBLIC_URL_REDIRECTS_ENABLED === "true";
+
+/** The least and most of a product one order may hold, said before the order is placed. */
+export const PURCHASE_LIMITS_ENABLED = process.env.NEXT_PUBLIC_PURCHASE_LIMITS_ENABLED === "true";
+
+/** Gift wrap and a gift message at checkout. */
+export const GIFT_OPTIONS_ENABLED = process.env.NEXT_PUBLIC_GIFT_OPTIONS_ENABLED === "true";
