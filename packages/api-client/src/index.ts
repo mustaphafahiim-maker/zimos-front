@@ -167,6 +167,8 @@ export * from "./endpoints/marketingUnsubscribe";
 // The opt-in step's sign-up (funnels/funnelOptIn.js).
 export * from "./endpoints/funnelOptIn";
 export * from "./endpoints/activityLog";
+// Sending a store's other domains to its primary one (domains/domainSettings.js).
+export * from "./endpoints/domainRedirect";
 // Two-step sign-in: the code step, its settings, backup codes, the console reset.
 // The dashboard shows none of it unless VITE_TWO_FACTOR_ENABLED is "true".
 export * from "./endpoints/twoFactor";
