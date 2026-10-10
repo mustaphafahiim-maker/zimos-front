@@ -2,6 +2,11 @@
 /* The six store themes (Store look → Theme). Inert unless the store wrapper
    carries `data-store-theme`; see the file for how a theme is put together. */
 @import "./store-themes.css";
+/* The page builder's full-width bands (picture slider, category tiles, trust
+   cards, product rails, video shelf, picture banner). Every rule of theirs is
+   in this one file: without the import their markup is drawn with no styles
+   at all — a picture at its own size, plain text under it, a black wave. */
+@import "./store-sections.css";
 
 /* Dark mode is driven by a `.dark` class on <html>, set before first paint by
    an inline script in the root layout and toggled by the theme switch. */
