@@ -167,6 +167,14 @@ export * from "./endpoints/marketingUnsubscribe";
 // The opt-in step's sign-up (funnels/funnelOptIn.js).
 export * from "./endpoints/funnelOptIn";
 export * from "./endpoints/activityLog";
+// Store reports, RFM scores and scheduled summary reports (STORE_FEATURES
+// store_reports, rfm, scheduled_reports), and the extra ad platforms' pixels
+// (extra_pixels).
+export * from "./endpoints/storeReports";
+export * from "./endpoints/rfm";
+export * from "./endpoints/scheduledReports";
+export * from "./endpoints/pinterestPixel";
+export * from "./endpoints/adPlatformPixels";
 // Returns a shopper asks for, exchanges (STORE_FEATURES shopper_returns,
 // return_exchanges), a parcel that came back and tracking for manual waybills
 // (tracking_provider).

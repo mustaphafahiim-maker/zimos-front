@@ -19,7 +19,29 @@
  */
 import type { ApiClient } from "../client";
 
-export type TrackingPixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity";
+export type TrackingPixelPlatform =
+  | "meta"
+  | "tiktok"
+  | "snapchat"
+  | "google"
+  | "gtm"
+  | "clarity"
+  // With STORE_FEATURES extra_pixels (endpoints/pinterestPixel.ts, endpoints/adPlatformPixels.ts):
+  // Pinterest, X, Reddit and Microsoft Ads also have a server API.
+  | "pinterest"
+  | "x"
+  | "taboola"
+  | "outbrain"
+  | "kwai"
+  | "reddit"
+  | "microsoft";
+
+/**
+ * Whether a platform's server events really leave the server: `sandbox` =
+ * built and logged only, until the platform is switched on; null = no server
+ * API (or a Google `AW-` id).
+ */
+export type TrackingPixelServerMode = "live" | "sandbox" | null;
 export type TrackingPixelScopeType = "all" | "funnels" | "products";
 
 export interface TrackingPixelScope {
@@ -50,12 +72,16 @@ export interface TrackingPixelDto {
   lastError: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Missing from an older API. */
+  serverMode?: TrackingPixelServerMode;
 }
 
 export interface TrackingPixelPlatformInfo {
   name: TrackingPixelPlatform;
   capi: boolean;
   testEventCode: boolean;
+  /** Missing from an older API. */
+  serverMode?: TrackingPixelServerMode;
 }
 
 export interface TrackingPixelList {
@@ -158,6 +184,8 @@ export interface TrackingPixelTestResult {
   eventId: string;
   /** True when a Meta test event code was used: look under Test events. */
   usedTestCode: boolean;
+  /** True when the platform has no test event to send (X): nothing went out, its keys are checked by the first order. */
+  skipped?: boolean;
 }
 
 /**
