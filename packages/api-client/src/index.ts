@@ -167,6 +167,11 @@ export * from "./endpoints/marketingUnsubscribe";
 // The opt-in step's sign-up (funnels/funnelOptIn.js).
 export * from "./endpoints/funnelOptIn";
 export * from "./endpoints/activityLog";
+// Shopper accounts and the wishlist (STORE_FEATURES shopper_accounts): the
+// store's setting, sign-in by code, orders, addresses, a verified email.
+export * from "./endpoints/shopperAccounts";
+export * from "./endpoints/shopperEmail";
+export * from "./endpoints/wishlist";
 // Gift cards and the store blog (STORE_FEATURES gift_cards, blog), with the
 // rich text the blog's blocks are written in.
 export * from "./endpoints/richText";
