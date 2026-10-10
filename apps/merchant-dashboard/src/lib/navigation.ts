@@ -24,6 +24,7 @@ import {
   Lightbulb,
   Megaphone,
   MessageCircle,
+  Newspaper,
   CircleQuestionMark,
   Package,
   PiggyBank,
@@ -36,6 +37,7 @@ import {
   Store,
   Tag,
   Target,
+  Ticket,
   Truck,
   Undo2,
   Users,
@@ -44,7 +46,7 @@ import {
 } from "lucide-react";
 import type { Messages } from "@/i18n/LocaleContext";
 import { NO_ANALYTICS_ROLES } from "@/lib/analyticsAccess";
-import { AI_ENABLED, PRODUCT_QUESTIONS_ENABLED, SIZE_CHARTS_ENABLED } from "@/lib/features";
+import { AI_ENABLED, BLOG_ENABLED, GIFT_CARDS_ENABLED, PRODUCT_QUESTIONS_ENABLED, SIZE_CHARTS_ENABLED } from "@/lib/features";
 
 /**
  * System roles without billing.manage (owner '*' and accountant hold it, see
@@ -65,6 +67,8 @@ export type NavKey =
   | "sizeCharts"
   | "customers"
   | "discounts"
+  | "giftCards"
+  | "blog"
   | "offers"
   | "shipping"
   | "payments"
@@ -175,6 +179,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "marketing", to: "/marketing", icon: Megaphone },
       { key: "offers", to: "/offers", icon: Gift },
       { key: "discounts", to: "/discounts", icon: Tag },
+      // Gift cards only while the feature is switched on (lib/features).
+      ...(GIFT_CARDS_ENABLED ? [{ key: "giftCards" as const, to: "/gift-cards", icon: Ticket }] : []),
       { key: "automations", to: "/automations", icon: Bot },
       { key: "affiliates", to: "/affiliates", icon: UsersRound },
       // AI studio only while the AI features are switched on (lib/features).
@@ -186,6 +192,8 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "store",
     items: [
       { key: "website", to: "/website", icon: Globe },
+      // The store blog only while the feature is switched on (lib/features).
+      ...(BLOG_ENABLED ? [{ key: "blog" as const, to: "/blog", icon: Newspaper }] : []),
       { key: "funnels", to: "/funnels", icon: Workflow },
       { key: "shoppableImages", to: "/shoppable-images", icon: MousePointerClick },
       { key: "storeSettings", to: "/store-settings", icon: Store },
@@ -268,6 +276,8 @@ export const NAV_LABELS = {
     sizeCharts: "Size charts",
     customers: "Customers",
     discounts: "Discounts",
+    giftCards: "Gift cards",
+    blog: "Blog",
     offers: "Offers",
     shipping: "Shipping & Tax",
     payments: "Payments",
@@ -312,6 +322,8 @@ export const NAV_LABELS = {
     sizeCharts: "جداول المقاسات",
     customers: "العملاء",
     discounts: "الخصومات",
+    giftCards: "بطاقات الهدايا",
+    blog: "المدونة",
     offers: "العروض",
     shipping: "الشحن والضرائب",
     payments: "المدفوعات",

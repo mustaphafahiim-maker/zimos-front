@@ -36,3 +36,23 @@ describe("menu entries of the ported store features", () => {
     expect(charts.NAV_LABELS.ar.productQuestions).toBe("الأسئلة");
   });
 });
+
+describe("menu entries of gift cards and the blog", () => {
+  it("has neither while their switches are off", async () => {
+    const keys = keysOf(await navWith({}));
+    expect(keys).not.toContain("giftCards");
+    expect(keys).not.toContain("blog");
+  });
+
+  it("adds each only with its own switch", async () => {
+    const cards = await navWith({ GIFT_CARDS_ENABLED: true });
+    expect(keysOf(cards)).toContain("giftCards");
+    expect(keysOf(cards)).not.toContain("blog");
+    expect(cards.NAV_ITEMS.find((item) => item.key === "giftCards")?.to).toBe("/gift-cards");
+
+    const blog = await navWith({ BLOG_ENABLED: true });
+    expect(keysOf(blog)).toContain("blog");
+    expect(keysOf(blog)).not.toContain("giftCards");
+    expect(blog.NAV_LABELS.ar.blog).toBe("المدونة");
+  });
+});

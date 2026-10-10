@@ -7,7 +7,7 @@ import { ToastProvider } from "@/components/Toast";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { RequireWorkspace } from "@/routes/RequireWorkspace";
 import { LazyRoute } from "@/routes/LazyRoute";
-import { AI_ENABLED, PRODUCT_QUESTIONS_ENABLED, PRODUCT_SPECS_ENABLED, SIZE_CHARTS_ENABLED } from "@/lib/features";
+import { AI_ENABLED, BLOG_ENABLED, GIFT_CARDS_ENABLED, PRODUCT_QUESTIONS_ENABLED, PRODUCT_SPECS_ENABLED, SIZE_CHARTS_ENABLED } from "@/lib/features";
 import { LoginPage } from "@/pages/LoginPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { RegisterPage } from "@/pages/RegisterPage";
@@ -68,6 +68,11 @@ import { SuggestionsPage } from "@/pages/help/SuggestionsPage";
 // element table) with the funnel editor, so it is split off with it.
 const AiStudioPage = lazy(() => import("@/pages/ai/AiStudioPage").then((m) => ({ default: m.AiStudioPage })));
 const WaBotPage = lazy(() => import("@/pages/inbox/WaBotPage").then((m) => ({ default: m.WaBotPage })));
+const GiftCardsPage = lazy(() => import("@/pages/giftCards/GiftCardsPage").then((m) => ({ default: m.GiftCardsPage })));
+const GiftCardDetailPage = lazy(() => import("@/pages/giftCards/GiftCardDetailPage").then((m) => ({ default: m.GiftCardDetailPage })));
+const BlogPostsPage = lazy(() => import("@/pages/blog/BlogPostsPage").then((m) => ({ default: m.BlogPostsPage })));
+const BlogPostEditorPage = lazy(() => import("@/pages/blog/BlogPostEditorPage").then((m) => ({ default: m.BlogPostEditorPage })));
+const BlogCategoriesPage = lazy(() => import("@/pages/blog/BlogCategoriesPage").then((m) => ({ default: m.BlogCategoriesPage })));
 const SizeChartsPage = lazy(() => import("@/pages/sizeCharts/SizeChartsPage").then((m) => ({ default: m.SizeChartsPage })));
 const SizeChartEditorPage = lazy(() => import("@/pages/sizeCharts/SizeChartEditorPage").then((m) => ({ default: m.SizeChartEditorPage })));
 const QuestionsPage = lazy(() => import("@/pages/questions/QuestionsPage").then((m) => ({ default: m.QuestionsPage })));
@@ -172,6 +177,13 @@ export default function App() {
                       <Route path="/courses" element={<CoursesPage />} />
                       <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                       <Route path="/discounts" element={<DiscountsPage />} />
+                      {/* Gift cards and the store blog (lib/features): off, these addresses go home. */}
+                      <Route path="/gift-cards" element={GIFT_CARDS_ENABLED ? <LazyRoute><GiftCardsPage /></LazyRoute> : <Navigate to="/" replace />} />
+                      <Route path="/gift-cards/:giftCardId" element={GIFT_CARDS_ENABLED ? <LazyRoute><GiftCardDetailPage /></LazyRoute> : <Navigate to="/" replace />} />
+                      <Route path="/blog" element={BLOG_ENABLED ? <LazyRoute><BlogPostsPage /></LazyRoute> : <Navigate to="/" replace />} />
+                      <Route path="/blog/new" element={BLOG_ENABLED ? <LazyRoute><BlogPostEditorPage /></LazyRoute> : <Navigate to="/" replace />} />
+                      <Route path="/blog/categories" element={BLOG_ENABLED ? <LazyRoute><BlogCategoriesPage /></LazyRoute> : <Navigate to="/" replace />} />
+                      <Route path="/blog/:postId" element={BLOG_ENABLED ? <LazyRoute><BlogPostEditorPage /></LazyRoute> : <Navigate to="/" replace />} />
                       <Route path="/offers" element={<OffersPage />} />
                       <Route path="/offers/bundles" element={<BundlesPage />} />
                       <Route path="/offers/order-bumps" element={<OrderBumpsPage />} />
