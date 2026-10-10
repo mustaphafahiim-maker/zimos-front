@@ -219,7 +219,7 @@ export interface OrderListFilters {
 
 // -------------------------------------------------- timeline, neighbours --
 
-export type OrderTimelineEventType = "status" | "audit" | "note" | "automation" | "webhook" | "courier";
+export type OrderTimelineEventType = "status" | "audit" | "note" | "automation" | "webhook" | "courier" | "message" | "message_status";
 
 export interface OrderTimelineEvent {
   id: string;
@@ -230,7 +230,9 @@ export interface OrderTimelineEvent {
    * status: { from, to, reason } · audit: { action, entity, before, after } ·
    * note: { body, visibility } · automation: { trigger, status, detail } ·
    * webhook: { eventType, status, attempts, responseStatus } ·
-   * courier: { carrierCode, status, carrierStatusCode, description, shipmentId }
+   * courier: { carrierCode, status, carrierStatusCode, description, shipmentId } ·
+   * message (with the API's order_messages): { channel, template, subject, status, error,
+   * deliveryStatus, statusAt, statusReason, bot? } · message_status: { channel, status, reason, subject }
    */
   data: Record<string, unknown>;
 }

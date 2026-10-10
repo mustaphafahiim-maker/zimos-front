@@ -167,6 +167,11 @@ export * from "./endpoints/marketingUnsubscribe";
 // The opt-in step's sign-up (funnels/funnelOptIn.js).
 export * from "./endpoints/funnelOptIn";
 export * from "./endpoints/activityLog";
+// Notifications: custom headers on a webhook endpoint, the block designer for
+// order emails, and the addresses that stopped receiving email.
+export * from "./endpoints/webhookHeaders";
+export * from "./endpoints/orderEmailDesign";
+export * from "./endpoints/emailSuppressions";
 // Store features that ship behind the API's STORE_FEATURES list. The dashboard
 // and the storefront show none of one unless its own switch is on.
 export * from "./endpoints/sizeCharts";
