@@ -44,6 +44,8 @@ import { WhatsAppMessageSection } from "./WhatsAppMessageSection";
 import { CatalogSettingsSection } from "./CatalogSettingsSection";
 import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
 import { AccountSection } from "./AccountSection";
+import { SecuritySection } from "./SecuritySection";
+import { TWO_FACTOR_ENABLED } from "@/lib/features";
 
 export function SettingsPage() {
   const workspaceId = useWorkspaceId();
@@ -59,6 +61,8 @@ export function SettingsPage() {
         description="Your store profile and the people who can manage it."
       />
       <AccountSection />
+      {/* Two-step sign-in and backup codes; about the person, not the store. */}
+      {TWO_FACTOR_ENABLED && <SecuritySection />}
       <AppearanceSection />
       <NotificationPreferencesSection key={`notifications-${workspaceId}`} />
       <WorkspaceProfileSection key={`profile-${workspaceId}`} />
