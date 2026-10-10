@@ -5,13 +5,14 @@ import type { StorefrontProduct } from "@store-builder/api-client";
 import { StoreLink } from "@/components/StoreRoute";
 import { useStore } from "@/lib/StoreContext";
 import { dirFor, formatPrice, getDictionary, type Locale } from "@/lib/i18n";
+import { CardLowestPrice } from "./product/LowestPriceLine";
 import { compareAtOf, defaultOfferOf, discountPercent, needsProductPage, offerAppliesTo, priceOf, productImages } from "@/lib/product";
 import { swipeStep } from "@/lib/swipe";
 import { ArrowIcon, BoxIcon } from "./Icons";
 import { QuickAddButton } from "./QuickAddButton";
 import { StoreImage } from "./StoreImage";
 import { skeleton } from "./ui";
-import { SHOPPER_ACCOUNTS_ENABLED } from "@/lib/features";
+import { PRICE_HISTORY_ENABLED, SHOPPER_ACCOUNTS_ENABLED } from "@/lib/features";
 import { WishlistHeart } from "./wishlist/WishlistHeart";
 
 export function ProductCard({
@@ -199,6 +200,7 @@ export function ProductCard({
             </span>
           )}
         </p>
+        {PRICE_HISTORY_ENABLED && <CardLowestPrice product={product} className="mt-1" />}
         {quickAdd ? (
           <QuickAddButton
             variantId={quickAdd.id}

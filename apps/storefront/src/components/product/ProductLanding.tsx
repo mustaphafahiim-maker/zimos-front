@@ -1,5 +1,6 @@
 "use client";
 
+import { LowestPriceLine } from "./LowestPriceLine";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -62,7 +63,7 @@ import { ProductBuyNotes } from "./ProductBuyNotes";
 import { SizeGuideLink } from "./SizeGuide";
 import { BackInStock } from "../stockAlert/BackInStock";
 import { preorderFor, stepperLimits, takesPreorders } from "@/lib/buyInfo";
-import { LOYALTY_ENABLED, PREORDERS_ENABLED, PURCHASE_LIMITS_ENABLED, SHOPPER_ACCOUNTS_ENABLED, SIZE_CHARTS_ENABLED, STOCK_ALERTS_ENABLED } from "@/lib/features";
+import { LOYALTY_ENABLED, PREORDERS_ENABLED, PRICE_HISTORY_ENABLED, PURCHASE_LIMITS_ENABLED, SHOPPER_ACCOUNTS_ENABLED, SIZE_CHARTS_ENABLED, STOCK_ALERTS_ENABLED } from "@/lib/features";
 import { EarnPointsNote } from "../tenders/EarnPointsNote";
 import { WishlistHeart } from "../wishlist/WishlistHeart";
 import { useHoliday } from "@/lib/storeHoliday";
@@ -536,6 +537,8 @@ export function ProductLanding({
             </span>
           )}
         </div>
+        {/* The lowest price of the last 30 days, beside a sale price (PRICE_HISTORY_ENABLED). */}
+        {PRICE_HISTORY_ENABLED && <LowestPriceLine workspaceId={workspaceId} variantId={compareAtUnit ? variant?.id : null} className="mt-1.5" />}
         {/* What one unit of this product earns in points, on a store with a loyalty programme (lib/features). */}
         {LOYALTY_ENABLED && <EarnPointsNote unitMinor={unit} />}
         <p className={`mt-2 flex items-center gap-1.5 text-sm font-medium ${available ? "text-success" : choosing ? "text-ink-soft" : "text-danger"}${preorder ? " hidden" : ""}`}>

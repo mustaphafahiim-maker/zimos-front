@@ -33,6 +33,9 @@ export const SIZE_CHARTS_ENABLED = import.meta.env.VITE_SIZE_CHARTS_ENABLED === 
 /** Shoppers' questions on products, and the team's answers. */
 export const PRODUCT_QUESTIONS_ENABLED = import.meta.env.VITE_PRODUCT_QUESTIONS_ENABLED === "true";
 
+/** A variant's prices over time on its product page. Pairs with the API's price_history. */
+export const PRICE_HISTORY_ENABLED = import.meta.env.VITE_PRICE_HISTORY_ENABLED === "true";
+
 /** Product specifications: the shared list and the table on product pages. */
 export const PRODUCT_SPECS_ENABLED = import.meta.env.VITE_PRODUCT_SPECS_ENABLED === "true";
 

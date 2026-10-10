@@ -14,6 +14,9 @@ export const SHOPPER_ACCOUNTS_ENABLED = process.env.NEXT_PUBLIC_SHOPPER_ACCOUNTS
  * API's STORE_FEATURES list; off, the store shows and sends nothing of it.
  */
 
+/** "Lowest price in the last 30 days" beside a sale price. Pairs with the API's price_history. */
+export const PRICE_HISTORY_ENABLED = process.env.NEXT_PUBLIC_PRICE_HISTORY_ENABLED === "true";
+
 /** The "Size guide" link on a product page. */
 export const SIZE_CHARTS_ENABLED = process.env.NEXT_PUBLIC_SIZE_CHARTS_ENABLED === "true";
 

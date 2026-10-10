@@ -20,10 +20,12 @@ import { PreorderSection } from "./components/PreorderSection";
 import { PurchaseLimitsSection } from "./components/PurchaseLimitsSection";
 import { ProductSizeChartNote } from "@/pages/sizeCharts/ProductSizeChartNote";
 import { ProductSpecsSection } from "@/pages/productSpecs/ProductSpecsSection";
+import { ProductPriceHistory } from "@/pages/priceHistory/ProductPriceHistory";
 import { ProductQuestionsSection } from "@/pages/questions/ProductQuestionsSection";
 import {
   PREORDERS_ENABLED,
   PRODUCT_QUESTIONS_ENABLED,
+  PRICE_HISTORY_ENABLED,
   PRODUCT_SPECS_ENABLED,
   PURCHASE_LIMITS_ENABLED,
   SIZE_CHARTS_ENABLED,
@@ -144,6 +146,7 @@ export function ProductEditPage() {
             {SIZE_CHARTS_ENABLED && <ProductSizeChartNote productId={data.id} collections={data.collections ?? []} />}
             {PREORDERS_ENABLED && <PreorderSection productId={data.id} />}
             {PURCHASE_LIMITS_ENABLED && <PurchaseLimitsSection productId={data.id} />}
+            {PRICE_HISTORY_ENABLED && <ProductPriceHistory productName={data.name} variants={data.variants ?? []} />}
             {PRODUCT_SPECS_ENABLED && <ProductSpecsSection productId={data.id} />}
             {PRODUCT_QUESTIONS_ENABLED && <ProductQuestionsSection productId={data.id} />}
             <ProductTestSection productId={data.id} variants={data.variants ?? []} media={data.media ?? []} onProductChanged={reload} />

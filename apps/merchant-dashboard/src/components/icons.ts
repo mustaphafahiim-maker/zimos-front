@@ -17,6 +17,7 @@ export type IconProps = LucideProps;
 
 export {
   CircleUser as IconAccount,
+  Activity as IconActivity,
   Megaphone as IconAnnounce,
   ArrowDown as IconArrowDown,
   ArrowLeft as IconArrowLeft,
