@@ -19,6 +19,8 @@ import { storeHref } from "@/lib/storeHref";
 import { ThankYouUpsell, CrossSellStrip } from "@/components/offers/StoreOffers";
 import { ThankYouDownloads } from "@/components/ThankYouDownloads";
 import { ManualPaymentStatus } from "@/components/checkout/ManualPayment";
+import { GiftCardPaidNote } from "@/components/giftCards/GiftCardPaidNote";
+import { GIFT_CARDS_ENABLED } from "@/lib/features";
 import { trackPurchaseOnce } from "@/lib/track";
 import { useIsClient } from "@/lib/useIsClient";
 
@@ -122,6 +124,8 @@ function Confirmation() {
             <OrderSnapshotSummary snapshot={snapshot} currency={currency} />
           </div>
         )}
+        {/* What a gift card paid on this order and what is left on delivery; only while gift cards are on (lib/features). */}
+        {GIFT_CARDS_ENABLED && <GiftCardPaidNote workspaceId={workspaceId} orderId={orderId} />}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {wa && (
