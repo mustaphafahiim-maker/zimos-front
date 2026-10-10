@@ -8,10 +8,11 @@ import { describe, expect, it } from "vitest";
  * The shopper's token is read only where the store calls the API for the
  * shopper, never where it renders HTML it did not write: nothing under
  * components/page-renderer, and no file that uses dangerouslySetInnerHTML,
- * may import lib/shopperToken.
+ * may import lib/shopperToken, or lib/shopperSession, which reads it for the
+ * account screens.
  */
 const SRC = fileURLToPath(new URL("..", import.meta.url));
-const IMPORTS_TOKEN = /from\s+["'](?:@\/lib\/shopperToken|(?:\.\.?\/)+(?:lib\/)?shopperToken)["']/;
+const IMPORTS_TOKEN = /from\s+["'](?:@\/lib\/(?:shopperToken|shopperSession)|(?:\.\.?\/)+(?:lib\/)?(?:shopperToken|shopperSession))["']/;
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
