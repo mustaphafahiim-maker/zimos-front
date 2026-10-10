@@ -13,6 +13,9 @@ import './theme/glass/list.css'
 import './theme/glass/sheet.css'
 import './theme/glass/settings.css'
 import './theme/glass/motion.css'
+import './theme/view-transitions.css'
+// Page chunks are fetched on hover / touch-start of a menu item (lib/prefetch.ts).
+import './routes/prefetch'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
