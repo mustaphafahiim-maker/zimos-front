@@ -17,6 +17,8 @@ import { useStore } from "@/lib/StoreContext";
 import { Notice, useAccount } from "./AccountShell";
 import { StageBadge } from "./AccountOrders";
 import { RepeatIcon } from "./accountIcons";
+import { ShopperReturns } from "@/components/returns/ShopperReturns";
+import { SHOPPER_RETURNS_ENABLED } from "@/lib/features";
 
 type Reorder =
   | { status: "idle" }
@@ -36,7 +38,7 @@ type Reorder =
  * actions belong (returns).
  */
 export function AccountOrder() {
-  const { orderId } = useParams<{ workspaceId: string; orderId: string }>();
+  const { workspaceId, orderId } = useParams<{ workspaceId: string; orderId: string }>();
   const { t, money, intlLocale, locale } = useStore();
   const a = t.account;
   const { api } = useAccount();
@@ -243,6 +245,8 @@ export function AccountOrder() {
                 </div>
               )}
             </div>
+            {/* «ارجع منتجات» for this order, as on the tracking page (lib/features). */}
+            {SHOPPER_RETURNS_ENABLED && api.token && orderId && <ShopperReturns orderId={orderId} shopperToken={api.token} workspaceId={workspaceId} />}
           </section>
         </div>
 

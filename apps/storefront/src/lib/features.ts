@@ -58,3 +58,6 @@ export const STORE_CREDIT_ENABLED = process.env.NEXT_PUBLIC_STORE_CREDIT_ENABLED
 
 /** Shoppers inviting friends: the invite tab, the banner of a `?ref=` link and the invite at checkout. Needs shopper accounts. */
 export const CUSTOMER_REFERRALS_ENABLED = process.env.NEXT_PUBLIC_CUSTOMER_REFERRALS_ENABLED === "true";
+
+/** A shopper asks for a return (or an exchange) from the tracking page and from their account's order. */
+export const SHOPPER_RETURNS_ENABLED = process.env.NEXT_PUBLIC_SHOPPER_RETURNS_ENABLED === "true";
