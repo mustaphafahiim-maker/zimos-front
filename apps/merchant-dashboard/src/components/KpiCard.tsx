@@ -23,6 +23,8 @@ interface KpiCardProps {
   loading?: boolean;
   /** The period's values in order. Taken so a screen can pass them; the small chart is not drawn yet. */
   trend?: number[];
+  /** Which direction is the good news. "down" for a return rate: a fall is green and a rise is red. */
+  goodWhen?: "up" | "down";
 }
 
 /** One grey shape of the skeleton. */
@@ -30,11 +32,13 @@ function Bone({ className }: { className?: string }) {
   return <span aria-hidden data-slot="kpi-bone" className={cn("block max-w-full animate-pulse rounded-full bg-paper-sunken motion-reduce:animate-none", className)} />;
 }
 
-export function KpiCard({ label, value, deltaBasisPoints, deltaLabel, hint, to, icon, className, loading = false }: KpiCardProps) {
+export function KpiCard({ label, value, deltaBasisPoints, deltaLabel, hint, to, icon, className, loading = false, goodWhen = "up" }: KpiCardProps) {
   const t = useT(STRINGS);
   const delta = deltaBasisPoints ?? null;
   const up = delta !== null && delta > 0;
   const down = delta !== null && delta < 0;
+  const good = goodWhen === "down" ? down : up;
+  const bad = goodWhen === "down" ? up : down;
   const body = (
     <Card aria-busy={loading || undefined} className={cn("h-full gap-0 p-4", to && "transition-colors hover:border-primary/40", className)}>
       <div className="flex items-start justify-between gap-2">
@@ -58,7 +62,7 @@ export function KpiCard({ label, value, deltaBasisPoints, deltaLabel, hint, to, 
       )}
       {loading ? null : delta !== null ? (
         <p className="mt-1 flex flex-wrap items-center gap-1 text-xs">
-          <span className={cn("font-medium", up && "text-success", down && "text-danger", !up && !down && "text-ink-soft")}>
+          <span className={cn("font-medium", good && "text-success", bad && "text-danger", !up && !down && "text-ink-soft")}>
             {up ? "▲" : down ? "▼" : "•"} {formatPercentValue(Math.abs(delta) / 10000)}
           </span>
           <span className="text-ink-soft">{deltaLabel ?? t.vsPrevious}</span>

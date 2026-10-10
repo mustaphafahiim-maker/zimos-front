@@ -92,6 +92,23 @@ export function formatOptions(options: Record<string, string> | null | undefined
   return entries.map(([k, v]) => `${k}: ${v}`).join(" · ");
 }
 
+/**
+ * A place name in the screen's language. The storefront saves known places as
+ * "القاهرة (Cairo)"; the Arabic screen shows «القاهرة», the English one
+ * "Cairo". Anything else is shown as it is.
+ */
+export function placeName(name: string | null | undefined): string {
+  if (!name) return "";
+  const match = /^(.+?)\s*\(([^()]+)\)\s*$/.exec(name.trim());
+  if (!match) return name;
+  const [, first, second] = match;
+  const arabic = /[\u0600-\u06FF]/;
+  const ar = arabic.test(first) ? first : arabic.test(second) ? second : null;
+  const latin = !arabic.test(second) ? second : !arabic.test(first) ? first : null;
+  if (!ar || !latin) return name;
+  return getLocale() === "ar" ? ar.trim() : latin.trim();
+}
+
 export function formatAddress(address: OrderAddressSnapshot | null | undefined): string {
   if (!address) return "No shipping address";
   return [address.addressLine, address.city, address.province, address.postalCode, address.country]

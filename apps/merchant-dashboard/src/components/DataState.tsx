@@ -35,6 +35,35 @@ interface DataStateProps {
   children: ReactNode;
 }
 
+// Five rows of different widths: a list, not a block.
+const TABLE_ROWS = [
+  ["w-2/5", "w-1/4", "w-14"],
+  ["w-1/3", "w-1/5", "w-12"],
+  ["w-1/2", "w-1/4", "w-16"],
+  ["w-1/3", "w-1/6", "w-14"],
+  ["w-2/5", "w-1/5", "w-12"],
+];
+
+/** A header line and five rows, for a page whose body is a list. */
+export function TableSkeleton() {
+  return (
+    <div data-slot="skeleton-card" className="rounded-[var(--radius-card)] border border-line bg-card p-5">
+      <div className="flex items-center gap-4 border-b border-line pb-3">
+        <SkeletonBar className="h-2.5 w-1/4" />
+        <SkeletonBar className="h-2.5 w-1/5" />
+        <SkeletonBar className="ms-auto h-2.5 w-1/6" />
+      </div>
+      {TABLE_ROWS.map(([first, second, last], i) => (
+        <div key={i} className="flex items-center gap-4 border-b border-line py-3.5 last:border-0 last:pb-0">
+          <SkeletonBar className={first} />
+          <SkeletonBar className={second} />
+          <SkeletonBar className={cn("ms-auto", last)} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** One grey bar of a loading placeholder; size it with `h-*` / `w-*`. */
 export function SkeletonBar({ className }: { className?: string }) {
   return <div className={cn("relative h-3 animate-pulse overflow-hidden rounded-full bg-paper-sunken motion-reduce:animate-none", className)} />;
