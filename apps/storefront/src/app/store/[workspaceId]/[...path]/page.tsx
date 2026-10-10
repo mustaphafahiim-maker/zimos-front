@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { decodeSegment } from "@/lib/urlRedirects";
+import { redirectIfMoved } from "@/lib/urlRedirectsServer";
 import { cache } from "react";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { PageRenderer } from "@/components/page-renderer";
@@ -89,7 +91,11 @@ export default async function CustomStorePage({ params }: { params: Params }) {
     redirect(target);
   }
 
-  if (result.kind === "notFound") notFound();
+  if (result.kind === "notFound") {
+    // An address the merchant moved (Store settings, URL redirects) goes on to its new one; anything else is a 404.
+    await redirectIfMoved(workspaceId, `/${(path ?? []).map(decodeSegment).join("/")}`);
+    notFound();
+  }
 
   const { page } = result.data;
   if ((page.tree?.sections?.length ?? 0) === 0) notFound();
