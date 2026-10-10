@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { EMAIL_SUPPRESSIONS_ENABLED } from "@/lib/features";
+import { CustomerSuppressionBanner } from "./suppressions/CustomerSuppressionBanner";
 import { Link, useParams } from "react-router-dom";
 import { Alert, Button, Input } from "@store-builder/ui";
 import type { Customer, CustomerAddress, Order } from "@store-builder/api-client";
@@ -177,6 +179,8 @@ export function CustomerDetailPage() {
         {customer && (
           <div className="space-y-6">
             <ContactInsights customerId={customer.id} />
+            {/* No email reaches this address: it bounced, or the customer marked one as spam (lib/features). */}
+            {EMAIL_SUPPRESSIONS_ENABLED && <CustomerSuppressionBanner email={customer.email} />}
             <ContactForm customer={customer} onSaved={reload} />
             <OrderHistorySection customer={customer} />
             <BlacklistSection customer={customer} onChanged={reload} />

@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { FilterTabs } from "@/components/FilterTabs";
 import { ContactsAllTab } from "./ContactsAllTab";
 import { SegmentsTab } from "./SegmentsTab";
+import { EmailSuppressionsTab, useSuppressedContactTab } from "./suppressions/EmailSuppressionsTab";
+import { EMAIL_SUPPRESSIONS_ENABLED } from "@/lib/features";
 
 const STRINGS = {
   en: {
@@ -26,7 +28,7 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-type Tab = "all" | "segments";
+type Tab = "all" | "segments" | "suppressed";
 
 /**
  * Contacts (SPEC §18.4): the customers list grown into leads + customers with
@@ -36,12 +38,15 @@ type Tab = "all" | "segments";
 export function ContactsPage() {
   const t = useT(STRINGS);
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab: Tab = searchParams.get("tab") === "segments" ? "segments" : "all";
+  // The addresses no email goes to: a tab only while the feature is on (lib/features); off, its address opens All.
+  const suppressed = useSuppressedContactTab();
+  const asked = searchParams.get("tab");
+  const tab: Tab = asked === "segments" ? "segments" : EMAIL_SUPPRESSIONS_ENABLED && asked === "suppressed" ? "suppressed" : "all";
   const segmentId = searchParams.get("segment") ?? "";
 
   const go = (next: { tab?: Tab; segment?: string }) => {
     const params = new URLSearchParams();
-    if (next.tab === "segments") params.set("tab", "segments");
+    if (next.tab === "segments" || next.tab === "suppressed") params.set("tab", next.tab);
     if (next.segment) params.set("segment", next.segment);
     setSearchParams(params, { replace: true });
   };
@@ -66,12 +71,15 @@ export function ContactsPage() {
         tabs={[
           { value: "all", label: t.all },
           { value: "segments", label: t.segments },
+          ...(EMAIL_SUPPRESSIONS_ENABLED ? [{ value: "suppressed" as const, label: suppressed.label }] : []),
         ]}
       />
       {tab === "all" ? (
         <ContactsAllTab segmentId={segmentId} onSegmentChange={(id) => go({ segment: id })} />
-      ) : (
+      ) : tab === "segments" ? (
         <SegmentsTab onView={(id) => go({ segment: id })} />
+      ) : (
+        <EmailSuppressionsTab />
       )}
     </div>
   );
