@@ -1,3 +1,4 @@
+import { shopperTokenHeaders } from "./shopperToken";
 import { createLocalStorageTokenStorage, type TokenStorage } from "./tokenStorage";
 import type { TwoFactorChallenge } from "./endpoints/twoFactor";
 import type {
@@ -3587,7 +3588,12 @@ export class ApiClient {
    * cart's lines; omit it and put a single `item` in the payload for a "Buy
    * Now". The server replies with `{ order }` — unwrapped here like createOrder.
    */
-  async checkout(workspaceId: string, payload: CheckoutPayload, cartToken?: string, opts: { visitorId?: string } = {}) {
+  async checkout(
+    workspaceId: string,
+    payload: CheckoutPayload,
+    cartToken?: string,
+    opts: { visitorId?: string; shopperToken?: string | null } = {}
+  ) {
     const { order } = await this.request<{ order: Order }>(`/store/${workspaceId}/checkout`, {
       method: "POST",
       body: payload,
@@ -3597,6 +3603,8 @@ export class ApiClient {
         ...(cartToken ? { "X-Cart-Token": cartToken } : {}),
         // Whose uploaded photos the order may take (custom fields).
         ...(opts.visitorId ? { "X-Visitor-Id": opts.visitorId } : {}),
+        // The signed-in shopper, when there is one: their points, credit, level and invite.
+        ...shopperTokenHeaders(opts.shopperToken),
       },
     });
     return order;
@@ -3611,9 +3619,10 @@ export class ApiClient {
   async placeCheckout(
     workspaceId: string,
     payload: CheckoutPayload,
-    opts: { cartToken?: string; previewToken?: string; visitorId?: string } = {}
+    opts: { cartToken?: string; previewToken?: string; visitorId?: string; shopperToken?: string | null } = {}
   ) {
-    const headers: Record<string, string> = {};
+    // The signed-in shopper, when there is one: their level and invite price the order.
+    const headers: Record<string, string> = { ...shopperTokenHeaders(opts.shopperToken) };
     if (opts.cartToken) headers["X-Cart-Token"] = opts.cartToken;
     if (opts.previewToken) headers["X-Store-Preview"] = opts.previewToken;
     // Whose uploaded photos the order may take (custom fields).

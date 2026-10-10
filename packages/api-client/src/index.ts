@@ -167,6 +167,12 @@ export * from "./endpoints/marketingUnsubscribe";
 // The opt-in step's sign-up (funnels/funnelOptIn.js).
 export * from "./endpoints/funnelOptIn";
 export * from "./endpoints/activityLog";
+// What rewards a returning customer (STORE_FEATURES loyalty, vip_tiers,
+// store_credit, customer_referrals): points, levels, credit and invites.
+export * from "./endpoints/loyalty";
+export * from "./endpoints/vipTiers";
+export * from "./endpoints/storeCredit";
+export * from "./endpoints/customerReferrals";
 // Shopper accounts and the wishlist (STORE_FEATURES shopper_accounts): the
 // store's setting, sign-in by code, orders, addresses, a verified email.
 export * from "./endpoints/shopperAccounts";
