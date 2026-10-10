@@ -14,6 +14,7 @@ export function CopyButton({
   label = "Copy link",
   className,
   labelClassName,
+  iconOnly = false,
 }: {
   value: string;
   label?: string;
@@ -21,6 +22,8 @@ export function CopyButton({
   /** Lets a cramped caller hide the text and leave just the icon. The button
    *  keeps its aria-label either way, and the icon still flips to a tick. */
   labelClassName?: string;
+  /** A round icon button; the words stay for screen readers. */
+  iconOnly?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | undefined>(undefined);
@@ -63,6 +66,7 @@ export function CopyButton({
       title={label}
       className={cn(
         "inline-flex cursor-pointer items-center gap-1.5 rounded-[0.5rem] px-2 py-1 text-xs font-medium text-ink-soft transition-colors hover:bg-paper hover:text-ink",
+        iconOnly && "size-7 shrink-0 justify-center gap-0 rounded-full p-0",
         className
       )}
     >
@@ -72,7 +76,7 @@ export function CopyButton({
         <Copy className="size-3.5" aria-hidden />
       )}
       {/* Announced rather than only drawn, so the confirmation isn't visual-only. */}
-      <span aria-live="polite" className={labelClassName}>
+      <span aria-live="polite" className={iconOnly ? "sr-only" : labelClassName}>
         {copied ? "Copied" : label}
       </span>
     </button>

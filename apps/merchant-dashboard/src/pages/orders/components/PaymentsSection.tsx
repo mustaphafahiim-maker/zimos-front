@@ -14,6 +14,11 @@ import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProviderLogo } from "@/components/ProviderLogo";
+import { GIFT_CARDS_ENABLED } from "@/lib/features";
+import { GiftCardPaymentIcon, GiftCardPaymentName, isGiftCardPayment } from "@/pages/giftCards/GiftCardPaymentName";
+
+/** A gift card's part of an order, named as one only while gift cards are switched on. */
+const giftCard = (payment: Parameters<typeof isGiftCardPayment>[0]) => GIFT_CARDS_ENABLED && isGiftCardPayment(payment);
 import { providerName } from "@/lib/providers";
 import { Modal } from "@/components/Modal";
 import { MoneyInput } from "@/components/MoneyInput";
@@ -326,17 +331,21 @@ function AttemptList({
           <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
             <span className="flex min-w-0 items-center gap-3">
               {/* A method means a gateway attempt; COD / manual records have none. */}
-              {p.method && <ProviderLogo code={p.providerCode} size="sm" />}
+              {giftCard(p) ? <GiftCardPaymentIcon /> : p.method && <ProviderLogo code={p.providerCode} size="sm" />}
               <span className="min-w-0">
                 <span className="font-medium text-ink">
-                  {p.method
-                    ? fmt(t.methodViaGateway, { method: methodLabel(p.method), gateway: providerName(p.providerCode) })
-                    : p.providerCode}{" "}
+                  {giftCard(p) ? (
+                    <GiftCardPaymentName payment={p} />
+                  ) : p.method ? (
+                    fmt(t.methodViaGateway, { method: methodLabel(p.method), gateway: providerName(p.providerCode) })
+                  ) : (
+                    p.providerCode
+                  )}{" "}
                   · {money(p.amount)}
                 </span>
                 <span className="block text-xs text-ink-soft">
                   {formatDateTime(p.createdAt)}
-                  {p.maskedDisplay && ` · ${p.maskedDisplay}`}
+                  {p.maskedDisplay && !giftCard(p) && ` · ${p.maskedDisplay}`}
                   {p.failureReason && p.status === "failed" && ` · ${p.failureReason}`}
                 </span>
               </span>
