@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, type AuthUser } from "@store-builder/api-client";
+import { ApiError, TwoFactorRequiredError, type AuthUser } from "@store-builder/api-client";
 import { api, fake } from "@/test/mocks";
 
 /**
@@ -26,6 +26,15 @@ function Probe() {
       <button onClick={() => void auth.retry()}>retry</button>
       <button onClick={() => void auth.refreshUser()}>reload</button>
       <button onClick={() => void auth.logout().catch(() => undefined)}>logout</button>
+      <button
+        onClick={() =>
+          void auth.login({ identifier: "owner@zimos.test", password: "x" }).catch((err: unknown) => {
+            document.title = err instanceof TwoFactorRequiredError ? `challenge:${err.challenge.challengeToken}` : "other";
+          })
+        }
+      >
+        login
+      </button>
     </div>
   );
 }
@@ -120,4 +129,19 @@ it("signing out ends the session here even when the server can't be told", async
 
   await waitFor(() => expect(status()).toBe("guest"));
   expect(api.logout).toHaveBeenCalledTimes(1);
+});
+
+describe("a sign-in that needs its second step", () => {
+  it("is not signed in: the challenge is handed to the login page", async () => {
+    api.isAuthenticated.mockReturnValue(false);
+    api.login.mockResolvedValue({ twoFactorRequired: true, challengeToken: "c1", channel: "totp" });
+    const u = renderProvider();
+    await waitFor(() => expect(status()).toBe("guest"));
+
+    await u.click(screen.getByRole("button", { name: "login" }));
+
+    await waitFor(() => expect(document.title).toBe("challenge:c1"));
+    expect(status()).toBe("guest");
+    expect(api.meDetails).not.toHaveBeenCalled();
+  });
 });

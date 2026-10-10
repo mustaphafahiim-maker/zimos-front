@@ -21,6 +21,9 @@ import { Field, TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { OrderEmailSender } from "./OrderEmailSender";
+import { OrderEmailEditor } from "./OrderEmailEditor";
+import { ORDER_EMAIL_DESIGN_ENABLED } from "@/lib/features";
+import type { OrderEmailDesignTemplate } from "@store-builder/api-client";
 
 /**
  * Settings → "Order emails" (SPEC §14.5): the emails customers get about
@@ -194,7 +197,23 @@ export function OrderEmailsSection() {
         )}
       </div>
 
-      {editing && data && (
+      {/* With the block designer on, an email opens in the editor that has both ways: plain text, or blocks. */}
+      {editing && data && ORDER_EMAIL_DESIGN_ENABLED && (
+        <OrderEmailEditor
+          key={editing.key}
+          layout="modal"
+          title={fmt(t.editTitle, { name: nameOf(t, editing.key) })}
+          template={{ ...editing, blocks: (editing as Partial<OrderEmailDesignTemplate>).blocks ?? null }}
+          tokens={data.tokens}
+          onClose={() => setEditing(null)}
+          onSaved={(updated) => {
+            replace(updated);
+            setEditing(null);
+            toast.success(t.saved);
+          }}
+        />
+      )}
+      {editing && data && !ORDER_EMAIL_DESIGN_ENABLED && (
         <EmailEditor
           key={editing.key}
           t={t}

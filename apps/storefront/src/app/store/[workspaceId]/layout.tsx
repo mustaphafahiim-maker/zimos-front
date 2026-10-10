@@ -10,6 +10,9 @@ import { NewsletterSignup, SocialProofPopup } from "@/components/offers/Engageme
 import { HideInFunnel } from "@/components/HideInFunnel";
 import { MobileCategoryStrip } from "@/components/MobileCategoryStrip";
 import { PaymentsPreviewBanner } from "@/components/PaymentsPreviewBanner";
+import { HolidayBanner } from "@/components/holiday/HolidayBanner";
+import { InviteBanner } from "@/components/rewards/InviteBanner";
+import { CUSTOMER_REFERRALS_ENABLED } from "@/lib/features";
 import { StoreFooter } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { StoreAnalytics } from "@/components/StoreAnalytics";
@@ -24,6 +27,7 @@ import {
   storefrontDesignMeta,
   storefrontGeneralMeta,
   storefrontStoreApp,
+  storefrontHolidayOf,
 } from "@store-builder/api-client";
 import { FloatingWhatsapp } from "@/components/FloatingWhatsapp";
 import { StoreRouteProvider } from "@/components/StoreRoute";
@@ -167,6 +171,8 @@ export default async function StoreLayout({
     country: storefrontGeneralMeta(store).general.country,
     // Self delivery: served governorates (and more as the API grows it); absent from older APIs.
     delivery: (store as { delivery?: StoreInfo["delivery"] }).delivery ?? null,
+    // A store on holiday, as the API names it (lib/storeHoliday reads it only while the feature is on).
+    holiday: storefrontHolidayOf(store),
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.
@@ -208,6 +214,14 @@ export default async function StoreLayout({
             {theme && <style dangerouslySetInnerHTML={{ __html: THEME_FONT_CSS }} />}
             <DocumentLocale locale={locale} />
             <PaymentsPreviewBanner workspaceId={workspaceId} />
+            {/* The band across the top while the store is on holiday; on funnel pages too (HOLIDAY_MODE_ENABLED). */}
+            <HolidayBanner />
+            {/* A friend's invite from a `?ref=` link, above the store (lib/features); funnel pages keep their own path. */}
+            {CUSTOMER_REFERRALS_ENABLED && (
+              <HideInFunnel>
+                <InviteBanner />
+              </HideInFunnel>
+            )}
             <HideInFunnel>
               <StoreHeader store={store} locale={locale} />
               <MobileCategoryStrip collections={collections} t={t} />

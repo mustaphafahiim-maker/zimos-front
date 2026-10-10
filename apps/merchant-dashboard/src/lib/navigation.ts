@@ -22,10 +22,14 @@ import {
   LineChart,
   LifeBuoy,
   Lightbulb,
+  Medal,
   Megaphone,
   MessageCircle,
+  Newspaper,
+  CircleQuestionMark,
   Package,
   PiggyBank,
+  Ruler,
   Settings,
   ShieldAlert,
   ShoppingBag,
@@ -34,6 +38,7 @@ import {
   Store,
   Tag,
   Target,
+  Ticket,
   Truck,
   Undo2,
   Users,
@@ -42,7 +47,28 @@ import {
 } from "lucide-react";
 import type { Messages } from "@/i18n/LocaleContext";
 import { NO_ANALYTICS_ROLES } from "@/lib/analyticsAccess";
-import { AI_ENABLED } from "@/lib/features";
+import {
+  AI_ENABLED,
+  BLOG_ENABLED,
+  CUSTOMER_REFERRALS_ENABLED,
+  GIFT_CARDS_ENABLED,
+  LOYALTY_ENABLED,
+  PRODUCT_QUESTIONS_ENABLED,
+  SIZE_CHARTS_ENABLED,
+  STORE_CREDIT_ENABLED,
+  VIP_TIERS_ENABLED,
+} from "@/lib/features";
+
+/** Where "Loyalty & rewards" opens: the first of its four programmes that is switched on; null while none is. */
+const REWARDS_HOME = LOYALTY_ENABLED
+  ? "/loyalty"
+  : VIP_TIERS_ENABLED
+    ? "/loyalty/vip"
+    : CUSTOMER_REFERRALS_ENABLED
+      ? "/loyalty/referrals"
+      : STORE_CREDIT_ENABLED
+        ? "/store-credit"
+        : null;
 
 /**
  * System roles without billing.manage (owner '*' and accountant hold it, see
@@ -59,8 +85,13 @@ export type NavKey =
   | "abandonedCarts"
   | "catalog"
   | "reviews"
+  | "productQuestions"
+  | "sizeCharts"
   | "customers"
   | "discounts"
+  | "giftCards"
+  | "blog"
+  | "loyalty"
   | "offers"
   | "shipping"
   | "payments"
@@ -148,6 +179,9 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "catalog", to: "/catalog", icon: Package },
       { key: "reviews", to: "/reviews", icon: Star },
+      // Shoppers' questions and size charts, each only while its feature is switched on (lib/features).
+      ...(PRODUCT_QUESTIONS_ENABLED ? [{ key: "productQuestions" as const, to: "/questions", icon: CircleQuestionMark }] : []),
+      ...(SIZE_CHARTS_ENABLED ? [{ key: "sizeCharts" as const, to: "/size-charts", icon: Ruler }] : []),
       { key: "digital", to: "/digital", icon: FileDown },
       { key: "courses", to: "/courses", icon: GraduationCap },
       { key: "media", to: "/media", icon: Images },
@@ -158,6 +192,8 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "customers",
     items: [
       { key: "customers", to: "/customers", icon: Users },
+      // Points, levels, invites and store credit: one entry, only while one of them is switched on (lib/features).
+      ...(REWARDS_HOME ? [{ key: "loyalty" as const, to: REWARDS_HOME, icon: Medal }] : []),
       { key: "inbox", to: "/inbox", icon: MessageCircle },
     ],
   },
@@ -168,6 +204,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "marketing", to: "/marketing", icon: Megaphone },
       { key: "offers", to: "/offers", icon: Gift },
       { key: "discounts", to: "/discounts", icon: Tag },
+      // Gift cards only while the feature is switched on (lib/features).
+      ...(GIFT_CARDS_ENABLED ? [{ key: "giftCards" as const, to: "/gift-cards", icon: Ticket }] : []),
       { key: "automations", to: "/automations", icon: Bot },
       { key: "affiliates", to: "/affiliates", icon: UsersRound },
       // AI studio only while the AI features are switched on (lib/features).
@@ -179,6 +217,8 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: "store",
     items: [
       { key: "website", to: "/website", icon: Globe },
+      // The store blog only while the feature is switched on (lib/features).
+      ...(BLOG_ENABLED ? [{ key: "blog" as const, to: "/blog", icon: Newspaper }] : []),
       { key: "funnels", to: "/funnels", icon: Workflow },
       { key: "shoppableImages", to: "/shoppable-images", icon: MousePointerClick },
       { key: "storeSettings", to: "/store-settings", icon: Store },
@@ -257,8 +297,13 @@ export const NAV_LABELS = {
     abandonedCarts: "Lost orders",
     catalog: "Products",
     reviews: "Reviews",
+    productQuestions: "Questions",
+    sizeCharts: "Size charts",
     customers: "Customers",
     discounts: "Discounts",
+    giftCards: "Gift cards",
+    blog: "Blog",
+    loyalty: "Loyalty & rewards",
     offers: "Offers",
     shipping: "Shipping & Tax",
     payments: "Payments",
@@ -299,8 +344,13 @@ export const NAV_LABELS = {
     abandonedCarts: "الطلبات المفقودة",
     catalog: "المنتجات",
     reviews: "التقييمات",
+    productQuestions: "الأسئلة",
+    sizeCharts: "جداول المقاسات",
     customers: "العملاء",
     discounts: "الخصومات",
+    giftCards: "بطاقات الهدايا",
+    blog: "المدونة",
+    loyalty: "الولاء والمكافآت",
     offers: "العروض",
     shipping: "الشحن والضرائب",
     payments: "المدفوعات",

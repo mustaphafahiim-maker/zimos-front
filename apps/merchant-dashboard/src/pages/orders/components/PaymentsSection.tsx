@@ -14,6 +14,11 @@ import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProviderLogo } from "@/components/ProviderLogo";
+import { GIFT_CARDS_ENABLED } from "@/lib/features";
+import { GiftCardPaymentIcon, GiftCardPaymentName, isGiftCardPayment } from "@/pages/giftCards/GiftCardPaymentName";
+
+/** A gift card's part of an order, named as one only while gift cards are switched on. */
+const giftCard = (payment: Parameters<typeof isGiftCardPayment>[0]) => GIFT_CARDS_ENABLED && isGiftCardPayment(payment);
 import { providerName } from "@/lib/providers";
 import { Modal } from "@/components/Modal";
 import { MoneyInput } from "@/components/MoneyInput";
@@ -21,6 +26,14 @@ import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { useOrderLabels } from "../orderLabels";
+import {
+  RefundDestinationField,
+  StoreTenderPaymentIcon,
+  StoreTenderPaymentName,
+  isStoreTenderPayment,
+  refundReasonText,
+  useRefundDestination,
+} from "@/pages/storeCredit/RefundDestination";
 
 const STRINGS = {
   en: {
@@ -326,17 +339,23 @@ function AttemptList({
           <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
             <span className="flex min-w-0 items-center gap-3">
               {/* A method means a gateway attempt; COD / manual records have none. */}
-              {p.method && <ProviderLogo code={p.providerCode} size="sm" />}
+              {isStoreTenderPayment(p) ? <StoreTenderPaymentIcon payment={p} /> : giftCard(p) ? <GiftCardPaymentIcon /> : p.method && <ProviderLogo code={p.providerCode} size="sm" />}
               <span className="min-w-0">
                 <span className="font-medium text-ink">
-                  {p.method
-                    ? fmt(t.methodViaGateway, { method: methodLabel(p.method), gateway: providerName(p.providerCode) })
-                    : p.providerCode}{" "}
+                  {isStoreTenderPayment(p) ? (
+                    <StoreTenderPaymentName payment={p} />
+                  ) : giftCard(p) ? (
+                    <GiftCardPaymentName payment={p} />
+                  ) : p.method ? (
+                    fmt(t.methodViaGateway, { method: methodLabel(p.method), gateway: providerName(p.providerCode) })
+                  ) : (
+                    p.providerCode
+                  )}{" "}
                   · {money(p.amount)}
                 </span>
                 <span className="block text-xs text-ink-soft">
                   {formatDateTime(p.createdAt)}
-                  {p.maskedDisplay && ` · ${p.maskedDisplay}`}
+                  {p.maskedDisplay && !giftCard(p) && !isStoreTenderPayment(p) && ` · ${p.maskedDisplay}`}
                   {p.failureReason && p.status === "failed" && ` · ${p.failureReason}`}
                 </span>
               </span>
@@ -367,7 +386,7 @@ function RefundList({ refunds, money, t }: { refunds: Refund[]; money: (n: numbe
               <span className="font-medium text-ink">{money(r.amount)}</span>
               <span className="block text-xs text-ink-soft">
                 {formatDateTime(r.createdAt)} · {t[`source_${r.source}` as keyof Strings]}
-                {r.reason && ` · ${r.reason}`}
+                {r.reason && ` · ${refundReasonText(r.reason)}`}
                 {r.failureCode === REFUND_NO_BALANCE
                   ? ` · ${t.refundNoBalance}`
                   : r.failureReason && ` · ${r.failureReason}`}
@@ -422,7 +441,10 @@ function RefundDialog({
   const viaGateway = timeline.refundVia === "gateway";
   const [paymentId, setPaymentId] = useState(initial.paymentId ?? timeline.perPayment[0]?.paymentId ?? "");
   const perPayment = timeline.perPayment.find((p) => p.paymentId === paymentId);
-  const max = viaGateway ? Math.min(timeline.refundable, perPayment?.refundable ?? 0) : timeline.refundable;
+  const moneyMax = viaGateway ? Math.min(timeline.refundable, perPayment?.refundable ?? 0) : timeline.refundable;
+  // Money (as before), the customer's store credit, or back to the gift card / points / credit that paid (RefundDestination.tsx).
+  const destination = useRefundDestination(order, timeline);
+  const max = destination.max ?? moneyMax;
   const [amount, setAmount] = useState(minorToMajorInput(initial.amount ?? max));
   const [reason, setReason] = useState("");
   const [notify, setNotify] = useState(true);
@@ -438,15 +460,22 @@ function RefundDialog({
       setError(fmt(t.amountInvalid, { max: money(max) }));
       return;
     }
+    const destinationProblem = destination.problem(reason);
+    if (destinationProblem) {
+      setError(destinationProblem);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const refund = await ordersRefundWithNotify(apiClient, workspaceId, order.id, {
-        amount: minor,
-        notifyCustomer: notify,
-        ...(reason.trim() ? { reason: reason.trim() } : {}),
-        ...(viaGateway && paymentId ? { paymentId } : {}),
-      });
+      const refund = !destination.isMoney
+        ? await destination.send({ amount: minor, reason: reason.trim(), notifyCustomer: notify })
+        : await ordersRefundWithNotify(apiClient, workspaceId, order.id, {
+            amount: minor,
+            notifyCustomer: notify,
+            ...(reason.trim() ? { reason: reason.trim() } : {}),
+            ...(viaGateway && paymentId ? { paymentId } : {}),
+          });
       onDone(refund);
     } catch (err) {
       setError(errorMessage(err));
@@ -455,16 +484,25 @@ function RefundDialog({
   }
 
   const attempt = (id: string) => timeline.attempts.find((p) => p.id === id);
+  // A gift card's, points' or credit's share goes back to it only when that payment is picked
+  // below: a refund that names no payment is money.
+  const destinations = destination.options.length > 1;
 
   return (
     <Modal
       open
       onClose={onClose}
       title={t.refundTitle}
-      description={viaGateway ? t.refundGateway : t.refundManual}
+      description={destinations ? undefined : viaGateway ? t.refundGateway : t.refundManual}
     >
       <form onSubmit={submit} className="space-y-4 p-5">
-        {viaGateway && timeline.perPayment.length > 1 && (
+        <RefundDestinationField
+          state={destination}
+          viaGateway={viaGateway}
+          currency={order.currency}
+          onPick={(limit) => setAmount(minorToMajorInput(limit ?? moneyMax))}
+        />
+        {destination.isMoney && viaGateway && timeline.perPayment.length > 1 && (
           <Field label={t.fromPayment}>
             {({ id }) => (
               <Select id={id} value={paymentId} onChange={(e) => setPaymentId(e.target.value)} className="h-11">
@@ -500,12 +538,12 @@ function RefundDialog({
           hint={fmt(t.amountHint, { max: money(max) })}
           required
         />
-        <Field label={t.reason}>
+        <Field label={t.reason} required={destination.reasonRequired}>
           {({ id }) => (
-            <Textarea id={id} value={reason} maxLength={300} placeholder={t.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
+            <Textarea id={id} value={reason} maxLength={300} placeholder={destination.reasonRequired ? undefined : t.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
           )}
         </Field>
-        <NotifyCustomerToggle checked={notify} onChange={setNotify} />
+        {destination.notifiable && <NotifyCustomerToggle checked={notify} onChange={setNotify} />}
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={onClose}>

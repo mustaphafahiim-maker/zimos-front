@@ -1,5 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { ApiError, type AuthUser, type LoginPayload } from "@store-builder/api-client";
+import {
+  ApiError,
+  TwoFactorRequiredError,
+  isTwoFactorChallenge,
+  securityVerifyTwoFactor,
+  type AuthUser,
+  type LoginPayload,
+} from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { hasPermission } from "@/lib/permissions";
 
@@ -11,7 +18,10 @@ interface AuthContextValue {
    * and `retry` reads it again; only a 401 makes the user a guest.
    */
   status: "loading" | "authenticated" | "guest" | "unavailable";
+  /** Throws TwoFactorRequiredError when the sign-in asks for a code (two-step, or a new device). */
   login: (payload: LoginPayload) => Promise<void>;
+  /** The code (or a backup code) for that challenge. */
+  verifyCode: (payload: { challengeToken: string; code: string }) => Promise<void>;
   logout: () => Promise<void>;
   /** Reads the account again after "unavailable". */
   retry: () => Promise<void>;
@@ -77,11 +87,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if ("verificationRequired" in result) {
           throw new ApiError("Confirm this account from the Zimos dashboard first, then sign in here.", 403);
         }
+        // Two-step sign-in, or a browser new to the account: the login page asks for the code.
+        if (isTwoFactorChallenge(result)) throw new TwoFactorRequiredError(result);
         if (!result.user.platformAdmin) {
           apiClient.clearSession();
           throw new ApiError("This account doesn't have platform admin access.", 403);
         }
         setUser(result.user);
+        setStatus("authenticated");
+      },
+      async verifyCode(payload) {
+        const { user: signedIn } = await securityVerifyTwoFactor(apiClient, payload);
+        if (!signedIn.platformAdmin) {
+          apiClient.clearSession();
+          throw new ApiError("This account doesn't have platform admin access.", 403);
+        }
+        setUser(signedIn);
         setStatus("authenticated");
       },
       async logout() {

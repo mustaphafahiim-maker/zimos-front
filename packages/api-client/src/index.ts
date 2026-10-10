@@ -167,6 +167,57 @@ export * from "./endpoints/marketingUnsubscribe";
 // The opt-in step's sign-up (funnels/funnelOptIn.js).
 export * from "./endpoints/funnelOptIn";
 export * from "./endpoints/activityLog";
+// Store reports, RFM scores and scheduled summary reports (STORE_FEATURES
+// store_reports, rfm, scheduled_reports), and the extra ad platforms' pixels
+// (extra_pixels).
+export * from "./endpoints/storeReports";
+export * from "./endpoints/rfm";
+export * from "./endpoints/scheduledReports";
+export * from "./endpoints/pinterestPixel";
+export * from "./endpoints/adPlatformPixels";
+// Returns a shopper asks for, exchanges (STORE_FEATURES shopper_returns,
+// return_exchanges), a parcel that came back and tracking for manual waybills
+// (tracking_provider).
+export * from "./endpoints/shopperReturns";
+export * from "./endpoints/returnHandling";
+export * from "./endpoints/shipmentTracking";
+// What rewards a returning customer (STORE_FEATURES loyalty, vip_tiers,
+// store_credit, customer_referrals): points, levels, credit and invites.
+export * from "./endpoints/loyalty";
+export * from "./endpoints/vipTiers";
+export * from "./endpoints/storeCredit";
+export * from "./endpoints/customerReferrals";
+// Shopper accounts and the wishlist (STORE_FEATURES shopper_accounts): the
+// store's setting, sign-in by code, orders, addresses, a verified email.
+export * from "./endpoints/shopperAccounts";
+export * from "./endpoints/shopperEmail";
+export * from "./endpoints/wishlist";
+// Gift cards and the store blog (STORE_FEATURES gift_cards, blog), with the
+// rich text the blog's blocks are written in.
+export * from "./endpoints/richText";
+export * from "./endpoints/giftCards";
+export * from "./endpoints/blog";
+// Notifications: custom headers on a webhook endpoint, the block designer for
+// order emails, and the addresses that stopped receiving email.
+export * from "./endpoints/webhookHeaders";
+export * from "./endpoints/orderEmailDesign";
+export * from "./endpoints/emailSuppressions";
+// Store features that ship behind the API's STORE_FEATURES list. The dashboard
+// and the storefront show none of one unless its own switch is on.
+export * from "./endpoints/sizeCharts";
+export * from "./endpoints/productQuestions";
+export * from "./endpoints/productSpecs";
+export * from "./endpoints/stockAlerts";
+export * from "./endpoints/preorders";
+export * from "./endpoints/holidayMode";
+export * from "./endpoints/urlRedirects";
+export * from "./endpoints/purchaseLimits";
+export * from "./endpoints/giftOptions";
+// Sending a store's other domains to its primary one (domains/domainSettings.js).
+export * from "./endpoints/domainRedirect";
+// Two-step sign-in: the code step, its settings, backup codes, the console reset.
+// The dashboard shows none of it unless VITE_TWO_FACTOR_ENABLED is "true".
+export * from "./endpoints/twoFactor";
 // AI module: generation jobs, usage, apply as draft; the WhatsApp reply bot.
 // The dashboard shows none of it unless VITE_AI_ENABLED is "true".
 export * from "./endpoints/ai";

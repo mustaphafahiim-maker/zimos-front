@@ -4,6 +4,7 @@ import { Alert, Badge, Button, Input, cn } from "@store-builder/ui";
 import {
   apiErrorCode,
   apiErrorDetails,
+  domainSetRedirectToPrimary,
   funnelsList,
   storeDesignAddDomain,
   storeDesignCheckDomainSsl,
@@ -28,7 +29,9 @@ import { Section } from "@/components/Section";
 import { Field } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { DOMAIN_REDIRECT_ENABLED } from "@/lib/features";
 import { DomainGuides } from "./DomainGuides";
+import { DomainRedirectSwitch } from "./DomainRedirectSwitch";
 import { cleanHostname, isApex, registrableDomain, relativeName } from "./domainNames";
 
 const STRINGS = {
@@ -460,6 +463,19 @@ export function DomainsTab() {
                         </Select>
                       )}
                     </Field>
+                  )}
+
+                  {DOMAIN_REDIRECT_ENABLED && usable && !domain.isPrimary && (
+                    <DomainRedirectSwitch
+                      domain={domain}
+                      disabled={isBusy("redirect")}
+                      onChange={(redirectToPrimary) =>
+                        void run(domain, "redirect", async () => {
+                          await domainSetRedirectToPrimary(apiClient, workspaceId, domain.id, redirectToPrimary);
+                          return t.savedToast;
+                        })
+                      }
+                    />
                   )}
 
                   <div className="flex flex-wrap gap-2">

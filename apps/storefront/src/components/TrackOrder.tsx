@@ -2,7 +2,9 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
-import { ApiError, orderTrackingByToken, type TrackResult } from "@store-builder/api-client";
+import { ApiError, orderTrackingByToken, orderTrackingExtras, type TrackResult } from "@store-builder/api-client";
+import { SHOPPER_RETURNS_ENABLED } from "@/lib/features";
+import { ShopperReturns } from "./returns/ShopperReturns";
 import { isEgyptianMobile, normalizePhone } from "@/lib/egypt";
 import { focusField } from "@/lib/focusField";
 import { createStorefrontApiClient } from "@/lib/apiClient";
@@ -105,6 +107,8 @@ export function TrackOrder() {
   // Every amount in one result is in the order's own currency, not the store's
   // current one — an order placed before a currency change still adds up.
   const currency = result?.currency;
+  // The order's signed tracking token: it names the order when the shopper asks for a return (lib/features).
+  const trackingToken = SHOPPER_RETURNS_ENABLED && result ? (orderTrackingExtras(result).trackingToken ?? null) : null;
 
   return (
     <main className={`${container} flex-1 py-10 sm:py-14`}>
@@ -231,6 +235,9 @@ export function TrackOrder() {
               <TrackOrderDownloads result={result} />
 
               <TrackOrderNotes result={result} />
+
+              {/* Return items, when the store lets shoppers ask. */}
+              {trackingToken && <ShopperReturns key={trackingToken} token={trackingToken} workspaceId={workspaceId} />}
 
               {result.updatedAt && (
                 <p className="mt-5 text-xs text-ink-soft">

@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ApiError,
+  TwoFactorRequiredError,
+  isTwoFactorChallenge,
   type AuthUser,
   type LoginPayload,
   type RegisterPayload,
@@ -139,6 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await apiClient.login(payload);
       // Sign-up codes on: an account not confirmed yet gets its code screen.
       if ("verificationRequired" in result) return result;
+      // Two-step sign-in: the login page catches this and asks for the code.
+      if (isTwoFactorChallenge(result)) throw new TwoFactorRequiredError(result);
       // An API from before soft confirmation hands out tokens to a
       // `pending_verification` account that its `authenticate` middleware
       // then rejects (it requires `status === "active"`), and so does

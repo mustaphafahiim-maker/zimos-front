@@ -1,4 +1,15 @@
 import { getTrackingContext, setPixelInfoProvider } from "./analyticsEvents";
+// X, Taboola, Outbrain, Kwai, Reddit and Microsoft Ads: their tags and event wording.
+import {
+  AD_TAG_PLATFORMS,
+  adTagEventsOf,
+  sendAdTagPageView,
+  sendToAdPlatformTags,
+  type AdTagEvent,
+  type AdTagEvents,
+  type AdTagPlatform,
+} from "./adPlatformTags";
+import { AD_PIXELS_ENABLED } from "./features";
 import type { TrackData, TrackEvent } from "./track";
 
 /**
@@ -17,7 +28,7 @@ import type { TrackData, TrackEvent } from "./track";
  * no pixels sends nothing.
  */
 
-export type PixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity";
+export type PixelPlatform = "meta" | "tiktok" | "snapchat" | "google" | "gtm" | "clarity" | "pinterest" | AdTagPlatform;
 
 export interface StorePixel {
   platform: PixelPlatform;
@@ -25,7 +36,23 @@ export interface StorePixel {
   scope: { type: "all" | "funnels" | "products"; ids: string[] };
   /** Google Ads conversion label, for an `AW-` id. */
   adsConversionLabel?: string;
+  /**
+   * For X, Taboola, Outbrain, Kwai, Reddit and Microsoft Ads: our event → the
+   * platform's name for it (GET /store/:ws). An event without one is not sent.
+   */
+  events?: AdTagEvents;
 }
+
+/** Our event names as the `events` of those pixels key them. */
+const AD_TAG_EVENT: Record<TrackEvent, AdTagEvent> = {
+  PageView: "page_view",
+  ViewContent: "view_content",
+  AddToCart: "add_to_cart",
+  InitiateCheckout: "begin_checkout",
+  AddPaymentInfo: "add_payment_info",
+  Purchase: "purchase",
+  Lead: "lead",
+};
 
 type Fn = (...args: unknown[]) => void;
 type TikTokInstance = { track: Fn; page: Fn };
@@ -33,6 +60,7 @@ type PixelWindow = Window & {
   fbq?: Fn;
   ttq?: TikTokInstance & { instance?: (id: string) => TikTokInstance };
   snaptr?: Fn;
+  pintrk?: Fn;
   gtag?: Fn;
   dataLayer?: unknown[];
 };
@@ -54,6 +82,14 @@ const SNAP: Record<TrackEvent, string> = {
   AddPaymentInfo: "ADD_BILLING",
   Purchase: "PURCHASE",
   Lead: "SIGN_UP",
+};
+// Pinterest's standard events; a page view is its own call (pintrk("page")), and
+// checkout steps before the purchase have no Pinterest event.
+const PINTEREST: Partial<Record<TrackEvent, string>> = {
+  ViewContent: "pagevisit",
+  AddToCart: "addtocart",
+  Purchase: "checkout",
+  Lead: "lead",
 };
 const GOOGLE: Record<TrackEvent, string> = {
   PageView: "page_view",
@@ -84,6 +120,8 @@ export function purchaseTimingOf(store: unknown): PurchaseTiming {
 }
 /** Scoped Snap pixels already initialised (Snap has no per-pixel send, so they are added on first match). */
 const snapInitialised = new Set<string>();
+/** Pinterest tags loaded so far: like Snap, an event goes to every loaded tag, so scoped ones load on first match. */
+const pinterestLoaded = new Set<string>();
 
 const VIEWED_KEY = "zimos_pixel_products";
 
@@ -101,6 +139,8 @@ function viewedProducts(): string[] {
 export function registerPixels(pixels: StorePixel[], purchaseTiming: PurchaseTiming = "on_order"): void {
   registry = pixels;
   browserPurchase = purchaseTiming === "on_order";
+  // The store-wide Pinterest tags are loaded by the tag script itself (components/TrackingPixels).
+  for (const p of pixels) if (p.platform === "pinterest" && p.scope.type === "all") pinterestLoaded.add(p.pixelId);
   setPixelInfoProvider(pixels.length ? pixelInfo : null);
 }
 
@@ -183,10 +223,21 @@ function sendPageViewTo(pixels: StorePixel[]): void {
         w.snaptr("track", "PAGE_VIEW");
       }
       if (p.platform === "google" && w.gtag) w.gtag("event", "page_view", { send_to: p.pixelId });
+      if (p.platform === "pinterest" && w.pintrk) {
+        loadPinterest(w, p.pixelId);
+        w.pintrk("page");
+      }
     }
+    sendAdTagPageView(pixels);
   } catch {
     /* a broken third-party script must never break the store */
   }
+}
+
+function loadPinterest(w: PixelWindow, tagId: string): void {
+  if (pinterestLoaded.has(tagId) || !w.pintrk) return;
+  pinterestLoaded.add(tagId);
+  w.pintrk("load", tagId);
 }
 
 function initSnap(w: PixelWindow, pixelId: string): void {
@@ -264,6 +315,23 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
       });
     }
 
+    const pinterest = active("pinterest");
+    if (w.pintrk && pinterest.length) {
+      for (const p of pinterest) loadPinterest(w, p.pixelId);
+      if (event === "PageView") w.pintrk("page");
+      else if (PINTEREST[event]) {
+        // event_id: the same id a server-side copy would carry, for Pinterest to dedup.
+        w.pintrk("track", PINTEREST[event], {
+          value,
+          currency: data.currency,
+          order_quantity: data.numItems,
+          order_id: data.orderId,
+          event_id: dedupeId,
+          line_items: data.contentIds?.map((id) => ({ product_id: id })),
+        });
+      }
+    }
+
     const google = active("google");
     if (w.gtag && google.length) {
       // send_to keeps the event off the Google tags whose scope does not cover this page.
@@ -288,6 +356,10 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
         ecommerce: { ...common, transaction_id: data.orderId, items: data.contentIds?.map((id) => ({ item_id: id })) },
       });
     }
+
+    // X, Taboola, Outbrain, Kwai, Reddit, Microsoft Ads: the in-scope pixels, under the platform's own
+    // name for the event, with the same id.
+    sendToAdPlatformTags(registry.filter(inScope), AD_TAG_EVENT[event], { value, currency: data.currency, orderId: data.orderId, dedupeId });
   } catch {
     /* a broken third-party script must never break the store */
   }
@@ -295,7 +367,16 @@ export function sendToAdPixels(event: TrackEvent, data: TrackData = {}): void {
 
 // ------------------------------------------------------------- store pixels --
 
-const PLATFORMS: readonly PixelPlatform[] = ["meta", "tiktok", "snapchat", "google", "gtm", "clarity"];
+const PLATFORMS: readonly PixelPlatform[] = [
+  "meta",
+  "tiktok",
+  "snapchat",
+  "google",
+  "gtm",
+  "clarity",
+  // The extra ad platforms only while their switch is on (lib/features): off, such a pixel is dropped here, never loaded.
+  ...(AD_PIXELS_ENABLED ? (["pinterest", ...AD_TAG_PLATFORMS] as const) : []),
+];
 // IDs are validated by the backend; re-checked here because they are placed in inline scripts.
 const SAFE = /^[A-Za-z0-9_-]{4,64}$/;
 
@@ -319,7 +400,8 @@ export function storePixelsOf(store: unknown): StorePixel[] {
       const type = scope.type === "funnels" || scope.type === "products" ? scope.type : "all";
       const ids = Array.isArray(scope.ids) ? scope.ids.filter((x): x is string => typeof x === "string") : [];
       const label = typeof r.adsConversionLabel === "string" && SAFE.test(r.adsConversionLabel) ? r.adsConversionLabel : undefined;
-      out.push({ platform, pixelId, scope: { type, ids }, ...(label ? { adsConversionLabel: label } : {}) });
+      const events = adTagEventsOf(platform, r.events);
+      out.push({ platform, pixelId, scope: { type, ids }, ...(label ? { adsConversionLabel: label } : {}), ...(events ? { events } : {}) });
     }
     return out;
   }

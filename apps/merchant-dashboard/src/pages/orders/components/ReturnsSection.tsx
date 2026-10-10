@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { Alert, Button, Card, CardContent, Spinner } from "@store-builder/ui";
-import type { Order, ReturnReasonCode, ReturnRequest, ReturnStatus } from "@store-builder/api-client";
+import { returnDecide, returnPhotosOf, returnSourceOf, type Order, type ReturnReasonCode, type ReturnRequest, type ReturnStatus } from "@store-builder/api-client";
+import { SHOPPER_RETURNS_ENABLED } from "@/lib/features";
+import { ReturnDecisionSheet } from "@/pages/returns/ReturnDecisionSheet";
+import { ReturnPhotos, ReturnSourceBadge } from "@/pages/returns/ReturnExtras";
+import { ReturnExchangeBadge, ReturnHandling } from "@/pages/returns/ReturnHandling";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
@@ -130,6 +134,8 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
   const errorMessage = useErrorMessage();
   const returns = useAsync(() => apiClient.listOrderReturns(workspaceId, order.id), [workspaceId, order.id]);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // With shopper returns on, a decision goes through a sheet: a message for the customer, and an exchange's shipping.
+  const [deciding, setDeciding] = useState<{ ret: ReturnRequest; action: "approve" | "reject"; open: boolean } | null>(null);
 
   const delivered =
     order.fulfillmentState === "fulfilled" || (order.shipments ?? []).some((s) => s.status === "delivered");
@@ -140,6 +146,10 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
   };
 
   async function moderate(ret: ReturnRequest, action: "approve" | "reject") {
+    if (SHOPPER_RETURNS_ENABLED) {
+      setDeciding({ ret, action, open: true });
+      return;
+    }
     setBusyId(ret.id);
     try {
       await apiClient.moderateReturn(workspaceId, ret.id, action);
@@ -190,7 +200,11 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
               <li key={ret.id} className="rounded-[0.5rem] border border-line px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm text-ink">{reasonLabel(ret.reason, t)}</span>
-                  <StatusBadge value={ret.status} text={statusLabel(ret.status, t)} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {SHOPPER_RETURNS_ENABLED && returnSourceOf(ret) === "shopper" && <ReturnSourceBadge />}
+                    {SHOPPER_RETURNS_ENABLED && <ReturnExchangeBadge ret={ret} />}
+                    <StatusBadge value={ret.status} text={statusLabel(ret.status, t)} />
+                  </div>
                 </div>
                 <div className="mt-1 text-xs text-ink-soft">
                   {ret.items.map((it) => `${it.quantity}× ${itemName(it.orderItemId)}`).join(t.listSep)}
@@ -198,6 +212,12 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
                     <span> · {fmt(t.restocked, { date: formatDateTime(ret.restockedAt) })}</span>
                   )}
                 </div>
+                {SHOPPER_RETURNS_ENABLED && returnPhotosOf(ret).length > 0 && (
+                  <div className="mt-2">
+                    <ReturnPhotos photos={returnPhotosOf(ret)} onExpired={() => void returns.refresh({ silent: true })} />
+                  </div>
+                )}
+                {SHOPPER_RETURNS_ENABLED && <ReturnHandling ret={ret} order={order} />}
                 <div className="mt-2 flex flex-wrap gap-2">
                   {ret.status === "requested" && (
                     <>
@@ -241,6 +261,26 @@ export function ReturnsSection({ order, onOrderMaybeChanged }: Props) {
           />
         ) : (
           <p className="mt-4 border-t border-line pt-4 text-sm text-ink-soft">{t.notDelivered}</p>
+        )}
+
+        {SHOPPER_RETURNS_ENABLED && (
+          <ReturnDecisionSheet
+            ret={deciding?.ret ?? null}
+            action={deciding?.action ?? "approve"}
+            open={Boolean(deciding?.open)}
+            who={order.orderNumber}
+            currency={order.currency}
+            onClose={() => setDeciding((current) => (current ? { ...current, open: false } : current))}
+            onConfirm={async (payload) => {
+              if (!deciding) return;
+              await returnDecide(apiClient, workspaceId, deciding.ret.id, payload);
+              toast.success(payload.action === "approve" ? t.approvedToast : t.rejectedToast);
+              setDeciding((current) => (current ? { ...current, open: false } : current));
+              void returns.refresh({ silent: true });
+              // Approving an exchange makes a replacement order; the summaries of the page may move.
+              onOrderMaybeChanged();
+            }}
+          />
         )}
       </CardContent>
     </Card>

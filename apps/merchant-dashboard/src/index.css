@@ -104,6 +104,32 @@
   --sidebar-ring: var(--color-primary);
 }
 
+/* Motion, spacing and the brand fill the screens ported from zimos-additions
+   are written with. New names only: no screen that existed before reads them. */
+:root {
+  --brand: var(--color-primary);
+  --bento-gap: 0.75rem;
+  --ease-pop: cubic-bezier(0.175, 0.885, 0.32, 2.2);
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fade: 160ms;
+  --dur-move: 320ms;
+  --dur-pop: 360ms;
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --bento-gap: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fade: 0ms;
+    --dur-move: 0ms;
+    --dur-pop: 0ms;
+  }
+}
+
 html.dark {
   --shadow-card: none;
 }
@@ -199,6 +225,9 @@ html.dark {
      existing palette, no new colours. */
   --color-warning: var(--color-accent-dark);
   --color-on-primary: var(--primary-foreground);
+  /* Wells, skeletons and code blocks of the ported screens (bg-paper-sunken):
+     the existing muted fill, no new colour. */
+  --color-paper-sunken: var(--muted);
 
   --font-display: var(--font-display);
   --font-sans: 'Inter Variable', sans-serif;

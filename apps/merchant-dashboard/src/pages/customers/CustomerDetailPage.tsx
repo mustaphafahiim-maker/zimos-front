@@ -1,4 +1,18 @@
 import { useState, type FormEvent } from "react";
+import {
+  CUSTOMER_REFERRALS_ENABLED,
+  EMAIL_SUPPRESSIONS_ENABLED,
+  LOYALTY_ENABLED,
+  STORE_CREDIT_ENABLED,
+  STORE_REPORTS_ENABLED,
+  VIP_TIERS_ENABLED,
+} from "@/lib/features";
+import { CustomerRfmCard } from "./crm/CustomerRfmCard";
+import { CustomerInvitesCard } from "@/pages/customerReferrals/CustomerInvitesCard";
+import { CustomerLoyaltyCard } from "@/pages/loyalty/CustomerLoyaltyCard";
+import { CustomerStoreCreditCard } from "@/pages/storeCredit/CustomerStoreCreditCard";
+import { CustomerVipCard } from "@/pages/vipTiers/CustomerVipCard";
+import { CustomerSuppressionBanner } from "./suppressions/CustomerSuppressionBanner";
 import { Link, useParams } from "react-router-dom";
 import { Alert, Button, Input } from "@store-builder/ui";
 import type { Customer, CustomerAddress, Order } from "@store-builder/api-client";
@@ -177,6 +191,15 @@ export function CustomerDetailPage() {
         {customer && (
           <div className="space-y-6">
             <ContactInsights customerId={customer.id} />
+            {/* No email reaches this address: it bounced, or the customer marked one as spam (lib/features). */}
+            {EMAIL_SUPPRESSIONS_ENABLED && <CustomerSuppressionBanner email={customer.email} />}
+            {/* The customer's credit, points, level and invites, each only while its programme is switched on (lib/features). */}
+            {STORE_CREDIT_ENABLED && <CustomerStoreCreditCard customerId={customer.id} />}
+            {LOYALTY_ENABLED && <CustomerLoyaltyCard customerId={customer.id} />}
+            {VIP_TIERS_ENABLED && <CustomerVipCard customerId={customer.id} />}
+            {CUSTOMER_REFERRALS_ENABLED && <CustomerInvitesCard customerId={customer.id} />}
+            {/* The customer's RFM group: how recently, how often and how much they buy (lib/features). */}
+            {STORE_REPORTS_ENABLED && <CustomerRfmCard customerId={customer.id} />}
             <ContactForm customer={customer} onSaved={reload} />
             <OrderHistorySection customer={customer} />
             <BlacklistSection customer={customer} onChanged={reload} />

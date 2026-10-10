@@ -46,6 +46,11 @@ function keyOf(storeId: string): string | null {
   return STORE_ID.test(storeId) ? `${KEY_PREFIX}${storeId}` : null;
 }
 
+/** True for a storage event that may have changed a kept token (another tab signed in or out). */
+export function isShopperTokenKey(key: string | null): boolean {
+  return key === null || key.startsWith(KEY_PREFIX);
+}
+
 /**
  * Keeps the token the API gave on sign-in. `expiresInSeconds` is the API's
  * own lifetime for it; the token is kept for that or 7 days, whichever is

@@ -42,6 +42,7 @@ export async function placeCodOrder({
   payload,
   cartToken,
   visitorId,
+  shopperToken,
 }: {
   client: ApiClient;
   workspaceId: string;
@@ -49,12 +50,14 @@ export async function placeCodOrder({
   cartToken?: string;
   /** The shopper's visitor id — it owns any photo answering a custom field. */
   visitorId?: string;
+  /** The signed-in shopper's token, when the order uses their points, credit, level or invite; nothing is sent without one. */
+  shopperToken?: string | null;
 }): Promise<Order> {
   // The bot guard's token and honeypot ride along with every order (lib/botGuard).
   const guarded = { ...payload, ...(await botGuardFields(client, workspaceId)), ...adMatchFields(workspaceId) };
   // A store that verifies phones answers OTP_REQUIRED first; the code is asked for and the order sent again.
   return withCheckoutOtp(workspaceId, payload.contact.phone, (otp) =>
-    client.checkout(workspaceId, { ...guarded, ...otp }, cartToken, { visitorId })
+    client.checkout(workspaceId, { ...guarded, ...otp }, cartToken, { visitorId, shopperToken })
   );
 }
 

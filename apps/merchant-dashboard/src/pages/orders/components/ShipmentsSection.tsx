@@ -55,6 +55,8 @@ import { CityDistrictPicker, LevelAddressPicker, type PickerSource } from "./Car
 import { TypedAddressNames, type TypedNamesProblem } from "./TypedAddressNames";
 import { useLevelLabel } from "./useLevelLabel";
 import { ShipmentDraftNote, ShipmentDraftSaveButton } from "./ShipmentDraftBar";
+import { TRACKING_PROVIDERS_ENABLED } from "@/lib/features";
+import { ManualShipmentTracking } from "./ManualShipmentTracking";
 
 const STATUSES: ShipmentStatus[] = [
   "created",
@@ -629,6 +631,11 @@ function ShipmentRow({
         <p className="mt-2 text-xs text-ink-soft">
           {fmt(cancelByHand ? t.manualCarrierCreatedNote : t.carrierCreatedNote, { carrier: carrierName })}
         </p>
+      )}
+
+      {/* A manual shipment read through the store's tracking provider (lib/features; nothing while the store has none). */}
+      {TRACKING_PROVIDERS_ENABLED && !booked && (
+        <ManualShipmentTracking orderId={orderId} shipment={shipment} canManage={canManage} disabled={busy !== null} onChanged={onChanged} />
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-2">

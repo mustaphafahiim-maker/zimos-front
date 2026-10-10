@@ -19,6 +19,28 @@ import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useCart } from "@/lib/CartProvider";
 import { orderBumpOf } from "@/lib/commerce";
 import { focusField } from "@/lib/focusField";
+import { GiftOptionsField, GiftWrapRow, useGiftChoice } from "@/components/gifts/GiftOptionsField";
+import { HolidayNote } from "@/components/holiday/HolidayNote";
+import { LimitLineNote, useLimitNotes } from "@/components/checkout/LimitLineNote";
+import { purchaseLimitMessage } from "@/lib/buyInfo";
+import {
+  CUSTOMER_REFERRALS_ENABLED,
+  GIFT_CARDS_ENABLED,
+  LOYALTY_ENABLED,
+  PURCHASE_LIMITS_ENABLED,
+  SHOPPER_ACCOUNTS_ENABLED,
+  STORE_CREDIT_ENABLED,
+  VIP_TIERS_ENABLED,
+} from "@/lib/features";
+import { CheckoutTenders, useCheckoutTenders } from "@/components/tenders/CheckoutTenders";
+import { CheckoutPerks, useCheckoutPerks } from "@/components/rewards/CheckoutPerks";
+
+/** Points and store credit at checkout, and the level's perks and a friend's invite under the totals: each only while switched on. */
+const TENDERS_ON = SHOPPER_ACCOUNTS_ENABLED && (LOYALTY_ENABLED || STORE_CREDIT_ENABLED);
+const PERKS_ON = VIP_TIERS_ENABLED || CUSTOMER_REFERRALS_ENABLED;
+import { CheckoutSavedAddresses } from "@/components/account/CheckoutSavedAddresses";
+import { GiftCardField, useGiftCard } from "@/components/giftCards/GiftCardField";
+import { useHolidayCheckout } from "@/lib/storeHoliday";
 import {
   FIELD_ORDER,
   formOptionsOf,
@@ -67,6 +89,11 @@ export default function CheckoutPage() {
   const [client] = useState(() => createStorefrontApiClient());
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
   const { byVariant } = useCatalog(workspaceId);
+  // Store features, each inert while its switch is off (lib/features): a store on holiday,
+  // what a product's purchase limits refused, and the gift wrap and message.
+  const holiday = useHolidayCheckout({ client, workspaceId });
+  const limitNotes = useLimitNotes(cart);
+  const gift = useGiftChoice({ client, workspaceId });
 
   // The form starts on the store's country (dashboard → General → Country).
   const storeCountry = useStoreCountry();
@@ -165,6 +192,8 @@ export default function CheckoutPage() {
   const quoteLines = items.map((l) => ({ variantId: l.variantId, offerId: l.offerId, quantity: l.quantity }));
   if (bumpOn && bump) quoteLines.push({ variantId: bump.variantId, offerId: bump.offerId, quantity: 1 });
   for (const b of cartBumps.selected) quoteLines.push({ variantId: b.variantId, offerId: b.offerId, quantity: 1 });
+  // The gift wrap is a product the server adds: its weight counts toward the parcel too.
+  if (gift.quoteLine) quoteLines.push(gift.quoteLine);
   // The shopper's shipping option, when the store offers more than one (shippingChoice.ts).
   const shippingChoice = useShippingChoice(useShippingQuote({ client, workspaceId, governorate: values.governorate, country: values.country, lines: quoteLines }));
   // Pickup from the store (when offered): no delivery fee; the server charges none either.
@@ -182,7 +211,15 @@ export default function CheckoutPage() {
       : shippingChoice.state;
   // With no code typed, the store's automatic discount comes off (the code's own amount is settled by the server).
   const automaticOff = appliedCode ? 0 : (shipping.extras.automaticDiscount?.amount ?? 0);
-  const total = subtotal + bumpInTotals + shipping.amount - automaticOff;
+  const total = subtotal + bumpInTotals + gift.wrapAmount + shipping.amount - automaticOff;
+  // A gift card pays part of a cash-on-delivery order (lib/features; inert while off: no method, so no card).
+  const giftCard = useGiftCard({ client, workspaceId, method: GIFT_CARDS_ENABLED && !manualChosen ? method : undefined, total, currency });
+  // A signed-in shopper's points and store credit pay part of a cash-on-delivery order (inert while off: no method, nothing read).
+  const tenders = useCheckoutTenders({ method: TENDERS_ON && !manualChosen ? method : undefined, total, currency, giftCard });
+  // The signed-in shopper's VIP level and a friend's invite, which the API takes off when the order is placed.
+  const perks = useCheckoutPerks({ enabled: PERKS_ON });
+  // Sent with the order only when one of these is in play, so every other order goes out as it always did.
+  const shopperToken = TENDERS_ON || PERKS_ON ? (tenders.shopperToken ?? perks.shopperToken ?? undefined) : undefined;
 
   // --- progress ------------------------------------------------------------
   // Contact → Address → Confirm above the form, from the same validation the
@@ -231,6 +268,13 @@ export default function CheckoutPage() {
       }
     }
 
+    // Points typed under the minimum or over the balance: said beside the field (which takes focus), before anything is sent.
+    const pointsProblem = TENDERS_ON ? tenders.check() : null;
+    if (pointsProblem) {
+      setFormError(pointsProblem);
+      return;
+    }
+
     const systemNotes: string[] = [];
 
     setSubmitting(true);
@@ -243,6 +287,10 @@ export default function CheckoutPage() {
         ...(bumpOn && bump ? { orderBump: { offerId: bump.offerId } } : {}),
         ...(cartBumps.selected.length > 0 ? { orderBumps: cartBumps.selected.map((b) => ({ offerId: b.offerId })) } : {}),
         ...(checkoutSessionId ? { checkoutSessionId } : {}),
+        ...gift.payload,
+        ...giftCard.payload,
+        ...(TENDERS_ON ? tenders.payload : {}),
+        ...(PERKS_ON ? perks.payload : {}),
       };
       if (manualChosen) {
         const { order } = await placeManualOrder({
@@ -253,7 +301,9 @@ export default function CheckoutPage() {
           proof,
           cartToken: cart.guestToken,
           visitorId: getVisitorId(workspaceId),
+          shopperToken,
         });
+        if (PERKS_ON) perks.onPlaced();
         clearCart();
         router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
         return;
@@ -267,7 +317,9 @@ export default function CheckoutPage() {
           method,
           cartToken: cart.guestToken,
           visitorId: getVisitorId(workspaceId),
+          shopperToken,
         });
+        if (PERKS_ON) perks.onPlaced();
         clearCart();
         if (external) {
           setRedirecting(true);
@@ -283,7 +335,9 @@ export default function CheckoutPage() {
         payload: payload as CheckoutPayload,
         cartToken: cart.guestToken,
         visitorId: getVisitorId(workspaceId),
+        shopperToken,
       });
+      if (PERKS_ON) perks.onPlaced();
       clearCart();
       router.push(afterOrder({ workspaceId, basePath, order, phone: payload.contact.phone }));
     } catch (err) {
@@ -306,14 +360,26 @@ export default function CheckoutPage() {
         });
         focusField(fieldId(FORM_PREFIX, invalid[0]));
       } else {
-        setFormError(orderErrorMessage(err, t.form.errors));
+        // A store that went on holiday, a product over its purchase limit, a gift option the store
+        // dropped: said in the shopper's words. Each is null while its feature is off.
+        if (PURCHASE_LIMITS_ENABLED) limitNotes.capture(err);
+        const featureRefusal =
+          holiday.onError(err) ??
+          (PURCHASE_LIMITS_ENABLED ? purchaseLimitMessage(err, locale) : null) ??
+          gift.onError(err) ??
+          giftCard.onError(err) ??
+          (TENDERS_ON ? tenders.onError(err) : null) ??
+          (PERKS_ON ? perks.onError(err) : null);
+        setFormError(featureRefusal ?? orderErrorMessage(err, t.form.errors));
         setSubmitting(false);
       }
       autosave.resume();
     }
   }
 
-  const submitLabel = redirecting
+  const submitLabel = holiday.pausedLabel
+    ? holiday.pausedLabel
+    : redirecting
     ? t.payment.redirecting
     : submitting
       ? t.checkout.placing
@@ -324,7 +390,7 @@ export default function CheckoutPage() {
   const storeClosed = store?.delivery?.hours ? !store.delivery.hours.openNow : false;
   // Closed by the weekly hours: when it opens next (lib/storeHours).
   const nextOpen = storeClosed ? (store?.delivery?.hours?.nextOpen ?? null) : null;
-  const submitDisabled = submitting || items.length === 0 || storeClosed;
+  const submitDisabled = submitting || items.length === 0 || storeClosed || holiday.paused;
   // The estimated delivery time: the chosen zone's, else the store's.
   const etaMinutes = pickingUp ? null : (zoneChosen?.etaMinutes ?? store?.delivery?.etaMinutes ?? null);
 
@@ -342,6 +408,8 @@ export default function CheckoutPage() {
       <div className="mt-6 max-w-xl">
         <CheckoutProgress done={progressDone} current={progressCurrent} />
       </div>
+      {/* A store on holiday: when the order ships, or that orders are paused. */}
+      <HolidayNote view={holiday} className="mt-3 max-w-xl" />
 
       <form
         onSubmit={handleSubmit}
@@ -364,6 +432,8 @@ export default function CheckoutPage() {
               {t.checkout.shipping}
             </h2>
             <div className="mt-4">
+              {/* A signed-in shopper's contact and saved addresses, or one line to sign in (nothing on a store without accounts). */}
+              {SHOPPER_ACCOUNTS_ENABLED && !pickingUp && <CheckoutSavedAddresses values={values} onChange={onFieldChange} />}
               <OrderFormFields
                 idPrefix={FORM_PREFIX}
                 values={values}
@@ -377,6 +447,9 @@ export default function CheckoutPage() {
               {!pickingUp && !storeZones && <ShippingOptionPicker choice={shippingChoice} idPrefix={FORM_PREFIX} />}
             </div>
           </section>
+
+          {/* "Is this a gift?": wrap, message, hidden prices, when the store offers them. */}
+          <GiftOptionsField state={gift} idPrefix={FORM_PREFIX} />
 
           <section className={`${card} p-5 sm:p-6`} aria-labelledby="payment-title">
             <h2 id="payment-title" className="text-lg font-semibold text-ink">
@@ -415,6 +488,7 @@ export default function CheckoutPage() {
                         <LineOptions options={line.options} />
                           <LineCustomizations customizations={line.customizations} />
                         <span className="text-xs"> × {line.quantity}</span>
+                        <LimitLineNote notes={limitNotes} productId={product?.id} />
                       </span>
                       <span className="shrink-0 font-medium text-ink">{money(line.lineTotal, currency)}</span>
                     </li>
@@ -496,6 +570,7 @@ export default function CheckoutPage() {
                   <dd className="text-ink">{money(b.priceAmount, currency)}</dd>
                 </div>
               ))}
+              <GiftWrapRow state={gift} currency={currency} />
               {!appliedCode && <DiscountRows extras={shipping.extras} coupon={null} currency={currency} />}
               <div className="flex justify-between gap-3">
                 <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
@@ -508,6 +583,12 @@ export default function CheckoutPage() {
                 <dd>{money(total, currency)}</dd>
               </div>
             </dl>
+            {/* "Have a gift card?": its code, what it takes off, and what the courier collects. */}
+            {GIFT_CARDS_ENABLED && <GiftCardField state={giftCard} remainder={!TENDERS_ON} />}
+            {/* "Use your store credit", "Use your points", and what is left for the courier once any of them pays part. */}
+            {TENDERS_ON && <CheckoutTenders state={tenders} />}
+            {/* The VIP level's perks and a friend's invite, as they will come off the order. */}
+            {PERKS_ON && <CheckoutPerks state={perks} />}
             <MinimumOrderNotice extras={shipping.extras} currency={currency} className="mt-3" />
             <FreeShippingHint
               progress={shipping.freeShipping}

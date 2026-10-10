@@ -12,18 +12,27 @@ import { PagesTab } from "./PagesTab";
 import { GeneralTab } from "./GeneralTab";
 import { SeoTab } from "./SeoTab";
 import { DomainsTab } from "./DomainsTab";
-import { CUSTOM_DOMAINS_ENABLED } from "@/lib/features";
+import { CUSTOM_DOMAINS_ENABLED, GIFT_OPTIONS_ENABLED, SHOPPER_ACCOUNTS_ENABLED, URL_REDIRECTS_ENABLED } from "@/lib/features";
 import { LanguagesTab } from "./LanguagesTab";
+import { GiftOptionsTab } from "./GiftOptionsTab";
+import { RedirectsTab } from "./redirects/RedirectsTab";
+import { CustomerAccountsTab } from "./CustomerAccountsTab";
 
 /**
  * Store settings the shopper sees: one page, one tab per area. Each tab is a
  * self-contained form over the workspace settings; a new area is a new tab
  * file plus one entry in TABS.
  */
-const ALL_TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains"] as const;
+const ALL_TABS = ["general", "checkout-form", "thank-you", "store-info", "policies", "pages", "seo", "languages", "domains", "gift-options", "redirects", "customer-accounts"] as const;
 type TabKey = (typeof ALL_TABS)[number];
-// Domains only while merchant domains are switched on (lib/features); off, /store-settings/domains opens General.
-const TABS: readonly TabKey[] = CUSTOM_DOMAINS_ENABLED ? ALL_TABS : ALL_TABS.filter((tab) => tab !== "domains");
+// Domains, gift options, redirects and customer accounts only while each is switched on (lib/features); off, its address opens General.
+const OFF_TABS: ReadonlySet<TabKey> = new Set<TabKey>([
+  ...(CUSTOM_DOMAINS_ENABLED ? [] : (["domains"] as const)),
+  ...(GIFT_OPTIONS_ENABLED ? [] : (["gift-options"] as const)),
+  ...(URL_REDIRECTS_ENABLED ? [] : (["redirects"] as const)),
+  ...(SHOPPER_ACCOUNTS_ENABLED ? [] : (["customer-accounts"] as const)),
+]);
+const TABS: readonly TabKey[] = ALL_TABS.filter((tab) => !OFF_TABS.has(tab));
 
 const STRINGS = {
   en: {
@@ -39,6 +48,9 @@ const STRINGS = {
     seo: "SEO",
     domains: "Domains",
     languages: "Languages",
+    "gift-options": "Gift options",
+    redirects: "Redirects",
+    "customer-accounts": "Customer accounts",
   },
   ar: {
     title: "إعدادات المتجر",
@@ -53,6 +65,9 @@ const STRINGS = {
     seo: "SEO",
     domains: "الدومينات",
     languages: "اللغات",
+    "gift-options": "خيارات الهدايا",
+    redirects: "تحويل الروابط",
+    "customer-accounts": "حسابات العملاء",
   },
 } satisfies Messages;
 
@@ -86,6 +101,9 @@ export function StoreDesignPage() {
       {active === "seo" && <SeoTab key={workspaceId} />}
       {active === "domains" && <DomainsTab key={workspaceId} />}
       {active === "languages" && <LanguagesTab key={workspaceId} />}
+      {active === "gift-options" && <GiftOptionsTab key={workspaceId} />}
+      {active === "redirects" && <RedirectsTab key={workspaceId} />}
+      {active === "customer-accounts" && <CustomerAccountsTab key={workspaceId} />}
         </div>
         <StoreLivePreview workspaceId={workspaceId} className="sticky top-24 hidden xl:block" />
       </div>

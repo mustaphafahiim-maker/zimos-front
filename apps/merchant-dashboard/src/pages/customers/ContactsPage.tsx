@@ -6,6 +6,11 @@ import { PageHeader } from "@/components/PageHeader";
 import { FilterTabs } from "@/components/FilterTabs";
 import { ContactsAllTab } from "./ContactsAllTab";
 import { SegmentsTab } from "./SegmentsTab";
+import { EmailSuppressionsTab, useSuppressedContactTab } from "./suppressions/EmailSuppressionsTab";
+import { EMAIL_SUPPRESSIONS_ENABLED, STORE_REPORTS_ENABLED } from "@/lib/features";
+import { isRfmLabel } from "@store-builder/api-client";
+import { RfmGroupList } from "./crm/RfmGroupList";
+import { RfmGroupsTab } from "./crm/RfmGroupsTab";
 
 const STRINGS = {
   en: {
@@ -14,6 +19,7 @@ const STRINGS = {
     tabs: "Contacts view",
     all: "All",
     segments: "Segments",
+    groups: "Customer groups",
     forms: "Form submissions",
   },
   ar: {
@@ -22,11 +28,12 @@ const STRINGS = {
     tabs: "طريقة عرض جهات الاتصال",
     all: "الكل",
     segments: "الشرائح",
+    groups: "مجموعات العملاء",
     forms: "رسائل النماذج",
   },
 } satisfies Messages;
 
-type Tab = "all" | "segments";
+type Tab = "all" | "segments" | "suppressed" | "groups";
 
 /**
  * Contacts (SPEC §18.4): the customers list grown into leads + customers with
@@ -36,12 +43,25 @@ type Tab = "all" | "segments";
 export function ContactsPage() {
   const t = useT(STRINGS);
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab: Tab = searchParams.get("tab") === "segments" ? "segments" : "all";
+  // The addresses no email goes to: a tab only while the feature is on (lib/features); off, its address opens All.
+  const suppressed = useSuppressedContactTab();
+  const asked = searchParams.get("tab");
+  // The RFM groups: a tab, and a group's own list on "All" (`?group=champions`), only while the feature is on.
+  const askedGroup = searchParams.get("group");
+  const group = STORE_REPORTS_ENABLED && isRfmLabel(askedGroup) ? askedGroup : null;
+  const tab: Tab =
+    asked === "segments"
+      ? "segments"
+      : EMAIL_SUPPRESSIONS_ENABLED && asked === "suppressed"
+        ? "suppressed"
+        : STORE_REPORTS_ENABLED && asked === "groups"
+          ? "groups"
+          : "all";
   const segmentId = searchParams.get("segment") ?? "";
 
   const go = (next: { tab?: Tab; segment?: string }) => {
     const params = new URLSearchParams();
-    if (next.tab === "segments") params.set("tab", "segments");
+    if (next.tab === "segments" || next.tab === "suppressed" || next.tab === "groups") params.set("tab", next.tab);
     if (next.segment) params.set("segment", next.segment);
     setSearchParams(params, { replace: true });
   };
@@ -66,12 +86,20 @@ export function ContactsPage() {
         tabs={[
           { value: "all", label: t.all },
           { value: "segments", label: t.segments },
+          ...(EMAIL_SUPPRESSIONS_ENABLED ? [{ value: "suppressed" as const, label: suppressed.label }] : []),
+          ...(STORE_REPORTS_ENABLED ? [{ value: "groups" as const, label: t.groups }] : []),
         ]}
       />
-      {tab === "all" ? (
+      {tab === "groups" ? (
+        <RfmGroupsTab />
+      ) : tab === "all" && group ? (
+        <RfmGroupList label={group} />
+      ) : tab === "all" ? (
         <ContactsAllTab segmentId={segmentId} onSegmentChange={(id) => go({ segment: id })} />
-      ) : (
+      ) : tab === "segments" ? (
         <SegmentsTab onView={(id) => go({ segment: id })} />
+      ) : (
+        <EmailSuppressionsTab />
       )}
     </div>
   );

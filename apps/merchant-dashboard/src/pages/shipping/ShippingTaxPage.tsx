@@ -38,6 +38,8 @@ import { ShippingProfilesSection } from "./ShippingProfilesSection";
 import { ShippingOptionsSection } from "./ShippingOptionsSection";
 import { ShippingTabsBar, useShippingTab } from "./ShippingTabs";
 import { WeightTiersSection } from "./WeightTiersSection";
+import { TRACKING_PROVIDERS_ENABLED } from "@/lib/features";
+import { ManualTrackingCard } from "./ManualTrackingCard";
 
 // Read as `tr` (not `t`) in this file: the tax-rate and tier loops below
 // already use `t` for their item.
@@ -428,6 +430,9 @@ function ShippingTaxBody() {
       {tab === "options" && <ShippingOptionsSection />}
 
       {tab === "carriers" && <CarrierConnectionsSection />}
+
+      {/* Tracking for shipments sent by hand: one card under the couriers (lib/features). */}
+      {tab === "carriers" && TRACKING_PROVIDERS_ENABLED && <ManualTrackingCard />}
 
       {tab === "taxes" && (
         <StoreShippingTaxSettings

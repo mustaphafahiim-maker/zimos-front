@@ -10,6 +10,10 @@ export interface Column<T> {
   align?: "start" | "end";
   className?: string;
   headerClassName?: string;
+  /** Read by a table that draws phone cards; this one keeps every column. */
+  phoneHidden?: boolean;
+  /** Read by a table that draws phone cards; this one keeps every column. */
+  phoneSkip?: (row: T) => boolean;
 }
 
 interface DataTableProps<T> {
@@ -23,7 +27,11 @@ interface DataTableProps<T> {
   className?: string;
   /** Rendered instead of the table body when there are no rows. */
   empty?: ReactNode;
+  /** While true and there are no rows yet, the `empty` content is held back. */
+  loading?: boolean;
   footer?: ReactNode;
+  /** Accepted for the ported lists; rows stay table rows at every width. */
+  phoneCards?: boolean;
 }
 
 /**
@@ -39,9 +47,10 @@ export function DataTable<T>({
   minWidth = "48rem",
   className,
   empty,
+  loading = false,
   footer,
 }: DataTableProps<T>) {
-  if (rows.length === 0 && empty) return <>{empty}</>;
+  if (rows.length === 0 && empty && !loading) return <>{empty}</>;
 
   return (
     <div className={cn("min-w-0", className)}>

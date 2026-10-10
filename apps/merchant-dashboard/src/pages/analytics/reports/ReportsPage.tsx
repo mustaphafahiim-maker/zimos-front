@@ -1,3 +1,5 @@
+import { STORE_REPORTS_ENABLED } from "@/lib/features";
+import { StoreReportsMenu } from "@/pages/analytics/storeReports/StoreReportsMenu";
 import { Link, useSearchParams } from "react-router-dom";
 import { AlertTriangle, Info, Lightbulb, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import { reportsGetInsights, type ReportsInsight } from "@store-builder/api-client";
@@ -216,6 +218,9 @@ export function ReportsPage() {
       {tab === "products" && <ProductsTab workspaceId={workspaceId} range={range} onError={toast.error} />}
       {tab === "delivery" && <DeliveryTab workspaceId={workspaceId} range={range} onError={toast.error} />}
       {tab === "customers" && <CustomersTab workspaceId={workspaceId} range={range} onError={toast.error} />}
+
+      {/* The accounting and stock reports that have their own pages (lib/features). */}
+      {STORE_REPORTS_ENABLED && <StoreReportsMenu />}
     </div>
   );
 }

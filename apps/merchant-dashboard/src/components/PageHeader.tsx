@@ -11,9 +11,27 @@ interface PageHeaderProps {
   /** Renders a "← label" link above the title. */
   back?: { to: string; label: string };
   actions?: ReactNode;
+  /** The page's one creation action; it closes the actions row. */
+  primaryAction?: ReactNode;
 }
 
-export function PageHeader({ title, titleMeta, titleBadge, description, back, actions }: PageHeaderProps) {
+/**
+ * A page's primary action on a phone: fixed above the bottom edge and as wide
+ * as the page, one big thumb target. Hidden from md up, where the action sits
+ * in the header instead.
+ */
+export function PageActionBar({ children }: { children: ReactNode }) {
+  return (
+    <div
+      data-page-action
+      className="fixed inset-x-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md md:hidden [&>*]:min-h-11 [&>*]:w-full [&>*]:justify-center [&>*]:shadow-[var(--shadow-card)]"
+    >
+      {children}
+    </div>
+  );
+}
+
+export function PageHeader({ title, titleMeta, titleBadge, description, back, actions, primaryAction }: PageHeaderProps) {
   return (
     <div className="mb-6">
       {back && (
@@ -37,7 +55,12 @@ export function PageHeader({ title, titleMeta, titleBadge, description, back, ac
           </h1>
           {description && <p className="mt-1 text-sm text-ink-soft">{description}</p>}
         </div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {(actions || primaryAction) && (
+          <div className="flex items-center gap-2">
+            {actions}
+            {primaryAction}
+          </div>
+        )}
       </div>
     </div>
   );
