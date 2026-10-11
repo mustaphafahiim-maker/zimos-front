@@ -8,6 +8,7 @@ import { EmptyBlock } from "../commerce";
 import { showcaseCopy } from "./copy";
 import { heroFocusMarkup, heroHasText, heroLookMarkup, heroPhoneHeight, resolveHeroFocus, resolveHeroLook } from "./heroLook";
 import { HeroSlider, type HeroSlide } from "./HeroSlider";
+import { pictureFocus } from "../pictureFrame";
 import { NeedTabs, type NeedTab } from "./NeedTabs";
 import { RailTrack } from "./RailTrack";
 import { ReelsTrack } from "./ReelsTrack";
@@ -146,11 +147,14 @@ function HeroSliderElement({ props, locale, editable }: ElementProps) {
 // --- category_tiles ------------------------------------------------------
 
 function CategoryTilesElement({ props, locale, editable }: ElementProps) {
+  const rtl = dirFor(locale) === "rtl";
   const tiles = items(props, "items", 24)
     .map((item) => ({
       image: safeUrl(str(item, "image")),
       title: loc(item, "title", locale),
       href: linkOf(item, "href"),
+      // The part of the picture its square keeps in view; nothing for the centre (pictureFrame.ts).
+      focus: pictureFocus(item, rtl),
     }))
     .filter((tile) => tile.image || tile.title.trim());
   if (tiles.length === 0) return <Empty editable={editable} message={showcaseCopy(locale).emptyTiles} />;
@@ -182,6 +186,7 @@ function CategoryTilesElement({ props, locale, editable }: ElementProps) {
                     loading={i < 3 ? "eager" : "lazy"}
                     decoding="async"
                     className="zs-cats__img"
+                    style={tile.focus ? { objectPosition: tile.focus } : undefined}
                   />
                 ) : null}
               </div>
@@ -795,6 +800,8 @@ function ImageBannerElement({ props, locale, editable, eager = false }: ElementP
   const buttonLabel = loc(props, "buttonLabel", locale);
   const buttonHref = linkOf(props, "buttonHref");
   const hasCopy = heading.trim() || text.trim() || (buttonLabel.trim() && buttonHref);
+  // The part of the picture the banner's box keeps in view; nothing for the centre (pictureFrame.ts).
+  const focus = pictureFocus(props, dirFor(locale) === "rtl");
 
   return (
     <section
@@ -810,7 +817,16 @@ function ImageBannerElement({ props, locale, editable, eager = false }: ElementP
           {mobileImage ? <source media="(max-width: 767px)" srcSet={mobileImage} /> : null}
           {/* Merchant media are arbitrary remote URLs (no next/image allowlist). */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={image} alt={str(props, "alt")} width={2600} height={1114} loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : undefined} decoding="async" />
+          <img
+            src={image}
+            alt={str(props, "alt")}
+            width={2600}
+            height={1114}
+            loading={eager ? "eager" : "lazy"}
+            fetchPriority={eager ? "high" : undefined}
+            decoding="async"
+            style={focus ? { objectPosition: focus } : undefined}
+          />
         </picture>
         {hasCopy ? <span className="zs-banner__overlay" aria-hidden /> : null}
       </div>

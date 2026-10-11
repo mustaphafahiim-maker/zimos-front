@@ -6,7 +6,7 @@ import type {
   PageSection,
   PageTree,
 } from "@store-builder/api-client";
-import { getDictionary, type Dictionary, type Locale } from "@/lib/i18n";
+import { dirFor, getDictionary, type Dictionary, type Locale } from "@/lib/i18n";
 import { setRequestMoneyFormat, type MoneyFormat } from "@/lib/moneyFormat";
 import { getStoreMeta } from "@/lib/storeMeta";
 import {
@@ -173,7 +173,7 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
     case "rich_text":
       return <TextElement props={props} large />;
     case "image":
-      return <ImageElement props={props} eager={ctx.opening === true} />;
+      return <ImageElement props={props} eager={ctx.opening === true} rtl={dirFor(ctx.locale) === "rtl"} />;
     case "gallery":
       return <GalleryElement props={props} />;
     case "button":
