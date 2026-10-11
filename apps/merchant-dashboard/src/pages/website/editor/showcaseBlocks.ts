@@ -69,6 +69,27 @@ const productBand = (limit: number): FieldSpec[] => [
   TONE,
 ];
 
+/**
+ * Tabs over the product grid (the storefront's ProductCardsElement): one tab
+ * per collection. Not part of the block's starting props — a grid that names
+ * no tab is the single grid it always was.
+ */
+const PRODUCT_TABS: FieldSpec = {
+  key: "tabs",
+  label: "Tabs",
+  kind: "itemList",
+  itemLabel: "Tab",
+  itemLabelAr: "تبويب",
+  titleKey: "label",
+  max: 6,
+  fields: [
+    { key: "label", label: "Tab name", labelAr: "اسم التبويب", kind: "text" },
+    { key: "labelEn", label: "Tab name (English)", labelAr: "اسم التبويب (إنجليزي)", kind: "text" },
+    { key: "collection", label: "Collection", labelAr: "المجموعة", kind: "text", ltr: true },
+  ],
+  hint: "One tab per collection: write the collection's address name (slug), or leave it empty for a tab of the newest products. With tabs, the Collection field above is not used. Shoppers never see a tab that has no products.",
+};
+
 /** Where a slide's text sits, across and up-and-down: the same three places on a computer and on a phone. */
 const SLIDE_SIDES = [
   { value: "start", label: "Start", labelAr: "البداية" },
@@ -441,7 +462,7 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
     label: "Product cards",
     icon: IconGridView,
     defaultProps: { heading: "", subheading: "", collection: "", limit: 8, columns: 4, showDiscount: true, buttonLabel: "", buttonHref: "/products", tone: "plain" },
-    fields: [...productBand(8), { key: "columns", label: "Columns on a computer", kind: "number", min: 2, max: 6 }],
+    fields: [...productBand(8), { key: "columns", label: "Columns on a computer", kind: "number", min: 2, max: 6 }, PRODUCT_TABS],
   },
   image_banner: {
     label: "Picture banner",

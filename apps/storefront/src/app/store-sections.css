@@ -2044,6 +2044,58 @@ section[data-zt-section]:has(.zs),
 .zs-pgrid__footer {
   display: none;
 }
+/* Tabs over the grid (a product_cards band that names `tabs`): one collection's
+   products per tab. The strip scrolls sideways on its own when the tabs do not
+   fit, so the page never does. */
+.zs-pgrid__tabs {
+  display: flex;
+  margin: 0 0 22px;
+  padding: 2px;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.zs-pgrid__tabs::-webkit-scrollbar {
+  display: none;
+}
+.zs-pgrid__tab {
+  display: inline-flex;
+  min-height: 44px;
+  flex: 0 0 auto;
+  padding: 0 18px;
+  align-items: center;
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--zs-ink) 18%, transparent);
+  border-radius: 999px;
+  background: var(--zs-card);
+  color: var(--zs-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+.zs-pgrid__tab:hover {
+  border-color: var(--zs-ink);
+}
+.zs-pgrid__tab.is-on {
+  border-color: var(--zs-ink);
+  background: var(--zs-ink);
+  color: var(--zs-ground);
+}
+.zs-pgrid__tab:focus-visible {
+  outline: 2px solid var(--zs-accent);
+  outline-offset: 2px;
+}
+.zs-pgrid__panel[hidden] {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .zs-pgrid__tab {
+    transition: none;
+  }
+}
 @media (max-width: 1024px) {
   .zs-pgrid__grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
