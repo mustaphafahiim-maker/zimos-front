@@ -1,7 +1,8 @@
 // Writes the store templates' generated files from their definitions
 // (src/pages/website/templates/storeTemplates.ts): one JSON file per template
-// under src/pages/website/templates/generated/, and the stand-in pictures under
-// the storefront's public/template-art/.
+// under src/pages/website/templates/generated/, the same template's version
+// alone under generated/console/ (what the platform console's "add version"
+// takes), and the stand-in pictures under the storefront's public/template-art/.
 //
 // The definitions import the editor's own blocks, which need the app's module
 // aliases, so the work is done by their test file run in its writing mode.

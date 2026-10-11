@@ -18,6 +18,8 @@ import { elementsOf, pictureSlots, templateProblems } from "./templateRules";
  */
 
 const GENERATED = fileURLToPath(new URL("./generated/", import.meta.url));
+/** Each template's version alone, as the platform console's "add version" takes it. */
+const CONSOLE = fileURLToPath(new URL("./generated/console/", import.meta.url));
 const ART = fileURLToPath(new URL("../../../../../storefront/public/template-art/", import.meta.url));
 /** `npm run templates:build` sets it: the files are written instead of compared. */
 const WRITE = process.env.UPDATE_STORE_TEMPLATES === "1";
@@ -137,6 +139,14 @@ describe("the rules a template is held to", () => {
     expect(broken((t) => (elementsOf(tree(t))[0].props!.text = "Welcome to the shop")).join("\n")).toMatch(/not in Arabic/);
   });
 
+  it("refuse a review card that could pass for a review: stars, a name, or words that are not a prompt", () => {
+    const review = (t: StoreTemplate) => elementsOf(t.version.pages[0].builderData).find((e) => e.type === "testimonial")!;
+    expect(review(templates[0]).props).toMatchObject({ rating: 0, author: "" });
+    expect(broken((t) => (review(t).props!.rating = 5)).join("\n")).toMatch(/carries no stars/);
+    expect(broken((t) => (review(t).props!.author = "منى ع.")).join("\n")).toMatch(/names no one/);
+    expect(broken((t) => (review(t).props!.quote = "منتج ممتاز ووصل بسرعة")).join("\n")).toMatch(/only says what to write/);
+  });
+
   it("refuse a link to a page the template does not bring", () => {
     const button = (t: StoreTemplate) => elementsOf(t.version.pages[0].builderData).find((e) => e.type === "button")!;
     expect(broken((t) => (button(t).props!.href = "/sale")).join("\n")).toMatch(/leads to no page/);
@@ -146,6 +156,15 @@ describe("the rules a template is held to", () => {
 describe("the generated files", () => {
   it("hold each template exactly as it is built", () => {
     holdFolder(GENERATED, templates.map((t) => ({ name: `${t.key}.json`, content: fileOf(t) })), ".json");
+  });
+
+  it("hold each template's version alone, ready to paste into the platform console", () => {
+    holdFolder(CONSOLE, templates.map((t) => ({ name: `${t.key}.json`, content: `${JSON.stringify(t.version, null, 2)}\n` })), ".json");
+    for (const template of templates) {
+      const pasted = JSON.parse(read(join(CONSOLE, `${template.key}.json`))) as Record<string, unknown>;
+      // Exactly the three keys the console's form expects.
+      expect(Object.keys(pasted)).toEqual(["globalStyles", "pages", "sections"]);
+    }
   });
 
   it("hold each stand-in picture exactly as it is drawn", () => {

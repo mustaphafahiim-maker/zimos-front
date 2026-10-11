@@ -93,8 +93,11 @@ const slide = (name: string, alt: string, heading: string, subheading: string, b
   contentWidth: 480,
 });
 
-/** What a reviews section starts with: a card that says what belongs in it. */
-const REVIEW = { quote: "اكتب هنا رأي عميل حقيقي اشترى منك.", author: "اسم العميل", rating: 5 };
+/**
+ * What a reviews section starts with: a card that says what belongs in it, and
+ * nothing a shopper could take for a review — no name, no stars.
+ */
+const REVIEW = { quote: "اكتب هنا رأي عميل حقيقي اشترى منك.", author: "", rating: 0 };
 
 const reviews = (heading: string): SectionDraft =>
   fromPreset("testimonial-wall", [{ text: heading, level: 2 }, { text: "اكتب هنا سطر عن مصدر الآراء دي." }, REVIEW, REVIEW, REVIEW]);

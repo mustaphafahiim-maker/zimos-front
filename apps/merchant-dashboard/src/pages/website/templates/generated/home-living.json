@@ -351,8 +351,8 @@
                           "type": "testimonial",
                           "props": {
                             "quote": "اكتب هنا رأي عميل حقيقي اشترى منك.",
-                            "author": "اسم العميل",
-                            "rating": 5
+                            "author": "",
+                            "rating": 0
                           }
                         }
                       ]
@@ -367,8 +367,8 @@
                           "type": "testimonial",
                           "props": {
                             "quote": "اكتب هنا رأي عميل حقيقي اشترى منك.",
-                            "author": "اسم العميل",
-                            "rating": 5
+                            "author": "",
+                            "rating": 0
                           }
                         }
                       ]
@@ -383,8 +383,8 @@
                           "type": "testimonial",
                           "props": {
                             "quote": "اكتب هنا رأي عميل حقيقي اشترى منك.",
-                            "author": "اسم العميل",
-                            "rating": 5
+                            "author": "",
+                            "rating": 0
                           }
                         }
                       ]

@@ -37,6 +37,8 @@ const RATIOS = new Set(IMAGE_RATIOS.map((r) => r.value));
 const BANDS = new Set<string>(SHOWCASE_TYPES);
 /** The store's own pages a template may link to besides the ones it brings. */
 const BUILT_IN_PAGES = new Set(["/", "/products", "/cart", "/track"]);
+/** How a line that asks the merchant to write something begins. */
+const WRITE_HERE = "اكتب هنا";
 /** Props that hold a link. */
 const LINK_KEYS = new Set(["href", "buttonHref", "ctaHref"]);
 
@@ -177,6 +179,12 @@ function elementProblems(page: string, element: PageElement, pages: Set<string>,
     for (const slide of slides) if (!isObject(slide) || !text(slide.image).trim()) out.push(`${at}: a slide without a picture is not drawn`);
   }
   if (element.type === "image_banner" && !text(props.image).trim()) out.push(`${at}: a banner without a picture is not drawn`);
+  // A review card in a template says what to write and nothing else: no name, no stars, no made-up words.
+  if (element.type === "testimonial") {
+    if (props.rating !== 0) out.push(`${at}: a template's review card carries no stars`);
+    if (text(props.author).trim()) out.push(`${at}: a template's review card names no one`);
+    if (!text(props.quote).startsWith(WRITE_HERE)) out.push(`${at}: a template's review card only says what to write ("${WRITE_HERE} …")`);
+  }
 
   for (const [key, value] of strings(props)) {
     if (/^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(value.trim()) || /https?:/i.test(value)) out.push(`${at}: "${key}" holds an address outside the store`);

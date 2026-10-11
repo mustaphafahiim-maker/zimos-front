@@ -1,0 +1,1017 @@
+{
+  "globalStyles": {
+    "primaryColor": "#6242F5",
+    "themeSettings": {
+      "storeTheme": "glass",
+      "footer": {
+        "layout": "rich"
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "الرئيسية",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "home-1-hero-split",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-1-hero-split-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-1-hero-split-r1-c1",
+                    "type": "column",
+                    "span": 6,
+                    "elements": [
+                      {
+                        "id": "home-1-hero-split-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "ساعة تعيش معاك يومك كله",
+                          "level": 1
+                        }
+                      },
+                      {
+                        "id": "home-1-hero-split-r1-c1-e2",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا في سطرين إيه اللي بيميّز منتجك وليه العميل محتاجه."
+                        }
+                      },
+                      {
+                        "id": "home-1-hero-split-r1-c1-e3",
+                        "type": "button",
+                        "props": {
+                          "label": "اطلبها دلوقتي",
+                          "href": "/products",
+                          "variant": "primary"
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "verticalAlign": "center"
+                    }
+                  },
+                  {
+                    "id": "home-1-hero-split-r1-c2",
+                    "type": "column",
+                    "span": 6,
+                    "elements": [
+                      {
+                        "id": "home-1-hero-split-r1-c2-e1",
+                        "type": "image",
+                        "props": {
+                          "src": "/template-art/single-hero.svg",
+                          "alt": "الساعة",
+                          "ratio": "1:1"
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "verticalAlign": "center"
+                    }
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "padding": "roomy"
+            }
+          },
+          {
+            "id": "home-2-text-image",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-2-text-image-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-2-text-image-r1-c1",
+                    "type": "column",
+                    "span": 7,
+                    "elements": [
+                      {
+                        "id": "home-2-text-image-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "اتصمّمت عشان تريّحك",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "home-2-text-image-r1-c1-e2",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا فقرة قصيرة عن فكرة المنتج وإزاي بيسهّل يوم العميل."
+                        }
+                      },
+                      {
+                        "id": "home-2-text-image-r1-c1-e3",
+                        "type": "button",
+                        "props": {
+                          "label": "اعرف أكتر",
+                          "href": "/products",
+                          "variant": "outline"
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "verticalAlign": "center"
+                    }
+                  },
+                  {
+                    "id": "home-2-text-image-r1-c2",
+                    "type": "column",
+                    "span": 5,
+                    "elements": [
+                      {
+                        "id": "home-2-text-image-r1-c2-e1",
+                        "type": "image",
+                        "props": {
+                          "src": "/template-art/single-story.svg",
+                          "alt": "سوار الساعة",
+                          "ratio": "4:3"
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "verticalAlign": "center"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "home-3-highlights",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-3-highlights-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-3-highlights-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-3-highlights-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "كل اللي محتاجه في منتج واحد",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "home-3-highlights-r1-c1-e2",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا سطر يلخّص أهم مميزات المنتج."
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "align": "center"
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "home-3-highlights-r2",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-3-highlights-r2-c1",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-3-highlights-r2-c1-e1",
+                        "type": "icon",
+                        "props": {
+                          "name": "check",
+                          "size": 28
+                        }
+                      },
+                      {
+                        "id": "home-3-highlights-r2-c1-e2",
+                        "type": "heading",
+                        "props": {
+                          "text": "اكتب الميزة الأولى",
+                          "level": 4
+                        }
+                      },
+                      {
+                        "id": "home-3-highlights-r2-c1-e3",
+                        "type": "text",
+                        "props": {
+                          "text": "اشرحها في سطر."
+                        }
+                      },
+                      {
+                        "id": "home-3-highlights-r2-c1-e4",
+                        "type": "icon",
+                        "props": {
+                          "name": "heart",
+                          "size": 28
+                        }
+                      },
+                      {
+                        "id": "home-3-highlights-r2-c1-e5",
+                        "type": "heading",
+                        "props": {
+                          "text": "اكتب الميزة التانية",
+                          "level": 4
+                        }
+                      },
+                      {
+                        "id": "home-3-highlights-r2-c1-e6",
+                        "type": "text",
+                        "props": {
+                          "text": "اشرحها في سطر."
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "verticalAlign": "center"
+                    }
+                  },
+                  {
+                    "id": "home-3-highlights-r2-c2",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-3-highlights-r2-c2-e1",
+                        "type": "image",
+                        "props": {
+                          "src": "/template-art/single-center.svg",
+                          "alt": "شاشة الساعة",
+                          "ratio": "3:4"
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "verticalAlign": "center"
+                    }
+                  },
+                  {
+                    "id": "home-3-highlights-r2-c3",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-3-highlights-r2-c3-e1",
+                        "type": "icon",
+                        "props": {
+                          "name": "star",
+                          "size": 28
+                        }
+                      },
+                      {
+                        "id": "home-3-highlights-r2-c3-e2",
+                        "type": "heading",
+                        "props": {
+                          "text": "اكتب الميزة التالتة",
+                          "level": 4
+                        }
+                      },
+                      {
+                        "id": "home-3-highlights-r2-c3-e3",
+                        "type": "text",
+                        "props": {
+                          "text": "اشرحها في سطر."
+                        }
+                      },
+                      {
+                        "id": "home-3-highlights-r2-c3-e4",
+                        "type": "icon",
+                        "props": {
+                          "name": "shield",
+                          "size": 28
+                        }
+                      },
+                      {
+                        "id": "home-3-highlights-r2-c3-e5",
+                        "type": "heading",
+                        "props": {
+                          "text": "اكتب الميزة الرابعة",
+                          "level": 4
+                        }
+                      },
+                      {
+                        "id": "home-3-highlights-r2-c3-e6",
+                        "type": "text",
+                        "props": {
+                          "text": "اشرحها في سطر."
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "verticalAlign": "center"
+                    }
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "background": "paper",
+              "padding": "roomy"
+            }
+          },
+          {
+            "id": "home-4-image-text",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-4-image-text-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-4-image-text-r1-c1",
+                    "type": "column",
+                    "span": 5,
+                    "elements": [
+                      {
+                        "id": "home-4-image-text-r1-c1-e1",
+                        "type": "image",
+                        "props": {
+                          "src": "/template-art/single-detail.svg",
+                          "alt": "مينا الساعة",
+                          "ratio": "4:3"
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "verticalAlign": "center"
+                    }
+                  },
+                  {
+                    "id": "home-4-image-text-r1-c2",
+                    "type": "column",
+                    "span": 7,
+                    "elements": [
+                      {
+                        "id": "home-4-image-text-r1-c2-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "تفاصيل بتفرق",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "home-4-image-text-r1-c2-e2",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا فقرة عن الخامة والصناعة والتفاصيل اللي العميل مش هيشوفها في الصورة."
+                        }
+                      },
+                      {
+                        "id": "home-4-image-text-r1-c2-e3",
+                        "type": "button",
+                        "props": {
+                          "label": "شوف التفاصيل",
+                          "href": "/products",
+                          "variant": "outline"
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "verticalAlign": "center"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "home-5-reasons",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-5-reasons-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-5-reasons-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-5-reasons-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "ليه تختارها؟",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r1-c1-e2",
+                        "type": "text",
+                        "props": {
+                          "text": "ست أسباب تخلّيك مطمّن وإنت بتطلب."
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "align": "center"
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "home-5-reasons-r2",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-5-reasons-r2-c1",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-5-reasons-r2-c1-e1",
+                        "type": "icon",
+                        "props": {
+                          "name": "shield",
+                          "size": 32
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r2-c1-e2",
+                        "type": "heading",
+                        "props": {
+                          "text": "ضمان",
+                          "level": 3
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r2-c1-e3",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا مدة الضمان وشروطه."
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "surface": "card"
+                    }
+                  },
+                  {
+                    "id": "home-5-reasons-r2-c2",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-5-reasons-r2-c2-e1",
+                        "type": "icon",
+                        "props": {
+                          "name": "truck",
+                          "size": 32
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r2-c2-e2",
+                        "type": "heading",
+                        "props": {
+                          "text": "شحن",
+                          "level": 3
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r2-c2-e3",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا مناطق الشحن ومدته."
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "surface": "card"
+                    }
+                  },
+                  {
+                    "id": "home-5-reasons-r2-c3",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-5-reasons-r2-c3-e1",
+                        "type": "icon",
+                        "props": {
+                          "name": "check",
+                          "size": 32
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r2-c3-e2",
+                        "type": "heading",
+                        "props": {
+                          "text": "استبدال",
+                          "level": 3
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r2-c3-e3",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا سياسة الاستبدال والاسترجاع."
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "surface": "card"
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "home-5-reasons-r3",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-5-reasons-r3-c1",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-5-reasons-r3-c1-e1",
+                        "type": "icon",
+                        "props": {
+                          "name": "star",
+                          "size": 32
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r3-c1-e2",
+                        "type": "heading",
+                        "props": {
+                          "text": "جودة",
+                          "level": 3
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r3-c1-e3",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا إيه اللي بيضمن جودة المنتج."
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "surface": "card"
+                    }
+                  },
+                  {
+                    "id": "home-5-reasons-r3-c2",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-5-reasons-r3-c2-e1",
+                        "type": "icon",
+                        "props": {
+                          "name": "heart",
+                          "size": 32
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r3-c2-e2",
+                        "type": "heading",
+                        "props": {
+                          "text": "خدمة عملاء",
+                          "level": 3
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r3-c2-e3",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا إزاي العميل يوصلك."
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "surface": "card"
+                    }
+                  },
+                  {
+                    "id": "home-5-reasons-r3-c3",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-5-reasons-r3-c3-e1",
+                        "type": "icon",
+                        "props": {
+                          "name": "gift",
+                          "size": 32
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r3-c3-e2",
+                        "type": "heading",
+                        "props": {
+                          "text": "هدية",
+                          "level": 3
+                        }
+                      },
+                      {
+                        "id": "home-5-reasons-r3-c3-e3",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا لو فيه هدية أو تغليف مع الطلب."
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "surface": "card"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "home-6-product-cards",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-6-product-cards-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-6-product-cards-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-6-product-cards-r1-c1-e1",
+                        "type": "product_cards",
+                        "props": {
+                          "heading": "اختار اللي يناسبك",
+                          "subheading": "الألوان والموديلات المتاحة.",
+                          "collection": "",
+                          "limit": 4,
+                          "columns": 4,
+                          "showDiscount": true,
+                          "buttonLabel": "كل المنتجات",
+                          "buttonHref": "/products",
+                          "tone": "plain"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            }
+          },
+          {
+            "id": "home-7-testimonial-wall",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-7-testimonial-wall-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-7-testimonial-wall-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-7-testimonial-wall-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "اللي جرّبوها بيقولوا إيه",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "home-7-testimonial-wall-r1-c1-e2",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا سطر عن مصدر الآراء دي."
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "align": "center"
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "home-7-testimonial-wall-r2",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-7-testimonial-wall-r2-c1",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-7-testimonial-wall-r2-c1-e1",
+                        "type": "testimonial",
+                        "props": {
+                          "quote": "اكتب هنا رأي عميل حقيقي اشترى منك.",
+                          "author": "",
+                          "rating": 0
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "home-7-testimonial-wall-r2-c2",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-7-testimonial-wall-r2-c2-e1",
+                        "type": "testimonial",
+                        "props": {
+                          "quote": "اكتب هنا رأي عميل حقيقي اشترى منك.",
+                          "author": "",
+                          "rating": 0
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "home-7-testimonial-wall-r2-c3",
+                    "type": "column",
+                    "span": 4,
+                    "elements": [
+                      {
+                        "id": "home-7-testimonial-wall-r2-c3-e1",
+                        "type": "testimonial",
+                        "props": {
+                          "quote": "اكتب هنا رأي عميل حقيقي اشترى منك.",
+                          "author": "",
+                          "rating": 0
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "background": "paper",
+              "padding": "roomy"
+            }
+          },
+          {
+            "id": "home-8-faq-split",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-8-faq-split-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-8-faq-split-r1-c1",
+                    "type": "column",
+                    "span": 5,
+                    "elements": [
+                      {
+                        "id": "home-8-faq-split-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "أسئلة بتتكرر",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "home-8-faq-split-r1-c1-e2",
+                        "type": "text",
+                        "props": {
+                          "text": "كل اللي محتاج تعرفه قبل ما تطلب."
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "home-8-faq-split-r1-c2",
+                    "type": "column",
+                    "span": 7,
+                    "elements": [
+                      {
+                        "id": "home-8-faq-split-r1-c2-e1",
+                        "type": "faq",
+                        "props": {
+                          "title": "",
+                          "items": [
+                            {
+                              "q": "الضمان مدته قد إيه؟",
+                              "a": "اكتب هنا مدة الضمان وشروطه."
+                            },
+                            {
+                              "q": "الشحن بياخد وقت قد إيه؟",
+                              "a": "اكتب هنا مدة الشحن ومناطقه."
+                            },
+                            {
+                              "q": "ينفع أرجّع المنتج؟",
+                              "a": "اكتب هنا سياسة الاستبدال والاسترجاع."
+                            },
+                            {
+                              "q": "الدفع بيتم إزاي؟",
+                              "a": "اكتب هنا طرق الدفع المتاحة."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "background": "paper"
+            }
+          },
+          {
+            "id": "home-9-newsletter",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-9-newsletter-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-9-newsletter-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-9-newsletter-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "خليك على تواصل",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "home-9-newsletter-r1-c1-e2",
+                        "type": "text",
+                        "props": {
+                          "text": "سيب بياناتك ونبلّغك بأي عرض أو موديل جديد."
+                        }
+                      },
+                      {
+                        "id": "home-9-newsletter-r1-c1-e3",
+                        "type": "form",
+                        "props": {
+                          "title": "",
+                          "submitLabel": "اشترك",
+                          "tags": "newsletter"
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "align": "center"
+                    }
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "background": "primary-soft"
+            }
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/warranty",
+      "title": "الضمان",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "warranty-1-rich-text-band",
+            "type": "section",
+            "rows": [
+              {
+                "id": "warranty-1-rich-text-band-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "warranty-1-rich-text-band-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "warranty-1-rich-text-band-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "الضمان",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "warranty-1-rich-text-band-r1-c1-e2",
+                        "type": "rich_text",
+                        "props": {
+                          "text": "اكتب هنا تفاصيل الضمان: مدته، بيغطّي إيه، وإزاي العميل يستخدمه."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "background": "paper",
+              "padding": "roomy"
+            }
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/shipping",
+      "title": "الشحن والاستبدال",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "shipping-1-shipping-returns",
+            "type": "section",
+            "rows": [
+              {
+                "id": "shipping-1-shipping-returns-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "shipping-1-shipping-returns-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "shipping-1-shipping-returns-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "الشحن والاستبدال",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "shipping-1-shipping-returns-r1-c1-e2",
+                        "type": "accordion",
+                        "props": {
+                          "title": "",
+                          "items": [
+                            {
+                              "q": "الشحن",
+                              "a": "اكتب هنا مناطق الشحن ومواعيده وتكلفته."
+                            },
+                            {
+                              "q": "الاستبدال والاسترجاع",
+                              "a": "اكتب هنا سياسة الاستبدال والاسترجاع لديك."
+                            },
+                            {
+                              "q": "الدفع",
+                              "a": "اكتب هنا طرق الدفع التي تقبلها."
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "shipping-1-shipping-returns-r1-c1-e3",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا أي ملاحظة أخيرة عن الطلبات."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "background": "paper"
+            }
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}
