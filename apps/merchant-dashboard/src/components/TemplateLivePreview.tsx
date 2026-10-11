@@ -14,9 +14,10 @@ import type { ColorMode, PreviewTheme } from "@/lib/previewBridge";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import {
   ensureFreshSession,
-  loadTemplateHome,
+  loadTemplatePreview,
   previewQueue,
   previewTokenFor,
+  type TemplatePreviewData,
 } from "@/lib/templatePreview";
 
 /** Widths the storefront is laid out at before being scaled into the box. */
@@ -67,6 +68,11 @@ type Outcome = "ready" | "failed";
  * replaces the template's home tree, and `theme` / `colorMode` render it in
  * an unsaved store theme and in light or dark (a new value re-renders).
  *
+ * A template may bring a look of its own in its styles. `themeFrom` is handed
+ * the look the caller asked for and those styles, and returns the look to
+ * draw; it is only called for a template this component fetched itself and
+ * only when a look was asked for, and the page is posted once, with the answer.
+ *
  * A card is a 4:3 window onto the desktop layout unless told otherwise:
  * `aspect="3/4"` makes it a portrait box (the templates grid, the site's
  * thumbnail) and `cardLayout="mobile"` lays the page out at a phone's width
@@ -77,6 +83,7 @@ export function TemplateLivePreview({
   templateId,
   page,
   theme = null,
+  themeFrom,
   colorMode = null,
   title,
   fallback,
@@ -93,6 +100,8 @@ export function TemplateLivePreview({
   page?: PageTree | null;
   /** An unsaved store look, as the editor sends it (the storefront validates it). */
   theme?: PreviewTheme | null;
+  /** The look to draw, given the one asked for and the fetched template's styles. A function that never changes. */
+  themeFrom?: (theme: PreviewTheme, globalStyles: Record<string, unknown>) => PreviewTheme;
   colorMode?: ColorMode | null;
   /** Names the frame for screen readers (full variant only; the card's frame is decorative). */
   title: string;
@@ -116,9 +125,9 @@ export function TemplateLivePreview({
 
   // Without IntersectionObserver there is no "near the viewport": load now.
   const [inView, setInView] = useState(() => !card || typeof IntersectionObserver === "undefined");
-  const [loaded, setLoaded] = useState<PageTree | null>(null);
+  const [loaded, setLoaded] = useState<TemplatePreviewData | null>(null);
   // A page handed in is the tree as it is — there is no template to fetch.
-  const tree = page !== undefined ? page : loaded;
+  const tree = page !== undefined ? page : (loaded?.home ?? null);
   const [granted, setGranted] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   // The large preview skips the queue; a card waits for its turn.
@@ -141,10 +150,10 @@ export function TemplateLivePreview({
   useEffect(() => {
     if (page !== undefined || !inView || loaded || outcome === "failed") return;
     let cancelled = false;
-    loadTemplateHome(templateId).then(
-      (home) => {
+    loadTemplatePreview(templateId).then(
+      (preview) => {
         if (cancelled) return;
-        if (home) setLoaded(home);
+        if (preview.home) setLoaded(preview);
         else setOutcome("failed");
       },
       () => {
@@ -174,7 +183,9 @@ export function TemplateLivePreview({
 
   // The frame and form mount with the slot; post into them (again, whenever
   // the look to render it in changes).
-  const themeJson = theme ? JSON.stringify(theme) : "";
+  // The tree and the styles arrive together, so the look is settled before the first post.
+  const drawn = theme && themeFrom && loaded ? themeFrom(theme, loaded.globalStyles) : theme;
+  const themeJson = drawn ? JSON.stringify(drawn) : "";
   useEffect(() => {
     if (!slot || !tree) return;
     let cancelled = false;

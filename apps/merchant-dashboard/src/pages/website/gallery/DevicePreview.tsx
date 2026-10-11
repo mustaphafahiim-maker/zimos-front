@@ -30,6 +30,7 @@ export function DevicePreview({
   templateId,
   page,
   theme = null,
+  themeFrom,
   colorMode = null,
   title,
   fallback,
@@ -44,6 +45,8 @@ export function DevicePreview({
   /** A page tree to show instead of the template's own. */
   page?: PageTree | null;
   theme?: PreviewTheme | null;
+  /** The look to draw once a fetched template's styles are known (TemplateLivePreview). */
+  themeFrom?: (theme: PreviewTheme, globalStyles: Record<string, unknown>) => PreviewTheme;
   colorMode?: ColorMode | null;
   /** Names the frame for screen readers. */
   title: string;
@@ -97,6 +100,7 @@ export function DevicePreview({
               templateId={templateId}
               page={page}
               theme={theme}
+              themeFrom={themeFrom}
               colorMode={colorMode}
               title={title}
               fallback={fallback}

@@ -7,7 +7,7 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useCodeLabel } from "./codes";
 import { TemplatePlaceholder } from "./TemplatePlaceholder";
-import { useTemplatePreviewTheme } from "./templateLook";
+import { useTemplatePreviewTheme, withTemplateTheme } from "./templateLook";
 
 const STRINGS = {
   en: { previewOf: "Preview {name}", current: "Current" },
@@ -59,6 +59,7 @@ function TemplateThumb({ template }: { template: WebsiteTemplateSummary }) {
           workspaceId={workspaceId}
           templateId={template.id}
           theme={theme}
+          themeFrom={withTemplateTheme}
           title={template.name}
           aspect="3/4"
           cardLayout="mobile"
