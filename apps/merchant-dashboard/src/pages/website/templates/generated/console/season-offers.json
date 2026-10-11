@@ -1,0 +1,599 @@
+{
+  "globalStyles": {
+    "primaryColor": "#7A5A3A",
+    "themeSettings": {
+      "storeTheme": "elegant",
+      "footer": {
+        "layout": "rich"
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "الرئيسية",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "home-1-hero-slider",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-1-hero-slider-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-1-hero-slider-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-1-hero-slider-r1-c1-e1",
+                        "type": "hero_slider",
+                        "props": {
+                          "slides": [
+                            {
+                              "image": "/template-art/offers-slide-1.svg",
+                              "mobileImage": "/template-art/offers-slide-1-phone.svg",
+                              "alt": "معطف شتوي",
+                              "heading": "كولكشن الشتا",
+                              "subheading": "اكتب هنا نسبة الخصم ومدة العرض.",
+                              "buttonLabel": "تسوّق العروض",
+                              "buttonHref": "/products",
+                              "side": "start",
+                              "vertical": "bottom",
+                              "contentWidth": 480,
+                              "eyebrow": "عروض الموسم"
+                            },
+                            {
+                              "image": "/template-art/offers-slide-2.svg",
+                              "mobileImage": "/template-art/offers-slide-2-phone.svg",
+                              "alt": "فستان",
+                              "heading": "خصومات آخر الموسم",
+                              "subheading": "اكتب هنا نسبة الخصم ومدة العرض.",
+                              "buttonLabel": "تسوّق العروض",
+                              "buttonHref": "/products",
+                              "side": "start",
+                              "vertical": "bottom",
+                              "contentWidth": 480,
+                              "eyebrow": "عروض الموسم"
+                            }
+                          ],
+                          "autoplay": true,
+                          "seconds": 5,
+                          "startDelay": 5,
+                          "arrows": true,
+                          "dots": true,
+                          "wave": true,
+                          "height": 560,
+                          "heightTablet": 480
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            }
+          },
+          {
+            "id": "home-2-category-tiles",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-2-category-tiles-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-2-category-tiles-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-2-category-tiles-r1-c1-e1",
+                        "type": "category_tiles",
+                        "props": {
+                          "heading": "تسوّق بالقسم",
+                          "items": [
+                            {
+                              "image": "/template-art/offers-cat-1.svg",
+                              "title": "حريمي",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/template-art/offers-cat-2.svg",
+                              "title": "شتوي",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/template-art/offers-cat-3.svg",
+                              "title": "رجالي",
+                              "href": "/products"
+                            }
+                          ],
+                          "columns": 3,
+                          "columnsMobile": 3,
+                          "tone": "plain"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            }
+          },
+          {
+            "id": "home-3-product-cards",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-3-product-cards-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-3-product-cards-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-3-product-cards-r1-c1-e1",
+                        "type": "product_cards",
+                        "props": {
+                          "heading": "أحدث المنتجات",
+                          "subheading": "الجديد والمميز واللي عليه عرض.",
+                          "collection": "",
+                          "limit": 6,
+                          "columns": 3,
+                          "showDiscount": true,
+                          "buttonLabel": "كل المنتجات",
+                          "buttonHref": "/products",
+                          "tone": "plain",
+                          "tabs": [
+                            {
+                              "label": "الكل",
+                              "collection": ""
+                            },
+                            {
+                              "label": "جديد",
+                              "collection": "new"
+                            },
+                            {
+                              "label": "مميز",
+                              "collection": "featured"
+                            },
+                            {
+                              "label": "عروض",
+                              "collection": "offers"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            }
+          },
+          {
+            "id": "home-4-image-banner",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-4-image-banner-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-4-image-banner-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-4-image-banner-r1-c1-e1",
+                        "type": "image_banner",
+                        "props": {
+                          "image": "/template-art/offers-banner.svg",
+                          "mobileImage": "/template-art/offers-banner-phone.svg",
+                          "alt": "بطاقة خصم",
+                          "heading": "عرض الأسبوع",
+                          "text": "اكتب هنا تفاصيل العرض ومدته.",
+                          "buttonLabel": "تسوّق دلوقتي",
+                          "buttonHref": "/products",
+                          "height": 490,
+                          "heightTablet": 430,
+                          "heightMobile": 390,
+                          "wave": false
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            }
+          },
+          {
+            "id": "home-5-best-picks",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-5-best-picks-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-5-best-picks-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-5-best-picks-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "أفضل تشكيلة الشهر",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "home-5-best-picks-r1-c1-e2",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا سطر عن القطع اللي اخترتها الشهر ده وليه."
+                        }
+                      },
+                      {
+                        "id": "home-5-best-picks-r1-c1-e3",
+                        "type": "button",
+                        "props": {
+                          "label": "شوف التشكيلة",
+                          "href": "/products",
+                          "variant": "outline"
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "align": "center"
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "home-5-best-picks-r2",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-5-best-picks-r2-c1",
+                    "type": "column",
+                    "span": 6,
+                    "elements": [
+                      {
+                        "id": "home-5-best-picks-r2-c1-e1",
+                        "type": "image",
+                        "props": {
+                          "src": "/template-art/offers-pick-1.svg",
+                          "alt": "معطف من التشكيلة",
+                          "href": "/products",
+                          "ratio": "3:4"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "home-5-best-picks-r2-c2",
+                    "type": "column",
+                    "span": 6,
+                    "elements": [
+                      {
+                        "id": "home-5-best-picks-r2-c2-e1",
+                        "type": "image",
+                        "props": {
+                          "src": "/template-art/offers-pick-2.svg",
+                          "alt": "شنطة من التشكيلة",
+                          "href": "/products",
+                          "ratio": "3:2"
+                        }
+                      },
+                      {
+                        "id": "home-5-best-picks-r2-c2-e2",
+                        "type": "image",
+                        "props": {
+                          "src": "/template-art/offers-pick-3.svg",
+                          "alt": "نضارة من التشكيلة",
+                          "href": "/products",
+                          "ratio": "3:2"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "home-6-newsletter-banner",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-6-newsletter-banner-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-6-newsletter-banner-r1-c1",
+                    "type": "column",
+                    "span": 6,
+                    "elements": [
+                      {
+                        "id": "home-6-newsletter-banner-r1-c1-e1",
+                        "type": "image",
+                        "props": {
+                          "src": "/template-art/offers-news.svg",
+                          "alt": "بطاقة خصم",
+                          "ratio": "4:3"
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "verticalAlign": "center"
+                    }
+                  },
+                  {
+                    "id": "home-6-newsletter-banner-r1-c2",
+                    "type": "column",
+                    "span": 6,
+                    "elements": [
+                      {
+                        "id": "home-6-newsletter-banner-r1-c2-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "اعرف العروض أول بأول",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "home-6-newsletter-banner-r1-c2-e2",
+                        "type": "text",
+                        "props": {
+                          "text": "سيب بياناتك ونبلّغك بكل عرض جديد قبل ما يخلص."
+                        }
+                      },
+                      {
+                        "id": "home-6-newsletter-banner-r1-c2-e3",
+                        "type": "form",
+                        "props": {
+                          "title": "",
+                          "submitLabel": "اشترك",
+                          "tags": "newsletter"
+                        }
+                      }
+                    ],
+                    "settings": {
+                      "verticalAlign": "center"
+                    }
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "background": "paper"
+            }
+          },
+          {
+            "id": "home-7-trust-strip",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-7-trust-strip-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-7-trust-strip-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-7-trust-strip-r1-c1-e1",
+                        "type": "trust_strip",
+                        "props": {
+                          "items": [
+                            {
+                              "icon": "truck",
+                              "title": "شحن لحد البيت",
+                              "text": "اكتب هنا مناطق الشحن ومدته."
+                            },
+                            {
+                              "icon": "cash",
+                              "title": "الدفع عند الاستلام",
+                              "text": "اكتب هنا طرق الدفع المتاحة."
+                            },
+                            {
+                              "icon": "return",
+                              "title": "استبدال سهل",
+                              "text": "اكتب هنا سياسة الاستبدال."
+                            }
+                          ],
+                          "tone": "plain"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            }
+          },
+          {
+            "id": "home-8-gallery",
+            "type": "section",
+            "rows": [
+              {
+                "id": "home-8-gallery-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "home-8-gallery-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "home-8-gallery-r1-c1-e1",
+                        "type": "gallery",
+                        "props": {
+                          "title": "",
+                          "images": [
+                            "/template-art/offers-cat-1.svg",
+                            "/template-art/offers-strip-1.svg",
+                            "/template-art/offers-cat-2.svg",
+                            "/template-art/offers-strip-2.svg",
+                            "/template-art/offers-cat-3.svg"
+                          ],
+                          "columns": 5
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/about",
+      "title": "من إحنا",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "about-1-rich-text-band",
+            "type": "section",
+            "rows": [
+              {
+                "id": "about-1-rich-text-band-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "about-1-rich-text-band-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "about-1-rich-text-band-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "من إحنا",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "about-1-rich-text-band-r1-c1-e2",
+                        "type": "rich_text",
+                        "props": {
+                          "text": "اكتب هنا مين إنتوا: بدأتوا إزاي، وبتبيعوا إيه، وليه العميل يختاركم."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "background": "paper",
+              "padding": "roomy"
+            }
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/shipping",
+      "title": "الشحن والاستبدال",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "shipping-1-shipping-returns",
+            "type": "section",
+            "rows": [
+              {
+                "id": "shipping-1-shipping-returns-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "shipping-1-shipping-returns-r1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "shipping-1-shipping-returns-r1-c1-e1",
+                        "type": "heading",
+                        "props": {
+                          "text": "الشحن والاستبدال",
+                          "level": 2
+                        }
+                      },
+                      {
+                        "id": "shipping-1-shipping-returns-r1-c1-e2",
+                        "type": "accordion",
+                        "props": {
+                          "title": "",
+                          "items": [
+                            {
+                              "q": "الشحن",
+                              "a": "اكتب هنا مناطق الشحن ومواعيده وتكلفته."
+                            },
+                            {
+                              "q": "الاستبدال والاسترجاع",
+                              "a": "اكتب هنا سياسة الاستبدال والاسترجاع لديك."
+                            },
+                            {
+                              "q": "الدفع",
+                              "a": "اكتب هنا طرق الدفع التي تقبلها."
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "shipping-1-shipping-returns-r1-c1-e3",
+                        "type": "text",
+                        "props": {
+                          "text": "اكتب هنا أي ملاحظة أخيرة عن الطلبات."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "settings": {
+              "background": "paper"
+            }
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

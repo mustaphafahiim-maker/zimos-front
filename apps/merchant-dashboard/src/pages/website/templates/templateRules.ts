@@ -179,6 +179,19 @@ function elementProblems(page: string, element: PageElement, pages: Set<string>,
     for (const slide of slides) if (!isObject(slide) || !text(slide.image).trim()) out.push(`${at}: a slide without a picture is not drawn`);
   }
   if (element.type === "image_banner" && !text(props.image).trim()) out.push(`${at}: a banner without a picture is not drawn`);
+  // A product grid's tabs: the first is the "all" tab (no collection), so a store with no collections yet still
+  // shows its products; the others name a collection by its address name, which the merchant makes theirs.
+  if (element.type === "product_cards" && props.tabs !== undefined) {
+    const tabs = list(props.tabs);
+    if (tabs.length < 2 || tabs.length > 6) out.push(`${at}: a tabbed grid has two to six tabs`);
+    tabs.forEach((tab, i) => {
+      const label = isObject(tab) ? text(tab.label) : "";
+      const collection = isObject(tab) ? text(tab.collection) : "";
+      if (!ARABIC.test(label)) out.push(`${at}: tab ${i + 1} needs an Arabic name`);
+      if (i === 0 && collection !== "") out.push(`${at}: the first tab shows every product, so it names no collection`);
+      if (i > 0 && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(collection)) out.push(`${at}: tab ${i + 1} needs a collection's address name`);
+    });
+  }
   // A review card in a template says what to write and nothing else: no name, no stars, no made-up words.
   if (element.type === "testimonial") {
     if (props.rating !== 0) out.push(`${at}: a template's review card carries no stars`);

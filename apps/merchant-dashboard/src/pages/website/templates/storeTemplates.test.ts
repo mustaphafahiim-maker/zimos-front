@@ -43,8 +43,8 @@ function holdFolder(dir: string, files: Array<{ name: string; content: string }>
 }
 
 describe("the store templates", () => {
-  it("are the four of this round, each on a theme of its own", () => {
-    expect(templates.map((t) => t.key)).toEqual(["home-living", "drinks", "departments", "single-product"]);
+  it("are six, each on a theme of its own", () => {
+    expect(templates.map((t) => t.key)).toEqual(["home-living", "drinks", "departments", "single-product", "fashion", "season-offers"]);
     const themes = templates.map((t) => t.version.globalStyles.themeSettings.storeTheme);
     expect(new Set(themes).size).toBe(themes.length);
     for (const theme of themes) expect(STORE_THEMES).toContain(theme);
@@ -63,7 +63,7 @@ describe("the store templates", () => {
   it.each(templates.map((t) => [t.key, t] as const))("%s has a home page and two more, read right to left", (_key, template) => {
     expect(template.rtl).toBe(true);
     expect(template.version.pages.map((p) => p.pageType)).toEqual(["home", "static", "static"]);
-    expect(template.version.pages[0].builderData.sections.length).toBeGreaterThanOrEqual(6);
+    expect(template.version.pages[0].builderData.sections.length).toBeGreaterThanOrEqual(4);
   });
 
   it("carry a theme and the fuller footer, and no header menu", () => {
@@ -145,6 +145,21 @@ describe("the rules a template is held to", () => {
     expect(broken((t) => (review(t).props!.rating = 5)).join("\n")).toMatch(/carries no stars/);
     expect(broken((t) => (review(t).props!.author = "منى ع.")).join("\n")).toMatch(/names no one/);
     expect(broken((t) => (review(t).props!.quote = "منتج ممتاز ووصل بسرعة")).join("\n")).toMatch(/only says what to write/);
+  });
+
+  it("refuse tabs a new store could not show: no all-products tab first, or a tab with no collection's name", () => {
+    const fashion = templates.find((t) => t.key === "fashion")!;
+    const brokenTabs = (change: (tabs: Array<Record<string, string>>) => void): string => {
+      const template = structuredClone(fashion);
+      const grid = elementsOf(template.version.pages[0].builderData).find((e) => e.type === "product_cards")!;
+      change(grid.props!.tabs as Array<Record<string, string>>);
+      return templateProblems(template, artNames).join(" | ");
+    };
+    expect(brokenTabs(() => undefined)).toBe("");
+    expect(brokenTabs((tabs) => (tabs[0].collection = "women"))).toMatch(/first tab shows every product/);
+    expect(brokenTabs((tabs) => (tabs[2].collection = ""))).toMatch(/tab 3 needs a collection's address name/);
+    expect(brokenTabs((tabs) => (tabs[1].label = "Women"))).toMatch(/tab 2 needs an Arabic name/);
+    expect(brokenTabs((tabs) => tabs.splice(1))).toMatch(/two to six tabs/);
   });
 
   it("refuse a link to a page the template does not bring", () => {

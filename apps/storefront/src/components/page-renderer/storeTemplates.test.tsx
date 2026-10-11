@@ -128,7 +128,7 @@ function boxOf(img: HTMLImageElement): string | null {
 
 describe("the store templates on the storefront", () => {
   it("are the generated files, each a template that reads right to left", () => {
-    expect(templates.map((t) => t.key)).toEqual(["departments", "drinks", "home-living", "single-product"]);
+    expect(templates.map((t) => t.key)).toEqual(["departments", "drinks", "fashion", "home-living", "season-offers", "single-product"]);
     for (const template of templates) expect(template.rtl, template.key).toBe(true);
   });
 

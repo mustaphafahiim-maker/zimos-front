@@ -36,7 +36,17 @@ export const ART_PALETTES = {
   warm: { ground: "#FBF5EC", groundDeep: "#F1DCC0", soft: "#FFFDF9", accent: "#A64A24", second: "#E3A857", ink: "#3B2A20" },
   bold: { ground: "#F4F4F5", groundDeep: "#DEDEE3", soft: "#FFFFFF", accent: "#D7261E", second: "#FFD60A", ink: "#0B0B0C" },
   glass: { ground: "#EEF1FA", groundDeep: "#D3DAF3", soft: "#FFFFFF", accent: "#6242F5", second: "#22B8CF", ink: "#0F172A" },
+  minimal: { ground: "#F7F7F7", groundDeep: "#E6E6E6", soft: "#FFFFFF", accent: "#2F4BFF", second: "#111111", ink: "#111111" },
+  elegant: { ground: "#FAF8F4", groundDeep: "#E7E1D6", soft: "#FFFFFF", accent: "#7A5A3A", second: "#C8B08A", ink: "#1C1A17" },
 } satisfies Record<string, ArtPalette>;
+
+/**
+ * The same palette for a drawing that words in white are laid over (the
+ * picture banner): a deep ground in the theme's accent, and a light subject.
+ */
+function deep(p: ArtPalette): ArtPalette {
+  return { ground: p.accent, groundDeep: p.ink, soft: p.second, accent: p.soft, second: p.second, ink: p.soft };
+}
 
 export type ArtTheme = keyof typeof ART_PALETTES;
 
@@ -108,6 +118,18 @@ const SUBJECTS = {
     `<path d="M76 86V62a24 24 0 0 1 48 0v24" fill="none" stroke="${p.ink}" stroke-opacity=".6" stroke-width="8" stroke-linecap="round"/>` +
     `<path d="M52 74h96l10 98H42z" fill="${p.accent}"/>` +
     `<rect x="64" y="110" width="72" height="12" rx="6" fill="${p.second}"/>`,
+  coat: (p) =>
+    `<path d="M72 28h56l36 26-14 36-14-8v92H64V82l-14 8-14-36z" fill="${p.accent}"/>` +
+    `<path d="M100 60v114" fill="none" stroke="${p.second}" stroke-width="5" stroke-linecap="round"/>` +
+    `<path d="M80 28l20 32 20-32" fill="none" stroke="${p.second}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<circle cx="112" cy="96" r="4.5" fill="${p.second}"/>` +
+    `<circle cx="112" cy="126" r="4.5" fill="${p.second}"/>`,
+  tag: (p) =>
+    `<path d="M98 26h60a12 12 0 0 1 12 12v60l-68 70a12 12 0 0 1-17 0L34 117a12 12 0 0 1 0-17z" fill="${p.accent}"/>` +
+    `<circle cx="138" cy="58" r="12" fill="${p.soft}"/>` +
+    `<path d="M70 124l36-36" fill="none" stroke="${p.second}" stroke-width="8" stroke-linecap="round"/>` +
+    `<circle cx="70" cy="94" r="8" fill="${p.second}"/>` +
+    `<circle cx="106" cy="118" r="8" fill="${p.second}"/>`,
   watch: (p) =>
     `<rect x="76" y="12" width="48" height="52" rx="10" fill="${p.ink}" opacity=".7"/>` +
     `<rect x="76" y="136" width="48" height="52" rx="10" fill="${p.ink}" opacity=".7"/>` +
@@ -164,6 +186,8 @@ export interface ArtSpec {
   lift?: number;
   /** Moves the subject sideways (a share of the width; below zero is to the left), to leave the other side calm. */
   shift?: number;
+  /** A deep ground and a light subject: for a picture that white words are laid over. */
+  deep?: boolean;
 }
 
 const GROUNDS: Array<{ from: [number, number]; to: [number, number]; blobs: Array<[number, number, number]> }> = [
@@ -178,7 +202,7 @@ const round = (value: number) => Math.round(value * 10) / 10;
 /** One stand-in picture as an SVG document. */
 export function drawArt(spec: ArtSpec): string {
   const { width: w, height: h } = spec;
-  const palette = ART_PALETTES[spec.theme];
+  const palette = spec.deep ? deep(ART_PALETTES[spec.theme]) : ART_PALETTES[spec.theme];
   const ground = GROUNDS[spec.ground ?? 0];
   const short = Math.min(w, h);
   const size = short * (spec.scale ?? 0.56);

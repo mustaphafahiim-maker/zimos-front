@@ -71,7 +71,7 @@ const PHONE = { width: 800, height: 1000, scale: 0.34, lift: 0.22 } as const;
 const LANDSCAPE = { width: 1200, height: 900 } as const;
 const SQUARE = { width: 800, height: 800 } as const;
 
-const art = (name: string, theme: ArtTheme, subject: ArtSubject, size: { width: number; height: number; scale?: number; lift?: number; shift?: number }, ground: 0 | 1 | 2 | 3 = 0): ArtSpec => ({
+const art = (name: string, theme: ArtTheme, subject: ArtSubject, size: { width: number; height: number; scale?: number; lift?: number; shift?: number; deep?: boolean }, ground: 0 | 1 | 2 | 3 = 0): ArtSpec => ({
   name,
   theme,
   subject,
@@ -426,7 +426,194 @@ const SINGLE: TemplateDraft = {
   ],
 };
 
-const DRAFTS: TemplateDraft[] = [HOME, DRINKS, DEPARTMENTS, SINGLE];
+// --- Fashion --------------------------------------------------------------------
+
+/**
+ * A tab of the product grid: its name and the collection it shows (none is the
+ * newest products). The collections are the merchant's to name: a tab whose
+ * collection the store does not have is simply not shown to shoppers, and
+ * shows in the editor with a note until it is given one.
+ */
+const tab = (label: string, collection = "") => ({ label, collection });
+
+const FASHION_SLIDES: Array<{ subject: ArtSubject; alt: string; heading: string; line: string }> = [
+  { subject: "dress", alt: "فستان", heading: "كولكشن الموسم الجديد", line: "اكتب هنا سطر عن أهم ما في الكولكشن الجديد." },
+  { subject: "shirt", alt: "تيشيرت", heading: "أساسيات كل يوم", line: "اكتب هنا سطر عن القطع الأساسية اللي عندك." },
+  { subject: "bag", alt: "شنطة", heading: "إكسسوارات تكمّل الطلّة", line: "اكتب هنا سطر عن الشنط والإكسسوارات." },
+];
+
+const FASHION_TILES: Array<[string, ArtSubject]> = [
+  ["حريمي", "dress"],
+  ["رجالي", "shirt"],
+  ["إكسسوارات", "shades"],
+];
+
+const FASHION: TemplateDraft = {
+  key: "fashion",
+  name: "أزياء — واجهة الموسم",
+  category: "fashion",
+  theme: "minimal",
+  art: [
+    ...FASHION_SLIDES.flatMap((s, i) => [
+      art(`fashion-slide-${i + 1}`, "minimal", s.subject, WIDE, ([0, 2, 1] as const)[i]),
+      art(`fashion-slide-${i + 1}-phone`, "minimal", s.subject, PHONE, ([0, 2, 1] as const)[i]),
+    ]),
+    ...FASHION_TILES.map(([, subject], i) => art(`fashion-cat-${i + 1}`, "minimal", subject, SQUARE, ([1, 3, 0] as const)[i])),
+  ],
+  pages: [
+    {
+      key: "home",
+      path: "/",
+      title: "الرئيسية",
+      sections: [
+        band("hero_slider", {
+          slides: FASHION_SLIDES.map((s, i) => ({ ...slide(`fashion-slide-${i + 1}`, s.alt, s.heading, s.line, "تسوّق دلوقتي"), eyebrow: "موسم جديد" })),
+          height: 560,
+          heightTablet: 480,
+        }),
+        band("category_tiles", {
+          heading: "تسوّق بالقسم",
+          items: FASHION_TILES.map(([title], i) => ({ image: artUrl(`fashion-cat-${i + 1}`), title, href: "/products" })),
+          columns: 3,
+          columnsMobile: 3,
+        }),
+        band("product_cards", {
+          heading: "كل المنتجات",
+          subheading: "اختار القسم وشوف اللي فيه.",
+          tabs: [tab("الكل"), tab("حريمي", "women"), tab("رجالي", "men"), tab("شنط", "bags"), tab("أحذية", "shoes")],
+          limit: 8,
+          columns: 4,
+          buttonLabel: "كل المنتجات",
+          buttonHref: "/products",
+        }),
+        newsletter("خليك أول واحد يعرف الجديد", "سيب بياناتك ونبعتلك الكولكشن الجديد والعروض."),
+      ],
+    },
+    story("about", "/about", "من إحنا", "اكتب هنا مين إنتوا: بدأتوا إزاي، وإيه اللي بيميّز تصميماتكم وخاماتكم."),
+    shipping("shipping", "/shipping", "الشحن والاستبدال"),
+  ],
+};
+
+// --- Season offers ----------------------------------------------------------------
+
+const OFFER_SLIDES: Array<{ subject: ArtSubject; alt: string; heading: string }> = [
+  { subject: "coat", alt: "معطف شتوي", heading: "كولكشن الشتا" },
+  { subject: "dress", alt: "فستان", heading: "خصومات آخر الموسم" },
+];
+
+const OFFER_TILES: Array<[string, ArtSubject]> = [
+  ["حريمي", "dress"],
+  ["شتوي", "coat"],
+  ["رجالي", "shirt"],
+];
+
+const OFFERS: TemplateDraft = {
+  key: "season-offers",
+  name: "عروض الموسم",
+  category: "ecommerce",
+  theme: "elegant",
+  art: [
+    ...OFFER_SLIDES.flatMap((s, i) => [
+      art(`offers-slide-${i + 1}`, "elegant", s.subject, WIDE, ([1, 2] as const)[i]),
+      art(`offers-slide-${i + 1}-phone`, "elegant", s.subject, PHONE, ([1, 2] as const)[i]),
+    ]),
+    ...OFFER_TILES.map(([, subject], i) => art(`offers-cat-${i + 1}`, "elegant", subject, SQUARE, ([0, 3, 1] as const)[i])),
+    art("offers-banner", "elegant", "tag", { ...WIDE, deep: true }, 0),
+    art("offers-banner-phone", "elegant", "tag", { ...PHONE, deep: true }, 0),
+    art("offers-pick-1", "elegant", "coat", { width: 900, height: 1200 }, 2),
+    art("offers-pick-2", "elegant", "bag", { width: 1200, height: 800 }, 1),
+    art("offers-pick-3", "elegant", "shades", { width: 1200, height: 800 }, 3),
+    art("offers-news", "elegant", "tag", LANDSCAPE, 2),
+    art("offers-strip-1", "elegant", "bag", SQUARE, 2),
+    art("offers-strip-2", "elegant", "shades", SQUARE, 1),
+  ],
+  pages: [
+    {
+      key: "home",
+      path: "/",
+      title: "الرئيسية",
+      sections: [
+        band("hero_slider", {
+          slides: OFFER_SLIDES.map((s, i) => ({
+            ...slide(`offers-slide-${i + 1}`, s.alt, s.heading, "اكتب هنا نسبة الخصم ومدة العرض.", "تسوّق العروض"),
+            eyebrow: "عروض الموسم",
+          })),
+          height: 560,
+          heightTablet: 480,
+        }),
+        band("category_tiles", {
+          heading: "تسوّق بالقسم",
+          items: OFFER_TILES.map(([title], i) => ({ image: artUrl(`offers-cat-${i + 1}`), title, href: "/products" })),
+          columns: 3,
+          columnsMobile: 3,
+        }),
+        band("product_cards", {
+          heading: "أحدث المنتجات",
+          subheading: "الجديد والمميز واللي عليه عرض.",
+          tabs: [tab("الكل"), tab("جديد", "new"), tab("مميز", "featured"), tab("عروض", "offers")],
+          limit: 6,
+          columns: 3,
+          buttonLabel: "كل المنتجات",
+          buttonHref: "/products",
+        }),
+        band("image_banner", {
+          image: artUrl("offers-banner"),
+          mobileImage: artUrl("offers-banner-phone"),
+          alt: "بطاقة خصم",
+          heading: "عرض الأسبوع",
+          text: "اكتب هنا تفاصيل العرض ومدته.",
+          buttonLabel: "تسوّق دلوقتي",
+          buttonHref: "/products",
+          wave: false,
+        }),
+        custom("best-picks", [
+          row([
+            col(
+              12,
+              [
+                el("heading", { text: "أفضل تشكيلة الشهر", level: 2 }),
+                el("text", { text: "اكتب هنا سطر عن القطع اللي اخترتها الشهر ده وليه." }),
+                el("button", { label: "شوف التشكيلة", href: "/products", variant: "outline" }),
+              ],
+              { align: "center" }
+            ),
+          ]),
+          row([
+            col(6, [el("image", { src: artUrl("offers-pick-1"), alt: "معطف من التشكيلة", href: "/products", ratio: "3:4" })]),
+            col(6, [
+              el("image", { src: artUrl("offers-pick-2"), alt: "شنطة من التشكيلة", href: "/products", ratio: "3:2" }),
+              el("image", { src: artUrl("offers-pick-3"), alt: "نضارة من التشكيلة", href: "/products", ratio: "3:2" }),
+            ]),
+          ]),
+        ]),
+        fromPreset("newsletter-banner", [
+          { src: artUrl("offers-news"), alt: "بطاقة خصم", ratio: "4:3" },
+          { text: "اعرف العروض أول بأول", level: 2 },
+          { text: "سيب بياناتك ونبلّغك بكل عرض جديد قبل ما يخلص." },
+          { title: "", submitLabel: "اشترك", tags: "newsletter" },
+        ]),
+        band("trust_strip", {
+          items: [
+            { icon: "truck", title: "شحن لحد البيت", text: "اكتب هنا مناطق الشحن ومدته." },
+            { icon: "cash", title: "الدفع عند الاستلام", text: "اكتب هنا طرق الدفع المتاحة." },
+            { icon: "return", title: "استبدال سهل", text: "اكتب هنا سياسة الاستبدال." },
+          ],
+        }),
+        fromPreset("gallery", [
+          {
+            title: "",
+            columns: 5,
+            images: [artUrl("offers-cat-1"), artUrl("offers-strip-1"), artUrl("offers-cat-2"), artUrl("offers-strip-2"), artUrl("offers-cat-3")],
+          },
+        ]),
+      ],
+    },
+    story("about", "/about", "من إحنا", "اكتب هنا مين إنتوا: بدأتوا إزاي، وبتبيعوا إيه، وليه العميل يختاركم."),
+    shipping("shipping", "/shipping", "الشحن والاستبدال"),
+  ],
+};
+
+const DRAFTS: TemplateDraft[] = [HOME, DRINKS, DEPARTMENTS, SINGLE, FASHION, OFFERS];
 
 function build(draft: TemplateDraft): StoreTemplate {
   const primaryColor = THEME_SPECS[draft.theme].palette.light.accent;
