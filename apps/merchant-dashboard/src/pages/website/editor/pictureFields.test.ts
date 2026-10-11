@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { ELEMENT_SPECS, IMAGE_RATIOS } from "./blocks";
+import { BLOCK_PRESETS, ELEMENT_SPECS, IMAGE_RATIOS, createSection, createStarterSections, sectionElements } from "./blocks";
 import { fieldHint, fieldLabel, optionLabel } from "./editorLocale";
 
 /**
@@ -46,6 +46,16 @@ describe("a picture's shape and focus in the editor", () => {
     }
     // A picture that never chose a shape starts with none: it is drawn as before.
     expect(ELEMENT_SPECS.image.defaultProps).toEqual({ src: "", alt: "" });
+  });
+
+  it("no block of the library gives a new picture a shape while the default-shape switch is off", () => {
+    // VITE_PICTURE_SHAPE_DEFAULT_ENABLED is not set here (pictureShapeDefault.test.ts turns it on).
+    for (const block of BLOCK_PRESETS) {
+      for (const element of sectionElements(createSection(block))) expect(element.props, block.key).not.toHaveProperty("ratio");
+    }
+    for (const section of createStarterSections("About us")) {
+      for (const element of sectionElements(section)) expect(element.props).not.toHaveProperty("ratio");
+    }
   });
 
   it("the part kept in view is offered for the banner and for each category tile", () => {

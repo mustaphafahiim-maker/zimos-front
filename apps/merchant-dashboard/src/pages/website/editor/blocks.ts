@@ -7,6 +7,7 @@ import type {
   PageSection,
   PageTree,
 } from "@store-builder/api-client";
+import { PICTURE_SHAPE_DEFAULT_ENABLED } from "@/lib/features";
 import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 import { localizePresetContent } from "./presetCopy";
 import { SHOWCASE_ELEMENT_SPECS, SHOWCASE_PRESETS } from "./showcaseBlocks";
@@ -3204,7 +3205,22 @@ function uid(prefix: string): string {
  */
 function createElement(type: PageElementType, content: Record<string, unknown> | undefined, locale: EditorLocale): PageElement {
   const props = localizePresetContent({ ...ELEMENT_SPECS[type].defaultProps, ...content }, locale);
+  // While the switch is on, a new full-width picture starts with a box of its own (lib/features).
+  if (type === "image" && PICTURE_SHAPE_DEFAULT_ENABLED && takesDefaultShape(props)) props.ratio = DEFAULT_PICTURE_SHAPE;
   return { id: uid(type), type, props };
+}
+
+/** The shape a new full-width picture starts with while the switch is on: one of IMAGE_RATIOS. */
+export const DEFAULT_PICTURE_SHAPE = "4:3";
+
+/**
+ * Whether a new picture is one the default shape is for: a full-width picture
+ * that names no shape of its own. A picture that is given a size or a width
+ * is an icon, a logo or a mark, and a box of another shape would crop it.
+ */
+function takesDefaultShape(props: Record<string, unknown>): boolean {
+  const unset = (value: unknown) => value === undefined || value === null || value === "";
+  return unset(props.ratio) && unset(props.width) && (unset(props.size) || props.size === "full");
 }
 
 /**
