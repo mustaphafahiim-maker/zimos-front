@@ -17,6 +17,8 @@ import { PageRenderer } from "./PageRenderer";
  * a minimum height, which makes the section a flex column that centres its
  * wrapper; a centred flex item is only as wide as its content, and a band has
  * no width of its own. 264px is the row's eleven gutters and nothing else.
+ * A section that holds a band is no longer given its minimum height at all:
+ * the band sets its own height for each screen.
  *
  * This runner has no layout engine, so the width itself is not measured here.
  * What is pinned is everything the width follows from: the marks the renderer
@@ -189,13 +191,38 @@ describe("a slider in a section that was given a minimum height", () => {
   const tall = { width: "full", padding: "tight", minHeight: 620 };
   const boxed = { settings: { style: { base: {} } } };
 
-  it("marks the section's wrapper, which the stylesheet then holds at the section's width", async () => {
+  it("does not apply the minimum height: the section is as tall as its band on every screen, and is no flex column", async () => {
+    for (const editable of [false, true]) {
+      const root = await draw(page(section("s1", tall, [column("c1", 12, [slider(boxed)])])), editable);
+      const sectionEl = root.querySelector<HTMLElement>("[data-zt-section]")!;
+      // One number for every screen: 620 under a slider that is 520 on a tablet left 50px of nothing above and below it.
+      expect(sectionEl.style.minHeight).toBe("");
+      expect(sectionEl.hasAttribute("style")).toBe(false);
+      // The classes of the same section without the setting, so nothing centres the wrapper as a flex item.
+      expect(sectionEl.className).toBe("px-4 sm:px-6 py-3 sm:py-4");
+      // The band's own heights are untouched.
+      const hero = sectionEl.querySelector<HTMLElement>(".zs-hero")!;
+      expect(hero.style.getPropertyValue("--zs-hero-h")).toBe("620px");
+      expect(hero.style.getPropertyValue("--zs-hero-h-tablet")).toBe("520px");
+    }
+  });
+
+  it("drops it for the whole section, whatever else the section holds and wherever the band is in it", async () => {
+    const root = await draw(page(section("s1", { minHeight: 700, background: "ink" }, [column("c1", 4, [heading, button]), column("c2", 4, [text("t1")]), column("c3", 4, [slider()])])));
+    const sectionEl = root.querySelector<HTMLElement>("[data-zt-section]")!;
+    expect(sectionEl.hasAttribute("style")).toBe(false);
+    expect(sectionEl.className.split(" ")).not.toEqual(expect.arrayContaining(["flex"]));
+    // The rest of the section's look is still its own.
+    expect(sectionEl.className).toContain("bg-ink");
+    expect(sectionEl.getAttribute("data-zt-bg")).toBe("ink");
+  });
+
+  it("still marks the section's wrapper, which the stylesheet holds at the section's width when something does centre it", async () => {
+    // The editor's preview lays the section out as a flex column while its height is dragged (useCanvasDrag).
     const root = await draw(page(section("s1", tall, [column("c1", 12, [slider(boxed)])])));
     const sectionEl = root.querySelector<HTMLElement>("[data-zt-section]")!;
-    // The two things that together shrink the wrapper: the section is a flex column, and its one item is centred by automatic margins.
-    expect(sectionEl.style.minHeight).toBe("620px");
-    expect(sectionEl.className.split(" ")).toEqual(expect.arrayContaining(["flex", "flex-col", "justify-center"]));
     const wrapper = sectionEl.firstElementChild as HTMLElement;
+    // Centred by automatic margins: as a flex item that alone would make it as wide as its content.
     expect(wrapper.className.split(" ")).toContain("mx-auto");
 
     expect(wrapper.getAttribute("data-zt-band")).toBe("");
@@ -226,7 +253,11 @@ describe("a slider in a section that was given a minimum height", () => {
   it("leaves a section with a minimum height and no band exactly as it was", async () => {
     const root = await draw(page(section("s1", { minHeight: 500 }, [column("c1", 12, [heading, button])])));
     expect(root.querySelector("[data-zt-band]")).toBeNull();
-    expect(root.querySelector("[data-zt-section]")!.firstElementChild!.className).toBe("mx-auto flex flex-col gap-6 max-w-6xl");
+    const sectionEl = root.querySelector<HTMLElement>("[data-zt-section]")!;
+    // Its minimum height is applied, with the centring that comes with it.
+    expect(sectionEl.style.minHeight).toBe("500px");
+    expect(sectionEl.className).toBe("px-4 sm:px-6 py-10 sm:py-14 flex flex-col justify-center");
+    expect(sectionEl.firstElementChild!.className).toBe("mx-auto flex flex-col gap-6 max-w-6xl");
   });
 });
 

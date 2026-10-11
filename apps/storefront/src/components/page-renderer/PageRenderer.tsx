@@ -89,7 +89,8 @@ function StyledElement({ element, ctx }: { element: PageElement; ctx: Ctx }) {
  * row (`data-zt-band` on both), its own style box does not narrow it
  * (`data-zs-band`), and its section is never a store theme's hero, whose
  * heading and column treatment are meant for the builder's own hero and would
- * otherwise land on the band's text.
+ * otherwise land on the band's text. It also sets its own height, so its
+ * section's minimum height is not applied (SectionNode).
  */
 function isBand(element: PageElement): boolean {
   return typeof element?.type === "string" && isShowcaseElement(element.type);
@@ -429,9 +430,13 @@ function SectionNode({ section, ctx, hero = false }: { section: PageSection; ctx
   const rows = Array.isArray(section.rows) ? section.rows : [];
   if (rows.length === 0) return null;
 
-  const { outer, inner } = sectionClasses(section.settings);
-  const minHeight = sectionMinHeight(section.settings);
   const band = holdsBand(section);
+  // A band names its own height for each screen, and a section's minimum height
+  // is one number for every screen: where the band is shorter than it (a tablet,
+  // a phone) it only left empty room above and below. So it is not applied to a
+  // section that holds a band, which is then exactly as tall as what is in it.
+  const minHeight = band ? null : sectionMinHeight(section.settings);
+  const { outer, inner } = sectionClasses(section.settings, minHeight);
 
   // The hooks a store theme lays the section out by — its spacing, width and,
   // for the page's opening section, its own hero layout. Attributes only: a
@@ -445,7 +450,7 @@ function SectionNode({ section, ctx, hero = false }: { section: PageSection; ctx
       {...sectionHooks(section.settings)}
       data-zimos-hero={hero && !band ? "" : undefined}
     >
-      {/* `data-zt-band`: a section with a minimum height centres this wrapper, which would then be only as wide as its content (store-sections.css). */}
+      {/* `data-zt-band`: a wrapper that its section centres as a flex item (the preview does that while a section's height is being dragged) would be only as wide as its content (store-sections.css). */}
       <div className={inner} data-zt-band={band ? "" : undefined}>
         {rows.map((row) => (
           <RowNode key={row.id} row={row} ctx={ctx} />
