@@ -27,6 +27,19 @@ section[data-zt-section]:has(.zs),
 .zt-sections > :has(.zs) {
   border-bottom-width: 0;
 }
+/* A band is always as wide as its section, wherever it was dropped. Its parts
+   are sized for the width of the page (the breakpoints below are the
+   screen's), so in a third of a row a slider is a 330px box with a 50px
+   heading that has nowhere to go. The column that holds one takes the whole
+   row whatever span it was given, and a width from the element's own Style
+   tab does not narrow it. Both marks are written by PageRenderer. */
+[data-zt-col][data-zt-band] {
+  grid-column: 1 / -1;
+}
+[data-zs][data-zs-band] {
+  width: auto;
+  max-width: none;
+}
 
 .zs {
   --zs-ink: var(--color-ink);
