@@ -21,7 +21,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { useErrorMessage, type ErrorOverrides } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
-import { DataState } from "@/components/DataState";
+import { DataState, StateMessage } from "@/components/DataState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CopyButton } from "@/components/CopyButton";
 import { EmptyState } from "@/components/EmptyState";
@@ -81,6 +81,8 @@ const STRINGS = {
     removeTitle: "Remove this domain?",
     removeBody: "Shoppers opening it will no longer reach your store. Your free store address keeps working.",
     noProvider: "No certificate provider is configured yet; certificates cannot be requested.",
+    unavailableTitle: "Custom domains are not available right now",
+    unavailableBody: "This feature is not switched on yet. Your store keeps working on its free address.",
     DOMAIN_TAKEN: "That domain is already connected to another store.",
     DOMAIN_ALREADY_ADDED: "That domain is already on this store.",
     DOMAIN_LIMIT_REACHED: "Your store has reached its number of domains. Remove one to connect another.",
@@ -135,6 +137,8 @@ const STRINGS = {
     removeTitle: "حذف هذا الدومين؟",
     removeBody: "من يفتحه لن يصل إلى متجرك. عنوان متجرك المجاني يظل يعمل.",
     noProvider: "لم يُضبط مزود شهادات بعد؛ لا يمكن طلب شهادات.",
+    unavailableTitle: "ميزة الدومينات غير متاحة حاليًا",
+    unavailableBody: "لم تُفعَّل هذه الميزة بعد. متجرك يعمل على عنوانه المجاني كالمعتاد.",
     DOMAIN_TAKEN: "هذا الدومين مربوط بمتجر آخر بالفعل.",
     DOMAIN_ALREADY_ADDED: "هذا الدومين مضاف إلى هذا المتجر بالفعل.",
     DOMAIN_LIMIT_REACHED: "وصل متجرك إلى الحد الأقصى من الدومينات. احذف دومينًا لربط آخر.",
@@ -284,6 +288,12 @@ export function DomainsTab() {
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-armed only when the waiting set changes
   }, [waitingKey, workspaceId]);
+
+  // The API answers every domains route with its 404 for an unknown path until
+  // its own CUSTOM_DOMAINS_ENABLED is on: the feature is off, nothing failed.
+  if (!state.loading && apiErrorCode(state.error) === "ROUTE_NOT_FOUND") {
+    return <StateMessage role="status" icon={<Globe aria-hidden />} title={t.unavailableTitle} description={t.unavailableBody} />;
+  }
 
   return (
     <DataState loading={state.loading} error={state.error} onRetry={() => void state.refresh()}>
