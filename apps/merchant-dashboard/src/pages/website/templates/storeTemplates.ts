@@ -1,5 +1,6 @@
 import type { PageTree } from "@store-builder/api-client";
 import { THEME_SPECS, type StoreThemeKey } from "../editor/storeThemes";
+import { singleProductSections } from "./singleProduct";
 import { artUrl, drawArt, drawMark, type ArtSpec, type ArtSubject, type ArtTheme } from "./templateArt";
 import { band, buildPage, col, custom, el, fromPreset, row, type SectionDraft } from "./templateTree";
 
@@ -327,15 +328,6 @@ const DEPARTMENTS: TemplateDraft = {
 
 // --- One product ---------------------------------------------------------------
 
-const point = (icon: string, title: string, line: string) => [
-  el("icon", { name: icon, size: 28 }),
-  el("heading", { text: title, level: 4 }),
-  el("text", { text: line }),
-];
-
-const card = (icon: string, title: string, line: string) =>
-  col(4, [el("icon", { name: icon, size: 32 }), el("heading", { text: title, level: 3 }), el("text", { text: line })], { surface: "card" });
-
 const SINGLE: TemplateDraft = {
   key: "single-product",
   name: "منتج واحد — صفحة هبوط",
@@ -352,74 +344,8 @@ const SINGLE: TemplateDraft = {
       key: "home",
       path: "/",
       title: "الرئيسية",
-      sections: [
-        fromPreset("hero-split", [
-          { text: "ساعة تعيش معاك يومك كله", level: 1 },
-          { text: "اكتب هنا في سطرين إيه اللي بيميّز منتجك وليه العميل محتاجه." },
-          { label: "اطلبها دلوقتي", href: "/products", variant: "primary" },
-          { src: artUrl("single-hero"), alt: "الساعة", ratio: "1:1" },
-        ]),
-        fromPreset("text-image", [
-          { text: "اتصمّمت عشان تريّحك", level: 2 },
-          { text: "اكتب هنا فقرة قصيرة عن فكرة المنتج وإزاي بيسهّل يوم العميل." },
-          { label: "اعرف أكتر", href: "/products", variant: "outline" },
-          { src: artUrl("single-story"), alt: "سوار الساعة", ratio: "4:3" },
-        ]),
-        custom(
-          "highlights",
-          [
-            row([col(12, [el("heading", { text: "كل اللي محتاجه في منتج واحد", level: 2 }), el("text", { text: "اكتب هنا سطر يلخّص أهم مميزات المنتج." })], { align: "center" })]),
-            row([
-              col(4, [...point("check", "اكتب الميزة الأولى", "اشرحها في سطر."), ...point("heart", "اكتب الميزة التانية", "اشرحها في سطر.")], { verticalAlign: "center" }),
-              col(4, [el("image", { src: artUrl("single-center"), alt: "شاشة الساعة", ratio: "3:4" })], { verticalAlign: "center" }),
-              col(4, [...point("star", "اكتب الميزة التالتة", "اشرحها في سطر."), ...point("shield", "اكتب الميزة الرابعة", "اشرحها في سطر.")], { verticalAlign: "center" }),
-            ]),
-          ],
-          { background: "paper", padding: "roomy" }
-        ),
-        fromPreset("image-text", [
-          { src: artUrl("single-detail"), alt: "مينا الساعة", ratio: "4:3" },
-          { text: "تفاصيل بتفرق", level: 2 },
-          { text: "اكتب هنا فقرة عن الخامة والصناعة والتفاصيل اللي العميل مش هيشوفها في الصورة." },
-          { label: "شوف التفاصيل", href: "/products", variant: "outline" },
-        ]),
-        custom("reasons", [
-          row([col(12, [el("heading", { text: "ليه تختارها؟", level: 2 }), el("text", { text: "ست أسباب تخلّيك مطمّن وإنت بتطلب." })], { align: "center" })]),
-          row([
-            card("shield", "ضمان", "اكتب هنا مدة الضمان وشروطه."),
-            card("truck", "شحن", "اكتب هنا مناطق الشحن ومدته."),
-            card("check", "استبدال", "اكتب هنا سياسة الاستبدال والاسترجاع."),
-          ]),
-          row([
-            card("star", "جودة", "اكتب هنا إيه اللي بيضمن جودة المنتج."),
-            card("heart", "خدمة عملاء", "اكتب هنا إزاي العميل يوصلك."),
-            card("gift", "هدية", "اكتب هنا لو فيه هدية أو تغليف مع الطلب."),
-          ]),
-        ]),
-        band("product_cards", {
-          heading: "اختار اللي يناسبك",
-          subheading: "الألوان والموديلات المتاحة.",
-          limit: 4,
-          columns: 4,
-          buttonLabel: "كل المنتجات",
-          buttonHref: "/products",
-        }),
-        reviews("اللي جرّبوها بيقولوا إيه"),
-        fromPreset("faq-split", [
-          { text: "أسئلة بتتكرر", level: 2 },
-          { text: "كل اللي محتاج تعرفه قبل ما تطلب." },
-          {
-            title: "",
-            items: [
-              { q: "الضمان مدته قد إيه؟", a: "اكتب هنا مدة الضمان وشروطه." },
-              { q: "الشحن بياخد وقت قد إيه؟", a: "اكتب هنا مدة الشحن ومناطقه." },
-              { q: "ينفع أرجّع المنتج؟", a: "اكتب هنا سياسة الاستبدال والاسترجاع." },
-              { q: "الدفع بيتم إزاي؟", a: "اكتب هنا طرق الدفع المتاحة." },
-            ],
-          },
-        ]),
-        newsletter("خليك على تواصل", "سيب بياناتك ونبلّغك بأي عرض أو موديل جديد."),
-      ],
+      // Written once, with the funnel starter of the same name (singleProduct.ts).
+      sections: singleProductSections("store"),
     },
     story("warranty", "/warranty", "الضمان", "اكتب هنا تفاصيل الضمان: مدته، بيغطّي إيه، وإزاي العميل يستخدمه."),
     shipping("shipping", "/shipping", "الشحن والاستبدال"),

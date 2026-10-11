@@ -19,10 +19,16 @@
 import type { PageElement, PageElementType, PageSection, PageTree } from "@store-builder/api-client";
 import type { Locale } from "@/i18n/LocaleContext";
 import { ELEMENT_SPECS } from "../website/editor/blocks";
+import { singleProductSections } from "../website/templates/singleProduct";
+import { buildPage } from "../website/templates/templateTree";
 import type { UiStepType } from "./funnelAdapter";
 
-/** Alternative starting pages for one step type. */
-export type StepPageVariant = "bundle";
+/**
+ * Alternative starting pages for one step type. "single-product" is the
+ * one-product page of the store template of the same name, laid out in columns
+ * and written once for both (website/templates/singleProduct.ts).
+ */
+export type StepPageVariant = "bundle" | "single-product";
 
 type ElementSpec = [PageElementType, Record<string, unknown>?];
 
@@ -258,7 +264,7 @@ const PAGES: Record<UiStepType, (c: Copy) => SectionSpec[]> = {
   ],
 };
 
-const VARIANTS: Record<StepPageVariant, (c: Copy) => SectionSpec[]> = {
+const VARIANTS: Record<Exclude<StepPageVariant, "single-product">, (c: Copy) => SectionSpec[]> = {
   // Bundle landing: the products that make up the bundle, shown as a grid the
   // merchant points at their own featured products.
   bundle: (c) => [
@@ -284,6 +290,8 @@ const VARIANTS: Record<StepPageVariant, (c: Copy) => SectionSpec[]> = {
 
 /** The page a new step of this type starts with. Always has content, so it passes the publish check. */
 export function stepPageTree(type: UiStepType, locale: Locale, variant?: StepPageVariant): PageTree {
+  // Ids named by place under the same "fs" prefix as every other starting page.
+  if (variant === "single-product") return buildPage("fs", singleProductSections("funnel", locale));
   const c = COPY[locale];
   return tree(variant ? VARIANTS[variant](c) : PAGES[type](c));
 }

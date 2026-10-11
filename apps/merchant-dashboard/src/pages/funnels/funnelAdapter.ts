@@ -350,9 +350,9 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
 
 // ------------------------------------------------- create / duplicate flows --
 
-export type StarterTemplateId = "blank" | "cod-single" | "cod-upsell" | "cod-bundle" | "upsell-downsell" | "lead-magnet";
+export type StarterTemplateId = "blank" | "cod-single" | "single-product" | "cod-upsell" | "cod-bundle" | "upsell-downsell" | "lead-magnet";
 
-export const STARTER_TEMPLATE_IDS: StarterTemplateId[] = ["blank", "cod-single", "cod-upsell", "cod-bundle", "upsell-downsell", "lead-magnet"];
+export const STARTER_TEMPLATE_IDS: StarterTemplateId[] = ["blank", "cod-single", "single-product", "cod-upsell", "cod-bundle", "upsell-downsell", "lead-magnet"];
 
 interface StarterStep {
   key: string;
@@ -390,6 +390,22 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
       { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
     ],
     edges: [
+      { from: "sales", to: "checkout", condition: "always" },
+      { from: "checkout", to: "thank-you", condition: "completed_checkout" },
+    ],
+  },
+  // One product sold on a full page: the one-product page of the store template
+  // of the same name, with the order form on the page itself. An order placed
+  // there goes straight to the thank-you page; the page's buttons, which carry
+  // no link, lead to the checkout step, where the same form stands alone.
+  "single-product": {
+    steps: [
+      { key: "sales", type: "sales", name: N("Sales page", "صفحة البيع"), page: "single-product" },
+      { key: "checkout", type: "checkout", name: N("Cash on delivery checkout", "الدفع عند الاستلام") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
+    ],
+    edges: [
+      { from: "sales", to: "thank-you", condition: "completed_checkout", priority: 1 },
       { from: "sales", to: "checkout", condition: "always" },
       { from: "checkout", to: "thank-you", condition: "completed_checkout" },
     ],

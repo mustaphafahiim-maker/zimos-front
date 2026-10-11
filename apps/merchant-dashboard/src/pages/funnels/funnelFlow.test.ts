@@ -71,6 +71,8 @@ const ALLOWED_ELEMENT_TYPES = new Set([
   "scroll_story",
   "marquee",
   "comparison",
+  // The order form a sales step can hold (the backend's builder elements): the one-product starter has one.
+  "cod_form",
 ]);
 
 const isObj = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
@@ -204,6 +206,39 @@ describe("starter templates", () => {
     expect(out("checkout")).toEqual([expect.objectContaining({ to: "upsell", condition: "completed_checkout" })]);
     const answers = out("upsell").map((e) => [e.condition, e.to]);
     expect(answers).toEqual(expect.arrayContaining([["accepted_offer", "thank-you"], ["declined_offer", "thank-you"]]));
+  });
+
+  it("the one-product template takes the order on its sales page and keeps a checkout step for the page's buttons", () => {
+    for (const locale of LOCALES) {
+      const plan = starterPlan("single-product", locale);
+      expect(plan.steps.map((s) => s.type)).toEqual(["sales", "checkout", "thank_you"]);
+      const out = (from: string) => plan.edges.filter((e) => e.from === from).map((e) => [e.condition, e.to, e.priority]);
+      // An order placed on the page outranks the plain way on, which the page's buttons take.
+      expect(out("sales")).toEqual([
+        ["completed_checkout", "thank-you", 1],
+        ["always", "checkout", 0],
+      ]);
+      expect(out("checkout")).toEqual([["completed_checkout", "thank-you", 0]]);
+
+      const elements = plan.steps[0].tree.sections.flatMap((s) => s.rows.flatMap((r) => r.columns.flatMap((c) => c.elements)));
+      const types = elements.map((e) => e.type);
+      // The order form and the countdown are on the page.
+      expect(types.filter((t) => t === "cod_form")).toHaveLength(1);
+      expect(types.filter((t) => t === "countdown")).toHaveLength(1);
+      // Nothing leads out of the funnel: no catalogue grid, no sign-up form, no button with a link of its own.
+      for (const type of ["product_cards", "product_list", "form"]) expect(types).not.toContain(type);
+      const buttons = elements.filter((e) => e.type === "button");
+      expect(buttons.length).toBeGreaterThan(0);
+      for (const button of buttons) expect(button.props?.href).toBe("");
+      // Every picture has a box of its own, as in the store template.
+      const pictures = elements.filter((e) => e.type === "image");
+      expect(pictures.length).toBeGreaterThan(0);
+      for (const picture of pictures) expect(picture.props?.ratio).toMatch(/^[0-9]+:[0-9]+$/);
+      // No review is made up: the cards say what to write, with no name and no stars.
+      for (const review of elements.filter((e) => e.type === "testimonial")) expect(review.props).toMatchObject({ author: "", rating: 0 });
+      const ids = elements.map((e) => e.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    }
   });
 
   it("the COD bundle template sells a bundle through a product grid", () => {
@@ -396,5 +431,5 @@ describe("saving step pages", () => {
 });
 
 // Keeps the list above honest if a starter is added without a test run over it.
-const _exhaustive: Record<StarterTemplateId, true> = { blank: true, "cod-single": true, "cod-upsell": true, "cod-bundle": true, "upsell-downsell": true, "lead-magnet": true };
+const _exhaustive: Record<StarterTemplateId, true> = { blank: true, "cod-single": true, "single-product": true, "cod-upsell": true, "cod-bundle": true, "upsell-downsell": true, "lead-magnet": true };
 void _exhaustive;
