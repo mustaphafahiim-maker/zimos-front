@@ -147,3 +147,15 @@ export const HERO_MEDIA_ENABLED = import.meta.env.VITE_HERO_MEDIA_ENABLED === "t
  * NEXT_PUBLIC_STORE_SIDEBAR_ENABLED, which is what draws the column.
  */
 export const STORE_SIDEBAR_ENABLED = import.meta.env.VITE_STORE_SIDEBAR_ENABLED === "true";
+
+/**
+ * A shape for new pictures in the website editor: a block added from the
+ * library gives its full-width pictures a 4:3 box (the `ratio` the storefront
+ * already reads), so whatever file the merchant then puts in fills that box
+ * instead of stretching the section to the file's own height. Off: a new
+ * picture names no shape and keeps the file's own, as before. Pages already
+ * saved are never touched either way, and a picture that is given a size
+ * (an icon, a logo) keeps its own shape. No storefront or API switch pairs
+ * with it: it only decides what the editor writes for a new block.
+ */
+export const PICTURE_SHAPE_DEFAULT_ENABLED = import.meta.env.VITE_PICTURE_SHAPE_DEFAULT_ENABLED === "true";

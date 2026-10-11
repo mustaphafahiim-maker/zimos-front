@@ -5,6 +5,7 @@ import type { Dictionary } from "@/lib/i18n";
 import { Countdown } from "./Countdown";
 import { GallerySlideshow } from "./GallerySlideshow";
 import { PageForm } from "./PageForm";
+import { pictureFocus, pictureRatio } from "./pictureFrame";
 import {
   COLUMN_CLASS,
   type LinkItem,
@@ -77,8 +78,13 @@ const IMAGE_MAX_WIDTH: Record<string, string> = {
 /**
  * `eager`: the picture sits in the page's opening section, so it is fetched
  * straight away and first (often the page's largest paint) rather than lazily.
+ *
+ * A picture that names a shape (`ratio`, pictureFrame.ts) is a box of that
+ * shape, as wide as its column, whatever file is put in it; the file fills the
+ * box, cropped around `focusX` / `focusY`. Without one the picture keeps its
+ * own shape and its markup is exactly what it always was.
  */
-export function ImageElement({ props, eager = false }: { props: Props; eager?: boolean }) {
+export function ImageElement({ props, eager = false, rtl = false }: { props: Props; eager?: boolean; rtl?: boolean }) {
   const src = safeUrl(str(props, "src"));
   if (!src) return null;
   const alt = str(props, "alt");
@@ -88,6 +94,8 @@ export function ImageElement({ props, eager = false }: { props: Props; eager?: b
   // as it always did.
   const widthPct = props.width === undefined ? 0 : num(props, "width", 0, 10, 100);
   const maxWidth = widthPct > 0 ? `${widthPct}%` : IMAGE_MAX_WIDTH[str(props, "size", "full")];
+  const ratio = pictureRatio(props.ratio);
+  const focus = ratio ? pictureFocus(props, rtl) : null;
 
   const img = (
     // Merchant images are arbitrary remote URLs (the media host is configurable
@@ -102,6 +110,8 @@ export function ImageElement({ props, eager = false }: { props: Props; eager?: b
       fetchPriority={eager ? "high" : undefined}
       decoding="async"
       className="zt-img h-auto w-full rounded-2xl object-cover"
+      // The shape set on the picture itself: its box no longer follows the file's own size.
+      style={ratio ? { aspectRatio: ratio, ...(focus ? { objectPosition: focus } : {}) } : undefined}
     />
   );
 

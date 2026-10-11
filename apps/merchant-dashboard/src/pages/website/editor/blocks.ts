@@ -7,6 +7,7 @@ import type {
   PageSection,
   PageTree,
 } from "@store-builder/api-client";
+import { PICTURE_SHAPE_DEFAULT_ENABLED } from "@/lib/features";
 import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 import { localizePresetContent } from "./presetCopy";
 import { SHOWCASE_ELEMENT_SPECS, SHOWCASE_PRESETS } from "./showcaseBlocks";
@@ -99,6 +100,34 @@ export const IMAGE_SIZES = [
 ];
 
 /**
+ * The shapes a picture's box can take. Named as width to height, the names the
+ * storefront reads (PICTURE_RATIOS in its page-renderer/pictureFrame.ts); a
+ * picture that names none keeps its own shape, as every picture did before.
+ */
+export const IMAGE_RATIOS = [
+  { value: "1:1", label: "Square (1:1)" },
+  { value: "4:3", label: "Landscape (4:3)" },
+  { value: "3:2", label: "Landscape (3:2)" },
+  { value: "16:9", label: "Wide (16:9)" },
+  { value: "21:9", label: "Strip (21:9)" },
+  { value: "3:4", label: "Portrait (3:4)" },
+  { value: "4:5", label: "Portrait (4:5)" },
+  { value: "2:3", label: "Tall (2:3)" },
+];
+
+/** The part of a cropped picture that stays in view; unset is the centre. */
+export const PICTURE_FOCUS_Y = [
+  { value: "top", label: "Top" },
+  { value: "center", label: "Centre" },
+  { value: "bottom", label: "Bottom" },
+];
+export const PICTURE_FOCUS_X = [
+  { value: "start", label: "Start" },
+  { value: "center", label: "Centre" },
+  { value: "end", label: "End" },
+];
+
+/**
  * One entry per allowed element type. `defaultProps` mirrors the props the
  * seeded templates actually use, so a block added here looks like a block that
  * came from a template.
@@ -156,6 +185,27 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
         min: 10,
         max: 100,
         hint: "A share of its column — or drag the picture's corner in the preview. Replaces Size; leave empty to use Size.",
+      },
+      {
+        key: "ratio",
+        label: "Shape",
+        kind: "select",
+        options: IMAGE_RATIOS,
+        hint: "A fixed box for the picture: any file you put in fills it, cropped to fit. Leave empty and the picture keeps its own shape.",
+      },
+      {
+        key: "focusY",
+        label: "Part of the picture kept in view (up and down)",
+        kind: "select",
+        options: PICTURE_FOCUS_Y,
+        hint: "Used with a shape: the part of the picture that stays when its box crops it. Leave empty for the centre.",
+      },
+      {
+        key: "focusX",
+        label: "Part of the picture kept in view (across)",
+        kind: "select",
+        options: PICTURE_FOCUS_X,
+        hint: "Start is the right side of an Arabic page and the left side of an English one.",
       },
     ],
   },
@@ -3155,7 +3205,22 @@ function uid(prefix: string): string {
  */
 function createElement(type: PageElementType, content: Record<string, unknown> | undefined, locale: EditorLocale): PageElement {
   const props = localizePresetContent({ ...ELEMENT_SPECS[type].defaultProps, ...content }, locale);
+  // While the switch is on, a new full-width picture starts with a box of its own (lib/features).
+  if (type === "image" && PICTURE_SHAPE_DEFAULT_ENABLED && takesDefaultShape(props)) props.ratio = DEFAULT_PICTURE_SHAPE;
   return { id: uid(type), type, props };
+}
+
+/** The shape a new full-width picture starts with while the switch is on: one of IMAGE_RATIOS. */
+export const DEFAULT_PICTURE_SHAPE = "4:3";
+
+/**
+ * Whether a new picture is one the default shape is for: a full-width picture
+ * that names no shape of its own. A picture that is given a size or a width
+ * is an icon, a logo or a mark, and a box of another shape would crop it.
+ */
+function takesDefaultShape(props: Record<string, unknown>): boolean {
+  const unset = (value: unknown) => value === undefined || value === null || value === "";
+  return unset(props.ratio) && unset(props.width) && (unset(props.size) || props.size === "full");
 }
 
 /**

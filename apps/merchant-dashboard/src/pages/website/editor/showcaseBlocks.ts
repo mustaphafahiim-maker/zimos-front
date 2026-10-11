@@ -69,6 +69,27 @@ const productBand = (limit: number): FieldSpec[] => [
   TONE,
 ];
 
+/**
+ * Tabs over the product grid (the storefront's ProductCardsElement): one tab
+ * per collection. Not part of the block's starting props — a grid that names
+ * no tab is the single grid it always was.
+ */
+const PRODUCT_TABS: FieldSpec = {
+  key: "tabs",
+  label: "Tabs",
+  kind: "itemList",
+  itemLabel: "Tab",
+  itemLabelAr: "تبويب",
+  titleKey: "label",
+  max: 6,
+  fields: [
+    { key: "label", label: "Tab name", labelAr: "اسم التبويب", kind: "text" },
+    { key: "labelEn", label: "Tab name (English)", labelAr: "اسم التبويب (إنجليزي)", kind: "text" },
+    { key: "collection", label: "Collection", labelAr: "المجموعة", kind: "text", ltr: true },
+  ],
+  hint: "One tab per collection: write the collection's address name (slug), or leave it empty for a tab of the newest products. With tabs, the Collection field above is not used. Shoppers never see a tab that has no products.",
+};
+
 /** Where a slide's text sits, across and up-and-down: the same three places on a computer and on a phone. */
 const SLIDE_SIDES = [
   { value: "start", label: "Start", labelAr: "البداية" },
@@ -112,6 +133,35 @@ const HERO_FOCUS_FIELDS: ItemSubField[] = [
     options: SLIDE_SIDES,
     hint: "Start is the right side of an Arabic page and the left side of an English one.",
     hintAr: "البداية هي الجهة اليمنى في الصفحة العربية واليسرى في الصفحة الإنجليزية.",
+  },
+];
+
+/** The same two choices for a category tile, whose picture fills a square. */
+const TILE_FOCUS_FIELDS: ItemSubField[] = HERO_FOCUS_FIELDS.map((field) =>
+  field.key === "focusY"
+    ? {
+        ...field,
+        hint: "A tile's picture fills a square, so part of it is cut off. Choose the part that must stay in view.",
+        hintAr: "صورة القسم تملأ مربعًا، فيُقتطع جزء منها. اختر الجزء الذي يجب أن يبقى ظاهرًا.",
+      }
+    : field
+);
+
+/** And for the picture banner, as two fields of its own (labels in Arabic: editorLocale.ts). */
+const BANNER_FOCUS_FIELDS: FieldSpec[] = [
+  {
+    key: "focusY",
+    label: "Part of the picture kept in view (up and down)",
+    kind: "select",
+    options: FOCUS_HEIGHTS,
+    hint: "The banner's box is rarely the shape of the picture, so part of the picture is cut off. Choose the part that must stay in view; leave empty for the centre.",
+  },
+  {
+    key: "focusX",
+    label: "Part of the picture kept in view (across)",
+    kind: "select",
+    options: SLIDE_SIDES,
+    hint: "Start is the right side of an Arabic page and the left side of an English one.",
   },
 ];
 
@@ -280,6 +330,7 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
           { key: "title", label: "Name", labelAr: "الاسم", kind: "text" },
           { key: "titleEn", label: "Name (English)", labelAr: "الاسم (إنجليزي)", kind: "text" },
           { key: "href", label: "Links to", labelAr: "الرابط", kind: "text", ltr: true },
+          ...TILE_FOCUS_FIELDS,
         ],
       },
       { key: "columns", label: "Columns on a computer", kind: "number", min: 2, max: 6 },
@@ -411,7 +462,7 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
     label: "Product cards",
     icon: IconGridView,
     defaultProps: { heading: "", subheading: "", collection: "", limit: 8, columns: 4, showDiscount: true, buttonLabel: "", buttonHref: "/products", tone: "plain" },
-    fields: [...productBand(8), { key: "columns", label: "Columns on a computer", kind: "number", min: 2, max: 6 }],
+    fields: [...productBand(8), { key: "columns", label: "Columns on a computer", kind: "number", min: 2, max: 6 }, PRODUCT_TABS],
   },
   image_banner: {
     label: "Picture banner",
@@ -427,6 +478,7 @@ export const SHOWCASE_ELEMENT_SPECS: Record<ShowcaseType, ShowcaseSpec> = {
       { key: "buttonHref", label: "Button links to", kind: "text", placeholder: "/products" },
       { key: "height", label: "Height on a computer (px)", kind: "number", min: 200, max: 900 },
       { key: "heightMobile", label: "Height on a phone (px)", kind: "number", min: 200, max: 900 },
+      ...BANNER_FOCUS_FIELDS,
       { key: "wave", label: "Wave along the bottom", kind: "boolean" },
     ],
   },

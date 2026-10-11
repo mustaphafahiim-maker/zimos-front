@@ -1,0 +1,513 @@
+{
+  "key": "drinks",
+  "name": "مشروبات وقهوة",
+  "category": "food_beverage",
+  "kind": "store",
+  "tags": [],
+  "rtl": true,
+  "primaryColor": "#A64A24",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#A64A24",
+      "themeSettings": {
+        "storeTheme": "warm",
+        "footer": {
+          "layout": "rich"
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "الرئيسية",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "home-1-hero-slider",
+              "type": "section",
+              "rows": [
+                {
+                  "id": "home-1-hero-slider-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "home-1-hero-slider-r1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "home-1-hero-slider-r1-c1-e1",
+                          "type": "hero_slider",
+                          "props": {
+                            "slides": [
+                              {
+                                "image": "/template-art/drinks-hero.svg",
+                                "mobileImage": "/template-art/drinks-hero-phone.svg",
+                                "alt": "فنجان قهوة",
+                                "heading": "مشروبك المفضّل لحد باب البيت",
+                                "subheading": "قهوة، شاي وعصاير طبيعية، متحضّرة بحب.",
+                                "buttonLabel": "اطلب دلوقتي",
+                                "buttonHref": "/products",
+                                "side": "start",
+                                "vertical": "bottom",
+                                "contentWidth": 480
+                              }
+                            ],
+                            "autoplay": true,
+                            "seconds": 5,
+                            "startDelay": 5,
+                            "arrows": false,
+                            "dots": false,
+                            "wave": true,
+                            "height": 560,
+                            "heightTablet": 480
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              }
+            },
+            {
+              "id": "home-2-trust-strip",
+              "type": "section",
+              "rows": [
+                {
+                  "id": "home-2-trust-strip-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "home-2-trust-strip-r1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "home-2-trust-strip-r1-c1-e1",
+                          "type": "trust_strip",
+                          "props": {
+                            "items": [
+                              {
+                                "icon": "truck",
+                                "title": "توصيل سريع",
+                                "text": "اكتب هنا مناطق التوصيل ومدته."
+                              },
+                              {
+                                "icon": "cash",
+                                "title": "الدفع عند الاستلام",
+                                "text": "اكتب هنا طرق الدفع المتاحة."
+                              },
+                              {
+                                "icon": "support",
+                                "title": "معاك على طول",
+                                "text": "اكتب هنا إزاي العميل يوصلك."
+                              }
+                            ],
+                            "tone": "plain"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              }
+            },
+            {
+              "id": "home-3-image-text",
+              "type": "section",
+              "rows": [
+                {
+                  "id": "home-3-image-text-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "home-3-image-text-r1-c1",
+                      "type": "column",
+                      "span": 5,
+                      "elements": [
+                        {
+                          "id": "home-3-image-text-r1-c1-e1",
+                          "type": "image",
+                          "props": {
+                            "src": "/template-art/drinks-story.svg",
+                            "alt": "أدوات تحضير القهوة",
+                            "ratio": "4:3"
+                          }
+                        }
+                      ],
+                      "settings": {
+                        "verticalAlign": "center"
+                      }
+                    },
+                    {
+                      "id": "home-3-image-text-r1-c2",
+                      "type": "column",
+                      "span": 7,
+                      "elements": [
+                        {
+                          "id": "home-3-image-text-r1-c2-e1",
+                          "type": "heading",
+                          "props": {
+                            "text": "حكايتنا",
+                            "level": 2
+                          }
+                        },
+                        {
+                          "id": "home-3-image-text-r1-c2-e2",
+                          "type": "text",
+                          "props": {
+                            "text": "اكتب هنا حكايتك مع المشروبات: بدأت إزاي، وبتختار مكوناتك منين."
+                          }
+                        },
+                        {
+                          "id": "home-3-image-text-r1-c2-e3",
+                          "type": "button",
+                          "props": {
+                            "label": "اعرف أكتر",
+                            "href": "/about",
+                            "variant": "outline"
+                          }
+                        }
+                      ],
+                      "settings": {
+                        "verticalAlign": "center"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "home-4-category-tiles",
+              "type": "section",
+              "rows": [
+                {
+                  "id": "home-4-category-tiles-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "home-4-category-tiles-r1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "home-4-category-tiles-r1-c1-e1",
+                          "type": "category_tiles",
+                          "props": {
+                            "heading": "اختار مشروبك",
+                            "items": [
+                              {
+                                "image": "/template-art/drinks-cat-1.svg",
+                                "title": "قهوة",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/template-art/drinks-cat-2.svg",
+                                "title": "شاي",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/template-art/drinks-cat-3.svg",
+                                "title": "عصاير طبيعية",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/template-art/drinks-cat-4.svg",
+                                "title": "مشروبات باردة",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/template-art/drinks-cat-5.svg",
+                                "title": "أعشاب",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/template-art/drinks-cat-6.svg",
+                                "title": "مستلزمات التحضير",
+                                "href": "/products"
+                              }
+                            ],
+                            "columns": 6,
+                            "columnsMobile": 3,
+                            "tone": "plain"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              }
+            },
+            {
+              "id": "home-5-product-cards",
+              "type": "section",
+              "rows": [
+                {
+                  "id": "home-5-product-cards-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "home-5-product-cards-r1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "home-5-product-cards-r1-c1-e1",
+                          "type": "product_cards",
+                          "props": {
+                            "heading": "الأكتر طلبًا",
+                            "subheading": "المشروبات اللي عملاءنا بيطلبوها كل يوم.",
+                            "collection": "",
+                            "limit": 8,
+                            "columns": 4,
+                            "showDiscount": true,
+                            "buttonLabel": "كل المنتجات",
+                            "buttonHref": "/products",
+                            "tone": "plain"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              }
+            },
+            {
+              "id": "home-6-testimonial-wall",
+              "type": "section",
+              "rows": [
+                {
+                  "id": "home-6-testimonial-wall-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "home-6-testimonial-wall-r1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "home-6-testimonial-wall-r1-c1-e1",
+                          "type": "heading",
+                          "props": {
+                            "text": "عملاءنا بيقولوا إيه",
+                            "level": 2
+                          }
+                        },
+                        {
+                          "id": "home-6-testimonial-wall-r1-c1-e2",
+                          "type": "text",
+                          "props": {
+                            "text": "اكتب هنا سطر عن مصدر الآراء دي."
+                          }
+                        }
+                      ],
+                      "settings": {
+                        "align": "center"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "home-6-testimonial-wall-r2",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "home-6-testimonial-wall-r2-c1",
+                      "type": "column",
+                      "span": 4,
+                      "elements": [
+                        {
+                          "id": "home-6-testimonial-wall-r2-c1-e1",
+                          "type": "testimonial",
+                          "props": {
+                            "quote": "اكتب هنا رأي عميل حقيقي اشترى منك.",
+                            "author": "",
+                            "rating": 0
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "id": "home-6-testimonial-wall-r2-c2",
+                      "type": "column",
+                      "span": 4,
+                      "elements": [
+                        {
+                          "id": "home-6-testimonial-wall-r2-c2-e1",
+                          "type": "testimonial",
+                          "props": {
+                            "quote": "اكتب هنا رأي عميل حقيقي اشترى منك.",
+                            "author": "",
+                            "rating": 0
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "id": "home-6-testimonial-wall-r2-c3",
+                      "type": "column",
+                      "span": 4,
+                      "elements": [
+                        {
+                          "id": "home-6-testimonial-wall-r2-c3-e1",
+                          "type": "testimonial",
+                          "props": {
+                            "quote": "اكتب هنا رأي عميل حقيقي اشترى منك.",
+                            "author": "",
+                            "rating": 0
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "settings": {
+                "background": "paper",
+                "padding": "roomy"
+              }
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/about",
+        "title": "حكايتنا",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "about-1-rich-text-band",
+              "type": "section",
+              "rows": [
+                {
+                  "id": "about-1-rich-text-band-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "about-1-rich-text-band-r1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "about-1-rich-text-band-r1-c1-e1",
+                          "type": "heading",
+                          "props": {
+                            "text": "حكايتنا",
+                            "level": 2
+                          }
+                        },
+                        {
+                          "id": "about-1-rich-text-band-r1-c1-e2",
+                          "type": "rich_text",
+                          "props": {
+                            "text": "اكتب هنا حكايتك مع المشروبات: بدأت إزاي، وإيه اللي بيميّز اللي بتقدّمه."
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "settings": {
+                "background": "paper",
+                "padding": "roomy"
+              }
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/delivery",
+        "title": "التوصيل والاستبدال",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "delivery-1-shipping-returns",
+              "type": "section",
+              "rows": [
+                {
+                  "id": "delivery-1-shipping-returns-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "delivery-1-shipping-returns-r1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "delivery-1-shipping-returns-r1-c1-e1",
+                          "type": "heading",
+                          "props": {
+                            "text": "التوصيل والاستبدال",
+                            "level": 2
+                          }
+                        },
+                        {
+                          "id": "delivery-1-shipping-returns-r1-c1-e2",
+                          "type": "accordion",
+                          "props": {
+                            "title": "",
+                            "items": [
+                              {
+                                "q": "الشحن",
+                                "a": "اكتب هنا مناطق الشحن ومواعيده وتكلفته."
+                              },
+                              {
+                                "q": "الاستبدال والاسترجاع",
+                                "a": "اكتب هنا سياسة الاستبدال والاسترجاع لديك."
+                              },
+                              {
+                                "q": "الدفع",
+                                "a": "اكتب هنا طرق الدفع التي تقبلها."
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "id": "delivery-1-shipping-returns-r1-c1-e3",
+                          "type": "text",
+                          "props": {
+                            "text": "اكتب هنا أي ملاحظة أخيرة عن الطلبات."
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "settings": {
+                "background": "paper"
+              }
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

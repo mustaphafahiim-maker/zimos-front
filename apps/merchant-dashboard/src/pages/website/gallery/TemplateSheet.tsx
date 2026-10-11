@@ -15,11 +15,10 @@ import { useSaveThemeSettings } from "@/lib/themeSettingsSave";
 import { useAsync } from "@/lib/useAsync";
 import { invalidateCached } from "@/lib/useCachedAsync";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { TEMPLATE_COLOR_SOURCE } from "../editor/storeLook";
 import { useCodeLabel } from "./codes";
 import { DevicePreview } from "./DevicePreview";
 import { TemplatePlaceholder } from "./TemplatePlaceholder";
-import { storeHasOwnLook, templateColour, useTemplatePreviewTheme } from "./templateLook";
+import { storeHasOwnLook, takeTemplateLook, templateColour, templateStoreTheme, useTemplatePreviewTheme, withTemplateTheme } from "./templateLook";
 import { useMountedOpen } from "./useMountedOpen";
 
 const STRINGS = {
@@ -30,6 +29,7 @@ const STRINGS = {
     catalogueNote:
       "This is your store in this template, with your own products. Product sections say “coming soon” until you add some.",
     inUseNote: "Your current site started from this template.",
+    ownThemeNote: "The preview shows this template in its own theme. Your store keeps the look it has.",
     loadingDetails: "Loading the template's pages…",
     detailError: "We couldn't load this template's pages. You can still use it.",
     retry: "Try again",
@@ -47,6 +47,9 @@ const STRINGS = {
     takesLook: "Your store takes this template's colours — you can change them in the editor.",
     takesLookLive:
       "Your store has no colours of its own yet, so it takes this template's right away — on the live store too. You can change them in the editor.",
+    takesTheme: "Your store takes this template's theme and colours — you can change them in the editor.",
+    takesThemeLive:
+      "Your store has no look of its own yet, so it takes this template's theme and colours right away — on the live store too. You can change them in the editor.",
     keepsLook: "Your store's colours and theme stay as they are.",
     siteName: "Site name",
     siteNameHint: "A temporary address is made from it. You can change it later.",
@@ -62,6 +65,7 @@ const STRINGS = {
     noPreview: "لا توجد معاينة بعد",
     catalogueNote: "هذا متجرك بهذا القالب وبمنتجاتك أنت. أقسام المنتجات تقول «قريبًا» إلى أن تضيف منتجات.",
     inUseNote: "موقعك الحالي بدأ من هذا القالب.",
+    ownThemeNote: "المعاينة تعرض القالب بمظهره الخاص. متجرك سيحتفظ بمظهره الحالي.",
     loadingDetails: "جارٍ تحميل صفحات القالب…",
     detailError: "تعذّر تحميل صفحات القالب. يمكنك استخدامه على أي حال.",
     retry: "إعادة المحاولة",
@@ -80,6 +84,9 @@ const STRINGS = {
     takesLook: "سيأخذ متجرك ألوان القالب — ويمكنك تغييرها من المحرر.",
     takesLookLive:
       "ليس لمتجرك ألوان خاصة بعد، فسيأخذ ألوان القالب فورًا — ويظهر ذلك على المتجر المنشور أيضًا. يمكنك تغييرها من المحرر.",
+    takesTheme: "سيأخذ متجرك مظهر هذا القالب وألوانه — ويمكنك تغييرهما من المحرر.",
+    takesThemeLive:
+      "ليس لمتجرك مظهر خاص بعد، فسيأخذ مظهر القالب وألوانه فورًا — ويظهر ذلك على المتجر المنشور أيضًا. يمكنك تغييرهما من المحرر.",
     keepsLook: "ألوان متجرك ومظهره تبقى كما هي.",
     siteName: "اسم الموقع",
     siteNameHint: "ننشئ منه عنوانًا مؤقتًا، ويمكنك تغييره لاحقًا.",
@@ -178,6 +185,8 @@ export function TemplateSheet({
   const styles = detail.data?.globalStyles;
   const colour = templateColour(styles?.primaryColor);
   const ownLook = storeHasOwnLook(currentWorkspace?.themeSettings);
+  // A template may bring a theme with its colour; the confirmation then says so.
+  const bringsTheme = templateStoreTheme(styles) !== null;
 
   /**
    * A template's colour lives in its `globalStyles`, which createWebsite copies
@@ -194,19 +203,8 @@ export function TemplateSheet({
     try {
       // Asked again of the server's copy: another tab may have picked a look since.
       await saveThemeSettings((current) =>
-        storeHasOwnLook(current)
-          ? null
-          : {
-              themeSettings: {
-                ...current,
-                // A template may bring its whole look — theme, header, footer (globalStyles.themeSettings).
-                ...(styles?.themeSettings && typeof styles.themeSettings === "object"
-                  ? (styles.themeSettings as Record<string, unknown>)
-                  : {}),
-                primaryColor: colour,
-                primaryColorSource: TEMPLATE_COLOR_SOURCE,
-              },
-            }
+        // A template may bring its whole look — theme, header, footer (globalStyles.themeSettings).
+        storeHasOwnLook(current) ? null : { themeSettings: takeTemplateLook(current, styles, colour) }
       );
     } catch {
       /* the site was created; the merchant can still pick a colour in the editor */
@@ -251,8 +249,8 @@ export function TemplateSheet({
     { id: "data", icon: IconCheck, tone: "kept", text: t.keepsData },
     ...(colour && !ownLook
       ? currentSite?.status === "published"
-        ? [{ id: "look", icon: IconWarning, tone: "heed" as const, text: t.takesLookLive }]
-        : [{ id: "look", icon: IconStyle, tone: "brand" as const, text: t.takesLook }]
+        ? [{ id: "look", icon: IconWarning, tone: "heed" as const, text: bringsTheme ? t.takesThemeLive : t.takesLookLive }]
+        : [{ id: "look", icon: IconStyle, tone: "brand" as const, text: bringsTheme ? t.takesTheme : t.takesLook }]
       : ownLook
         ? [{ id: "look", icon: IconCheck, tone: "kept" as const, text: t.keepsLook }]
         : []),
@@ -300,11 +298,18 @@ export function TemplateSheet({
             workspaceId={workspaceId}
             templateId={template.id}
             theme={theme}
+            themeFrom={withTemplateTheme}
             title={fmt(t.livePreview, { name: template.name })}
             fallback={<TemplatePlaceholder color={template.primaryColor} title={template.name} label={t.noPreview} />}
             // What is left of the sheet once its header, the device switch and its footer are counted.
             stageClassName="h-[calc(92dvh_-_17.5rem)] min-h-[20rem] sm:h-[calc(min(85dvh,46rem)_-_15.5rem)]"
           />
+          {/* The preview is of the template; a store with a look of its own is told it keeps that look. */}
+          {ownLook && bringsTheme && (
+            <p data-slot="template-own-theme" className="text-xs leading-5 font-medium text-ink">
+              {t.ownThemeNote}
+            </p>
+          )}
           <p className="text-xs leading-5 text-ink-soft">{t.catalogueNote}</p>
           <div className="text-sm">
             {detail.loading ? (

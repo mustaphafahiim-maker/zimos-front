@@ -23,19 +23,28 @@ export function homeTreeOf(detail: Pick<WebsiteTemplateDetail, "pages">): PageTr
   return data;
 }
 
-const homeTrees = new Map<string, Promise<PageTree | null>>();
+/** What a template's preview needs of the template: the page to draw and the styles it carries. */
+export interface TemplatePreviewData {
+  home: PageTree | null;
+  globalStyles: Record<string, unknown>;
+}
+
+const previews = new Map<string, Promise<TemplatePreviewData>>();
 
 /**
- * A template's home tree, fetched once per session. Templates are a published
- * catalogue, so the card and the full-size preview can share one request. A
- * failed fetch is forgotten, so opening the template again retries it.
+ * A template's home tree and its styles, fetched once per session. Templates
+ * are a published catalogue, so the card and the full-size preview can share
+ * one request. A failed fetch is forgotten, so opening the template again
+ * retries it.
  */
-export function loadTemplateHome(templateId: string): Promise<PageTree | null> {
-  let pending = homeTrees.get(templateId);
+export function loadTemplatePreview(templateId: string): Promise<TemplatePreviewData> {
+  let pending = previews.get(templateId);
   if (!pending) {
-    pending = apiClient.getWebsiteTemplate(templateId).then(homeTreeOf);
-    pending.catch(() => homeTrees.delete(templateId));
-    homeTrees.set(templateId, pending);
+    pending = apiClient
+      .getWebsiteTemplate(templateId)
+      .then((detail) => ({ home: homeTreeOf(detail), globalStyles: detail.globalStyles ?? {} }));
+    pending.catch(() => previews.delete(templateId));
+    previews.set(templateId, pending);
   }
   return pending;
 }

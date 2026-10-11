@@ -8,7 +8,9 @@ import { EmptyBlock } from "../commerce";
 import { showcaseCopy } from "./copy";
 import { heroFocusMarkup, heroHasText, heroLookMarkup, heroPhoneHeight, resolveHeroFocus, resolveHeroLook } from "./heroLook";
 import { HeroSlider, type HeroSlide } from "./HeroSlider";
+import { pictureFocus } from "../pictureFrame";
 import { NeedTabs, type NeedTab } from "./NeedTabs";
+import { ProductTabs } from "./ProductTabs";
 import { RailTrack } from "./RailTrack";
 import { ReelsTrack } from "./ReelsTrack";
 import { ShelfRail } from "./ShelfRail";
@@ -146,11 +148,14 @@ function HeroSliderElement({ props, locale, editable }: ElementProps) {
 // --- category_tiles ------------------------------------------------------
 
 function CategoryTilesElement({ props, locale, editable }: ElementProps) {
+  const rtl = dirFor(locale) === "rtl";
   const tiles = items(props, "items", 24)
     .map((item) => ({
       image: safeUrl(str(item, "image")),
       title: loc(item, "title", locale),
       href: linkOf(item, "href"),
+      // The part of the picture its square keeps in view; nothing for the centre (pictureFrame.ts).
+      focus: pictureFocus(item, rtl),
     }))
     .filter((tile) => tile.image || tile.title.trim());
   if (tiles.length === 0) return <Empty editable={editable} message={showcaseCopy(locale).emptyTiles} />;
@@ -182,6 +187,7 @@ function CategoryTilesElement({ props, locale, editable }: ElementProps) {
                     loading={i < 3 ? "eager" : "lazy"}
                     decoding="async"
                     className="zs-cats__img"
+                    style={tile.focus ? { objectPosition: tile.focus } : undefined}
                   />
                 ) : null}
               </div>
@@ -711,10 +717,22 @@ async function ProductShelfElement(ctx: ElementProps) {
 
 // --- product_cards ----------------------------------------------------------------------
 
+/**
+ * The tabs a product grid names (`tabs`): a label a shopper reads and the
+ * collection it shows — none named is the newest products, the "All" tab. A
+ * grid that names none is the single grid it always was.
+ */
+function productTabs(props: Props, locale: Locale): Array<{ label: string; collection: string }> {
+  return items(props, "tabs", 6)
+    .map((tab) => ({ label: loc(tab, "label", locale).trim(), collection: str(tab, "collection") }))
+    .filter((tab) => tab.label !== "");
+}
+
 async function ProductCardsElement(ctx: ElementProps) {
-  const { props, currency, locale } = ctx;
-  const result = await bandProducts(ctx, 8);
-  if ("empty" in result) return result.empty;
+  const { props, currency, locale, workspaceId, editable } = ctx;
+  const named = productTabs(props, locale);
+  const result = named.length === 0 ? await bandProducts(ctx, 8) : null;
+  if (result && "empty" in result) return result.empty;
 
   const copy = showcaseCopy(locale);
   const heading = loc(props, "heading", locale);
@@ -729,6 +747,31 @@ async function ProductCardsElement(ctx: ElementProps) {
         {buttonLabel}
       </StoreLink>
     ) : null;
+
+  let body: ReactNode;
+  if (result) {
+    body = grid(result.products);
+  } else {
+    const limit = num(props, "limit", 8, 1, 24);
+    const fetched = await Promise.all(named.map((tab) => collectionProducts(workspaceId, tab.collection, limit)));
+    // A shopper never meets an empty tab. In the editor every tab shows, so one with no products yet can be found and given a collection.
+    const tabs = named.map((tab, i) => ({ ...tab, products: fetched[i] ?? [] })).filter((tab) => editable || tab.products.length > 0);
+    if (tabs.length === 0) return null;
+    body =
+      tabs.length === 1 && !editable ? (
+        // One tab left is no choice to offer: its products, as a plain grid.
+        grid(tabs[0].products)
+      ) : (
+        <ProductTabs
+          tabs={tabs.map((tab, i) => ({ key: `${i}`, label: tab.label }))}
+          panels={tabs.map((tab, i) =>
+            tab.products.length > 0 ? grid(tab.products) : <EmptyBlock key={i} title="" message={getDictionary(locale).renderer.emptyProducts} />
+          )}
+          label={heading}
+          rtl={dirFor(locale) === "rtl"}
+        />
+      );
+  }
 
   return (
     <section
@@ -746,41 +789,47 @@ async function ProductCardsElement(ctx: ElementProps) {
             {viewAll}
           </header>
         ) : null}
-        <div className="zs-pgrid__grid">
-          {result.products.map((product) => {
-            const image = firstImage(product);
-            const { now, was, percent } = pricing(product, currency, locale);
-            const href = `/products/${product.slug}`;
-            return (
-              <article key={product.id} className="zs-pgrid__card">
-                <StoreLink className="zs-pgrid__media" href={href} aria-label={product.name} tabIndex={-1}>
-                  <div className="zs-pgrid__box">
-                    {showDiscount && percent ? <span className="zs-pgrid__badge">{copy.discount(percent)}</span> : null}
-                    {image ? (
-                      // Merchant media are arbitrary remote URLs (no next/image allowlist).
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={image} alt="" width={900} height={900} loading="lazy" decoding="async" className="zs-pgrid__img" />
-                    ) : null}
-                  </div>
-                </StoreLink>
-                <div className="zs-pgrid__body">
-                  <h3>
-                    <StoreLink href={href}>{product.name}</StoreLink>
-                  </h3>
-                  <div className="zs-pgrid__price" data-sale={was ? "" : undefined}>
-                    {was ? <s>{was}</s> : null}
-                    <span>{now}</span>
-                  </div>
-                  <ProductAction product={product} label={cartLabel} locale={locale} />
-                </div>
-              </article>
-            );
-          })}
-        </div>
+        {body}
         {viewAll ? <div className="zs-pgrid__footer">{viewAll}</div> : null}
       </div>
     </section>
   );
+
+  function grid(products: StorefrontProduct[]) {
+    return (
+      <div className="zs-pgrid__grid">
+        {products.map((product) => {
+          const image = firstImage(product);
+          const { now, was, percent } = pricing(product, currency, locale);
+          const href = `/products/${product.slug}`;
+          return (
+            <article key={product.id} className="zs-pgrid__card">
+              <StoreLink className="zs-pgrid__media" href={href} aria-label={product.name} tabIndex={-1}>
+                <div className="zs-pgrid__box">
+                  {showDiscount && percent ? <span className="zs-pgrid__badge">{copy.discount(percent)}</span> : null}
+                  {image ? (
+                    // Merchant media are arbitrary remote URLs (no next/image allowlist).
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={image} alt="" width={900} height={900} loading="lazy" decoding="async" className="zs-pgrid__img" />
+                  ) : null}
+                </div>
+              </StoreLink>
+              <div className="zs-pgrid__body">
+                <h3>
+                  <StoreLink href={href}>{product.name}</StoreLink>
+                </h3>
+                <div className="zs-pgrid__price" data-sale={was ? "" : undefined}>
+                  {was ? <s>{was}</s> : null}
+                  <span>{now}</span>
+                </div>
+                <ProductAction product={product} label={cartLabel} locale={locale} />
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    );
+  }
 }
 
 // --- image_banner -------------------------------------------------------------------------
@@ -795,6 +844,8 @@ function ImageBannerElement({ props, locale, editable, eager = false }: ElementP
   const buttonLabel = loc(props, "buttonLabel", locale);
   const buttonHref = linkOf(props, "buttonHref");
   const hasCopy = heading.trim() || text.trim() || (buttonLabel.trim() && buttonHref);
+  // The part of the picture the banner's box keeps in view; nothing for the centre (pictureFrame.ts).
+  const focus = pictureFocus(props, dirFor(locale) === "rtl");
 
   return (
     <section
@@ -810,7 +861,16 @@ function ImageBannerElement({ props, locale, editable, eager = false }: ElementP
           {mobileImage ? <source media="(max-width: 767px)" srcSet={mobileImage} /> : null}
           {/* Merchant media are arbitrary remote URLs (no next/image allowlist). */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={image} alt={str(props, "alt")} width={2600} height={1114} loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : undefined} decoding="async" />
+          <img
+            src={image}
+            alt={str(props, "alt")}
+            width={2600}
+            height={1114}
+            loading={eager ? "eager" : "lazy"}
+            fetchPriority={eager ? "high" : undefined}
+            decoding="async"
+            style={focus ? { objectPosition: focus } : undefined}
+          />
         </picture>
         {hasCopy ? <span className="zs-banner__overlay" aria-hidden /> : null}
       </div>

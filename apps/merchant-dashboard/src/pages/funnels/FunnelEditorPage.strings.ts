@@ -450,6 +450,11 @@ export const STARTER_TEMPLATE_TEXT: Record<Locale, Record<StarterTemplateId, { n
   en: {
     blank: { name: "Blank", description: "Landing → checkout → thank you. Build the rest yourself." },
     "cod-single": { name: "COD single product", description: "One product, cash on delivery, phone-first checkout." },
+    "single-product": {
+      name: "COD single product, full sales page",
+      description:
+        "A full page for one product (pictures, highlights, reasons to buy, reviews, questions) with the order form on the page → cash on delivery checkout → thank you.",
+    },
     "cod-upsell": {
       name: "COD product + one-click upsell",
       description: "Product page → cash on delivery checkout → one extra offer → thank you. Pick the upsell's offer in the editor.",
@@ -464,6 +469,11 @@ export const STARTER_TEMPLATE_TEXT: Record<Locale, Record<StarterTemplateId, { n
   ar: {
     blank: { name: "فارغ", description: "صفحة الهبوط ← صفحة الدفع ← صفحة الشكر. وأكمل الباقي بنفسك." },
     "cod-single": { name: "منتج واحد بالدفع عند الاستلام", description: "منتج واحد، دفع عند الاستلام، وصفحة دفع تبدأ برقم الهاتف." },
+    "single-product": {
+      name: "منتج واحد بصفحة بيع كاملة",
+      description:
+        "صفحة كاملة لمنتج واحد (صور ومميزات وأسباب الشراء وآراء وأسئلة) بها نموذج الطلب ← الدفع عند الاستلام ← صفحة الشكر.",
+    },
     "cod-upsell": {
       name: "منتج بالدفع عند الاستلام مع عرض إضافي بنقرة",
       description: "صفحة المنتج ← الدفع عند الاستلام ← عرض إضافي ← صفحة الشكر. اختر عرض الخطوة الإضافية من المحرر.",
