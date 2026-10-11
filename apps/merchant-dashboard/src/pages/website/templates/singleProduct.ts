@@ -13,8 +13,11 @@ import { band, col, custom, el, fromPreset, row, type SectionDraft } from "./tem
  *   store    its buttons lead to the catalogue; it shows the store's products,
  *            and ends with the newsletter
  *   funnel   its buttons have no link (the funnel decides where a press
- *            leads); it has a countdown, takes the order on the page itself
- *            with the cash-on-delivery form, and ends with one last call
+ *            leads); it takes the order on the page itself with the
+ *            cash-on-delivery form, and ends with one last call
+ *
+ * Neither carries a countdown: a timer that starts by itself the day a page
+ * is published hurries the shopper for an offer the merchant never made.
  *
  * The words are in the two languages a funnel can be made in; the store
  * template is Arabic. As everywhere in the templates, a line that would
@@ -58,8 +61,6 @@ interface Copy {
   newsTitle: string;
   newsText: string;
   subscribe: string;
-  offerTitle: string;
-  countdownLabel: string;
   orderTitle: string;
   orderText: string;
   closeTitle: string;
@@ -112,8 +113,6 @@ const COPY: Record<SingleProductLang, Copy> = {
     newsTitle: "خليك على تواصل",
     newsText: "سيب بياناتك ونبلّغك بأي عرض أو موديل جديد.",
     subscribe: "اشترك",
-    offerTitle: "اكتب هنا عنوان العرض",
-    countdownLabel: "العرض بينتهي خلال",
     orderTitle: "اطلبها دلوقتي",
     orderText: "اكتب هنا سطر يطمّن العميل قبل ما يطلب: الدفع، التوصيل، أو الاستبدال.",
     closeTitle: "جاهز تطلب؟",
@@ -164,8 +163,6 @@ const COPY: Record<SingleProductLang, Copy> = {
     newsTitle: "Stay in touch",
     newsText: "Leave your details and we will tell you about any offer or new model.",
     subscribe: "Subscribe",
-    offerTitle: "Write here the offer's title",
-    countdownLabel: "The offer ends in",
     orderTitle: "Order now",
     orderText: "Write here a line that reassures the customer before ordering: payment, delivery or exchange.",
     closeTitle: "Ready to order?",
@@ -245,12 +242,6 @@ export function singleProductSections(use: SingleProductUse, lang: SingleProduct
 
   return [
     opening,
-    // The timer runs from the day the funnel is published (the countdown's own rule); its title is the merchant's to write.
-    fromPreset("countdown-band", [
-      { text: c.offerTitle, level: 2 },
-      { label: c.countdownLabel, endsInHours: 24 },
-      { label: c.orderNow, href: "", variant: "primary" },
-    ]),
     idea,
     highlights,
     details,

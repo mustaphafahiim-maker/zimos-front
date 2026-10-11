@@ -222,9 +222,9 @@ describe("starter templates", () => {
 
       const elements = plan.steps[0].tree.sections.flatMap((s) => s.rows.flatMap((r) => r.columns.flatMap((c) => c.elements)));
       const types = elements.map((e) => e.type);
-      // The order form and the countdown are on the page.
+      // The order form is on the page, and no countdown: nothing hurries the shopper for an offer the merchant never made.
       expect(types.filter((t) => t === "cod_form")).toHaveLength(1);
-      expect(types.filter((t) => t === "countdown")).toHaveLength(1);
+      expect(types).not.toContain("countdown");
       // Nothing leads out of the funnel: no catalogue grid, no sign-up form, no button with a link of its own.
       for (const type of ["product_cards", "product_list", "form"]) expect(types).not.toContain(type);
       const buttons = elements.filter((e) => e.type === "button");

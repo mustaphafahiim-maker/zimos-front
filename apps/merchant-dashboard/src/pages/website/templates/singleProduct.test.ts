@@ -26,9 +26,9 @@ describe("the one-product page", () => {
     expect(template.version.pages[0].builderData).toEqual(buildPage("home", singleProductSections("store")));
   });
 
-  it("keeps the same sections for a store and for a funnel, but for three", () => {
+  it("keeps the same sections for a store and for a funnel, but for two", () => {
     expect(names(page("store"))).toEqual(["hero-split", "text-image", "highlights", "image-text", "reasons", "product-cards", "testimonial-wall", "faq-split", "newsletter"]);
-    expect(names(page("funnel"))).toEqual(["hero-split", "countdown-band", "text-image", "highlights", "image-text", "reasons", "order", "testimonial-wall", "faq-split", "cta-band"]);
+    expect(names(page("funnel"))).toEqual(["hero-split", "text-image", "highlights", "image-text", "reasons", "order", "testimonial-wall", "faq-split", "cta-band"]);
   });
 
   it("words and lays out the shared sections the same, apart from where a button leads", () => {
@@ -53,13 +53,16 @@ describe("the one-product page", () => {
     expect(new Set(labels).size).toBe(1);
   });
 
-  it("takes the order on the funnel's page, with a countdown the merchant titles", () => {
+  it("takes the order on the funnel's page", () => {
     const funnel = elementsOf(page("funnel"));
     expect(funnel.find((e) => e.type === "cod_form")?.props).toEqual({ title: "", productId: "" });
-    expect(funnel.find((e) => e.type === "countdown")?.props).toMatchObject({ endsInHours: 24 });
-    const store = elementsOf(page("store")).map((e) => e.type);
-    expect(store).not.toContain("cod_form");
-    expect(store).not.toContain("countdown");
+    expect(elementsOf(page("store")).map((e) => e.type)).not.toContain("cod_form");
+  });
+
+  it("puts no countdown on either page: no timer hurries a shopper for an offer the merchant never made", () => {
+    for (const lang of ["ar", "en"] as const) {
+      for (const use of ["store", "funnel"] as const) expect(elementsOf(page(use, lang)).map((e) => e.type), `${use} ${lang}`).not.toContain("countdown");
+    }
   });
 
   it("is written in both languages a funnel can be made in, element for element", () => {
