@@ -32,12 +32,25 @@ section[data-zt-section]:has(.zs),
    screen's), so in a third of a row a slider is a 330px box with a 50px
    heading that has nowhere to go. The column that holds one takes the whole
    row whatever span it was given, and a width from the element's own Style
-   tab does not narrow it. Both marks are written by PageRenderer. */
+   tab does not narrow it. The marks are written by PageRenderer. */
 [data-zt-col][data-zt-band] {
   grid-column: 1 / -1;
 }
+/* A band has no width of its own (a slider's parts are all laid over it), so
+   a box that is only as wide as its content leaves it none. Two boxes above a
+   band can be that: its section's wrapper, which a section with a minimum
+   height centres as a flex item (264px then, the row's eleven gutters, and
+   nothing at all on a phone), and its own style box once the Style tab gives
+   it a place, which is an automatic side margin. Each names its width
+   instead. The wrapper keeps its own limit and its centring, so a section of
+   normal width is still held to its container. */
+[data-zt-section] > [data-zt-band] {
+  width: 100%;
+  min-width: 0;
+}
 [data-zs][data-zs-band] {
-  width: auto;
+  width: 100%;
+  min-width: 0;
   max-width: none;
 }
 

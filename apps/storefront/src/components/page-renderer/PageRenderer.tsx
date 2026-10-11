@@ -84,8 +84,9 @@ function StyledElement({ element, ctx }: { element: PageElement; ctx: Ctx }) {
 /**
  * The full-width showcase bands (./showcase): the picture slider, the category
  * tiles, the product rails… Each lays itself out for the width of the page, so
- * wherever one was dropped it is given the whole width of its section: its
- * column takes the row (`data-zt-band`), its own style box does not narrow it
+ * wherever one was dropped it is given the whole width of its section: the
+ * section's wrapper does not shrink to its content and its column takes the
+ * row (`data-zt-band` on both), its own style box does not narrow it
  * (`data-zs-band`), and its section is never a store theme's hero, whose
  * heading and column treatment are meant for the builder's own hero and would
  * otherwise land on the band's text.
@@ -430,6 +431,7 @@ function SectionNode({ section, ctx, hero = false }: { section: PageSection; ctx
 
   const { outer, inner } = sectionClasses(section.settings);
   const minHeight = sectionMinHeight(section.settings);
+  const band = holdsBand(section);
 
   // The hooks a store theme lays the section out by — its spacing, width and,
   // for the page's opening section, its own hero layout. Attributes only: a
@@ -441,9 +443,10 @@ function SectionNode({ section, ctx, hero = false }: { section: PageSection; ctx
       className={outer}
       style={minHeight === null ? undefined : { minHeight }}
       {...sectionHooks(section.settings)}
-      data-zimos-hero={hero && !holdsBand(section) ? "" : undefined}
+      data-zimos-hero={hero && !band ? "" : undefined}
     >
-      <div className={inner}>
+      {/* `data-zt-band`: a section with a minimum height centres this wrapper, which would then be only as wide as its content (store-sections.css). */}
+      <div className={inner} data-zt-band={band ? "" : undefined}>
         {rows.map((row) => (
           <RowNode key={row.id} row={row} ctx={ctx} />
         ))}
