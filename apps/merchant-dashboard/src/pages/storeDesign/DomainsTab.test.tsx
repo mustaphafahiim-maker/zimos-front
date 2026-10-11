@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import type { StoreDomain } from "@store-builder/api-client";
+import { ApiError, type StoreDomain } from "@store-builder/api-client";
 import { api } from "@/test/mocks";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { DomainsTab } from "./DomainsTab";
@@ -135,5 +135,42 @@ describe("DomainsTab", () => {
     renderWithProviders(<DomainsTab />, { locale: "ar" });
     expect(await screen.findByText("في انتظار الـ DNS")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /تواصل معنا/ }).getAttribute("href")).toMatch(/\/ar\/contact$/);
+  });
+});
+
+describe("DomainsTab while the API keeps its domains routes closed", () => {
+  // What the API answers on every domains route until its own CUSTOM_DOMAINS_ENABLED is on.
+  const closed = (call: Call) => {
+    throw new ApiError(`Cannot ${call.method} /api/v1${call.path}`, 404, "ROUTE_NOT_FOUND", {});
+  };
+
+  it("says the feature is not available instead of the raw message, with nothing to retry", async () => {
+    fakeBackend({ "GET /overview": closed });
+    renderWithProviders(<DomainsTab />);
+    expect(await screen.findByText("Custom domains are not available right now")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("This feature is not switched on yet");
+    expect(screen.queryByText(/Cannot GET/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.queryByPlaceholderText("www.example.com")).toBeNull();
+  });
+
+  it("says it in Arabic", async () => {
+    fakeBackend({ "GET /overview": closed });
+    renderWithProviders(<DomainsTab />, { locale: "ar" });
+    expect(await screen.findByText("ميزة الدومينات غير متاحة حاليًا")).toBeInTheDocument();
+    expect(screen.queryByText(/Cannot GET/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "حاول مرة أخرى" })).toBeNull();
+  });
+
+  it("keeps any other error as it was: its message and Try again", async () => {
+    fakeBackend({
+      "GET /overview": () => {
+        throw new ApiError("Resource not found", 404, "NOT_FOUND", {});
+      },
+    });
+    renderWithProviders(<DomainsTab />);
+    expect(await screen.findByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(screen.getByText("We couldn't find that. It may have been deleted.")).toBeInTheDocument();
+    expect(screen.queryByText("Custom domains are not available right now")).toBeNull();
   });
 });

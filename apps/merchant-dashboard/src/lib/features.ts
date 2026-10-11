@@ -4,7 +4,12 @@
  * off means the dashboard shows nothing of it.
  */
 
-/** Merchant-owned domains: the Domains tab in Store settings and its setup step. Pairs with the storefront's CUSTOM_DOMAINS_ENABLED. */
+/**
+ * Merchant-owned domains: the Domains tab in Store settings and its setup step.
+ * Turn on only once the API runs with its own CUSTOM_DOMAINS_ENABLED: while that
+ * is off the API answers every domains route with 404 and the tab says the
+ * feature is not available. The storefront's CUSTOM_DOMAINS_ENABLED goes on with them.
+ */
 export const CUSTOM_DOMAINS_ENABLED = import.meta.env.VITE_CUSTOM_DOMAINS_ENABLED === "true";
 
 /**
