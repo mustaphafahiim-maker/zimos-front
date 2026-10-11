@@ -2,7 +2,7 @@ import type { WebsiteTemplateSummary } from "@store-builder/api-client";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import type { PreviewTheme } from "@/lib/previewBridge";
 import { TEMPLATE_COLOR_SOURCE } from "../editor/storeLook";
-import { ORIGINAL_LOOK, readThemeChoice, type StoreThemeKey } from "../editor/storeThemes";
+import { ORIGINAL_LOOK, THEME_SPECS, readThemeChoice, type StoreThemeKey } from "../editor/storeThemes";
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
@@ -43,14 +43,22 @@ export function templateStoreTheme(globalStyles: unknown): StoreThemeKey | null 
 
 /**
  * The look a template's preview is drawn in, once its styles are known
- * (TemplateLivePreview's `themeFrom`). A template with a theme is drawn in
- * that theme alone: on a theme the store keeps the theme's own accent and a
- * template's colour is not painted over it (the storefront's brandVars), so
- * the preview sends no colour either. Without a theme, the look asked for.
+ * (TemplateLivePreview's `themeFrom`).
+ *
+ * A template that wears a theme is always shown in it, whatever the store's
+ * own look: the preview is of the template. The theme goes with its own two
+ * accents, spelled out, because a store's saved accent would otherwise stay on
+ * the page under the theme. (Taking the template is another matter: a store
+ * with a look of its own keeps it, and the sheet says so.)
+ *
+ * A template with no theme keeps the rule it always had: the look asked for,
+ * which is its colour on a store with no look of its own and nothing otherwise.
  */
-export function withTemplateTheme(theme: PreviewTheme, globalStyles: Record<string, unknown>): PreviewTheme {
+export function withTemplateTheme(theme: PreviewTheme | null, globalStyles: Record<string, unknown>): PreviewTheme | null {
   const storeTheme = templateStoreTheme(globalStyles);
-  return storeTheme ? { storeTheme } : theme;
+  if (!storeTheme) return theme;
+  const { light, dark } = THEME_SPECS[storeTheme].palette;
+  return { storeTheme, primaryColor: light.accent, primaryColorDark: dark.accent };
 }
 
 /**
@@ -78,8 +86,9 @@ export function takeTemplateLook(current: Record<string, unknown>, globalStyles:
 /**
  * The look a template's preview renders in: what applying it would give this
  * store — the template's accent on a store with no look of its own, the
- * store's own look otherwise (null: as saved). The theme a template brings is
- * added once its styles are fetched (`withTemplateTheme`).
+ * store's own look otherwise (null: as saved). A template that wears a theme
+ * is drawn in that theme instead, once its styles are fetched
+ * (`withTemplateTheme`).
  */
 export function useTemplatePreviewTheme(template: Pick<WebsiteTemplateSummary, "primaryColor">): PreviewTheme | null {
   const { currentWorkspace } = useWorkspace();

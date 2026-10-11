@@ -69,9 +69,9 @@ type Outcome = "ready" | "failed";
  * an unsaved store theme and in light or dark (a new value re-renders).
  *
  * A template may bring a look of its own in its styles. `themeFrom` is handed
- * the look the caller asked for and those styles, and returns the look to
- * draw; it is only called for a template this component fetched itself and
- * only when a look was asked for, and the page is posted once, with the answer.
+ * the look the caller asked for (none included) and those styles, and returns
+ * the look to draw; it is only called for a template this component fetched
+ * itself, and the page is posted once, with the answer.
  *
  * A card is a 4:3 window onto the desktop layout unless told otherwise:
  * `aspect="3/4"` makes it a portrait box (the templates grid, the site's
@@ -101,7 +101,7 @@ export function TemplateLivePreview({
   /** An unsaved store look, as the editor sends it (the storefront validates it). */
   theme?: PreviewTheme | null;
   /** The look to draw, given the one asked for and the fetched template's styles. A function that never changes. */
-  themeFrom?: (theme: PreviewTheme, globalStyles: Record<string, unknown>) => PreviewTheme;
+  themeFrom?: (theme: PreviewTheme | null, globalStyles: Record<string, unknown>) => PreviewTheme | null;
   colorMode?: ColorMode | null;
   /** Names the frame for screen readers (full variant only; the card's frame is decorative). */
   title: string;
@@ -184,7 +184,7 @@ export function TemplateLivePreview({
   // The frame and form mount with the slot; post into them (again, whenever
   // the look to render it in changes).
   // The tree and the styles arrive together, so the look is settled before the first post.
-  const drawn = theme && themeFrom && loaded ? themeFrom(theme, loaded.globalStyles) : theme;
+  const drawn = themeFrom && loaded ? themeFrom(theme, loaded.globalStyles) : theme;
   const themeJson = drawn ? JSON.stringify(drawn) : "";
   useEffect(() => {
     if (!slot || !tree) return;

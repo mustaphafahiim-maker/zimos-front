@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { THEME_SPECS } from "../editor/storeThemes";
 import { buildStoreTemplates } from "../templates/storeTemplates";
 import { takeTemplateLook, templateStoreTheme, withTemplateTheme } from "./templateLook";
 
@@ -23,12 +24,25 @@ describe("the theme a template wears", () => {
 describe("the look a template's preview is drawn in", () => {
   const asked = { primaryColor: "#7C2D12" };
 
-  it("is the template's theme alone, since a theme keeps its own accent", () => {
-    expect(withTemplateTheme(asked, { primaryColor: "#7C2D12", themeSettings: { storeTheme: "classic" } })).toEqual({ storeTheme: "classic" });
+  it("is the template's theme with the theme's own two accents, whatever was asked for", () => {
+    const { light, dark } = THEME_SPECS.classic.palette;
+    const classic = { storeTheme: "classic", primaryColor: light.accent, primaryColorDark: dark.accent };
+    const styles = { primaryColor: "#7C2D12", themeSettings: { storeTheme: "classic" } };
+    expect(withTemplateTheme(asked, styles)).toEqual(classic);
+    // A store with a look of its own asks for nothing: the template is still shown as itself.
+    expect(withTemplateTheme(null, styles)).toEqual(classic);
   });
 
-  it("is the look asked for when the template brings no theme", () => {
+  it("is the look asked for, or none, when the template brings no theme", () => {
     expect(withTemplateTheme(asked, { primaryColor: "#7C2D12" })).toBe(asked);
+    expect(withTemplateTheme(null, { primaryColor: "#7C2D12" })).toBeNull();
+  });
+
+  it("is drawn in every one of our templates' own themes", () => {
+    for (const template of buildStoreTemplates()) {
+      const theme = template.version.globalStyles.themeSettings.storeTheme;
+      expect(withTemplateTheme(null, template.version.globalStyles)).toMatchObject({ storeTheme: theme, primaryColor: template.primaryColor });
+    }
   });
 });
 

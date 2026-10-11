@@ -46,7 +46,7 @@ export function DevicePreview({
   page?: PageTree | null;
   theme?: PreviewTheme | null;
   /** The look to draw once a fetched template's styles are known (TemplateLivePreview). */
-  themeFrom?: (theme: PreviewTheme, globalStyles: Record<string, unknown>) => PreviewTheme;
+  themeFrom?: (theme: PreviewTheme | null, globalStyles: Record<string, unknown>) => PreviewTheme | null;
   colorMode?: ColorMode | null;
   /** Names the frame for screen readers. */
   title: string;

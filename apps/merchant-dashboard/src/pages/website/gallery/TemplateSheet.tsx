@@ -29,6 +29,7 @@ const STRINGS = {
     catalogueNote:
       "This is your store in this template, with your own products. Product sections say “coming soon” until you add some.",
     inUseNote: "Your current site started from this template.",
+    ownThemeNote: "The preview shows this template in its own theme. Your store keeps the look it has.",
     loadingDetails: "Loading the template's pages…",
     detailError: "We couldn't load this template's pages. You can still use it.",
     retry: "Try again",
@@ -64,6 +65,7 @@ const STRINGS = {
     noPreview: "لا توجد معاينة بعد",
     catalogueNote: "هذا متجرك بهذا القالب وبمنتجاتك أنت. أقسام المنتجات تقول «قريبًا» إلى أن تضيف منتجات.",
     inUseNote: "موقعك الحالي بدأ من هذا القالب.",
+    ownThemeNote: "المعاينة تعرض القالب بمظهره الخاص. متجرك سيحتفظ بمظهره الحالي.",
     loadingDetails: "جارٍ تحميل صفحات القالب…",
     detailError: "تعذّر تحميل صفحات القالب. يمكنك استخدامه على أي حال.",
     retry: "إعادة المحاولة",
@@ -302,6 +304,12 @@ export function TemplateSheet({
             // What is left of the sheet once its header, the device switch and its footer are counted.
             stageClassName="h-[calc(92dvh_-_17.5rem)] min-h-[20rem] sm:h-[calc(min(85dvh,46rem)_-_15.5rem)]"
           />
+          {/* The preview is of the template; a store with a look of its own is told it keeps that look. */}
+          {ownLook && bringsTheme && (
+            <p data-slot="template-own-theme" className="text-xs leading-5 font-medium text-ink">
+              {t.ownThemeNote}
+            </p>
+          )}
           <p className="text-xs leading-5 text-ink-soft">{t.catalogueNote}</p>
           <div className="text-sm">
             {detail.loading ? (

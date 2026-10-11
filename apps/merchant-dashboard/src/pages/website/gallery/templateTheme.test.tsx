@@ -4,6 +4,7 @@ import type { WebsiteTemplateDetail, WebsiteTemplateSummary, Workspace } from "@
 import { invalidateCached } from "@/lib/useCachedAsync";
 import { api, fake, workspaceMock, type ListedWorkspace } from "@/test/mocks";
 import { currentPath, renderWithProviders } from "@/test/renderWithProviders";
+import { THEME_SPECS } from "../editor/storeThemes";
 import { buildStoreTemplates } from "../templates/storeTemplates";
 import { WebsitePage } from "../WebsitePage";
 
@@ -39,6 +40,9 @@ const card = (id: string, primaryColor: string | null = built.primaryColor) =>
 const detail = (id: string, globalStyles: Record<string, unknown> = built.version.globalStyles) =>
   fake<WebsiteTemplateDetail>({ ...card(id), globalStyles, pages: built.version.pages, sections: [] });
 
+/** The classic theme as a preview draws it: the theme with its own two accents. */
+const CLASSIC = { storeTheme: "classic", primaryColor: THEME_SPECS.classic.palette.light.accent, primaryColorDark: THEME_SPECS.classic.palette.dark.accent };
+
 const posted = (name: string) => Array.from(document.querySelectorAll<HTMLInputElement>(`form[target] input[name="${name}"]`)).map((input) => input.value);
 
 let submit: ReturnType<typeof vi.fn<() => void>>;
@@ -63,7 +67,7 @@ describe("a template's theme in the gallery", () => {
     renderWithProviders(<WebsitePage />, { route: "/website" });
 
     await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
-    expect(posted("theme")).toEqual([JSON.stringify({ storeTheme: "classic" })]);
+    expect(posted("theme")).toEqual([JSON.stringify(CLASSIC)]);
     // The page posted is the template's own home page.
     expect(JSON.parse(posted("tree")[0])).toEqual(built.version.pages[0].builderData);
     await act(() => new Promise((resolve) => setTimeout(resolve, 30)));
@@ -79,7 +83,9 @@ describe("a template's theme in the gallery", () => {
     await screen.findByText(/Comes with 3 pages/);
 
     const sheet = document.querySelector('[data-slot="template-sheet"]')!;
-    await waitFor(() => expect(sheet.querySelector<HTMLInputElement>('form[target] input[name="theme"]')?.value).toBe(JSON.stringify({ storeTheme: "classic" })));
+    await waitFor(() => expect(sheet.querySelector<HTMLInputElement>('form[target] input[name="theme"]')?.value).toBe(JSON.stringify(CLASSIC)));
+    // A store with no look of its own will take the theme: nothing to add under the preview.
+    expect(document.querySelector('[data-slot="template-own-theme"]')).toBeNull();
   });
 
   it("stays the template's colour alone for a template that brings no theme", async () => {
@@ -92,15 +98,36 @@ describe("a template's theme in the gallery", () => {
     expect(posted("theme")).toEqual([JSON.stringify({ primaryColor: "#7C2D12" })]);
   });
 
-  it("is not drawn over a store that has a look of its own", async () => {
-    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: { storeTheme: "warm" } });
+  it("is shown on a store that has a look of its own too, which is told it keeps that look", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: { storeTheme: "warm", primaryColor: "#BE123C" } });
     api.listWebsiteTemplates.mockResolvedValue([card("own_look")]);
     api.getWebsiteTemplate.mockResolvedValue(detail("own_look"));
+    const { user } = renderWithProviders(<WebsitePage />, { route: "/website" });
+
+    // The card: the template's theme with its own accents, over whatever the store saved.
+    await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
+    expect(posted("theme")).toEqual([JSON.stringify(CLASSIC)]);
+
+    await user.click(await screen.findByRole("button", { name: `Preview ${built.name}` }));
+    await screen.findByText(/Comes with 3 pages/);
+    const sheet = document.querySelector('[data-slot="template-sheet"]')!;
+    await waitFor(() => expect(sheet.querySelector<HTMLInputElement>('form[target] input[name="theme"]')?.value).toBe(JSON.stringify(CLASSIC)));
+    expect(sheet.querySelector('[data-slot="template-own-theme"]')).toHaveTextContent("Your store keeps the look it has.");
+
+    // And taking it changes nothing of the store's look: the confirmation says so.
+    await user.click(screen.getByRole("button", { name: "Use this template" }));
+    expect(await screen.findByText("Your store's colours and theme stay as they are.")).toBeInTheDocument();
+  });
+
+  it("leaves a store with a look of its own as it is saved for a template that brings no theme", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", themeSettings: { storeTheme: "warm" } });
+    api.listWebsiteTemplates.mockResolvedValue([card("own_look_plain", "#7C2D12")]);
+    api.getWebsiteTemplate.mockResolvedValue(detail("own_look_plain", { primaryColor: "#7C2D12" }));
 
     renderWithProviders(<WebsitePage />, { route: "/website" });
 
     await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
-    // No look posted: the store is drawn as it is saved.
+    // No look posted: the store is drawn as it is saved, as before.
     expect(posted("theme")).toEqual([""]);
   });
 });
