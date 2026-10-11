@@ -87,6 +87,18 @@ describe("anything unusable falls back to the default", () => {
 });
 
 describe("a chosen value lands where the renderer expects it", () => {
+  it("a section given a minimum height centres its content, unless the renderer says it is not applied", () => {
+    const TALL = `${SECTION_OUTER} flex flex-col justify-center`;
+    assert.deepEqual(sectionClasses({ minHeight: 620 }), { outer: TALL, inner: SECTION_INNER });
+    // The renderer passes the height it really gives: none for a section that holds a full-width band.
+    assert.deepEqual(sectionClasses({ minHeight: 620 }, null), { outer: SECTION_OUTER, inner: SECTION_INNER });
+    assert.deepEqual(sectionClasses({ minHeight: 620 }, 620), { outer: TALL, inner: SECTION_INNER });
+    // An unusable stored value was never a height.
+    for (const minHeight of [0, -5, "620", null, Number.NaN]) {
+      assert.deepEqual(sectionClasses({ minHeight }), { outer: SECTION_OUTER, inner: SECTION_INNER }, String(minHeight));
+    }
+  });
+
   it("strong backgrounds capture their two colours outside and re-point the tokens inside", () => {
     for (const background of ["primary", "ink"]) {
       const { outer, inner } = sectionClasses({ background });

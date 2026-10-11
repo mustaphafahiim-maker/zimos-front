@@ -189,14 +189,16 @@ export function sectionMinHeight(settings: unknown): number | null {
  * Classes for the `<section>` and for the width wrapper inside it. A section
  * given a minimum height also centres its content vertically in the extra
  * room, the way a tall hero band reads; without one, the classes are exactly
- * what they always were.
+ * what they always were. `minHeight` is the height the section is really
+ * given, for the caller that does not apply the stored one (PageRenderer, for
+ * a section that holds a full-width band).
  */
-export function sectionClasses(settings: unknown): { outer: string; inner: string } {
+export function sectionClasses(settings: unknown, minHeight: number | null = sectionMinHeight(settings)): { outer: string; inner: string } {
   const background = settingClass(settings, "background", SECTION_BACKGROUND, "none");
   const tone = settingClass(settings, "background", SECTION_TONE, "none");
   const padding = settingClass(settings, "padding", SECTION_PADDING, "normal");
   const width = settingClass(settings, "width", SECTION_WIDTH, "normal");
-  const tall = sectionMinHeight(settings) !== null ? " flex flex-col justify-center" : "";
+  const tall = minHeight !== null ? " flex flex-col justify-center" : "";
   return {
     outer: `px-4 sm:px-6 ${padding} ${background}`.trimEnd() + tall,
     inner: `mx-auto flex flex-col gap-6 ${width} ${tone}`.trimEnd(),
