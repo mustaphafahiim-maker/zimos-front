@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Megaphone, SlidersHorizontal } from "lucide-react";
+import { BadgeCheck, Megaphone, Percent, PiggyBank, SlidersHorizontal, Target } from "lucide-react";
 import { Alert, Button, cn } from "@store-builder/ui";
 import { profitGetPnl, type ProfitGroupBy, type ProfitPnl, type ProfitRow, type ProfitStatement } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -267,9 +267,10 @@ export function RealProfitPage() {
                     {money(statement.netProfit)}
                   </bdi>
                 }
+                icon={<PiggyBank aria-hidden />}
               />
-              <KpiCard label={t.margin} value={<bdi dir="ltr">{pct(statement.margin)}</bdi>} />
-              <KpiCard label={t.maxCpa} value={<bdi dir="ltr">{money(totals.maxCpa)}</bdi>} hint={t.maxCpaHint} />
+              <KpiCard label={t.margin} value={<bdi dir="ltr">{pct(statement.margin)}</bdi>} icon={<Percent aria-hidden />} />
+              <KpiCard label={t.maxCpa} value={<bdi dir="ltr">{money(totals.maxCpa)}</bdi>} hint={t.maxCpaHint} icon={<Target aria-hidden />} />
               <KpiCard
                 label={t.deliveryRate}
                 value={<bdi dir="ltr">{pct(totals.deliveryRate)}</bdi>}
@@ -278,6 +279,7 @@ export function RealProfitPage() {
                   returned: formatCount(totals.orders.returned),
                   open: formatCount(totals.orders.open),
                 })}
+                icon={<BadgeCheck aria-hidden />}
               />
             </div>
 
