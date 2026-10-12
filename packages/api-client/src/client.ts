@@ -452,6 +452,39 @@ function randomKey(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+/** The lock the tabs of one site take turns on to refresh their shared tokens. */
+const REFRESH_LOCK = "sb.auth.refresh";
+/** How long a tab waits for its turn before refreshing anyway, as it did before the lock. */
+const REFRESH_LOCK_WAIT_MS = 10_000;
+
+/**
+ * Runs `refresh` while no other tab of this site is refreshing (the Web Locks
+ * API). Outside a browser, or in one without it, it runs at once. A tab that
+ * holds the lock too long (frozen, or a request that never answers) does not
+ * hold the others up: after REFRESH_LOCK_WAIT_MS the waiting tab goes ahead.
+ */
+async function inRefreshTurn<T>(refresh: () => Promise<T>): Promise<T> {
+  const locks = typeof window !== "undefined" && typeof navigator !== "undefined" ? navigator.locks : undefined;
+  if (!locks) return refresh();
+
+  const waiting = new AbortController();
+  const timer = setTimeout(() => waiting.abort(), REFRESH_LOCK_WAIT_MS);
+  let started = false;
+  try {
+    return await locks.request(REFRESH_LOCK, { signal: waiting.signal }, async () => {
+      started = true;
+      clearTimeout(timer);
+      return refresh();
+    });
+  } catch (err) {
+    // The wait was given up, or the browser refused the lock: refresh without it.
+    if (!started) return refresh();
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export class ApiClient {
   private baseUrl: string;
   private tokenStorage: TokenStorage;
@@ -558,6 +591,11 @@ export class ApiClient {
    * ends the session. A refresh that fails any other way — rate limited, a
    * server error, no network — keeps the session and throws that failure, so
    * the request that needed it fails with it and can be tried again.
+   *
+   * A refresh token works once: the server takes a second use of it for a
+   * stolen copy and ends every session of the account. Two tabs share the
+   * stored tokens, so only one of them refreshes at a time (`inRefreshTurn`);
+   * the one that waited finds the new pair already stored and uses it.
    */
   private async tryRefresh(): Promise<boolean> {
     const { refreshToken } = this.tokenStorage.get();
@@ -567,13 +605,20 @@ export class ApiClient {
     if (!this.refreshPromise) {
       this.refreshPromise = (async () => {
         try {
-          const result = await this.request<AuthTokens>("/auth/refresh", {
-            method: "POST",
-            body: { refreshToken },
-            auth: false,
+          return await inRefreshTurn(async () => {
+            const stored = this.tokenStorage.get().refreshToken;
+            // Signed out in another tab while this one waited.
+            if (!stored) return false;
+            // Refreshed in another tab while this one waited.
+            if (stored !== refreshToken) return true;
+            const result = await this.request<AuthTokens>("/auth/refresh", {
+              method: "POST",
+              body: { refreshToken },
+              auth: false,
+            });
+            this.setTokens(result);
+            return true;
           });
-          this.setTokens(result);
-          return true;
         } catch (err) {
           if (!(err instanceof ApiError && err.status === 401)) throw err;
           this.clearSession();
@@ -787,6 +832,17 @@ export class ApiClient {
     } finally {
       this.clearSession();
     }
+  }
+
+  /**
+   * Signs the account out of every device, this one included
+   * (POST /auth/sessions/revoke-all), then forgets the tokens here. Unlike
+   * `logout`, a failure keeps the session: nothing was ended, and the caller
+   * says so.
+   */
+  async signOutEverywhere() {
+    await this.request("/auth/sessions/revoke-all", { method: "POST" });
+    this.clearSession();
   }
 
   async me() {
