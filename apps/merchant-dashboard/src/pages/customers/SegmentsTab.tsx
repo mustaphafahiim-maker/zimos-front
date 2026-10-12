@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Filter, Pencil, Plus, Trash2 } from "lucide-react";
+import { ListFilter, Pencil, Plus, Trash2 } from "lucide-react";
 import { Alert, Button, Card } from "@store-builder/ui";
 import {
   segmentsCreate,
@@ -212,7 +212,7 @@ export function SegmentsTab({ onView }: { onView: (segmentId: string) => void })
       <DataState loading={list.loading} error={list.error} onRetry={() => void list.refresh()}>
         {segments.length === 0 ? (
           <EmptyState
-            icon={<Filter className="size-6" aria-hidden />}
+            icon={<ListFilter className="size-6" aria-hidden />}
             title={t.emptyTitle}
             description={t.emptyDescription}
             action={<Button onClick={() => setEditing("new")}>{t.add}</Button>}

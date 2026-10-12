@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Image as ImageIcon, Trash2, Upload } from "lucide-react";
+import { Image as ImageIcon, ImageOff, Trash2, Upload } from "lucide-react";
 import { Alert, Button, Spinner } from "@store-builder/ui";
 import type { MediaAsset } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -95,7 +95,7 @@ function Thumb({
       <div className="flex aspect-square items-center justify-center bg-paper">
         {broken ? (
           <span className="flex flex-col items-center gap-1 px-2 text-center text-xs text-ink-soft">
-            <ImageIcon className="size-5" aria-hidden />
+            <ImageOff className="size-5" aria-hidden />
             {t.broken}
           </span>
         ) : (

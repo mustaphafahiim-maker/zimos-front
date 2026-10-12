@@ -1,28 +1,28 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Banknote,
-  FileDown,
+  Download,
   GraduationCap,
   MousePointerClick,
   Handshake,
   Sparkles,
   Activity,
-  BadgeDollarSign,
+  CircleDollarSign,
   BarChart3,
   Bot,
-  ClipboardCheck,
+  PhoneCall,
   CreditCard,
   Gift,
   Globe,
   History,
   Images,
-  LayoutDashboard,
+  House,
   LineChart,
   LifeBuoy,
   Lightbulb,
   Medal,
   Megaphone,
-  MessageCircle,
+  MessageCircleMore,
   Newspaper,
   CircleQuestionMark,
   Package,
@@ -41,7 +41,7 @@ import {
   Undo2,
   Users,
   Wallet,
-  Workflow,
+  Route,
 } from "lucide-react";
 import type { Messages } from "@/i18n/LocaleContext";
 import { NO_ANALYTICS_ROLES } from "@/lib/analyticsAccess";
@@ -171,14 +171,14 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: "main",
     labelKey: null,
-    items: [{ key: "overview", to: "/", icon: LayoutDashboard }],
+    items: [{ key: "overview", to: "/", icon: House }],
   },
   {
     id: "orders",
     labelKey: "orders",
     items: [
       { key: "orders", to: "/orders", icon: ShoppingBag, badge: "toShip" },
-      { key: "confirmationQueue", to: "/confirmation-queue", icon: ClipboardCheck, badge: "toConfirm" },
+      { key: "confirmationQueue", to: "/confirmation-queue", icon: PhoneCall, badge: "toConfirm" },
       { key: "abandonedCarts", to: "/abandoned-carts", icon: ShoppingCart },
       { key: "returns", to: "/returns", icon: Undo2 },
       { key: "fraud", to: "/fraud", icon: ShieldAlert },
@@ -193,7 +193,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // Shoppers' questions and size charts, each only while its feature is switched on (lib/features).
       ...(PRODUCT_QUESTIONS_ENABLED ? [{ key: "productQuestions" as const, to: "/questions", icon: CircleQuestionMark }] : []),
       ...(SIZE_CHARTS_ENABLED ? [{ key: "sizeCharts" as const, to: "/size-charts", icon: Ruler }] : []),
-      { key: "digital", to: "/digital", icon: FileDown },
+      { key: "digital", to: "/digital", icon: Download },
       { key: "courses", to: "/courses", icon: GraduationCap },
       { key: "media", to: "/media", icon: Images },
     ],
@@ -205,7 +205,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "customers", to: "/customers", icon: Users },
       // Points, levels, invites and store credit: one entry, only while one of them is switched on (lib/features).
       ...(REWARDS_HOME ? [{ key: "loyalty" as const, to: REWARDS_HOME, icon: Medal }] : []),
-      { key: "inbox", to: "/inbox", icon: MessageCircle, badge: "unread" },
+      { key: "inbox", to: "/inbox", icon: MessageCircleMore, badge: "unread" },
     ],
   },
   {
@@ -229,7 +229,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "website", to: "/website", icon: Globe },
       // The store blog only while the feature is switched on (lib/features).
       ...(BLOG_ENABLED ? [{ key: "blog" as const, to: "/blog", icon: Newspaper }] : []),
-      { key: "funnels", to: "/funnels", icon: Workflow },
+      { key: "funnels", to: "/funnels", icon: Route },
       { key: "shoppableImages", to: "/shoppable-images", icon: MousePointerClick },
       { key: "storeSettings", to: "/store-settings", icon: Store },
     ],
@@ -243,7 +243,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "webAnalytics", to: "/analytics/web", icon: LineChart, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "attribution", to: "/analytics/attribution", icon: Target, hiddenForRoles: NO_ANALYTICS_ROLES },
       { key: "profit", to: "/profit", icon: PiggyBank, hiddenForRoles: NO_ANALYTICS_ROLES },
-      { key: "ads", to: "/ads", icon: BadgeDollarSign, hiddenForRoles: NO_ANALYTICS_ROLES },
+      { key: "ads", to: "/ads", icon: CircleDollarSign, hiddenForRoles: NO_ANALYTICS_ROLES },
     ],
   },
   {

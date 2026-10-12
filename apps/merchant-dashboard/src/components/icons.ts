@@ -171,6 +171,7 @@ export {
   Pin as IconPin,
   MapPin as IconPlace,
   Play as IconPlay,
+  Plug as IconPlug,
   Plus as IconPlus,
   Power as IconPower,
   Printer as IconPrint,
@@ -250,7 +251,7 @@ export {
   Clapperboard as IconVideoClip,
   Wallet as IconWallet,
   TriangleAlert as IconWarning,
-  AudioWaveform as IconWaves,
+  WavesHorizontal as IconWaves,
   Globe as IconWebsite,
   MessageCircle as IconWhatsApp,
 } from "lucide-react";

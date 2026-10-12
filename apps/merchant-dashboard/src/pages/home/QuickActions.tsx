@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ClipboardCheck, Globe, PackagePlus, Plus, ShoppingBag, ShoppingCart, Store, Tag, type LucideIcon } from "lucide-react";
+import { Globe, PackagePlus, PhoneCall, Plus, ShoppingBag, ShoppingCart, Store, Tag, type LucideIcon } from "lucide-react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { findNavItem, isNavItemVisible } from "@/lib/navigation";
 import { useT, type Messages } from "@/i18n/LocaleContext";
@@ -36,7 +36,7 @@ type Key = "newOrder" | "newProduct" | "confirm" | "orders" | "carts" | "discoun
 const ACTIONS: Array<{ key: Key; to: string; icon: LucideIcon; primary?: boolean }> = [
   { key: "newOrder", to: "/orders/new", icon: Plus, primary: true },
   { key: "newProduct", to: "/catalog/new", icon: PackagePlus },
-  { key: "confirm", to: "/confirmation-queue", icon: ClipboardCheck },
+  { key: "confirm", to: "/confirmation-queue", icon: PhoneCall },
   { key: "orders", to: "/orders", icon: ShoppingBag },
   { key: "carts", to: "/abandoned-carts", icon: ShoppingCart },
   { key: "discount", to: "/discounts", icon: Tag },
