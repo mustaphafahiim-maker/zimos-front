@@ -1,4 +1,3 @@
-import type { ComponentType } from "react";
 import {
   Activity,
   Ban,
@@ -27,6 +26,7 @@ import {
   UserCog,
   Users,
   Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { P } from "@/lib/permissions";
@@ -34,13 +34,21 @@ import { P } from "@/lib/permissions";
 export interface NavItem {
   label: string;
   to: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   /** The view permission the page's endpoints need; hidden without it. */
   permission: string;
 }
 
-export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
+export interface NavGroup {
+  /** Stable name of the group: what the side menu remembers a folded group by. */
+  id: string;
+  label: string | null;
+  items: NavItem[];
+}
+
+export const NAV_GROUPS: NavGroup[] = [
   {
+    id: "main",
     label: null,
     items: [
       { label: "Overview", to: "/", icon: LayoutDashboard, permission: P.OVERVIEW_VIEW },
@@ -49,6 +57,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     ],
   },
   {
+    id: "merchants",
     label: "Merchants",
     items: [
       { label: "Workspaces", to: "/workspaces", icon: Building2, permission: P.WORKSPACES_VIEW },
@@ -61,6 +70,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     ],
   },
   {
+    id: "referrals",
     label: "Referrals",
     items: [
       { label: "Agents", to: "/agents", icon: Handshake, permission: P.AGENTS_VIEW },
@@ -68,6 +78,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     ],
   },
   {
+    id: "marketplace",
     label: "Marketplace",
     items: [
       { label: "Templates", to: "/templates", icon: LayoutTemplate, permission: P.TEMPLATES_VIEW },
@@ -77,6 +88,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     ],
   },
   {
+    id: "operations",
     label: "Operations",
     items: [
       { label: "Carriers", to: "/carriers", icon: Truck, permission: P.PROVIDERS_VIEW },
@@ -85,6 +97,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     ],
   },
   {
+    id: "risk",
     label: "Risk",
     items: [
       { label: "Fraud signals", to: "/fraud-signals", icon: ShieldAlert, permission: P.RISK_VIEW },
@@ -92,6 +105,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     ],
   },
   {
+    id: "support",
     label: "Support",
     items: [
       { label: "Tickets", to: "/tickets", icon: LifeBuoy, permission: P.SUPPORT_VIEW },
@@ -101,6 +115,7 @@ export const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     ],
   },
   {
+    id: "system",
     label: "System",
     items: [
       { label: "Feature flags", to: "/feature-flags", icon: Flag, permission: P.FEATURE_FLAGS_VIEW },
@@ -123,4 +138,25 @@ export function useVisibleNav() {
 export function useLandingPath(): string | null {
   const groups = useVisibleNav();
   return groups[0]?.items[0]?.to ?? null;
+}
+
+/**
+ * The menu entry a page sits under: its own, or the longest one its address
+ * starts with (a workspace's page is under Workspaces). The overview is `/`
+ * and nothing else.
+ */
+export function findNavItem(pathname: string): NavItem | null {
+  let found: NavItem | null = null;
+  for (const group of NAV_GROUPS) {
+    for (const item of group.items) {
+      const under = item.to === "/" ? pathname === "/" : pathname === item.to || pathname.startsWith(`${item.to}/`);
+      if (under && (!found || item.to.length > found.to.length)) found = item;
+    }
+  }
+  return found;
+}
+
+/** The group an entry is listed in. */
+export function findNavGroup(item: NavItem): NavGroup | null {
+  return NAV_GROUPS.find((group) => group.items.includes(item)) ?? null;
 }

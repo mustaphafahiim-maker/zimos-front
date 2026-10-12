@@ -1,9 +1,16 @@
+import { Languages } from "lucide-react";
+import { cn } from "@store-builder/ui";
 import { useLocale, useT } from "@/i18n/LocaleContext";
 import { SHELL_STRINGS } from "@/lib/shellStrings";
 
-/** Arabic / English, next to the theme toggle: flips the page direction and is remembered. */
-export function LanguageToggle() {
-  const { toggleLocale } = useLocale();
+/**
+ * Arabic / English: flips the page direction and is remembered. Drawn like the
+ * merchant dashboard's language switch — a bordered pill on the raised
+ * surface that shows the language you would switch to. `compact` is the round
+ * one of the toolbar.
+ */
+export function LanguageToggle({ className = "", compact = false }: { className?: string; compact?: boolean }) {
+  const { locale, toggleLocale } = useLocale();
   const t = useT(SHELL_STRINGS);
   return (
     <button
@@ -11,9 +18,14 @@ export function LanguageToggle() {
       onClick={toggleLocale}
       aria-label={t.switchLanguage}
       title={t.switchLanguage}
-      className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-sm font-semibold text-ink-soft hover:bg-primary-soft hover:text-ink"
+      className={cn(
+        "inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-line bg-paper-raised text-sm font-medium text-ink-soft transition-colors hover:border-ink-soft hover:text-ink",
+        compact ? "w-9" : "px-3",
+        className
+      )}
     >
-      {t.languageShort}
+      {!compact && <Languages className="size-4" aria-hidden />}
+      <span lang={locale === "ar" ? "en" : "ar"}>{t.languageShort}</span>
     </button>
   );
 }

@@ -2,14 +2,20 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
+import { useT } from "@/i18n/LocaleContext";
+import { SIGN_OUT_STRINGS } from "@/lib/shellStrings";
+import { overlayTarget } from "./overlayRoot";
 
 /**
  * Asks before signing out: only its "Sign out" button signs out. Cancel,
  * Escape or a click outside closes it. Focus starts on Cancel and stays
  * inside while it is open; `onClose` puts it back where it belongs.
+ * Drawn as the merchant dashboard draws its own (its SignOutConfirmDialog):
+ * a small card in the middle of the dimmed page.
  */
 export function SignOutDialog({ onClose }: { onClose: () => void }) {
   const { logout } = useAuth();
+  const t = useT(SIGN_OUT_STRINGS);
   const titleId = useId();
   const bodyId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -56,7 +62,7 @@ export function SignOutDialog({ onClose }: { onClose: () => void }) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-primary-dark/40 p-4 py-12 backdrop-blur-[2px] dark:bg-black/60"
+      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-ink/40 p-4"
       onMouseDown={close}
     >
       <div
@@ -67,26 +73,26 @@ export function SignOutDialog({ onClose }: { onClose: () => void }) {
         aria-describedby={bodyId}
         onKeyDown={onKeyDown}
         onMouseDown={(e) => e.stopPropagation()}
-        className="animate-slide-up w-full max-w-sm rounded-2xl border border-line bg-paper-raised shadow-lg"
+        className="w-full max-w-sm rounded-[var(--radius-card)] border border-line bg-paper-raised shadow-xl"
       >
         <div className="px-5 pt-5">
-          <h2 id={titleId} className="text-lg font-semibold text-ink">
-            Sign out?
+          <h2 id={titleId} className="font-display text-lg font-medium text-ink">
+            {t.title}
           </h2>
           <p id={bodyId} className="mt-1 text-sm text-ink-soft">
-            You'll need to sign in again to open the console.
+            {t.body}
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-3 px-5 py-4">
           <Button ref={cancelRef} variant="outline" onClick={close} disabled={busy}>
-            Cancel
+            {t.cancel}
           </Button>
           <Button variant="destructive" onClick={signOut} disabled={busy}>
-            {busy ? "Signing out…" : "Sign out"}
+            {busy ? t.signingOut : t.signOut}
           </Button>
         </div>
       </div>
     </div>,
-    document.body
+    overlayTarget()
   );
 }
