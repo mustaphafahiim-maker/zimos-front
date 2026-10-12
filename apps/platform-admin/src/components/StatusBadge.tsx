@@ -4,11 +4,12 @@ import { cn } from "@store-builder/ui";
 export type Tone = "success" | "warning" | "danger" | "info" | "neutral" | "primary";
 
 const TONE_CLASS: Record<Tone, string> = {
-  success: "bg-success-soft text-success border-success/20",
-  warning: "bg-accent-soft text-accent-dark border-accent/20",
-  danger: "bg-danger-soft text-danger border-danger/20",
-  info: "bg-primary-soft text-primary-dark dark:text-primary border-primary/20",
-  primary: "bg-primary-soft text-primary border-primary/20",
+  success: "bg-success-soft text-success border-success/30",
+  warning: "bg-accent-soft text-accent-dark border-accent/40",
+  danger: "bg-danger-soft text-danger border-danger/30",
+  // Dark primary-dark reads ~3:1 on primary-soft; the lifted primary holds 4.5:1.
+  info: "bg-primary-soft text-primary-dark dark:text-primary border-primary/30",
+  primary: "bg-primary-soft text-primary border-primary/30",
   neutral: "bg-paper text-ink-soft border-line",
 };
 
@@ -35,7 +36,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex h-6 w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 text-xs font-medium",
+        "inline-flex w-fit shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap",
         TONE_CLASS[tone],
         className
       )}

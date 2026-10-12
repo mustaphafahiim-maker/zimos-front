@@ -33,7 +33,7 @@ export function CopyId({ value, full = false, className }: { value: string; full
         type="button"
         onClick={copy}
         aria-label={copied ? `Copied ${value}` : `Copy ID ${value}`}
-        className="inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-ink-soft hover:bg-paper hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="inline-flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-paper-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
       >
         {copied ? <Check className="size-3.5 text-success" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
       </button>

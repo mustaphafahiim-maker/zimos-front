@@ -25,9 +25,9 @@ export function ComingLater({ title, description, summary }: ComingLaterProps) {
   return (
     <div>
       <PageHeader title={title} description={description} />
-      <div className="flex flex-col items-center gap-4 rounded-[var(--radius-card)] border border-dashed border-line bg-paper-raised/60 px-6 py-14 text-center">
-        <span className="flex size-11 items-center justify-center rounded-full bg-primary-soft">
-          <Hourglass className="size-5 text-primary" aria-hidden />
+      <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-line bg-paper-raised px-6 py-12 text-center">
+        <span className="flex size-12 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+          <Hourglass className="size-6" aria-hidden />
         </span>
         <div className="max-w-md space-y-1.5">
           <h2 className="text-base font-semibold text-ink">{t.comingLater}</h2>

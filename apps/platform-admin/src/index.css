@@ -69,6 +69,14 @@
   }
 }
 
+/* Tables here are the shared <Table> with this app's <Th> (components/Panel.tsx):
+   the head's tint is on its cells, where the dashboard's own table tints the
+   head row. Under the glass layer both are the pane's head tint; with glass
+   off the cells keep the solid band they name themselves. */
+:root:not([data-glass="off"]) .glass-app main [data-slot="table-head"] {
+  background-color: var(--lg-thead);
+}
+
 /* Range input tinted with the brand primary. */
 input[type="range"].range-primary {
   accent-color: var(--color-primary);
