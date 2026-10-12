@@ -8,7 +8,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./social-links": "./src/social-links/index.ts",
-    "./styles.css": "./src/styles.css"
+    "./appearance": "./src/appearance/index.ts",
+    "./styles.css": "./src/styles.css",
+    "./theme/*": "./src/theme/*"
   },
   "peerDependencies": {
     "react": "^19.0.0",

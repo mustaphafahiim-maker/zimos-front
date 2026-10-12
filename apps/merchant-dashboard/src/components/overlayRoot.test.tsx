@@ -7,7 +7,8 @@ import { Popover } from "./Popover";
 import { DashboardLayout } from "./DashboardLayout";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { testWorkspace } from "@/test/mocks";
-import css from "../index.css?raw";
+// The body of index.css, which the platform console is built from too.
+import css from "../../../../packages/ui/src/theme/app.css?raw";
 import dashboardLayout from "./DashboardLayout.tsx?raw";
 import editorLayout from "./EditorLayout.tsx?raw";
 

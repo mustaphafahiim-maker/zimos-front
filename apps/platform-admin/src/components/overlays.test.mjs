@@ -11,12 +11,14 @@ import { readFileSync } from "node:fs";
  * and the stylesheet.
  */
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
-const css = read("../index.css");
+// This app's own rules, then the base it shares with the merchant dashboard
+// (`.animate-slide-in-start` is defined there).
+const css = `${read("../index.css")}\n${read("../../../../packages/ui/src/theme/app.css")}`;
 
 function ruleBody(selector) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = css.match(new RegExp(`(?:^|\\n)${escaped}\\s*\\{([^}]*)\\}`));
-  assert.ok(match, `no ${selector} rule in index.css`);
+  assert.ok(match, `no ${selector} rule in index.css or app.css`);
   return match[1];
 }
 
