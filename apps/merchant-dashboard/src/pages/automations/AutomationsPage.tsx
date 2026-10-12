@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bot, Check, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Bot, Check, ListChecks, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Alert, Button, Card, Input, cn } from "@store-builder/ui";
 import {
   automationFlowsDelete,
@@ -430,7 +430,7 @@ export function AutomationsPage() {
         <DataState loading={runsLoading} error={runsError} onRetry={() => void loadRuns(null)}>
           {runs.length === 0 ? (
             <div className="px-4 pb-4">
-              <EmptyState title={t.noRuns} description={t.noRunsDesc} />
+              <EmptyState icon={<ListChecks aria-hidden />} title={t.noRuns} description={t.noRunsDesc} />
             </div>
           ) : (
             <DataTable

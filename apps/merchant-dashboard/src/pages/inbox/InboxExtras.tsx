@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { MessageSquareQuote, Plus, Trash2, X } from "lucide-react";
+import { Plus, Quote, Trash2, X } from "lucide-react";
 import { Alert, Button, cn } from "@store-builder/ui";
 import {
   formatMoney,
@@ -396,7 +396,7 @@ export function QuickRepliesMenu({ onPick, draft }: { onPick: (text: string) => 
   return (
     <div ref={root} className="relative">
       <Button type="button" size="icon" variant="outline" aria-label={t.quickReplies} title={t.quickReplies} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <MessageSquareQuote className="size-4" aria-hidden />
+        <Quote className="size-4" aria-hidden />
       </Button>
       {open && (
         <div className="absolute bottom-full start-0 z-20 mb-2 w-80 max-w-[85vw] rounded-[0.5rem] border border-line bg-paper-raised p-3 shadow-lg">

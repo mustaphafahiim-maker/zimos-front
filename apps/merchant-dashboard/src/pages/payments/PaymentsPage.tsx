@@ -15,7 +15,7 @@ import { formatDateTime } from "@/lib/format";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { fmt, useCommon, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
-import { IconCard, IconSliders, IconWallet } from "@/components/icons";
+import { IconCard, IconChecklist, IconWallet } from "@/components/icons";
 import { PageHeader } from "@/components/PageHeader";
 import { SettingsLayout, SettingsPane, useSettingsSection, type SettingsSectionDef } from "@/components/settings";
 import { DataState } from "@/components/DataState";
@@ -205,7 +205,7 @@ export function PaymentsPage() {
     () => [
       { id: "manual", label: t.secManual, description: t.secManualHint, icon: IconWallet, tone: "green" },
       { id: "gateways", label: t.gatewaysTitle, description: t.secGatewaysHint, icon: IconCard, tone: "blue" },
-      { id: "methods", label: t.methodListTitle, description: t.secMethodsHint, icon: IconSliders, tone: "purple" },
+      { id: "methods", label: t.methodListTitle, description: t.secMethodsHint, icon: IconChecklist, tone: "purple" },
     ],
     [t]
   );

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { IconCourier, IconPercent, IconShipping, IconSliders } from "@/components/icons";
+import { IconPercent, IconPlug, IconShipping, IconSliders } from "@/components/icons";
 import type { SettingsSectionDef } from "@/components/settings";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 
@@ -31,7 +31,7 @@ const STRINGS = {
 const TABS = ["rates", "options", "carriers", "taxes"] as const;
 export type ShippingTab = (typeof TABS)[number];
 
-const ICONS = { rates: IconShipping, options: IconSliders, carriers: IconCourier, taxes: IconPercent } as const;
+const ICONS = { rates: IconShipping, options: IconSliders, carriers: IconPlug, taxes: IconPercent } as const;
 const TONES = { rates: "blue", options: "purple", carriers: "orange", taxes: "green" } as const;
 
 /**
