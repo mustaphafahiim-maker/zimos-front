@@ -1,9 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import { ApiError, type AuthUser, type TwoFactorStatus } from "@store-builder/api-client";
-import { api, fake } from "@/test/mocks";
+import { api, authMock, fake } from "@/test/mocks";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { SecuritySection } from "./SecuritySection";
+
+// The switch is a build constant; on here unless a test turns it off.
+const flags = vi.hoisted(() => ({ twoFactor: true }));
+vi.mock("@/lib/features", async (original) => ({
+  ...(await original<typeof import("@/lib/features")>()),
+  get TWO_FACTOR_ENABLED() {
+    return flags.twoFactor;
+  },
+}));
+
+beforeEach(() => {
+  flags.twoFactor = true;
+});
 
 const off: TwoFactorStatus = { mode: "off", enabledAt: null, rememberedDevices: 0, hasPassword: true, backupCodesLeft: 0, backupCodesCreatedAt: null };
 const byEmail: TwoFactorStatus = { ...off, mode: "email", enabledAt: "2026-10-01T10:00:00.000Z", rememberedDevices: 2 };
@@ -134,5 +147,73 @@ describe("SecuritySection", () => {
     expect(await screen.findByRole("heading", { name: "الأمان" })).toBeInTheDocument();
     expect(await screen.findByText("رمز بالبريد الإلكتروني")).toBeInTheDocument();
     expect(screen.getByText("تغيير كلمة المرور")).toBeInTheDocument();
+    expect(within(row("تسجيل الخروج من كل الأجهزة")).getByRole("button", { name: "تسجيل الخروج" })).toBeInTheDocument();
+  });
+});
+
+describe("SecuritySection while two-step sign-in is switched off", () => {
+  beforeEach(() => {
+    flags.twoFactor = false;
+  });
+
+  it("has the password and the devices, no second step, and asks the API nothing about it", async () => {
+    renderWithProviders(<SecuritySection />);
+    expect(await screen.findByRole("heading", { name: "Security" })).toBeInTheDocument();
+    expect(screen.getByText("Your password and your signed-in devices")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Change your password/ })).toHaveAttribute("href", "/forgot-password");
+    expect(within(row("Sign out of all devices")).getByRole("button", { name: "Sign out" })).toBeEnabled();
+    expect(screen.queryByText("Two-step sign-in")).not.toBeInTheDocument();
+    expect(screen.queryByText("Code by email")).not.toBeInTheDocument();
+    expect(api.request.mock.calls.filter(([path]) => String(path).startsWith("/auth/two-factor"))).toEqual([]);
+  });
+});
+
+describe("signing out of all devices", () => {
+  const open = async (user: ReturnType<typeof renderWithProviders>["user"]) => {
+    await user.click(within(row("Sign out of all devices")).getByRole("button", { name: "Sign out" }));
+    return screen.findByRole("dialog", { name: "Sign out of all devices?" });
+  };
+
+  it("asks first: nothing is signed out until it is confirmed, and Cancel leaves everything as it is", async () => {
+    flags.twoFactor = false;
+    const { user } = renderWithProviders(<SecuritySection />);
+    const dialog = await open(user);
+    expect(within(dialog).getByText(/Every phone and computer signed in to your account will be signed out, this one included\./)).toBeInTheDocument();
+    expect(authMock.signOutEverywhere).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(authMock.signOutEverywhere).not.toHaveBeenCalled();
+  });
+
+  it("signs out everywhere once confirmed", async () => {
+    flags.twoFactor = false;
+    const { user } = renderWithProviders(<SecuritySection />);
+    const dialog = await open(user);
+    await user.click(within(dialog).getByRole("button", { name: "Sign out of all devices" }));
+
+    await waitFor(() => expect(authMock.signOutEverywhere).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("says why and stays signed in when the server could not be told", async () => {
+    flags.twoFactor = false;
+    const { user } = renderWithProviders(<SecuritySection />, {
+      auth: { signOutEverywhere: vi.fn(async () => Promise.reject(new ApiError("Too many requests", 429, "RATE_LIMITED", {}))) },
+    });
+    const dialog = await open(user);
+    await user.click(within(dialog).getByRole("button", { name: "Sign out of all devices" }));
+
+    expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Sign out of all devices?" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Sign out of all devices" })).toBeEnabled();
+  });
+
+  it("with two-step sign-in on, the question says remembered devices are asked for a code again", async () => {
+    serve({ "/auth/two-factor": byEmail });
+    const { user } = renderWithProviders(<SecuritySection />);
+    await screen.findByText("Turn off two-step sign-in");
+    const dialog = await open(user);
+    expect(within(dialog).getByText(/Devices remembered for two-step sign-in will be asked for a code again\./)).toBeInTheDocument();
   });
 });

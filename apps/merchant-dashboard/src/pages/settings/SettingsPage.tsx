@@ -109,7 +109,9 @@ const STRINGS = {
     s_notifications: "Notifications",
     d_notifications: "What you are told about, and where",
     s_security: "Security",
-    d_security: "Two-step sign-in and password",
+    d_security: "Two-step sign-in, password and signed-in devices",
+    // The same section while two-step sign-in is switched off.
+    d_security_basic: "Password and signed-in devices",
     s_developers: "API keys and webhooks",
     d_developers: "Connect other systems to this store",
     storeCardRole: "You are signed in to this store",
@@ -151,7 +153,8 @@ const STRINGS = {
     s_notifications: "الإشعارات",
     d_notifications: "ما الذي يصلك، وأين",
     s_security: "الأمان",
-    d_security: "الدخول بخطوتين وكلمة المرور",
+    d_security: "الدخول بخطوتين وكلمة المرور والأجهزة المسجَّل دخولها",
+    d_security_basic: "كلمة المرور والأجهزة المسجَّل دخولها",
     s_developers: "مفاتيح API والـ webhooks",
     d_developers: "اربط أنظمة أخرى بهذا المتجر",
     storeCardRole: "أنت داخل على هذا المتجر",
@@ -180,7 +183,7 @@ const SECTIONS = [
   { id: "profile", key: "profile", group: "account", icon: IconAccount, tone: "blue", words: ["profile", "account", "name", "username", "email", "phone", "اسمي", "اسم المستخدم", "البريد", "الهاتف", "حسابي"] },
   { id: "appearance", key: "appearance", group: "account", icon: IconTheme, tone: "purple", words: ["language", "theme", "dark", "light", "black", "oled", "tone", "glass", "glow", "appearance", "look", "اللغة", "عربي", "إنجليزي", "داكن", "غامق", "فاتح", "أسود", "درجة", "زجاج", "توهج", "المظهر", "الشكل"] },
   { id: "notifications", key: "notifications", group: "account", icon: IconBell, tone: "red", words: ["notifications", "sound", "summary reports", "email", "إشعارات", "تنبيهات", "صوت", "تقارير"] },
-  { id: "security", key: "security", group: "account", icon: IconShield, tone: "green", words: ["security", "two-step", "2fa", "two factor", "password", "backup codes", "الأمان", "خطوتين", "كلمة المرور", "رموز احتياطية"] },
+  { id: "security", key: "security", group: "account", icon: IconShield, tone: "green", words: ["security", "two-step", "2fa", "two factor", "password", "backup codes", "sign out", "devices", "sessions", "الأمان", "خطوتين", "كلمة المرور", "رموز احتياطية", "تسجيل الخروج", "الأجهزة", "الجلسات"] },
   { id: "developers", key: "developers", group: "developers", icon: IconKey, tone: "gray", words: ["api", "api keys", "webhooks", "developers", "مفاتيح", "ويب هوك", "المطورين"] },
 ] as const satisfies ReadonlyArray<{ id: string; key: string; group: string; icon: IconComponent; tone: SettingsTone; words: readonly string[] }>;
 
@@ -306,7 +309,6 @@ function SettingsScreen() {
   const hidden = useMemo(() => {
     const out = new Set<SectionId>();
     if (!HOLIDAY_MODE_ENABLED) out.add("holiday");
-    if (!TWO_FACTOR_ENABLED) out.add("security");
     if (!BILLING_ROLES.has(role ?? "")) out.add("billing");
     return out;
   }, [role]);
@@ -316,7 +318,8 @@ function SettingsScreen() {
       SECTIONS.filter((section) => !hidden.has(section.id)).map((section) => ({
         id: section.id,
         label: t[`s_${section.key}`],
-        description: t[`d_${section.key}`],
+        // Security is always listed; two-step sign-in is its part behind a switch.
+        description: section.id === "security" && !TWO_FACTOR_ENABLED ? t.d_security_basic : t[`d_${section.key}`],
         icon: section.icon,
         tone: section.tone,
         group: t[`g_${section.group}`],

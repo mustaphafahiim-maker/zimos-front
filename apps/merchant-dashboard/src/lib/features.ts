@@ -26,7 +26,7 @@ export const AI_ENABLED = import.meta.env.VITE_AI_ENABLED === "true";
  * its switch hides nothing because nothing reads it yet.
  */
 
-/** Two-step sign-in: the code step at sign-in, Security in Settings, backup codes, and the console reset. */
+/** Two-step sign-in: the code step at sign-in, its part of Security in Settings (the section itself is always there), backup codes, and the console reset. */
 export const TWO_FACTOR_ENABLED = import.meta.env.VITE_TWO_FACTOR_ENABLED === "true";
 
 /** Sending a store's other domains to its primary one. Shown only when CUSTOM_DOMAINS_ENABLED is on too. */

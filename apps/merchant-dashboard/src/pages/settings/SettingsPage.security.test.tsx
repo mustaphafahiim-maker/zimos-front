@@ -14,13 +14,14 @@ vi.mock("@/lib/features", async (original) => ({
 }));
 
 describe("Settings and the Security section", () => {
-  it("has no Security section and asks the API nothing about it while the switch is off", async () => {
+  it("shows the Security section without the second step, and asks the API nothing about it, while the switch is off", async () => {
     flags.twoFactor = false;
-    // A link to the section of a switch that is off lands on the first section.
     renderWithProviders(<SettingsPage />, { route: "/settings?tab=security" });
-    expect(await screen.findByRole("heading", { name: "Store profile" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Security" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Security/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Security" })).toBeInTheDocument();
+    // The password and signing out of every device are there whatever the switch says.
+    expect(screen.getByRole("link", { name: /Change your password/ })).toHaveAttribute("href", "/forgot-password");
+    expect(screen.getByRole("group", { name: "Sign out of all devices" })).toBeInTheDocument();
+    expect(screen.queryByText("Two-step sign-in")).not.toBeInTheDocument();
     expect(api.request.mock.calls.filter(([path]) => String(path).startsWith("/auth/two-factor"))).toEqual([]);
   });
 
@@ -29,5 +30,6 @@ describe("Settings and the Security section", () => {
     renderWithProviders(<SettingsPage />, { route: "/settings?tab=security" });
     expect(await screen.findByRole("heading", { name: "Security" })).toBeInTheDocument();
     await waitFor(() => expect(api.request).toHaveBeenCalledWith("/auth/two-factor"));
+    expect(screen.getByRole("group", { name: "Sign out of all devices" })).toBeInTheDocument();
   });
 });

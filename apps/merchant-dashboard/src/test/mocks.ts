@@ -72,6 +72,7 @@ export interface AuthMock {
   login: Mock<(payload: LoginPayload) => Promise<VerificationChallenge | null>>;
   register: Mock<(payload: RegisterPayload) => Promise<VerificationChallenge | null>>;
   logout: Mock<() => Promise<void>>;
+  signOutEverywhere: Mock<() => Promise<void>>;
   refreshUser: Mock<() => Promise<void>>;
   retry: Mock<() => Promise<void>>;
 }
@@ -99,6 +100,7 @@ export function resetMocks() {
     login: vi.fn(async () => null),
     register: vi.fn(async () => null),
     logout: vi.fn(async () => undefined),
+    signOutEverywhere: vi.fn(async () => undefined),
     refreshUser: vi.fn(async () => undefined),
     retry: vi.fn(async () => undefined),
   } satisfies AuthMock);
