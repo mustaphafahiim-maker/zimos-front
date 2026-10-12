@@ -41,8 +41,8 @@ function AccountUnavailable() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-paper p-4">
-      <div role="alert" className="w-full max-w-sm rounded-2xl border border-line bg-paper-raised p-6 text-center shadow-sm">
-        <h1 className="text-lg font-semibold text-ink">We couldn't load your account</h1>
+      <div role="alert" className="w-full max-w-sm rounded-[var(--radius-card)] border border-line bg-paper-raised p-6 text-center shadow-sm">
+        <h1 className="font-display text-lg font-medium text-ink">We couldn't load your account</h1>
         <p className="mt-2 text-sm text-ink-soft">
           You're still signed in. The connection to Zimos dropped or the server is busy. Try again in a moment.
         </p>
