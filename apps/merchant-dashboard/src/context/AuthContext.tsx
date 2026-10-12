@@ -35,6 +35,11 @@ interface AuthContextValue {
   /** Resolves with a challenge while sign-up codes are on; otherwise the new account is signed in. */
   register: (payload: RegisterPayload) => Promise<VerificationChallenge | null>;
   logout: () => Promise<void>;
+  /**
+   * Signs the account out of every device, this one included. Rejects, and
+   * keeps this session, when the server could not be told.
+   */
+  signOutEverywhere: () => Promise<void>;
   refreshUser: () => Promise<void>;
   /** Reads the account again after "unavailable". */
   retry: () => Promise<void>;
@@ -194,6 +199,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setConfirmed(true);
           setStatus("guest");
         }
+      },
+      async signOutEverywhere() {
+        // A guest only once the server has ended the sessions: a failure
+        // leaves this device signed in, and the screen says it did not work.
+        await apiClient.signOutEverywhere();
+        setUser(null);
+        setNeedsPlan(false);
+        setConfirmed(true);
+        setStatus("guest");
       },
       refreshUser: loadUser,
       retry,

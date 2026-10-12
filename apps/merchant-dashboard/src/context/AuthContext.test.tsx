@@ -28,6 +28,15 @@ function Probe() {
       <button onClick={() => void auth.logout().catch(() => undefined)}>logout</button>
       <button
         onClick={() =>
+          void auth.signOutEverywhere().catch(() => {
+            document.title = "everywhere failed";
+          })
+        }
+      >
+        everywhere
+      </button>
+      <button
+        onClick={() =>
           void auth.login({ identifier: "owner@zimos.test", password: "x" }).catch((err: unknown) => {
             document.title = err instanceof TwoFactorRequiredError ? `challenge:${err.challenge.challengeToken}` : "other";
           })
@@ -129,6 +138,36 @@ it("signing out ends the session here even when the server can't be told", async
 
   await waitFor(() => expect(status()).toBe("guest"));
   expect(api.logout).toHaveBeenCalledTimes(1);
+});
+
+describe("signing out of all devices", () => {
+  it("makes this device a guest once the server has ended the sessions (the sign-in page follows)", async () => {
+    api.meDetails.mockResolvedValue(me);
+    api.signOutEverywhere.mockResolvedValue(undefined);
+    const u = renderProvider();
+    await waitFor(() => expect(status()).toBe("authenticated"));
+
+    await u.click(screen.getByRole("button", { name: "everywhere" }));
+
+    await waitFor(() => expect(status()).toBe("guest"));
+    expect(screen.getByTestId("user")).toHaveTextContent("");
+    expect(api.signOutEverywhere).toHaveBeenCalledTimes(1);
+    expect(api.logout).not.toHaveBeenCalled();
+  });
+
+  it("stays signed in, and says it failed, when the server could not be told", async () => {
+    document.title = "";
+    api.meDetails.mockResolvedValue(me);
+    api.signOutEverywhere.mockRejectedValue(new TypeError("Failed to fetch"));
+    const u = renderProvider();
+    await waitFor(() => expect(status()).toBe("authenticated"));
+
+    await u.click(screen.getByRole("button", { name: "everywhere" }));
+
+    await waitFor(() => expect(document.title).toBe("everywhere failed"));
+    expect(status()).toBe("authenticated");
+    expect(screen.getByTestId("user")).toHaveTextContent("owner@zimos.test");
+  });
 });
 
 describe("a sign-in that needs its second step", () => {

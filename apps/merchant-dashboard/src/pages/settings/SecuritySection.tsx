@@ -17,6 +17,8 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { useAuth } from "@/context/AuthContext";
+import { TWO_FACTOR_ENABLED } from "@/lib/features";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataState } from "@/components/DataState";
 import { Modal } from "@/components/Modal";
 import { TextField } from "@/components/Field";
@@ -27,14 +29,24 @@ import { BackupCodesPanel } from "./BackupCodesPanel";
 import { PaneSkeleton } from "./sections/SettingsCard";
 
 /**
- * Settings → Security: two-step sign-in with its methods and backup codes,
- * and the way to a new password. Shown only while TWO_FACTOR_ENABLED is on.
+ * Settings → Security: the way to a new password and signing out of every
+ * device, always; two-step sign-in with its methods and backup codes while
+ * TWO_FACTOR_ENABLED is on.
  */
 
 const STRINGS = {
   en: {
     title: "Security",
-    description: "Two-step sign-in and your password",
+    description: "Two-step sign-in, your password and your signed-in devices",
+    descriptionBasic: "Your password and your signed-in devices",
+    devicesTitle: "Signed-in devices",
+    signOutAll: "Sign out of all devices",
+    signOutAllHint: "Every phone and computer signed in to your account signs in again, this one included.",
+    signOut: "Sign out",
+    signOutAllTitle: "Sign out of all devices?",
+    signOutAllBody: "Every phone and computer signed in to your account will be signed out, this one included. You will sign in again here.",
+    signOutAllBodyTwoStep: "Devices remembered for two-step sign-in will be asked for a code again.",
+    signingOut: "Signing out…",
     twoTitle: "Two-step sign-in",
     twoHint: "After your password, a code is asked for when you sign in from a device we do not know.",
     status: "Now",
@@ -74,7 +86,16 @@ const STRINGS = {
   },
   ar: {
     title: "الأمان",
-    description: "تسجيل الدخول بخطوتين وكلمة المرور",
+    description: "تسجيل الدخول بخطوتين وكلمة المرور والأجهزة المسجَّل دخولها",
+    descriptionBasic: "كلمة المرور والأجهزة المسجَّل دخولها",
+    devicesTitle: "الأجهزة المسجَّل دخولها",
+    signOutAll: "تسجيل الخروج من كل الأجهزة",
+    signOutAllHint: "كل هاتف وحاسوب مسجَّل دخوله إلى حسابك سيسجّل الدخول من جديد، وهذا الجهاز منها.",
+    signOut: "تسجيل الخروج",
+    signOutAllTitle: "تسجيل الخروج من كل الأجهزة؟",
+    signOutAllBody: "سيُسجَّل خروج كل هاتف وحاسوب مسجَّل دخوله إلى حسابك، وهذا الجهاز منها، وستسجّل الدخول هنا من جديد.",
+    signOutAllBodyTwoStep: "الأجهزة المحفوظة لتسجيل الدخول بخطوتين سيُطلب منها الرمز من جديد.",
+    signingOut: "جارٍ تسجيل الخروج…",
     twoTitle: "تسجيل الدخول بخطوتين",
     twoHint: "بعد كلمة المرور، يُطلب رمز عند تسجيل الدخول من جهاز غير معروف.",
     status: "الحالة الآن",
@@ -119,13 +140,58 @@ type T = Record<keyof (typeof STRINGS)["en"], string>;
 export function SecuritySection() {
   const t = useT(STRINGS);
   return (
-    <SettingsPane title={t.title} description={t.description} icon={IconShield} tone="green">
-      <TwoStepPanel t={t} />
+    <SettingsPane title={t.title} description={TWO_FACTOR_ENABLED ? t.description : t.descriptionBasic} icon={IconShield} tone="green">
+      {/* The part behind the switch: while it is off the API is not asked about the second step. */}
+      {TWO_FACTOR_ENABLED && <TwoStepPanel t={t} />}
       {/* There is no change-password call: the way to a new password is the reset link (/forgot-password). */}
       <SettingsGroup title={t.passwordTitle}>
         <SettingsLinkRow to="/forgot-password" icon={IconKey} tone="gray" label={t.resetPassword} hint={t.resetPasswordHint} />
       </SettingsGroup>
+      <DevicesPanel t={t} />
     </SettingsPane>
+  );
+}
+
+// ───────────────────────────── devices ─────────────────────────────
+
+/**
+ * "Sign out of all devices": asks first, then ends every session of the
+ * account on the server, this one included, and the sign-in page follows
+ * (AuthContext.signOutEverywhere). When the server cannot be told, nothing is
+ * signed out: the dialog stays open with the reason.
+ */
+function DevicesPanel({ t }: { t: T }) {
+  const { signOutEverywhere } = useAuth();
+  const [asking, setAsking] = useState(false);
+
+  return (
+    <>
+      <SettingsGroup title={t.devicesTitle}>
+        <SettingsRow
+          label={t.signOutAll}
+          hint={t.signOutAllHint}
+          control={
+            <Button variant="ghost" className="min-h-11 text-danger hover:bg-danger-soft" onClick={() => setAsking(true)}>
+              {t.signOut}
+            </Button>
+          }
+        />
+      </SettingsGroup>
+      <ConfirmDialog
+        open={asking}
+        title={t.signOutAllTitle}
+        description={TWO_FACTOR_ENABLED ? `${t.signOutAllBody} ${t.signOutAllBodyTwoStep}` : t.signOutAllBody}
+        confirmLabel={t.signOutAll}
+        cancelLabel={t.cancel}
+        busyLabel={t.signingOut}
+        destructive
+        onCancel={() => setAsking(false)}
+        onConfirm={async () => {
+          await signOutEverywhere();
+          setAsking(false);
+        }}
+      />
+    </>
   );
 }
 

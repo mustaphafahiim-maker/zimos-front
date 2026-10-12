@@ -64,6 +64,8 @@ describe("the settings menu", () => {
       "Profile",
       "Language and look",
       "Notifications",
+      // Always listed: the password and signing out of every device (two-step sign-in is its part behind a switch).
+      "Security",
       "API keys and webhooks",
     ]);
     const tones = Object.fromEntries(
