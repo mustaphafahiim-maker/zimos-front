@@ -48,7 +48,7 @@ export function FeaturePicker({
             <label
               key={f.key}
               className={cn(
-                "flex min-h-11 items-center gap-2.5 rounded-[10px] border border-line px-3 py-2 text-sm text-ink",
+                "flex min-h-11 items-center gap-2.5 rounded-[0.875rem] border border-line px-3 py-2 text-sm text-ink",
                 reason ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-ink-soft"
               )}
             >

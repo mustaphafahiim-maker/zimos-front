@@ -14,7 +14,12 @@ interface DataStateProps {
   children: ReactNode;
 }
 
-/** Standard loading / error / empty wrapper for a data region. */
+/**
+ * Standard loading / error / empty wrapper for a data region, in the merchant
+ * dashboard's shapes (its components/DataState.tsx and EmptyState.tsx): the
+ * spinner in the middle of the region, the error as an alert with a way to
+ * try again, and "nothing here" as a pane with an icon tile.
+ */
 export function DataState({
   loading,
   error,
@@ -26,7 +31,7 @@ export function DataState({
 }: DataStateProps) {
   if (loading) {
     return (
-      <div className="flex min-h-[30vh] items-center justify-center text-ink-soft">
+      <div role="status" aria-live="polite" className="flex min-h-[30vh] items-center justify-center text-ink-soft">
         <Spinner className="size-6" />
       </div>
     );
@@ -43,7 +48,7 @@ export function DataState({
         </span>
         {onRetry && !permission && (
           <div>
-            <Button size="sm" variant="outline" onClick={onRetry}>
+            <Button size="sm" variant="outline" onClick={onRetry} className="min-h-11">
               Try again
             </Button>
           </div>
@@ -61,10 +66,12 @@ export function DataState({
 
 export function EmptyBlock({ message, action }: { message: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-[var(--radius-card)] border border-dashed border-line bg-paper-raised/60 px-6 py-12 text-center text-sm text-ink-soft">
-      <Inbox className="size-6 text-ink-soft" aria-hidden />
-      <p>{message}</p>
-      {action}
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-paper-raised px-6 py-12 text-center">
+      <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary-soft text-primary [&>svg]:size-6">
+        <Inbox aria-hidden />
+      </div>
+      <p className="max-w-md text-base font-semibold text-ink">{message}</p>
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }

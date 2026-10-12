@@ -109,7 +109,7 @@ export function CarrierAreasPage() {
                 ["Not on the map", counts.missing],
                 ["Stores picked otherwise", counts.overridden],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-3">
+                <div key={label} className="rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line p-3">
                   <p className="text-xs text-ink-soft">{label}</p>
                   <p className="tabular text-xl font-semibold text-ink">{formatNumber(Number(value))}</p>
                 </div>

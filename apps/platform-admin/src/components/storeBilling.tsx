@@ -84,7 +84,7 @@ function DurationPicker({
             role="radio"
             aria-checked={value?.months === m}
             onClick={() => onChange({ months: m })}
-            className={`min-h-11 rounded-[10px] border px-3 text-sm ${value?.months === m ? "border-primary bg-primary-soft text-ink" : "border-line text-ink-soft hover:border-ink-soft"}`}
+            className={`min-h-11 rounded-[0.875rem] border px-3 text-sm ${value?.months === m ? "border-primary bg-primary-soft text-ink" : "border-line text-ink-soft hover:border-ink-soft"}`}
           >
             {m === 12 ? "1 year" : `${m} month${m > 1 ? "s" : ""}`}
           </button>
@@ -94,7 +94,7 @@ function DurationPicker({
           role="radio"
           aria-checked={Boolean(value?.days)}
           onClick={() => onChange({ days: value?.days ?? 30 })}
-          className={`min-h-11 rounded-[10px] border px-3 text-sm ${value?.days ? "border-primary bg-primary-soft text-ink" : "border-line text-ink-soft hover:border-ink-soft"}`}
+          className={`min-h-11 rounded-[0.875rem] border px-3 text-sm ${value?.days ? "border-primary bg-primary-soft text-ink" : "border-line text-ink-soft hover:border-ink-soft"}`}
         >
           Days
         </button>
@@ -104,7 +104,7 @@ function DurationPicker({
             role="radio"
             aria-checked={custom}
             onClick={() => onChange(null)}
-            className={`min-h-11 rounded-[10px] border px-3 text-sm ${custom ? "border-primary bg-primary-soft text-ink" : "border-line text-ink-soft hover:border-ink-soft"}`}
+            className={`min-h-11 rounded-[0.875rem] border px-3 text-sm ${custom ? "border-primary bg-primary-soft text-ink" : "border-line text-ink-soft hover:border-ink-soft"}`}
           >
             Until a date
           </button>
@@ -243,14 +243,14 @@ function SubscriptionSummary({ data }: { data: AdminManualSubscription }) {
         )}
       </dl>
       {data.openCharge && (
-        <p className="rounded-[10px] border border-warning/40 bg-warning-soft px-3 py-2 text-xs text-ink">
+        <p className="rounded-[0.875rem] border border-warning/40 bg-warning-soft px-3 py-2 text-xs text-ink">
           A charge is open for {formatDate(data.openCharge.periodStart)} → {formatDate(data.openCharge.periodEnd)}. Manual changes leave it as it is.
         </p>
       )}
       {data.history.length > 0 && (
         <div>
           <h3 className="mb-2 text-sm font-semibold text-ink">Manual changes</h3>
-          <ul className="divide-y divide-line rounded-[10px] border border-line text-sm">
+          <ul className="divide-y divide-line rounded-[0.875rem] border border-line text-sm">
             {data.history.map((h) => (
               <li key={h.id} className="space-y-0.5 px-3 py-2">
                 <p className="font-medium text-ink">
@@ -734,7 +734,7 @@ export function FeatureOverridesPanel({ workspaceId, canManage, onChanged }: { w
           </Table>
         )}
         {data && data.overrides.some((o) => o.state !== "active") && (
-          <div className="border-t border-line px-5 py-4">
+          <div className="border-t border-line px-4 py-4">
             <h3 className="mb-2 text-sm font-semibold text-ink">Past overrides</h3>
             <ul className="space-y-2 text-sm">
               {data.overrides
@@ -860,7 +860,7 @@ function AddFeatureDialog({
           <legend className="text-sm font-medium text-ink">This store</legend>
           <div className="flex flex-wrap gap-2" role="radiogroup">
             {(["grant", "deny"] as const).map((m) => (
-              <label key={m} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-[10px] border px-3 text-sm ${mode === m ? "border-primary bg-primary-soft" : "border-line"}`}>
+              <label key={m} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-[0.875rem] border px-3 text-sm ${mode === m ? "border-primary bg-primary-soft" : "border-line"}`}>
                 <input type="radio" name="override-mode" checked={mode === m} onChange={() => setMode(m)} />
                 {m === "grant" ? "Gets these features" : "Loses these features"}
               </label>

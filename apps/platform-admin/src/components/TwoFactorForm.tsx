@@ -41,7 +41,7 @@ export function TwoFactorForm({
   }
 
   return (
-    <form onSubmit={submit} className="mt-8 space-y-5">
+    <form onSubmit={submit} className="mt-6 space-y-5">
       {newDevice && <p className="text-sm font-medium text-ink">{t.newDevice}</p>}
       <p className="text-sm text-ink-soft">{challengeBody(t, challenge)}</p>
       {error && <Alert variant="danger">{error}</Alert>}
@@ -57,7 +57,7 @@ export function TwoFactorForm({
           maxLength={backup ? 9 : 6}
           value={code}
           onChange={(e) => setCode(cleanCode(e.target.value, backup))}
-          className="text-center font-mono text-lg tracking-[0.3em]"
+          className={backup ? "text-center font-mono text-lg tracking-[0.3em]" : "text-center font-mono text-lg tracking-[0.4em]"}
         />
         {!newDevice && (
           <button

@@ -114,7 +114,7 @@ export function ServiceListingsPage() {
         ) : (
           <ul className="space-y-3">
             {shown.map((l) => (
-              <li key={l.id} className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
+              <li key={l.id} className="rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge tone={l.isActive ? "success" : "neutral"}>{l.isActive ? "Shown" : "Hidden"}</StatusBadge>
                   <StatusBadge tone="info">{CATEGORY_LABEL[l.category]}</StatusBadge>

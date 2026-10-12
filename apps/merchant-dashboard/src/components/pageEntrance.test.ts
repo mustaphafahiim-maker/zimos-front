@@ -11,12 +11,13 @@ import { describe, expect, it } from "vitest";
  * the page, out of view, under a grey backdrop. jsdom does not lay out, so this
  * reads the stylesheet.
  */
-const css = readFileSync(fileURLToPath(new URL("../index.css", import.meta.url)), "utf8");
+// The body of index.css, which the platform console is built from too.
+const css = readFileSync(fileURLToPath(new URL("../../../../packages/ui/src/theme/app.css", import.meta.url)), "utf8");
 
 function ruleBody(selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = css.match(new RegExp(`(?:^|\\n)${escaped}\\s*\\{([^}]*)\\}`));
-  if (!match) throw new Error(`no ${selector} rule in index.css`);
+  if (!match) throw new Error(`no ${selector} rule in app.css`);
   return match[1];
 }
 

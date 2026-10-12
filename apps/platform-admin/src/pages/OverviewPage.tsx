@@ -420,7 +420,7 @@ function OverviewBody({ data }: { data: OverviewReport }) {
                     {item.to ? (
                       <Link
                         to={item.to}
-                        className="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-primary-soft/60"
+                        className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-primary-soft/60"
                       >
                         {body}
                         <ChevronRight
@@ -431,7 +431,7 @@ function OverviewBody({ data }: { data: OverviewReport }) {
                     ) : (
                       // No workspace to open — a link to nowhere would be worse
                       // than a plain row.
-                      <div className="flex items-start gap-3 px-5 py-3">{body}</div>
+                      <div className="flex items-start gap-3 px-4 py-3">{body}</div>
                     )}
                   </li>
                 );

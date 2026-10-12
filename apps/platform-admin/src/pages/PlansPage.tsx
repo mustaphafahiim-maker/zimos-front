@@ -331,8 +331,8 @@ export function PlansPage() {
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {(data?.plans ?? []).map((p) => (
-            <article key={p.id} className="flex flex-col rounded-[var(--radius-card)] border border-line bg-paper-raised">
-              <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
+            <article key={p.id} className="flex flex-col rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line">
+              <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-4">
                 <div>
                   <h2 className="text-lg font-semibold text-ink">{p.name}</h2>
                   <p className="font-mono text-xs text-ink-soft">{p.code}</p>
@@ -346,7 +346,7 @@ export function PlansPage() {
                   </StatusBadge>
                 </div>
               </div>
-              <div className="flex-1 space-y-4 px-5 py-4">
+              <div className="flex-1 space-y-4 px-4 py-4">
                 <div>
                   <p className="tabular text-2xl font-semibold text-ink">
                     {formatMinorMoney(p.monthlyPrice, p.currency)}
@@ -401,7 +401,7 @@ export function PlansPage() {
                   })}
                 </ul>
               </div>
-              <div className="flex items-center justify-between gap-2 border-t border-line px-5 py-3">
+              <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-3">
                 <span className="text-xs text-ink-soft">{fmt(t.updated, { when: formatRelative(p.updatedAt) })}</span>
                 <div className="flex gap-1.5">
                   <Button size="sm" variant="outline" onClick={() => setEditing(toForm(p))}>

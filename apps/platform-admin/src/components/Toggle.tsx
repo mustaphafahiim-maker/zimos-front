@@ -11,7 +11,13 @@ interface ToggleProps {
   className?: string;
 }
 
-/** Accessible switch. Renders label/description at the start when provided. */
+/**
+ * Accessible switch. Renders label/description at the start when provided.
+ * The track and the thumb are the merchant dashboard's switch (its
+ * components/settings/SettingsRow.tsx): a grey well when off, the brand fill
+ * when on, a white thumb that travels toward the end side. The theme gives
+ * them their material on the zimos-settings-switch-* hooks.
+ */
 export function Toggle({ checked, onChange, label, hideLabel, description, disabled, className }: ToggleProps) {
   const control = (
     <button
@@ -22,17 +28,25 @@ export function Toggle({ checked, onChange, label, hideLabel, description, disab
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-        checked ? "bg-primary" : "bg-line",
-        disabled && "cursor-not-allowed opacity-50"
+        "group/switch inline-flex shrink-0 cursor-pointer items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+        disabled && "cursor-not-allowed"
       )}
     >
       <span
+        aria-hidden
         className={cn(
-          "inline-block size-5 rounded-full bg-white shadow transition-transform",
-          checked ? "translate-x-5 rtl:-translate-x-5" : "translate-x-0.5 rtl:-translate-x-0.5"
+          "zimos-settings-switch-track relative h-7 w-12 shrink-0 overflow-hidden rounded-full transition-[background-color] duration-[var(--dur-fade)] ease-[var(--ease-out)] group-disabled/switch:opacity-55 motion-reduce:transition-none forced-colors:border forced-colors:border-[color:ButtonText]",
+          checked ? "bg-primary forced-colors:bg-[color:Highlight]" : "bg-line-strong"
         )}
-      />
+      >
+        <span
+          className={cn(
+            // 24px in a 28 × 48 track with 2px of air: it travels 20px, toward the end side.
+            "zimos-settings-switch-thumb absolute start-0.5 top-0.5 flex size-6 items-center justify-center rounded-full bg-white shadow-[0_1px_3px_rgb(0_0_0/0.3)] transition-transform duration-[var(--dur-pop)] ease-[var(--ease-pop)] motion-reduce:transition-none forced-colors:bg-[color:ButtonText]",
+            checked && "translate-x-5 rtl:-translate-x-5"
+          )}
+        />
+      </span>
     </button>
   );
   if (!label || hideLabel) return control;

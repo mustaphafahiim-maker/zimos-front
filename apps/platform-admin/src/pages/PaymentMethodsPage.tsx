@@ -168,7 +168,7 @@ export function PaymentMethodsPage() {
             <Panel flush>
               <ul className="divide-y divide-line">
                 {methods.map((m, index) => (
-                  <li key={m.code} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+                  <li key={m.code} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 space-y-1">
                       <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink">
                         {m.labelEn}

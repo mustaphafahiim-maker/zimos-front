@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { cn } from "@store-builder/ui";
+import { Card, cn } from "@store-builder/ui";
 
 interface KpiCardProps {
   label: string;
@@ -14,6 +14,7 @@ interface KpiCardProps {
   className?: string;
 }
 
+/** One figure on the shared card, as the merchant dashboard draws it (its components/KpiCard.tsx): the label, the icon in its chip, the figure, the change. */
 export function KpiCard({
   label,
   value,
@@ -28,20 +29,16 @@ export function KpiCard({
   const up = delta !== null && delta > 0;
   const down = delta !== null && delta < 0;
   const body = (
-    <div
-      className={cn(
-        "h-full rounded-[var(--radius-card)] border border-line bg-paper-raised p-4",
-        to && "transition-colors hover:border-primary/40",
-        className
-      )}
-    >
+    <Card className={cn("h-full gap-0 p-4", to && "transition-colors hover:border-primary/40", className)}>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium tracking-wide text-ink-soft uppercase">{label}</p>
-        {icon && <span className="text-primary [&>svg]:size-4">{icon}</span>}
+        <p className="text-xs font-medium text-ink-soft">{label}</p>
+        {icon && (
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft text-primary [&>svg]:size-4">{icon}</span>
+        )}
       </div>
-      <p className="tabular mt-1.5 text-2xl font-semibold text-ink">{value}</p>
+      <p className="tabular mt-1 text-2xl font-semibold tracking-tight text-ink">{value}</p>
       {delta !== null ? (
-        <p className="mt-1 flex items-center gap-1 text-xs">
+        <p className="mt-1 flex flex-wrap items-center gap-1 text-xs">
           <span className={cn("font-medium", up && "text-success", down && "text-danger", !up && !down && "text-ink-soft")}>
             {up ? "▲" : down ? "▼" : "•"} {(Math.abs(delta) / 100).toFixed(1)}%
           </span>
@@ -50,10 +47,10 @@ export function KpiCard({
       ) : hint ? (
         <p className="mt-1 text-xs text-ink-soft">{hint}</p>
       ) : null}
-    </div>
+    </Card>
   );
   return to ? (
-    <Link to={to} className="block">
+    <Link to={to} className="block rounded-2xl">
       {body}
     </Link>
   ) : (

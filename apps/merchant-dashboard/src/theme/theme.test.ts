@@ -5,16 +5,23 @@ import { describe, expect, it } from "vitest";
 import { GLOW_PRESETS, ORIGINAL_GLOW_LEFT, ORIGINAL_GLOW_RIGHT } from "@/lib/glowPresets";
 
 const SRC = fileURLToPath(new URL("..", import.meta.url));
-const read = (relative: string) => readFileSync(join(SRC, relative), "utf8");
+/**
+ * The layers the platform console draws with too (tokens, looks, the glass
+ * shell, the base of index.css) and the store of the look are in packages/ui;
+ * `ui/…` names a file there. This dashboard's own screens stay under theme/.
+ */
+const UI = join(SRC, "..", "..", "..", "packages", "ui", "src");
+const read = (relative: string) => readFileSync(relative.startsWith("ui/") ? join(UI, relative.slice(3)) : join(SRC, relative), "utf8");
 
 function cssFiles(dir: string): string[] {
-  return readdirSync(join(SRC, dir), { withFileTypes: true }).flatMap((entry) =>
+  const at = dir.startsWith("ui/") ? join(UI, dir.slice(3)) : join(SRC, dir);
+  return readdirSync(at, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? cssFiles(`${dir}/${entry.name}`) : entry.name.endsWith(".css") ? [`${dir}/${entry.name}`] : []
   );
 }
 
 describe("the dashboard's theme", () => {
-  const tokens = read("theme/tokens.css");
+  const tokens = read("ui/theme/tokens.css");
 
   it("has one brand, and every primary shade comes from it", () => {
     expect(tokens.match(/--brand: #[0-9a-f]{6};/g)).toEqual(["--brand: #165dff;"]);
@@ -30,13 +37,20 @@ describe("the dashboard's theme", () => {
 
   it("is loaded after index.css, tokens first", () => {
     const main = read("main.tsx");
-    const order = ["./index.css", "./theme/tokens.css", "./theme/looks.css", "./theme/liquid-glass.css", "./theme/glass/menu.css"].map((file) => main.indexOf(`'${file}'`));
+    const order = [
+      "./index.css",
+      "@store-builder/ui/theme/tokens.css",
+      "@store-builder/ui/theme/looks.css",
+      "@store-builder/ui/theme/liquid-glass.css",
+      "@store-builder/ui/theme/glass/menu.css",
+    ].map((file) => main.indexOf(`'${file}'`));
     expect(order.every((at) => at > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
   it("brings no image, font file or stylesheet of its own: colours and shapes only", () => {
-    const files = cssFiles("theme");
+    // app.css is the base of index.css (Tailwind's own map), not a layer of the theme.
+    const files = [...cssFiles("theme"), ...cssFiles("ui/theme").filter((file) => file !== "ui/theme/app.css")];
     expect(files.length).toBeGreaterThanOrEqual(13);
     for (const file of files) {
       const text = read(file);
@@ -66,8 +80,8 @@ describe("the dashboard's theme", () => {
   });
 
   it("can be switched off: the glass layer is written against data-glass, and the page sets it before first paint", () => {
-    for (const file of cssFiles("theme/glass")) expect(read(file), file).toContain(':root:not([data-glass="off"])');
-    expect(read("theme/liquid-glass.css")).toContain(':root:not([data-glass="off"])');
+    for (const file of [...cssFiles("theme/glass"), ...cssFiles("ui/theme/glass")]) expect(read(file), file).toContain(':root:not([data-glass="off"])');
+    expect(read("ui/theme/liquid-glass.css")).toContain(':root:not([data-glass="off"])');
     const page = readFileSync(join(SRC, "..", "index.html"), "utf8");
     expect(page).toContain('get("zimos.glass")');
     expect(page).toContain('e.setAttribute("data-glass", "off")');
@@ -129,9 +143,9 @@ const NEUTRALS = ["--color-paper", "--color-paper-raised", "--color-paper-sunken
 type Neutral = (typeof NEUTRALS)[number];
 
 describe("the three looks", () => {
-  const tokens = read("theme/tokens.css");
-  const looks = read("theme/looks.css");
-  const glass = read("theme/liquid-glass.css");
+  const tokens = read("ui/theme/tokens.css");
+  const looks = read("ui/theme/looks.css");
+  const glass = read("ui/theme/liquid-glass.css");
   const darkTokens = rule(tokens, "\n.dark");
   const blackTokens = rule(looks, ':root[data-look="black"]');
   const toneTokens = rule(looks, ':root[data-look="dark"][data-tone]');
@@ -247,7 +261,7 @@ describe("the three looks", () => {
 
   it("is set before first paint, from the same keys the app keeps", () => {
     const page = readFileSync(join(SRC, "..", "index.html"), "utf8");
-    const store = read("lib/appearance.ts");
+    const store = read("ui/appearance/store.ts");
     for (const key of ["zimos.look", "zimos.darkLook", "zimos.darkTone", "zimos.glass", "zimos.glowLeft", "zimos.glowRight", "zimos.glowIntensity", "theme"]) {
       expect(page, key).toContain(`get("${key}")`);
       expect(store, key).toContain(`"${key}"`);
@@ -261,9 +275,9 @@ describe("the three looks", () => {
 });
 
 describe("the glow colours of the glass backdrop", () => {
-  const tokens = read("theme/tokens.css");
-  const looks = read("theme/looks.css");
-  const glass = read("theme/liquid-glass.css");
+  const tokens = read("ui/theme/tokens.css");
+  const looks = read("ui/theme/looks.css");
+  const glass = read("ui/theme/liquid-glass.css");
   const POOLS = ["brand", "violet", "pink", "peach", "sky"] as const;
 
   // liquid-glass.css is one nested rule: the light values come first, the dark ones inside `&.dark {`.
@@ -295,7 +309,7 @@ describe("the glow colours of the glass backdrop", () => {
     }
     // No default hides in the variables themselves: unset means unset.
     expect(glass).not.toMatch(/var\(--zimos-glow-(left|right|strength),/);
-    expect(looks + tokens + read("index.css")).not.toMatch(/--zimos-glow-/);
+    expect(looks + tokens + read("index.css") + read("ui/theme/app.css")).not.toMatch(/--zimos-glow-/);
   });
 
   it("paints the left pools from the left colour and the right pools from the right one", () => {
@@ -311,7 +325,7 @@ describe("the glow colours of the glass backdrop", () => {
   });
 
   it("is what both backdrops draw: the dashboard's and the sign-in screens'", () => {
-    for (const file of ["theme/liquid-glass.css", "theme/glass/sweep-account.css"]) {
+    for (const file of ["ui/theme/liquid-glass.css", "ui/theme/glass/sweep-account.css"]) {
       const css = read(file);
       for (const pool of POOLS) expect(css, `${file} ${pool}`).toMatch(new RegExp(`radial-gradient\\([^)]*, var\\(--lg-bg-${pool}\\) 0%, transparent`));
       expect(css, file).toMatch(/radial-gradient\([^;]*var\(--lg-bg-base\);/);

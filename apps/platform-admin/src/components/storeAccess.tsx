@@ -37,7 +37,7 @@ export function StoreAccessPanel({ workspaceId, onChanged }: { workspaceId: stri
             <Summary access={data} />
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div>
-                <p className="mb-1 text-xs font-semibold tracking-wide text-ink-soft uppercase">Manual suspension</p>
+                <p className="mb-1 text-xs font-semibold text-ink-soft">Manual suspension</p>
                 <dl>
                   <DetailRow label="State">
                     {data.suspension.suspended ? (
@@ -62,7 +62,7 @@ export function StoreAccessPanel({ workspaceId, onChanged }: { workspaceId: stri
                 </dl>
               </div>
               <div>
-                <p className="mb-1 text-xs font-semibold tracking-wide text-ink-soft uppercase">Billing</p>
+                <p className="mb-1 text-xs font-semibold text-ink-soft">Billing</p>
                 <dl>
                   <DetailRow label="Lifecycle">
                     <StatusBadge tone={BILLING_PHASE_LABELS[data.billing.phase].tone} dot>
