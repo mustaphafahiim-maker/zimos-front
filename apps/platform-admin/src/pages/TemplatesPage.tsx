@@ -619,7 +619,7 @@ function VersionsDrawer({
         {versions.length === 0 ? (
           <EmptyBlock message={tx.noVersions} />
         ) : (
-          <ul className="divide-y divide-line rounded-[10px] border border-line">
+          <ul className="divide-y divide-line rounded-[0.875rem] border border-line">
             {versions.map((v) => (
               <li key={v.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
@@ -720,7 +720,7 @@ function NewVersionForm({
   }
 
   return (
-    <form onSubmit={submit} className="mb-4 space-y-3 rounded-[10px] border border-line bg-paper p-4">
+    <form onSubmit={submit} className="mb-4 space-y-3 rounded-[0.875rem] border border-line bg-paper-sunken p-4">
       {error && <Alert variant="danger">{error}</Alert>}
       <TextAreaField
         label={tx.versionJson}

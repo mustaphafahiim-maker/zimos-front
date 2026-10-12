@@ -86,7 +86,7 @@ export function StoreWalletPanel({ workspaceId }: { workspaceId: string }) {
       <DataState loading={loading && !data} error={error} onRetry={() => void refresh()}>
         {w && (
           <>
-            <dl className="grid gap-4 px-5 py-4 text-sm sm:grid-cols-4">
+            <dl className="grid gap-4 px-4 py-4 text-sm sm:grid-cols-4">
               <div>
                 <dt className="text-xs text-ink-soft">Balance</dt>
                 <dd className={cn("tabular text-lg font-semibold", w.balance < 0 ? "text-danger" : "text-ink")}>{formatMinorMoneyExact(w.balance, w.currency)}</dd>
@@ -131,7 +131,7 @@ export function StoreWalletPanel({ workspaceId }: { workspaceId: string }) {
             </dl>
             {data?.refunds && <RefundRoom refunds={data.refunds} currency={w.currency} />}
             {entries.length === 0 ? (
-              <p className="border-t border-line px-5 py-4 text-sm text-ink-soft">No movements yet.</p>
+              <p className="border-t border-line px-4 py-4 text-sm text-ink-soft">No movements yet.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -184,7 +184,7 @@ export function StoreWalletPanel({ workspaceId }: { workspaceId: string }) {
               </Table>
             )}
             {pages > 1 && (
-              <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-3 text-sm text-ink-soft">
+              <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 text-sm text-ink-soft">
                 <span>
                   Page {page} of {pages}
                 </span>
@@ -225,7 +225,7 @@ function RefundRoom({ refunds, currency }: { refunds: WalletRefundBreakdown; cur
   const share = `${refunds.ceilingBp / 100}%`;
   return (
     <div className="border-t border-line">
-      <dl className="grid gap-4 px-5 py-4 text-sm sm:grid-cols-4">
+      <dl className="grid gap-4 px-4 py-4 text-sm sm:grid-cols-4">
         <div>
           <dt className="text-xs text-ink-soft">Paid top-ups (lifetime)</dt>
           <dd className="tabular text-ink">{money(refunds.lifetimeToppedUp)}</dd>

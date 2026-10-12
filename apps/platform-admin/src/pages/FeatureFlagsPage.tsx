@@ -168,7 +168,7 @@ function FlagRow({
   };
 
   return (
-    <li className="grid grid-cols-1 items-center gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_16rem_auto]">
+    <li className="grid grid-cols-1 items-center gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_16rem_auto]">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <Mono className="text-sm">{flag.key}</Mono>
@@ -349,7 +349,7 @@ function TargetsModal({
             {unknownIds.length} targeted id{unknownIds.length === 1 ? " is" : "s are"} not in the current workspace list and will be kept.
           </p>
         )}
-        <ul className="scroll-thin max-h-72 divide-y divide-line overflow-y-auto rounded-[10px] border border-line">
+        <ul className="scroll-thin max-h-72 divide-y divide-line overflow-y-auto rounded-[0.875rem] border border-line">
           {visible.length === 0 ? (
             <li className="px-3 py-4 text-center text-sm text-ink-soft">No workspaces match.</li>
           ) : (

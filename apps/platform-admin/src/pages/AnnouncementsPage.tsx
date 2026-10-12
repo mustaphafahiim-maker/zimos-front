@@ -47,7 +47,7 @@ export function AnnouncementBanner({ title, body, severity, dismissible }: { tit
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-[12px] border px-4 py-3 text-sm",
+        "flex items-start gap-3 rounded-[0.875rem] border px-4 py-3 text-sm",
         severity === "warning" ? "border-accent/30 bg-accent-soft" : "border-primary/20 bg-primary-soft"
       )}
     >
@@ -119,7 +119,7 @@ export function AnnouncementsPage() {
         ) : (
           <ul className="space-y-3">
             {filtered.map((a) => (
-              <li key={a.id} className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
+              <li key={a.id} className="rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line p-4">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <Status value={adminApi.announcementStatus(a)} />
                   <StatusBadge tone={a.severity === "warning" ? "warning" : "info"}>{a.severity}</StatusBadge>
@@ -301,7 +301,7 @@ function AnnouncementEditor({
         <Toggle label="Dismissible" description="Merchants can close the banner." checked={form.dismissible} onChange={(v) => set("dismissible", v)} />
         <div>
           <p className="mb-2 text-sm font-medium text-ink">Preview</p>
-          <div className="rounded-[12px] border border-dashed border-line bg-paper p-3">
+          <div className="rounded-[0.875rem] border border-dashed border-line bg-paper-sunken p-3">
             <AnnouncementBanner title={form.title} body={form.body} severity={form.severity} dismissible={form.dismissible} />
           </div>
         </div>

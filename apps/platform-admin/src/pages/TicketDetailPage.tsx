@@ -89,7 +89,7 @@ export function TicketDetailPage() {
               <Panel title="Conversation" flush>
                 <ol className="divide-y divide-line">
                   {data.messages.map((m) => (
-                    <li key={m.id} className={cn("px-5 py-4", m.authorType === "admin" && "bg-primary-soft/40")}>
+                    <li key={m.id} className={cn("px-4 py-4", m.authorType === "admin" && "bg-primary-soft/40")}>
                       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2 text-xs text-ink-soft">
                         <span>
                           <span className="font-semibold text-ink">{m.authorName ?? "Deleted user"}</span>{" "}
