@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useGuardedLeave } from "@/lib/useUnsavedGuard";
-import { CornerDownLeft, Package, Plus, Search, ShoppingBag, Users, Workflow, type LucideIcon } from "lucide-react";
+import { BookUser, Box, CornerDownLeft, Inbox, Package, Percent, Route, Search, ShoppingBag, User, type LucideIcon } from "lucide-react";
 import { cn } from "@store-builder/ui";
 import { dashboardSearch, type DashboardSearchResult } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
@@ -144,11 +144,11 @@ export function CommandPalette() {
     const matches = (label: string) => needle === "" || label.toLowerCase().includes(needle);
 
     const commands: Entry[] = [
-      { id: "cmd-product", group: t.commands, icon: Plus, title: t.cmdNewProduct, to: "/catalog/new" },
-      { id: "cmd-discount", group: t.commands, icon: Plus, title: t.cmdNewDiscount, to: "/discounts" },
+      { id: "cmd-product", group: t.commands, icon: Box, title: t.cmdNewProduct, to: "/catalog/new" },
+      { id: "cmd-discount", group: t.commands, icon: Percent, title: t.cmdNewDiscount, to: "/discounts" },
       { id: "cmd-orders", group: t.commands, icon: ShoppingBag, title: t.cmdNewOrder, to: "/orders" },
-      { id: "cmd-forms", group: t.commands, icon: Search, title: t.cmdForms, to: "/form-submissions" },
-      { id: "cmd-segments", group: t.commands, icon: Users, title: t.cmdSegments, to: "/customers?tab=segments" },
+      { id: "cmd-forms", group: t.commands, icon: Inbox, title: t.cmdForms, to: "/form-submissions" },
+      { id: "cmd-segments", group: t.commands, icon: BookUser, title: t.cmdSegments, to: "/customers?tab=segments" },
     ].filter((c) => matches(String(c.title)));
 
     const pages: Entry[] = NAV_ITEMS.filter((item) => isNavItemVisible(item, role))
@@ -179,7 +179,7 @@ export function CommandPalette() {
       ...results.customers.map((c) => ({
         id: `customer-${c.id}`,
         group: t.customers,
-        icon: Users,
+        icon: User,
         title: <bdi>{c.fullName || c.phone}</bdi>,
         detail: (
           <>
@@ -188,7 +188,7 @@ export function CommandPalette() {
         ),
         to: `/customers/${c.id}`,
       })),
-      ...results.funnels.map((f) => ({ id: `funnel-${f.id}`, group: t.funnels, icon: Workflow, title: <bdi>{f.name}</bdi>, to: `/funnels/${f.id}` })),
+      ...results.funnels.map((f) => ({ id: `funnel-${f.id}`, group: t.funnels, icon: Route, title: <bdi>{f.name}</bdi>, to: `/funnels/${f.id}` })),
     ];
 
     // With nothing typed the palette is a launcher: actions first, then pages.

@@ -5,13 +5,15 @@ import { useGuardedLeave } from "@/lib/useUnsavedGuard";
 import {
   AlertTriangle,
   Bell,
+  BellRing,
+  Bot,
   CheckCheck,
   Download,
   Megaphone,
   PackageMinus,
-  PlugZap,
   ShoppingBag,
   Truck,
+  Unplug,
   Wallet,
   X,
   type LucideIcon,
@@ -73,7 +75,7 @@ const ICONS: Record<string, LucideIcon> = {
   "order.new": ShoppingBag,
   "order.suspicious": AlertTriangle,
   "stock.low": PackageMinus,
-  "integration.failed": PlugZap,
+  "integration.failed": Unplug,
   "export.ready": Download,
   "shipping.batch_done": Truck,
   "wallet.low": Wallet,
@@ -82,7 +84,7 @@ const ICONS: Record<string, LucideIcon> = {
   "wallet.credit": Wallet,
   "wallet.fallback": Wallet,
   announcement: Megaphone,
-  automation: Megaphone,
+  automation: Bot,
 };
 
 /**
@@ -159,6 +161,9 @@ export function NotificationsBell() {
 
   if (!workspaceId) return null;
 
+  // The bell rings while something is unread.
+  const Glyph = unreadCount > 0 ? BellRing : Bell;
+
   return (
     <>
       <button
@@ -170,7 +175,7 @@ export function NotificationsBell() {
         data-slot="notifications-bell"
         className="relative flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-[scale,background-color,color] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-primary-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-primary active:scale-[0.97] aria-expanded:bg-primary-soft aria-expanded:text-primary-dark motion-reduce:transition-none dark:aria-expanded:text-primary pointer-coarse:size-11"
       >
-        <Bell className="size-5" aria-hidden />
+        <Glyph className="size-5" aria-hidden />
         {unreadCount > 0 && (
           <span
             data-testid="notifications-badge"
