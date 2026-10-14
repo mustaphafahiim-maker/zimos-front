@@ -15,6 +15,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDate, formatDateTime, formatMinorMoney } from "@/lib/format";
 import { formatDays } from "@/lib/planDisplay";
+import { formatHours } from "./planSwitchMode";
 import { useLocale, useT, fmt } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
@@ -311,7 +312,15 @@ function PreviewDetails({ preview, view }: { preview: PlanSwitchPreview; view: S
           ))}
         </dl>
       )}
-      {preview.amountDue > 0 && <p className="text-xs text-ink-soft">{s.notPaidNote}</p>}
+      {preview.chargeExpiry ? (
+        // The server says how long the charge would live (an upgrade or a move).
+        <p className="text-xs text-ink-soft">
+          {fmt(s.notPaidBy, { date: formatDateTime(preview.chargeExpiry.expiresAt), hours: formatHours(preview.chargeExpiry.hours, locale) })}
+        </p>
+      ) : (
+        // An older API, or null: the words without a date.
+        preview.amountDue > 0 && <p className="text-xs text-ink-soft">{s.notPaidNote}</p>
+      )}
       {preview.replaces && preview.kind !== "none" && <p className="text-xs text-ink-soft">{replacesText(preview, view, s)}</p>}
     </div>
   );

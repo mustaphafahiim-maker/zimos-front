@@ -289,6 +289,47 @@ describe("the banner of the switch waiting", () => {
   });
 });
 
+/** Opens the confirmation for `planName` with `next` as the server's preview; resolves the dialog. */
+async function confirmationFor(planName: string, next: PlanSwitchPreview, options: { locale?: "en" | "ar" } = {}) {
+  const { user } = setup(ON, options);
+  api.previewPlanSwitch.mockResolvedValue({ preview: next });
+  const label = options.locale === "ar" ? "بدّل إلى هذه الخطة" : "Switch to this plan";
+  await user.click(within(await cardOf(planName)).getByRole("button", { name: label }));
+  const title = options.locale === "ar" ? `التبديل إلى ${planName}` : `Switch to ${planName}`;
+  const dialog = await screen.findByRole("dialog", { name: title });
+  await within(dialog).findByRole("button", { name: options.locale === "ar" ? "إغلاق" : "Close" });
+  return dialog;
+}
+
+describe("how long the charge lives (preview.chargeExpiry)", () => {
+  it("present: the date and the hours", async () => {
+    const dialog = await confirmationFor("Pro", upgrade({ chargeExpiry: { hours: 48, expiresAt: "2030-01-19T12:00:00.000Z" } }));
+    expect(within(dialog).getByText(/If it isn't paid by .*2030.* \(48 hours from now\), the change is cancelled by itself/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/If it isn't paid in time/)).not.toBeInTheDocument();
+  });
+
+  it("absent (an older API): the words without a date", async () => {
+    const absent = await confirmationFor("Pro", upgrade());
+    expect(within(absent).getByText(/If it isn't paid in time, the change is cancelled by itself/)).toBeInTheDocument();
+    expect(within(absent).queryByText(/hours from now/)).not.toBeInTheDocument();
+  });
+
+  it("null: the words without a date", async () => {
+    const dialog = await confirmationFor("Pro", upgrade({ chargeExpiry: null }));
+    expect(within(dialog).getByText(/If it isn't paid in time/)).toBeInTheDocument();
+  });
+
+  it("nothing to pay: no such line at all", async () => {
+    const dialog = await confirmationFor("Basic", downgrade());
+    expect(within(dialog).queryByText(/If it isn't paid/)).not.toBeInTheDocument();
+  });
+
+  it("in Arabic", async () => {
+    const dialog = await confirmationFor("Pro", upgrade({ chargeExpiry: { hours: 48, expiresAt: "2030-01-19T12:00:00.000Z" } }), { locale: "ar" });
+    expect(within(dialog).getByText(/\(خلال ٤٨ ساعة من الآن\)/)).toBeInTheDocument();
+  });
+});
+
 describe("the words", () => {
   it("say the same things in both languages", () => {
     expect(Object.keys(PLAN_SWITCH_STRINGS.ar).sort()).toEqual(Object.keys(PLAN_SWITCH_STRINGS.en).sort());
