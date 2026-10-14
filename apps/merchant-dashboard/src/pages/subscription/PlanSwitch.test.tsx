@@ -1,0 +1,296 @@
+import { describe, expect, it } from "vitest";
+import { screen, waitFor, within } from "@testing-library/react";
+import type {
+  MerchantInvoice,
+  PlanSwitch,
+  PlanSwitchPreview,
+  PlanSwitchSummary,
+  SubscriptionPlan,
+  SubscriptionPlans,
+  Workspace,
+  WorkspaceBilling,
+} from "@store-builder/api-client";
+import { ApiError } from "@store-builder/api-client";
+import { api, fake, workspaceMock } from "@/test/mocks";
+import { renderWithProviders } from "@/test/renderWithProviders";
+import { SubscriptionPage } from "./SubscriptionPage";
+import { PLAN_SWITCH_STRINGS } from "./planSwitchStrings";
+
+// A paid store changing plan by itself (the backend's /billing/plan-switch,
+// PLAN_SWITCH_ENABLED): the switch button on each card, the confirmation
+// with the server's preview, the banner of the switch waiting, and today's
+// "Contact support" page while the server says so.
+
+const plan = (id: string, name: string, monthly: number, extra: Partial<SubscriptionPlan> = {}) =>
+  fake<SubscriptionPlan>({
+    id,
+    name,
+    currency: "EGP",
+    monthlyPrice: monthly,
+    yearlyPrice: monthly * 10,
+    trialDays: 14,
+    maxStores: 1,
+    maxFunnelsPerMonth: 5,
+    softOrderQuota: null,
+    features: [],
+    isCurrent: false,
+    isPublic: true,
+    prices: { monthly: { gross: monthly, discount: 0, net: monthly }, yearly: { gross: monthly * 10, discount: 0, net: monthly * 10 } },
+    ...extra,
+  });
+
+const billing = fake<WorkspaceBilling>({
+  subscription: {
+    status: "active",
+    billingCycle: "monthly",
+    trialEndsAt: null,
+    currentPeriodStart: "2030-01-01T00:00:00Z",
+    currentPeriodEnd: "2030-02-01T00:00:00Z",
+    plan: { id: "plan_starter", name: "Starter", currency: "EGP", monthlyPrice: 30000, yearlyPrice: 300000 },
+  },
+  referralCode: null,
+  nextCharge: { grossAmount: 30000, discountAmount: 0, amount: 30000, currency: "EGP" },
+  limits: { stores: { used: 1, max: 2 }, funnelsThisMonth: { used: 0, max: 5, resetsAt: "2030-02-01" } },
+  draft: false,
+});
+
+const ON: PlanSwitchSummary = { enabled: true, mode: "switch", reason: null, open: null };
+
+function setup(planSwitch?: PlanSwitchSummary, { locale = "en" as "en" | "ar" } = {}) {
+  workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", role: "owner" });
+  const view = fake<SubscriptionPlans>({
+    subscription: { status: "active", billingCycle: "monthly", planId: "plan_starter", trialEndsAt: null, currentPeriodEnd: "2030-02-01T00:00:00Z", draft: false },
+    trial: { available: false, used: true },
+    planChange: "support",
+    referralCode: null,
+    plans: [plan("plan_basic", "Basic", 15000), plan("plan_starter", "Starter", 30000, { isCurrent: true }), plan("plan_pro", "Pro", 60000)],
+    payPerOrder: { available: false, current: false, plan: null },
+    move: null,
+    ...(planSwitch ? { planSwitch } : {}),
+  });
+  api.getWorkspaceBilling.mockResolvedValue(billing);
+  api.getSubscriptionPlans.mockResolvedValue(view);
+  api.listBillingInvoices.mockResolvedValue({ invoices: [], page: 1, pageSize: 10, total: 0 });
+  return { ...renderWithProviders(<SubscriptionPage />, { route: "/subscription", path: "/subscription", locale }), view };
+}
+
+const cardOf = async (name: string) => (await screen.findByRole("heading", { name })).closest("article")!;
+
+const upgrade = (overrides: Partial<PlanSwitchPreview> = {}): PlanSwitchPreview => ({
+  kind: "upgrade",
+  reason: null,
+  effective: "on_payment",
+  effectiveAt: null,
+  from: { planId: "plan_starter", planName: "Starter", billingCycle: "monthly", currency: "EGP" },
+  to: { planId: "plan_pro", planName: "Pro", billingCycle: "monthly", currency: "EGP" },
+  amountDue: 14500,
+  currency: "EGP",
+  proration: { remainingDays: 15, cycleDays: 31, periodCycle: "monthly", standardPeriod: true, fromPrice: 30000, toPrice: 60000, difference: 30000, amount: 14500, currency: "EGP" },
+  trial: false,
+  nextRenewal: { at: "2030-02-01T00:00:00.000Z", amount: 60000, currency: "EGP", billingCycle: "monthly" },
+  payable: true,
+  blockedBy: null,
+  replaces: null,
+  ...overrides,
+});
+
+const downgrade = (): PlanSwitchPreview =>
+  upgrade({
+    kind: "scheduled",
+    reason: "downgrade",
+    effective: "period_end",
+    effectiveAt: "2030-02-01T00:00:00.000Z",
+    to: { planId: "plan_basic", planName: "Basic", billingCycle: "monthly", currency: "EGP" },
+    amountDue: 0,
+    proration: null,
+    nextRenewal: { at: "2030-02-01T00:00:00.000Z", amount: 15000, currency: "EGP", billingCycle: "monthly" },
+    payable: null,
+  });
+
+const openSwitch = (overrides: Partial<PlanSwitch> = {}): PlanSwitch => ({
+  id: "sw_1",
+  kind: "upgrade",
+  status: "pending",
+  from: { planId: "plan_starter", planName: "Starter", billingCycle: "monthly" },
+  to: { planId: "plan_pro", planName: "Pro", billingCycle: "monthly" },
+  effectiveAt: null,
+  appliedAt: null,
+  endedAt: null,
+  endReason: null,
+  invoiceId: "inv_1",
+  amountDue: 14500,
+  currency: "EGP",
+  expiresAt: "2030-01-19T12:00:00.000Z",
+  proration: { remainingDays: 15, cycleDays: 31, fromPrice: 30000, toPrice: 60000, amount: 14500, currency: "EGP" },
+  createdAt: "2030-01-17T12:00:00.000Z",
+  ...overrides,
+});
+
+describe("with the switch off, or support deciding: today's page", () => {
+  it("an older API and PLAN_SWITCH_ENABLED off both show Contact support, the paid note and the billing cycle choice", async () => {
+    for (const summary of [undefined, { enabled: false, mode: null, reason: null, open: null } satisfies PlanSwitchSummary]) {
+      const { unmount } = setup(summary);
+      expect(await screen.findByText("To switch plan while your paid subscription runs, contact Zimos support.")).toBeInTheDocument();
+      expect(within(await cardOf("Pro")).getByRole("button", { name: "Contact support to switch" })).toHaveAttribute("href", "/support");
+      expect(within(await cardOf("Basic")).getByRole("button", { name: "Contact support to switch" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Switch to this plan" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Plan change" })).not.toBeInTheDocument();
+      expect(screen.getByText(/Annual — .* a year \(2 months free\)/)).toBeInTheDocument();
+      expect(api.previewPlanSwitch).not.toHaveBeenCalled();
+      unmount();
+    }
+  });
+
+  it("support deciding says why, and keeps Contact support", async () => {
+    setup({ enabled: true, mode: "support", reason: "MANUAL_PRICING", open: null });
+    expect(await screen.findByText("Your plan's price was set by Zimos, so your plan is changed through Zimos support.")).toBeInTheDocument();
+    expect(within(await cardOf("Pro")).getByRole("button", { name: "Contact support to switch" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Switch to this plan" })).not.toBeInTheDocument();
+  });
+});
+
+describe("an upgrade", () => {
+  it("previews the difference before anything is written, starts it with the amount shown, then opens Pay", async () => {
+    const { user, view } = setup(ON);
+    api.previewPlanSwitch.mockResolvedValue({ preview: upgrade() });
+    const invoice = fake<MerchantInvoice>({ id: "inv_1", status: "pending", amountDue: 14500, currency: "EGP", targetPlanId: "plan_pro", targetBillingCycle: "monthly" });
+    api.startPlanSwitch.mockImplementation(async () => {
+      api.listBillingInvoices.mockResolvedValue({ invoices: [invoice], page: 1, pageSize: 10, total: 1 });
+      return { kind: "upgrade", created: true, changed: false, switch: openSwitch(), invoice, plans: { ...view, planSwitch: { ...ON, open: openSwitch() } } };
+    });
+    api.getPaymentMethods.mockResolvedValue({ methods: [fake({ code: "instapay", kind: "manual", label: { ar: "إنستا باي", en: "InstaPay" } })], currency: "EGP", contactSupport: false });
+    api.listBillingPaymentProofs.mockResolvedValue({ proofs: [] });
+
+    expect(await screen.findByText(/an upgrade costs only the difference for the days left/)).toBeInTheDocument();
+    await user.click(within(await cardOf("Pro")).getByRole("button", { name: "Switch to this plan" }));
+    await waitFor(() => expect(api.previewPlanSwitch).toHaveBeenCalledWith("ws_1", { planId: "plan_pro", billingCycle: "monthly" }));
+    const dialog = await screen.findByRole("dialog", { name: "Switch to Pro" });
+    expect(within(dialog).getByText(/You pay only the difference for the days left in your current period \(15 days\)/)).toBeInTheDocument();
+    expect(within(dialog).getByText("15 days of 31 days")).toBeInTheDocument();
+    expect(within(dialog).getByText("As soon as the payment is confirmed")).toBeInTheDocument();
+    expect(within(dialog).getByText("Next renewal")).toBeInTheDocument();
+    expect(api.startPlanSwitch).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("button", { name: /Switch and pay/ }));
+    await waitFor(() => expect(api.startPlanSwitch).toHaveBeenCalledWith("ws_1", { planId: "plan_pro", billingCycle: "monthly", expectedAmount: 14500 }));
+    // The usual Pay dialog, which pays the charge waiting.
+    await waitFor(() => expect(api.openBillingInvoice).toHaveBeenCalled());
+  });
+
+  it("reads the preview again when the amount changed, and confirms the new one", async () => {
+    const { user } = setup(ON);
+    api.previewPlanSwitch.mockResolvedValueOnce({ preview: upgrade() }).mockResolvedValueOnce({ preview: upgrade({ amountDue: 14000 }) });
+    api.startPlanSwitch.mockRejectedValueOnce(new ApiError("changed", 409, "SWITCH_AMOUNT_CHANGED", { amountDue: 14000, currency: "EGP" }));
+    await user.click(within(await cardOf("Pro")).getByRole("button", { name: "Switch to this plan" }));
+    const dialog = await screen.findByRole("dialog", { name: "Switch to Pro" });
+    await user.click(await within(dialog).findByRole("button", { name: /Switch and pay/ }));
+    expect(await within(dialog).findByText(/The amount changed since it was shown/)).toBeInTheDocument();
+    await waitFor(() => expect(api.previewPlanSwitch).toHaveBeenCalledTimes(2));
+    expect(await within(dialog).findByRole("button", { name: /Switch and pay .*140/ })).toBeEnabled();
+  });
+
+  it("shows what blocks it in words, with the confirm button off", async () => {
+    const { user } = setup(ON);
+    api.previewPlanSwitch.mockResolvedValue({ preview: upgrade({ blockedBy: "PROOF_UNDER_REVIEW" }) });
+    await user.click(within(await cardOf("Pro")).getByRole("button", { name: "Switch to this plan" }));
+    const dialog = await screen.findByRole("dialog", { name: "Switch to Pro" });
+    expect(await within(dialog).findByText(/A transfer for the charge waiting is being checked/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /Switch and pay/ })).toBeDisabled();
+  });
+
+  it("no way to pay the currency: says so, with the way to support", async () => {
+    const { user } = setup(ON);
+    api.previewPlanSwitch.mockResolvedValue({ preview: upgrade({ currency: "USD", payable: false, blockedBy: "NO_PAYMENT_METHOD" }) });
+    await user.click(within(await cardOf("Pro")).getByRole("button", { name: "Switch to this plan" }));
+    const dialog = await screen.findByRole("dialog", { name: "Switch to Pro" });
+    const alert = (await within(dialog).findByText(/There's no way to pay in USD/)).closest("[role=alert]")!;
+    expect(within(alert as HTMLElement).getByRole("link", { name: "Contact support" })).toHaveAttribute("href", "/support");
+  });
+
+  it("a refusal from the preview is worded, not raw", async () => {
+    const { user } = setup(ON);
+    api.previewPlanSwitch.mockRejectedValue(new ApiError("Special terms", 409, "SPECIAL_TERMS_ACTIVE"));
+    await user.click(within(await cardOf("Pro")).getByRole("button", { name: "Switch to this plan" }));
+    expect(await screen.findByText(/Your plan has special terms agreed with Zimos/)).toBeInTheDocument();
+    expect(screen.queryByText("Special terms")).not.toBeInTheDocument();
+  });
+});
+
+describe("a downgrade, and the cycle", () => {
+  it("is scheduled for the end of the paid period, with its date", async () => {
+    const { user, view } = setup(ON);
+    api.previewPlanSwitch.mockResolvedValue({ preview: downgrade() });
+    const scheduled = openSwitch({ kind: "scheduled", status: "scheduled", to: { planId: "plan_basic", planName: "Basic", billingCycle: "monthly" }, effectiveAt: "2030-02-01T00:00:00.000Z", invoiceId: null, amountDue: null, currency: null, expiresAt: null, proration: null });
+    api.startPlanSwitch.mockImplementation(async () => {
+      // From here the server lists the plans with the change waiting.
+      api.getSubscriptionPlans.mockResolvedValue({ ...view, planSwitch: { ...ON, open: scheduled } });
+      return { kind: "scheduled", created: true, changed: false, switch: scheduled, invoice: null, plans: { ...view, planSwitch: { ...ON, open: scheduled } } };
+    });
+    await user.click(within(await cardOf("Basic")).getByRole("button", { name: "Switch to this plan" }));
+    const dialog = await screen.findByRole("dialog", { name: "Switch to Basic" });
+    expect(await within(dialog).findByText(/Basic starts on .*2030, when your paid period ends\. Nothing is refunded/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Schedule the change" }));
+    await waitFor(() => expect(api.startPlanSwitch).toHaveBeenCalledWith("ws_1", { planId: "plan_basic", billingCycle: "monthly", expectedAmount: 0 }));
+    expect(await screen.findByText(/Scheduled: Basic starts on/)).toBeInTheDocument();
+    // The banner, and the card saying when.
+    expect(await screen.findByRole("heading", { name: "Plan change" })).toBeInTheDocument();
+    expect(within(await cardOf("Basic")).getByText(/Starts on/)).toBeInTheDocument();
+  });
+
+  it("the current plan on the other cycle offers the change of billing", async () => {
+    const { user } = setup(ON);
+    api.previewPlanSwitch.mockResolvedValue({ preview: downgrade() });
+    await user.click(await screen.findByRole("radio", { name: /Yearly/ }));
+    await user.click(within(await cardOf("Starter")).getByRole("button", { name: "Switch to annual billing" }));
+    await waitFor(() => expect(api.previewPlanSwitch).toHaveBeenCalledWith("ws_1", { planId: "plan_starter", billingCycle: "yearly" }));
+  });
+});
+
+describe("the banner of the switch waiting", () => {
+  it("an upgrade waiting: its amount, Pay now, when it lapses, and Cancel", async () => {
+    const { user, view } = setup({ ...ON, open: openSwitch() });
+    expect(await screen.findByText(/Your switch to Pro \(monthly\) is waiting for its payment of .*145.*You stay on Starter until it's paid\./)).toBeInTheDocument();
+    expect(screen.getByText(/If it isn't paid by .*, it's cancelled by itself/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pay now" })).toHaveAttribute("href", "/subscription?tab=invoices&pay=1");
+    expect(within(await cardOf("Pro")).getByRole("button", { name: "Pay to switch" })).toHaveAttribute("href", "/subscription?tab=invoices&pay=1");
+    api.cancelPlanSwitch.mockImplementation(async () => {
+      api.getSubscriptionPlans.mockResolvedValue({ ...view, planSwitch: ON });
+      return { cancelled: true, switch: openSwitch({ status: "cancelled" }), plans: { ...view, planSwitch: ON } };
+    });
+    await user.click(screen.getByRole("button", { name: "Cancel this change" }));
+    await waitFor(() => expect(api.cancelPlanSwitch).toHaveBeenCalledWith("ws_1"));
+    expect(await screen.findByText("The change was cancelled. Nothing is due, and your plan stays as it is.")).toBeInTheDocument();
+    expect(screen.queryByText(/is waiting for its payment/)).not.toBeInTheDocument();
+  });
+
+  it("a scheduled change: its date and Cancel; a refused cancel is worded", async () => {
+    const { user } = setup({
+      ...ON,
+      open: openSwitch({ kind: "scheduled", status: "scheduled", to: { planId: "plan_basic", planName: "Basic", billingCycle: "monthly" }, effectiveAt: "2030-02-01T00:00:00.000Z", invoiceId: null, amountDue: null, currency: null, expiresAt: null, proration: null }),
+    });
+    expect(await screen.findByText(/Your switch to Basic \(monthly\) takes effect on .*2030, when your paid period ends/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pay now" })).not.toBeInTheDocument();
+    api.cancelPlanSwitch.mockRejectedValue(new ApiError("billed", 409, "PLAN_SWITCH_ALREADY_BILLED", { invoiceId: "inv_2", effectiveAt: "2030-02-01T00:00:00.000Z" }));
+    await user.click(screen.getByRole("button", { name: "Cancel this change" }));
+    expect(await screen.findByText(/already paid at its price, so that change stays/)).toBeInTheDocument();
+  });
+
+  it("still shows, and cancels, with the switch off", async () => {
+    setup({ enabled: false, mode: null, reason: null, open: openSwitch() });
+    expect(await screen.findByRole("button", { name: "Cancel this change" })).toBeInTheDocument();
+    expect(screen.getByText("To switch plan while your paid subscription runs, contact Zimos support.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Switch to this plan" })).not.toBeInTheDocument();
+  });
+
+  it("is in Arabic", async () => {
+    setup({ ...ON, open: openSwitch() }, { locale: "ar" });
+    expect(await screen.findByText(/تبديلك إلى Pro \(شهري\) في انتظار دفع/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إلغاء هذا التغيير" })).toBeInTheDocument();
+  });
+});
+
+describe("the words", () => {
+  it("say the same things in both languages", () => {
+    expect(Object.keys(PLAN_SWITCH_STRINGS.ar).sort()).toEqual(Object.keys(PLAN_SWITCH_STRINGS.en).sort());
+  });
+});
