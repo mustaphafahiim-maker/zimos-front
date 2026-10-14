@@ -72,6 +72,8 @@ export const PLAN_SWITCH_STRINGS = {
     cancelling: "Cancelling…",
     cancelled: "The change was cancelled. Nothing is due, and your plan stays as it is.",
     cancelProof: "A transfer for this charge is being checked. You can cancel once it has been reviewed.",
+    underReview: "A transfer for this charge is being reviewed. Wait for the review: once it's approved the switch is done; if it's rejected, you can pay again or cancel.",
+    cardUnderReview: "Transfer under review",
   },
   ar: {
     selfServeNote: "بدّل خطتك في أي وقت: الترقية تكلّفك الفرق فقط عن الأيام المتبقية، والتخفيض يبدأ عند انتهاء فترتك المدفوعة.",
@@ -138,6 +140,8 @@ export const PLAN_SWITCH_STRINGS = {
     cancelling: "جارٍ الإلغاء…",
     cancelled: "أُلغي التغيير. لا شيء مستحق، وتبقى خطتك كما هي.",
     cancelProof: "يجري التحقق من تحويل لهذه الدفعة. يمكنك الإلغاء بعد مراجعته.",
+    underReview: "تجري مراجعة تحويل لهذه الدفعة. انتظر نتيجة المراجعة: إذا قُبل يتم التبديل، وإذا رُفض يمكنك الدفع مرة أخرى أو الإلغاء.",
+    cardUnderReview: "التحويل قيد المراجعة",
   },
 } satisfies Messages;
 

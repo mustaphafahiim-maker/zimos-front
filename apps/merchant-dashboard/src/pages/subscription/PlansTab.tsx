@@ -326,14 +326,18 @@ function PlanCard({
             {plan.isCurrent ? (cycle === "yearly" ? s.switchToYearly : s.switchToMonthly) : s.switchTo}
           </Button>
         )}
-        {action === "switchPay" && (
-          <>
-            <p className="text-sm text-ink-soft">{s.cardWaiting}</p>
-            <Button asChild className="min-h-11 w-full">
-              <Link to={PAY_NOW_LINK}>{s.payToSwitch}</Link>
-            </Button>
-          </>
-        )}
+        {action === "switchPay" &&
+          (view.planSwitch?.open?.proofUnderReview === true ? (
+            // A transfer for it is with the console: nothing to pay meanwhile.
+            <p className="rounded-[10px] border border-line bg-paper px-3 py-2 text-sm text-ink">{s.cardUnderReview}</p>
+          ) : (
+            <>
+              <p className="text-sm text-ink-soft">{s.cardWaiting}</p>
+              <Button asChild className="min-h-11 w-full">
+                <Link to={PAY_NOW_LINK}>{s.payToSwitch}</Link>
+              </Button>
+            </>
+          ))}
         {action === "switchScheduled" && (
           <p className="rounded-[10px] border border-line bg-paper px-3 py-2 text-sm text-ink">
             {fmt(s.cardScheduled, { date: formatDate(view.planSwitch?.open?.effectiveAt) })}

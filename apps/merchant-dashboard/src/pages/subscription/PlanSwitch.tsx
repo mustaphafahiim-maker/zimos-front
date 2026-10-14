@@ -375,6 +375,9 @@ export function PlanSwitchBanner({
     }
   }
 
+  // A transfer for its charge is with the console (absent from an older API: then
+  // Cancel stays, and its 409 PROOF_UNDER_REVIEW is worded above).
+  const underReview = open.status === "pending" && open.proofUnderReview === true;
   const sameCycleChange = open.status === "scheduled" && open.from.planId === open.to.planId;
   let body: string;
   if (open.status === "pending") {
@@ -391,19 +394,26 @@ export function PlanSwitchBanner({
         {s.bannerTitle}
       </h2>
       <Alert role="status">{body}</Alert>
-      {open.status === "pending" && open.expiresAt && (
-        <p className="text-xs text-ink-soft">{fmt(s.pendingExpires, { date: formatDateTime(open.expiresAt) })}</p>
+      {underReview ? (
+        // The console is checking a transfer: nothing to do but wait (it doesn't lapse meanwhile).
+        <p className="text-sm font-medium text-ink">{s.underReview}</p>
+      ) : (
+        <>
+          {open.status === "pending" && open.expiresAt && (
+            <p className="text-xs text-ink-soft">{fmt(s.pendingExpires, { date: formatDateTime(open.expiresAt) })}</p>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {open.status === "pending" && (
+              <Button asChild className="min-h-11">
+                <Link to={PAY_NOW_LINK}>{t.payNow}</Link>
+              </Button>
+            )}
+            <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={() => void cancel()}>
+              {busy ? s.cancelling : s.cancelSwitch}
+            </Button>
+          </div>
+        </>
       )}
-      <div className="flex flex-wrap items-center gap-2">
-        {open.status === "pending" && (
-          <Button asChild className="min-h-11">
-            <Link to={PAY_NOW_LINK}>{t.payNow}</Link>
-          </Button>
-        )}
-        <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={() => void cancel()}>
-          {busy ? s.cancelling : s.cancelSwitch}
-        </Button>
-      </div>
       {error && (
         <Alert variant="danger" role="alert">
           {error}

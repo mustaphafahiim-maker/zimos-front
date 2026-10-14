@@ -330,6 +330,48 @@ describe("how long the charge lives (preview.chargeExpiry)", () => {
   });
 });
 
+describe("a transfer under review (open.proofUnderReview)", () => {
+  it("true: says so, and offers neither Cancel nor Pay now, on the banner or the card", async () => {
+    setup({ ...ON, open: openSwitch({ proofUnderReview: true }) });
+    expect(await screen.findByText(/A transfer for this charge is being reviewed\. Wait for the review/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel this change" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pay now" })).not.toBeInTheDocument();
+    // It doesn't lapse while reviewed, so no date for that either.
+    expect(screen.queryByText(/If it isn't paid by/)).not.toBeInTheDocument();
+    const pro = await cardOf("Pro");
+    expect(within(pro).getByText("Transfer under review")).toBeInTheDocument();
+    expect(within(pro).queryByRole("button", { name: "Pay to switch" })).not.toBeInTheDocument();
+  });
+
+  it("false: Cancel and Pay now as before", async () => {
+    setup({ ...ON, open: openSwitch({ proofUnderReview: false }) });
+    expect(await screen.findByRole("button", { name: "Cancel this change" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Pay now" })).toBeInTheDocument();
+    expect(screen.queryByText(/is being reviewed/)).not.toBeInTheDocument();
+  });
+
+  it("absent (an older API): Cancel stays, and the server's refusal is still worded", async () => {
+    const { user } = setup({ ...ON, open: openSwitch() });
+    api.cancelPlanSwitch.mockRejectedValue(new ApiError("proof", 409, "PROOF_UNDER_REVIEW", { invoiceId: "inv_1" }));
+    await user.click(await screen.findByRole("button", { name: "Cancel this change" }));
+    expect(await screen.findByText("A transfer for this charge is being checked. You can cancel once it has been reviewed.")).toBeInTheDocument();
+  });
+
+  it("a scheduled change never has one: Cancel stays", async () => {
+    setup({
+      ...ON,
+      open: openSwitch({ kind: "scheduled", status: "scheduled", effectiveAt: "2030-02-01T00:00:00.000Z", invoiceId: null, amountDue: null, currency: null, expiresAt: null, proration: null, proofUnderReview: false }),
+    });
+    expect(await screen.findByRole("button", { name: "Cancel this change" })).toBeInTheDocument();
+  });
+
+  it("in Arabic", async () => {
+    setup({ ...ON, open: openSwitch({ proofUnderReview: true }) }, { locale: "ar" });
+    expect(await screen.findByText(/تجري مراجعة تحويل لهذه الدفعة/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "إلغاء هذا التغيير" })).not.toBeInTheDocument();
+  });
+});
+
 describe("the words", () => {
   it("say the same things in both languages", () => {
     expect(Object.keys(PLAN_SWITCH_STRINGS.ar).sort()).toEqual(Object.keys(PLAN_SWITCH_STRINGS.en).sort());
