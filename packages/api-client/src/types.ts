@@ -3840,6 +3840,126 @@ export interface SubscriptionPlans {
   payPerOrder?: { available: boolean; current: boolean; plan: { id: string; name: string; fee: number; currency: string } | null };
   /** A store on pay per order moving to one of `plans` by itself; null for any other store, absent from an older API. */
   move?: PlanMove | null;
+  /** Changing plan by itself (`/billing/plan-switch`, PLAN_SWITCH_ENABLED). Absent from an older API. */
+  planSwitch?: PlanSwitchSummary;
+}
+
+/**
+ * How this subscription changes plan (`GET /workspaces/:id/billing/plans`):
+ * `switch` a paid subscription, by itself (`/billing/plan-switch`);
+ * `immediate` a draft or a trial (`POST /billing/plan`); `move` pay per
+ * order (`/billing/plan-move`); `support` through Zimos support, `reason`
+ * saying why; null while PLAN_SWITCH_ENABLED is off. `open` is the switch
+ * waiting (also while the flag is off, so it can be cancelled).
+ */
+export interface PlanSwitchSummary {
+  enabled: boolean;
+  mode: "switch" | "immediate" | "move" | "support" | null;
+  reason: PlanSwitchSupportReason | null;
+  open: PlanSwitch | null;
+}
+
+/** Why a plan is changed through Zimos support. */
+export type PlanSwitchSupportReason = "PLAN_CHANGE_NEEDS_SUPPORT" | "MANUAL_PRICING" | "SPECIAL_TERMS_ACTIVE";
+
+/** upgrade: the difference for the days left; move: a full period (from a free plan); scheduled: at the end of the paid period; immediate: at once, nothing to pay. */
+export type PlanSwitchKind = "upgrade" | "move" | "scheduled" | "immediate";
+
+/** pending (its charge waits) and scheduled are open; the rest are final. */
+export type PlanSwitchStatus = "pending" | "scheduled" | "applied" | "cancelled" | "replaced" | "expired" | "dropped";
+
+/** What a preview says would stop starting the switch now. */
+export type PlanSwitchBlock = "PROOF_UNDER_REVIEW" | "PLAN_SWITCH_ALREADY_BILLED" | "NO_PAYMENT_METHOD";
+
+/** What an upgrade's charge is for, in minor units: the days left and the two prices per period. */
+export interface PlanSwitchProration {
+  remainingDays: number;
+  cycleDays: number;
+  fromPrice: number;
+  toPrice: number;
+  amount: number;
+  currency: string;
+}
+
+/** A merchant's plan switch as the dashboard sees it. */
+export interface PlanSwitch {
+  id: string;
+  kind: PlanSwitchKind;
+  status: PlanSwitchStatus;
+  from: { planId: string | null; planName: string | null; billingCycle: BillingCycle };
+  to: { planId: string | null; planName: string | null; billingCycle: BillingCycle };
+  /** A scheduled switch: when it takes effect (the end of the paid period). */
+  effectiveAt: string | null;
+  appliedAt: string | null;
+  endedAt: string | null;
+  endReason: string | null;
+  /** An upgrade or a move: the charge to pay (the usual Pay dialog pays it). */
+  invoiceId: string | null;
+  amountDue: number | null;
+  currency: string | null;
+  /** A pending switch: when its unpaid charge is voided by itself. */
+  expiresAt: string | null;
+  proration: PlanSwitchProration | null;
+  createdAt: string;
+}
+
+/** `POST /workspaces/:id/billing/plan-switch/preview` — what switching would do; nothing is written. */
+export interface PlanSwitchPreview {
+  kind: PlanSwitchKind | "trial_change" | "none";
+  reason:
+    | "downgrade"
+    | "cycle_change"
+    | "currency"
+    | "period_ended"
+    | "no_plan"
+    | "free_plan"
+    | "same_price"
+    | "nothing_due"
+    | "from_free"
+    | "pay_per_order"
+    | null;
+  /** on_payment (upgrade, move), period_end (scheduled), now (immediate, trial_change), null (none). */
+  effective: "on_payment" | "period_end" | "now" | null;
+  effectiveAt: string | null;
+  from: { planId: string; planName: string; billingCycle: BillingCycle; currency: string } | null;
+  to: { planId: string; planName: string; billingCycle: BillingCycle; currency: string };
+  /** Due now, minor units: 0 for anything but an upgrade or a move. */
+  amountDue: number;
+  currency: string;
+  proration: (PlanSwitchProration & { periodCycle: BillingCycle; standardPeriod: boolean; difference: number }) | null;
+  trial: boolean;
+  /** null when the new plan is free; `at` is null for a move (one period after its payment). */
+  nextRenewal: { at: string | null; amount: number; currency: string; billingCycle: BillingCycle } | null;
+  /** null with nothing due; otherwise whether the store can pay `currency` itself. */
+  payable: boolean | null;
+  blockedBy: PlanSwitchBlock | null;
+  /** What starting it would cancel: the switch waiting, or (kind "renewal") a renewal charge nobody is paying. */
+  replaces: {
+    switchId: string | null;
+    kind: PlanSwitchKind | "renewal";
+    status: string;
+    toPlanId: string | null;
+    toBillingCycle: BillingCycle | null;
+    invoiceId: string | null;
+  } | null;
+}
+
+/** `POST /workspaces/:id/billing/plan-switch` — 201 with a new switch, 200 otherwise. */
+export interface PlanSwitchStartResult {
+  kind: PlanSwitchPreview["kind"];
+  created: boolean;
+  changed: boolean;
+  switch: PlanSwitch | null;
+  /** An upgrade's or a move's charge. */
+  invoice: MerchantInvoice | null;
+  plans: SubscriptionPlans;
+}
+
+/** `POST /workspaces/:id/billing/plan-switch/cancel`. */
+export interface PlanSwitchCancelResult {
+  cancelled: boolean;
+  switch: PlanSwitch | null;
+  plans: SubscriptionPlans;
 }
 
 /** The move off pay per order (`POST /workspaces/:id/billing/plan-move`). */

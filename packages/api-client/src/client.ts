@@ -35,6 +35,9 @@ import type {
   WorkspaceAccess,
   GoLiveResult,
   SubscriptionPlans,
+  PlanSwitchPreview,
+  PlanSwitchStartResult,
+  PlanSwitchCancelResult,
   ReferralCodePreview,
   MerchantInvoice,
   MerchantInvoicePage,
@@ -1207,6 +1210,47 @@ export class ApiClient {
   /** Drops the move waiting for its payment: its charge is void, the store stays as it is. */
   async cancelPlanMove(workspaceId: string) {
     return this.request<{ cancelled: boolean; plans: SubscriptionPlans }>(`/workspaces/${workspaceId}/billing/plan-move/cancel`, {
+      method: "POST",
+      body: {},
+    });
+  }
+
+  /**
+   * What switching to `planId` would do, writing nothing (PLAN_SWITCH_ENABLED):
+   * its kind, when it takes effect, what is due now and the next renewal.
+   * `billingCycle` defaults to the subscription's. 404 PLAN_SWITCH_DISABLED,
+   * 422 PLAN_NOT_AVAILABLE, 409 PLAN_CHANGE_NEEDS_SUPPORT / MANUAL_PRICING /
+   * SPECIAL_TERMS_ACTIVE.
+   */
+  async previewPlanSwitch(workspaceId: string, payload: { planId: string; billingCycle?: BillingCycle }) {
+    return this.request<{ preview: PlanSwitchPreview }>(`/workspaces/${workspaceId}/billing/plan-switch/preview`, {
+      method: "POST",
+      body: payload,
+    });
+  }
+
+  /**
+   * Starts the switch the preview showed; `expectedAmount` is its `amountDue`
+   * (409 SWITCH_AMOUNT_CHANGED, details { amountDue, currency }, when it no
+   * longer is). An upgrade or a move comes back with its charge to pay. 201
+   * new, 200 the same one again or nothing changed. Also 409
+   * PROOF_UNDER_REVIEW, PLAN_SWITCH_ALREADY_BILLED, NO_PAYMENT_METHOD,
+   * PLAN_SWITCH_BUSY, and the preview's refusals.
+   */
+  async startPlanSwitch(workspaceId: string, payload: { planId: string; billingCycle?: BillingCycle; expectedAmount?: number }) {
+    return this.request<PlanSwitchStartResult>(`/workspaces/${workspaceId}/billing/plan-switch`, {
+      method: "POST",
+      body: payload,
+    });
+  }
+
+  /**
+   * Cancels the switch waiting (its charge void, the store as it is); with
+   * none, a pay-per-order move waiting. Works with PLAN_SWITCH_ENABLED off. 409
+   * PROOF_UNDER_REVIEW, PLAN_SWITCH_ALREADY_BILLED.
+   */
+  async cancelPlanSwitch(workspaceId: string) {
+    return this.request<PlanSwitchCancelResult>(`/workspaces/${workspaceId}/billing/plan-switch/cancel`, {
       method: "POST",
       body: {},
     });

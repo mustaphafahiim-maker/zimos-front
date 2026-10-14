@@ -88,6 +88,17 @@ export type ApiErrorCode =
   | "NOTHING_TO_PAY" // 409 — the charge comes to nothing (a full discount)
   | "CHARGE_NOT_PENDING" // 409 — the charge was settled in the meantime
   | "CHARGE_AMOUNT_CHANGED" // 409, details = { amountDue, currency } — a transfer's proof sent with an expectedAmount the charge no longer comes to
+  // billing — changing plan by itself (/billing/plan-switch, PLAN_SWITCH_ENABLED)
+  | "PLAN_SWITCH_DISABLED" // 404 — preview or start while the switch is off
+  | "PLAN_CHANGE_NEEDS_SUPPORT" // 409 — the subscription is cancelled or suspended (or, on POST /billing/plan, paid)
+  | "MANUAL_PRICING" // 409 — the plan's price was set in the console
+  | "SPECIAL_TERMS_ACTIVE" // 409 — a special-terms grant is running
+  | "PROOF_UNDER_REVIEW" // 409, details = { invoiceId } — a transfer for the charge waiting is being checked
+  | "PLAN_SWITCH_ALREADY_BILLED" // 409, details = { invoiceId, effectiveAt } — the period after a scheduled change is paid at its price
+  | "NO_PAYMENT_METHOD" // 409, details = { currency } — no gateway or transfer is offered for that currency
+  | "SWITCH_AMOUNT_CHANGED" // 409, details = { amountDue, currency } — expectedAmount is no longer the amount due
+  | "PLAN_SWITCH_BUSY" // 409 — another change was made at the same moment
+  | "PLAN_SWITCH_WAITING" // 409 — PATCH /billing (the cycle) while a switch waits
   // store access (workspaces/workspaceAccessService)
   | "SUBSCRIPTION_REQUIRED" // 402 — creating a product or funnel while unpaid past the grace day
   | "STORE_SUSPENDED" // 403 — creating a product or funnel while suspended by the platform
