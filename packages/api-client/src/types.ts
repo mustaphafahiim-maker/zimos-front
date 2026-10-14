@@ -3899,6 +3899,12 @@ export interface PlanSwitch {
   currency: string | null;
   /** A pending switch: when its unpaid charge is voided by itself. */
   expiresAt: string | null;
+  /**
+   * A transfer's proof for its charge is with the console: cancelling or
+   * replacing it is refused (409 PROOF_UNDER_REVIEW) and it doesn't expire
+   * until reviewed. Always false for a scheduled switch. Absent from an older API.
+   */
+  proofUnderReview?: boolean;
   proration: PlanSwitchProration | null;
   createdAt: string;
 }
@@ -3928,7 +3934,15 @@ export interface PlanSwitchPreview {
   currency: string;
   proration: (PlanSwitchProration & { periodCycle: BillingCycle; standardPeriod: boolean; difference: number }) | null;
   trial: boolean;
-  /** null when the new plan is free; `at` is null for a move (one period after its payment). */
+  /**
+   * How long the charge it writes would live unpaid if started now: an
+   * upgrade or a move. null when it writes none (and for a pay-per-order
+   * move while the prepaid balance is off: that charge never expires by
+   * itself). The hourly job voids it at its first run after `expiresAt`.
+   * Absent from an older API.
+   */
+  chargeExpiry?: { hours: number; expiresAt: string } | null;
+  /** null when the new plan is free; `at` is null only for a move (its period starts when it is paid). */
   nextRenewal: { at: string | null; amount: number; currency: string; billingCycle: BillingCycle } | null;
   /** null with nothing due; otherwise whether the store can pay `currency` itself. */
   payable: boolean | null;
