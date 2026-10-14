@@ -4,6 +4,7 @@ import { Alert, Button, Input, Label, cn } from "@store-builder/ui";
 import type {
   BillingCycle,
   PlanPrice,
+  PlanSwitchStartResult,
   SubscriptionPlan,
   SubscriptionPlans,
   WorkspaceBilling,
@@ -12,7 +13,7 @@ import { apiErrorDetails } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
-import { formatMinorMoney } from "@/lib/format";
+import { formatDate, formatMinorMoney } from "@/lib/format";
 import { noteWentLive } from "@/lib/goLive";
 import { formatDays } from "@/lib/planDisplay";
 import { useLocale, useT, fmt } from "@/i18n/LocaleContext";
@@ -21,20 +22,33 @@ import { CycleSwitch, PlanSummary } from "@/components/plans/PlanPicker";
 import { BillingCycleChoice } from "./billingParts";
 import { BILLING_STRINGS, codeDiscountLabel } from "./billingText";
 import { PAY_STRINGS } from "./payStrings";
+import { PAY_NOW_LINK, PlanSwitchBanner, PlanSwitchDialog, type SwitchTarget } from "./PlanSwitch";
+import { selfServeSwitch, supportReasonText } from "./planSwitchMode";
+import { PLAN_SWITCH_STRINGS } from "./planSwitchStrings";
 import { SUBSCRIPTION_STRINGS } from "./subscriptionStrings";
 import { WALLET_STRINGS } from "./walletStrings";
-
-/** The Invoices tab with its Pay dialog open (SubscriptionPage). */
-const PAY_NOW_LINK = "/subscription?tab=invoices&pay=1";
 
 /** The Usage tab, where the prepaid balance is topped up. */
 const TOP_UP_LINK = "/subscription?tab=usage";
 
-/** What a card offers, from the subscription's state (see the backend's merchantPlansService). */
-type CardAction = "trial" | "choose" | "move" | "movePay" | "support" | "current" | "none";
+/**
+ * What a card offers, from the subscription's state (see the backend's
+ * merchantPlansService and planSwitchService). switch / switchPay /
+ * switchScheduled only while the server says the store changes plan by itself
+ * (`planSwitch.mode` "switch", PLAN_SWITCH_ENABLED).
+ */
+type CardAction = "trial" | "choose" | "move" | "movePay" | "switch" | "switchPay" | "switchScheduled" | "support" | "current" | "none";
 
-function actionFor(plan: SubscriptionPlan, view: SubscriptionPlans): CardAction {
+function actionFor(plan: SubscriptionPlan, view: SubscriptionPlans, cycle: BillingCycle): CardAction {
   if (view.trial.available && plan.trialDays > 0 && (plan.isPublic || plan.isCurrent)) return "trial";
+  if (selfServeSwitch(view)) {
+    // The switch waiting is this card's (plan and cycle): it leads to paying it, or says when it starts.
+    const open = view.planSwitch?.open;
+    if (open && open.to.planId === plan.id && open.to.billingCycle === cycle) return open.status === "pending" ? "switchPay" : "switchScheduled";
+    // The store's own plan on the other cycle: a change of billing at the end of the period.
+    if (plan.isCurrent) return cycle === view.subscription.billingCycle ? "current" : "switch";
+    return plan.isPublic ? "switch" : "none";
+  }
   if (plan.isCurrent) return "current";
   if (!plan.isPublic) return "none";
   // A store on pay per order moves by itself; while a move waits, only its plan's card leads to paying it.
@@ -74,9 +88,19 @@ export function PlansTab({
 }) {
   const t = useT(SUBSCRIPTION_STRINGS);
   const bt = useT(BILLING_STRINGS);
+  const s = useT(PLAN_SWITCH_STRINGS);
+  const toast = useToast();
+  const navigate = useNavigate();
   const [cycle, setCycle] = useState<BillingCycle>(view.subscription.billingCycle);
+  const [switchTarget, setSwitchTarget] = useState<SwitchTarget | null>(null);
   const code = view.referralCode;
   const move = view.move?.available ? view.move : null;
+  // Changing plan by itself (PLAN_SWITCH_ENABLED, a paid subscription): the
+  // cycle picked here is the one switched to, and each card asks to switch.
+  const selfServe = !move && selfServeSwitch(view);
+  const supportReason = move ? null : supportReasonText(view, s);
+  // The switch waiting, shown whenever the server lists one (also with the flag off).
+  const openSwitch = move ? null : (view.planSwitch?.open ?? null);
   const paidPlan = billing?.subscription.plan;
   // The next charge, for the current plan's card — not while a paid period
   // runs (that renews from the Invoices tab). Read again after a plan change.
@@ -84,6 +108,24 @@ export function PlansTab({
     billing && billing.subscription.status !== "active" && billing.nextCharge
       ? { ...billing.nextCharge, planId: billing.subscription.plan?.id ?? null }
       : null;
+
+  function switched(result: PlanSwitchStartResult) {
+    setSwitchTarget(null);
+    onPlansChange(result.plans);
+    onChanged();
+    const plan = result.switch?.to.planName ?? "";
+    if (result.invoice && result.invoice.status === "pending" && (result.kind === "upgrade" || result.kind === "move")) {
+      // The charge is written: the usual Pay dialog pays it.
+      toast.success(fmt(s.startedPay, { amount: formatMinorMoney(result.invoice.amountDue, result.invoice.currency), plan }));
+      navigate(PAY_NOW_LINK);
+    } else if (result.kind === "scheduled") {
+      toast.success(fmt(s.startedScheduled, { plan, date: formatDate(result.switch?.effectiveAt) }));
+    } else if (result.kind === "none") {
+      if (result.changed) toast.success(s.keptCurrent);
+    } else if (result.changed || result.created) {
+      toast.success(t.planChanged);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -94,9 +136,14 @@ export function PlansTab({
       )}
       {move ? (
         <MoveNotice move={move} onPlansChange={onPlansChange} onChanged={onChanged} />
+      ) : selfServe ? (
+        <p className="text-sm text-ink-soft">{s.selfServeNote}</p>
+      ) : supportReason ? (
+        <p className="text-sm text-ink-soft">{supportReason}</p>
       ) : (
         view.planChange === "support" && <p className="text-sm text-ink-soft">{t.paidNote}</p>
       )}
+      {openSwitch && <PlanSwitchBanner open={openSwitch} onPlansChange={onPlansChange} onChanged={onChanged} />}
 
       {code && (
         <p className="text-sm text-ink" dir="auto">
@@ -106,7 +153,7 @@ export function PlansTab({
         </p>
       )}
 
-      {!move && view.planChange === "support" && billing && paidPlan && paidPlan.monthlyPrice > 0 ? (
+      {!move && !selfServe && view.planChange === "support" && billing && paidPlan && paidPlan.monthlyPrice > 0 ? (
         <BillingCycleChoice billing={billing} onChange={onBillingChange} />
       ) : (
         <CycleSwitch value={cycle} onChange={setCycle} />
@@ -118,14 +165,17 @@ export function PlansTab({
             key={plan.id}
             plan={plan}
             view={view}
-            cycle={view.planChange === "support" && !move ? view.subscription.billingCycle : cycle}
+            cycle={view.planChange === "support" && !move && !selfServe ? view.subscription.billingCycle : cycle}
             due={due}
             onPlansChange={onPlansChange}
             onChanged={onChanged}
+            onSwitch={(target) => setSwitchTarget(target)}
           />
         ))}
         <PayPerOrderCard view={view} onPlansChange={onPlansChange} onChanged={onChanged} />
       </div>
+
+      <PlanSwitchDialog target={switchTarget} view={view} onClose={() => setSwitchTarget(null)} onDone={switched} />
     </div>
   );
 }
@@ -137,6 +187,7 @@ function PlanCard({
   due,
   onPlansChange,
   onChanged,
+  onSwitch,
 }: {
   plan: SubscriptionPlan;
   view: SubscriptionPlans;
@@ -145,9 +196,12 @@ function PlanCard({
   due: (NonNullable<WorkspaceBilling["nextCharge"]> & { planId: string | null }) | null;
   onPlansChange: (next: SubscriptionPlans) => void;
   onChanged: () => void;
+  /** Opens the switch's confirmation for this card (PlanSwitchDialog). */
+  onSwitch: (target: SwitchTarget) => void;
 }) {
   const t = useT(SUBSCRIPTION_STRINGS);
   const p = useT(PAY_STRINGS);
+  const s = useT(PLAN_SWITCH_STRINGS);
   const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
@@ -155,7 +209,7 @@ function PlanCard({
   const errorMessage = useErrorMessage();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const action = actionFor(plan, view);
+  const action = actionFor(plan, view, cycle);
   const moveBlocked = action === "move" && ((view.move?.debt ?? 0) > 0 || Boolean(view.move?.otherChargeOpen));
   const price = priceFor(plan.prices, cycle);
   const yearlySaving = plan.prices.monthly.net * 12 - plan.prices.yearly.net;
@@ -224,8 +278,13 @@ function PlanCard({
       </div>
 
       <PlanSummary
-        // A move off pay per order never starts a trial, so a plan's own isn't shown then.
-        plan={{ ...plan, monthlyPrice: plan.prices.monthly.net, yearlyPrice: plan.prices.yearly.net, trialDays: view.move?.available ? 0 : plan.trialDays }}
+        // A move off pay per order, or a switch, never starts a trial, so a plan's own isn't shown then.
+        plan={{
+          ...plan,
+          monthlyPrice: plan.prices.monthly.net,
+          yearlyPrice: plan.prices.yearly.net,
+          trialDays: view.move?.available || selfServeSwitch(view) ? 0 : plan.trialDays,
+        }}
         billingCycle={cycle}
       />
       {price.discount > 0 && (
@@ -261,6 +320,28 @@ function PlanCard({
           <Button asChild className="min-h-11 w-full">
             <Link to={PAY_NOW_LINK}>{t.movePay}</Link>
           </Button>
+        )}
+        {action === "switch" && (
+          <Button type="button" className="min-h-11 w-full" onClick={() => onSwitch({ plan, cycle })}>
+            {plan.isCurrent ? (cycle === "yearly" ? s.switchToYearly : s.switchToMonthly) : s.switchTo}
+          </Button>
+        )}
+        {action === "switchPay" &&
+          (view.planSwitch?.open?.proofUnderReview === true ? (
+            // A transfer for it is with the console: nothing to pay meanwhile.
+            <p className="rounded-[10px] border border-line bg-paper px-3 py-2 text-sm text-ink">{s.cardUnderReview}</p>
+          ) : (
+            <>
+              <p className="text-sm text-ink-soft">{s.cardWaiting}</p>
+              <Button asChild className="min-h-11 w-full">
+                <Link to={PAY_NOW_LINK}>{s.payToSwitch}</Link>
+              </Button>
+            </>
+          ))}
+        {action === "switchScheduled" && (
+          <p className="rounded-[10px] border border-line bg-paper px-3 py-2 text-sm text-ink">
+            {fmt(s.cardScheduled, { date: formatDate(view.planSwitch?.open?.effectiveAt) })}
+          </p>
         )}
         {action === "support" && (
           <Button asChild variant="outline" className="min-h-11 w-full">
