@@ -15,7 +15,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDate, formatDateTime, formatMinorMoney } from "@/lib/format";
 import { formatDays } from "@/lib/planDisplay";
-import { formatHours } from "./planSwitchMode";
+import { formatHours, renewalLine } from "./planSwitchMode";
 import { useLocale, useT, fmt } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
@@ -291,11 +291,18 @@ function PreviewDetails({ preview, view }: { preview: PlanSwitchPreview; view: S
       value: preview.effective === "on_payment" ? s.startsOnPayment : preview.effective === "period_end" ? date : s.startsNow,
     });
   }
-  if (preview.nextRenewal && preview.kind !== "none") {
+  // A free plan has no renewal: no row. A move's follows its payment (see renewalLine).
+  const renewal = renewalLine(preview);
+  if (renewal && preview.nextRenewal) {
     const amount = formatMinorMoney(preview.nextRenewal.amount, preview.nextRenewal.currency);
     rows.push({
       label: s.nextRenewal,
-      value: preview.nextRenewal.at ? fmt(s.nextRenewalValue, { amount, date: formatDate(preview.nextRenewal.at) }) : fmt(s.nextRenewalAfterPayment, { amount }),
+      value:
+        renewal === "date"
+          ? fmt(s.nextRenewalValue, { amount, date: formatDate(preview.nextRenewal.at) })
+          : renewal === "after_payment"
+            ? fmt(s.nextRenewalAfterPayment, { amount })
+            : amount,
     });
   }
 

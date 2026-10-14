@@ -330,6 +330,61 @@ describe("how long the charge lives (preview.chargeExpiry)", () => {
   });
 });
 
+describe("the next renewal in the confirmation (preview.nextRenewal)", () => {
+  const rowOf = (dialog: HTMLElement) => within(dialog).queryByText("Next renewal")?.closest("div") ?? null;
+
+  it("a move (at null): it follows the payment, with no date", async () => {
+    const dialog = await confirmationFor(
+      "Pro",
+      upgrade({
+        kind: "move",
+        reason: "from_free",
+        proration: null,
+        amountDue: 60000,
+        nextRenewal: { at: null, amount: 60000, currency: "EGP", billingCycle: "monthly" },
+      })
+    );
+    const row = rowOf(dialog)!;
+    expect(within(row).getByText(/one period after the payment/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Invalid date/)).not.toBeInTheDocument();
+    expect(within(row).queryByText(/—/)).not.toBeInTheDocument();
+  });
+
+  it("a free plan (nextRenewal null): no renewal row at all", async () => {
+    const dialog = await confirmationFor("Basic", upgrade({ kind: "immediate", reason: "free_plan", effective: "now", amountDue: 0, proration: null, nextRenewal: null, payable: null }));
+    expect(within(dialog).getByText(/is free and starts now/)).toBeInTheDocument();
+    expect(rowOf(dialog)).toBeNull();
+  });
+
+  it("the plan the store is on (none): reads as its renewal as it stands", async () => {
+    const none = upgrade({
+      kind: "none",
+      reason: null,
+      effective: null,
+      to: { planId: "plan_starter", planName: "Starter", billingCycle: "monthly", currency: "EGP" },
+      amountDue: 0,
+      proration: null,
+      nextRenewal: { at: "2030-02-01T00:00:00.000Z", amount: 30000, currency: "EGP", billingCycle: "monthly" },
+      payable: null,
+    });
+    const dialog = await confirmationFor("Basic", none);
+    expect(within(dialog).getByText("This is already your plan.")).toBeInTheDocument();
+    expect(within(rowOf(dialog)!).getByText(/300 on .*2030/)).toBeInTheDocument();
+    // Nothing starts and nothing is due.
+    expect(within(dialog).queryByText("Starts")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Due now")).not.toBeInTheDocument();
+  });
+
+  it("the plan the store is on, from an older API (at null): no renewal row", async () => {
+    const dialog = await confirmationFor(
+      "Basic",
+      upgrade({ kind: "none", reason: null, effective: null, amountDue: 0, proration: null, nextRenewal: { at: null, amount: 30000, currency: "EGP", billingCycle: "monthly" }, payable: null })
+    );
+    expect(within(dialog).getByText("This is already your plan.")).toBeInTheDocument();
+    expect(rowOf(dialog)).toBeNull();
+  });
+});
+
 describe("a transfer under review (open.proofUnderReview)", () => {
   it("true: says so, and offers neither Cancel nor Pay now, on the banner or the card", async () => {
     setup({ ...ON, open: openSwitch({ proofUnderReview: true }) });
