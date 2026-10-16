@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import type { WebsiteTemplateDetail, WebsiteTemplateSummary, Workspace } from "@store-builder/api-client";
+import type { Website, WebsiteDetail, WebsiteTemplateDetail, WebsiteTemplateSummary, Workspace } from "@store-builder/api-client";
 import { api, fake, workspaceMock, type ListedWorkspace } from "@/test/mocks";
 import { currentPath, renderWithProviders } from "@/test/renderWithProviders";
 import { MAX_LOADING_PREVIEWS } from "@/lib/templatePreview";
@@ -162,6 +162,124 @@ describe("WebsitePage template gallery", () => {
     // Blank-document loads of the new frame don't free another slot either.
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(submit).toHaveBeenCalledTimes(MAX_LOADING_PREVIEWS + 1);
+  });
+});
+
+/** One design in two languages, as the console holds them: «name», and «name عربي» right-to-left and tagged `ar`. */
+function design(id: string, name: string, category: string) {
+  return [
+    fake<WebsiteTemplateSummary>({ id: `${id}_en`, name, category, thumbnailUrl: null, templateVersionId: `v_${id}_en`, rtl: false, tags: ["xs"] }),
+    fake<WebsiteTemplateSummary>({
+      id: `${id}_ar`,
+      name: `${name} عربي`,
+      category,
+      thumbnailUrl: null,
+      templateVersionId: `v_${id}_ar`,
+      rtl: true,
+      tags: ["xs", "ar"],
+    }),
+  ];
+}
+
+const cardNames = () => screen.getAllByRole("button", { name: /^(Preview|معاينة) / }).map((b) => b.textContent);
+
+// Every test names its templates its own way: the page shows the last list it fetched (kept for the session)
+// before the new one arrives.
+describe("WebsitePage template languages", () => {
+  it("shows one card per design, in the switch's language, and counts what shows", async () => {
+    api.listWebsiteTemplates.mockResolvedValue([
+      ...design("lang_a", "Lang A", "fashion"),
+      ...design("lang_b", "Lang B", "perfume"),
+      // A template in one language only, like a funnel: it shows whatever the switch says.
+      template("lang_solo", "Lang Solo", "fashion"),
+    ]);
+    const { user } = renderWithProviders(<WebsitePage />, { route: "/website" });
+
+    const languages = await screen.findByRole("radiogroup", { name: "Template language" });
+    // The dashboard is in English, so the switch starts there.
+    expect(within(languages).getByRole("radio", { name: "English" })).toHaveAttribute("aria-checked", "true");
+    expect(cardNames()).toEqual(["Lang A", "Lang B", "Lang Solo"]);
+    expect(screen.getByText("3 templates")).toBeInTheDocument();
+    const chips = screen.getByRole("group", { name: "Filter templates by category" });
+    const chipText = () => Array.from(chips.querySelectorAll("button")).map((b) => b.textContent);
+    expect(chipText()).toEqual(["All3", "Fashion2", "Perfume1"]);
+
+    await user.click(within(languages).getByRole("radio", { name: "عربي" }));
+    // The same designs in the same places, now the Arabic templates; the one-language template stays.
+    expect(cardNames()).toEqual(["Lang A عربي", "Lang B عربي", "Lang Solo"]);
+    expect(screen.getByText("3 templates")).toBeInTheDocument();
+    expect(chipText()).toEqual(["All3", "Fashion2", "Perfume1"]);
+
+    // The previews are the Arabic templates'.
+    act(() => FakeIntersectionObserver.scrollAllIntoView());
+    await waitFor(() => expect(api.getWebsiteTemplate).toHaveBeenCalledWith("lang_a_ar"));
+    expect(api.getWebsiteTemplate).not.toHaveBeenCalledWith("lang_a_en");
+
+    // Search and the kinds still narrow what shows.
+    await user.type(screen.getByRole("searchbox", { name: "Search templates" }), "lang b");
+    expect(cardNames()).toEqual(["Lang B عربي"]);
+    await user.clear(screen.getByRole("searchbox", { name: "Search templates" }));
+    await user.click(within(chips).getByRole("button", { name: /^Fashion/ }));
+    expect(cardNames()).toEqual(["Lang A عربي", "Lang Solo"]);
+  });
+
+  it("starts in Arabic on a dashboard in Arabic", async () => {
+    api.listWebsiteTemplates.mockResolvedValue([...design("lang_c", "Lang C", "fashion"), ...design("lang_d", "Lang D", "fashion")]);
+    renderWithProviders(<WebsitePage />, { route: "/website", locale: "ar" });
+
+    const languages = await screen.findByRole("radiogroup", { name: "لغة القالب" });
+    expect(within(languages).getByRole("radio", { name: "عربي" })).toHaveAttribute("aria-checked", "true");
+    expect(cardNames()).toEqual(["Lang C عربي", "Lang D عربي"]);
+  });
+
+  it("uses the template of the language picked", async () => {
+    api.listWebsiteTemplates.mockResolvedValue(design("lang_e", "Lang E", "fashion"));
+    api.createWebsite.mockResolvedValue(fake({ website: { id: "site_e", name: "Nile Store" }, pages: [] }));
+    const { user } = renderWithProviders(<WebsitePage />, { route: "/website" });
+
+    await user.click(await screen.findByRole("radio", { name: "عربي" }));
+    await user.click(screen.getByRole("button", { name: "Preview Lang E عربي" }));
+    await screen.findByText(/Comes with 1 page/);
+    expect(api.getWebsiteTemplate).toHaveBeenCalledWith("lang_e_ar");
+    await user.click(screen.getByRole("button", { name: "Use this template" }));
+    await user.click(await screen.findByRole("button", { name: "Start with this template" }));
+
+    await waitFor(() => expect(api.createWebsite).toHaveBeenCalled());
+    expect(api.createWebsite.mock.calls[0][1]).toMatchObject({ templateVersionId: "v_lang_e_ar" });
+  });
+
+  it("marks the design the site started from, in either language, and puts it first", async () => {
+    const live = fake<Website>({
+      id: "site_f",
+      name: "Nile Store",
+      status: "published",
+      subdomain: "site_f.zimos.test",
+      publishedRevisionId: "rev_1",
+      sourceTemplateVersionId: "v_lang_g_ar",
+    });
+    api.listWebsites.mockResolvedValue([live]);
+    api.getWebsite.mockResolvedValue(fake<WebsiteDetail>({ website: live, pages: [], publishedRevision: null }));
+    api.listWebsiteTemplates.mockResolvedValue([...design("lang_f", "Lang F", "fashion"), ...design("lang_g", "Lang G", "fashion")]);
+    renderWithProviders(<WebsitePage />, { route: "/website" });
+
+    // The site came from the Arabic template; the switch shows English, and the card is still the store's.
+    const card = (await screen.findByRole("button", { name: "Preview Lang G" })).closest("li")!;
+    expect(card).toHaveAttribute("data-current");
+    expect(cardNames()).toEqual(["Lang G", "Lang F"]);
+  });
+
+  it("puts right-to-left templates first for a store in Arabic, which the API spells ar-EG", async () => {
+    workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", defaultLocale: "ar-EG" });
+    api.listWebsiteTemplates.mockResolvedValue([
+      fake<WebsiteTemplateSummary>({ id: "dir_ltr", name: "Dir Left", category: "fashion", thumbnailUrl: null, templateVersionId: "v_dir_ltr", rtl: false }),
+      fake<WebsiteTemplateSummary>({ id: "dir_rtl", name: "Dir Right", category: "fashion", thumbnailUrl: null, templateVersionId: "v_dir_rtl", rtl: true }),
+    ]);
+    renderWithProviders(<WebsitePage />, { route: "/website" });
+
+    await screen.findByRole("button", { name: "Preview Dir Right" });
+    expect(cardNames()).toEqual(["Dir Right", "Dir Left"]);
+    // No design comes in both languages here, so there is nothing to switch.
+    expect(screen.queryByRole("radiogroup", { name: "Template language" })).toBeNull();
   });
 });
 

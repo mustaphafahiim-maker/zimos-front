@@ -5,12 +5,22 @@ import { IconSearch } from "@/components/icons";
 import { DataState, SkeletonBar } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
 import { ChipRow, ListToolbar, type ChipItem } from "@/components/list";
-import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { Segmented } from "@/components/Segmented";
+import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
 import { apiClient } from "@/lib/apiClient";
 import { pluralOf } from "@/lib/plural";
 import { useCachedAsync } from "@/lib/useCachedAsync";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { ALL_CATEGORIES, normalizeSearch, templateCategories } from "../templateGallery";
+import {
+  ALL_CATEGORIES,
+  isArabicLocale,
+  normalizeSearch,
+  templateCategories,
+  templateLanguage,
+  templatesInLanguage,
+  templateTwins,
+  type TemplateLanguage,
+} from "../templateGallery";
 import { useCodeLabel } from "./codes";
 import { TemplateCard } from "./TemplateCard";
 import { TemplateSheet } from "./TemplateSheet";
@@ -30,6 +40,7 @@ const STRINGS = {
     clearFilters: "Show all templates",
     showAll: "Show all ({n})",
     showLess: "Show fewer",
+    language: "Template language",
   },
   ar: {
     title: "القوالب",
@@ -47,8 +58,15 @@ const STRINGS = {
     clearFilters: "عرض كل القوالب",
     showAll: "عرض الكل ({n})",
     showLess: "عرض أقل",
+    language: "لغة القالب",
   },
 } satisfies Messages;
+
+/** The language switch's two sides, each named in its own language whatever the dashboard's. */
+const LANGUAGE_OPTIONS: ReadonlyArray<{ value: TemplateLanguage; label: string }> = [
+  { value: "en", label: "English" },
+  { value: "ar", label: "عربي" },
+];
 
 /** How many cards the page shows before «اعرض الكل»: four rows of two on a phone and on a desktop. */
 const FIRST_CARDS = 8;
@@ -59,6 +77,16 @@ const FIRST_CARDS = 8;
  * the page is at most 56rem wide, and four would make them thumbnails.
  */
 const GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-2";
+
+/** Was the store's site made from this design: this template, or its copy in the other language? */
+function madeFrom(
+  template: WebsiteTemplateSummary,
+  twins: ReadonlyMap<string, WebsiteTemplateSummary>,
+  currentVersion: string | null
+): boolean {
+  if (currentVersion === null) return false;
+  return template.templateVersionId === currentVersion || twins.get(template.id)?.templateVersionId === currentVersion;
+}
 
 /** The section while the catalogue loads: the toolbar, the chips and the first cards, in their own shapes. */
 function GallerySkeleton() {
@@ -97,6 +125,12 @@ function GallerySkeleton() {
  * short; a search shows everything it finds. The template the store's site
  * started from leads the grid and wears «الحالي».
  *
+ * A design the catalogue has in English and in Arabic («XS 01» and «XS 01
+ * عربي», templateTwins) is one card, shown in the language of the switch
+ * above the cards (English | عربي, the dashboard's language to start with):
+ * its preview, the template its sheet uses, and every count are that
+ * language's. A template in one language only always shows.
+ *
  * A card opens the template's sheet (TemplateSheet): the live store, and the
  * one button that uses it.
  */
@@ -126,16 +160,23 @@ export function TemplatesGallery({
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const currentVersion = currentSite?.sourceTemplateVersionId ?? null;
+  // A design made in English and in Arabic is one card, in the language picked here: the dashboard's to start with.
+  const { locale } = useLocale();
+  const [language, setLanguage] = useState<TemplateLanguage>(locale === "ar" ? "ar" : "en");
+  const twins = useMemo(() => templateTwins(templates.data ?? []), [templates.data]);
   // A store in Arabic sees the right-to-left (Arabic) templates first, any other store the rest first.
+  // The API spells the store's language "ar-EG".
   const { currentWorkspace } = useWorkspace();
-  const arabicStore = currentWorkspace?.defaultLocale === "ar";
+  const arabicStore = isArabicLocale(currentWorkspace?.defaultLocale);
   const list = useMemo(() => {
-    const all: WebsiteTemplateSummary[] = templates.data ?? [];
-    // The one in use first, then the store's own language (the sort is stable: the rest keep the catalogue's order).
+    const shown = templatesInLanguage(templates.data ?? [], language, twins);
+    // The one in use first, then the store's own language — a design in both always fits (the sort is stable:
+    // the rest keep the catalogue's order).
     const rank = (template: WebsiteTemplateSummary) =>
-      (template.templateVersionId === currentVersion ? 0 : 2) + ((template.rtl === true) === arabicStore ? 0 : 1);
-    return [...all].sort((a, b) => rank(a) - rank(b));
-  }, [templates.data, currentVersion, arabicStore]);
+      (madeFrom(template, twins, currentVersion) ? 0 : 2) +
+      (twins.has(template.id) || (templateLanguage(template) === "ar") === arabicStore ? 0 : 1);
+    return [...shown].sort((a, b) => rank(a) - rank(b));
+  }, [templates.data, language, twins, currentVersion, arabicStore]);
   const categories = useMemo(() => templateCategories(list), [list]);
 
   // By name, or by kind — in the dashboard's language or as the catalogue spells it.
@@ -190,6 +231,17 @@ export function TemplatesGallery({
           <ListToolbar
             search={{ value: query, onChange: setQuery, placeholder: t.searchPlaceholder, label: t.search }}
           />
+          {/* Only when some design comes in both languages: otherwise it would change nothing. */}
+          {twins.size > 0 && (
+            <Segmented
+              size="sm"
+              value={language}
+              onChange={setLanguage}
+              label={t.language}
+              options={LANGUAGE_OPTIONS}
+              className="self-start"
+            />
+          )}
           {categories.length > 1 && (
             <ChipRow items={chips} value={category} onChange={setCategory} label={t.filterLabel} />
           )}
@@ -214,7 +266,7 @@ export function TemplatesGallery({
                 <TemplateCard
                   key={template.id}
                   template={template}
-                  current={currentVersion !== null && template.templateVersionId === currentVersion}
+                  current={madeFrom(template, twins, currentVersion)}
                   onOpen={() => {
                     setPicked(template);
                     setSheetOpen(true);
