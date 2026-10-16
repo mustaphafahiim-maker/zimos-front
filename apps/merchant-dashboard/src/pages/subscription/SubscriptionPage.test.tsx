@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
-import type { SubscriptionPlan, SubscriptionPlans, Workspace, WorkspaceBilling } from "@store-builder/api-client";
+import type { BillingPaymentProof, MerchantInvoice, SubscriptionPlan, SubscriptionPlans, Workspace, WorkspaceBilling } from "@store-builder/api-client";
 import { ApiError } from "@store-builder/api-client";
 import { api, fake, workspaceMock } from "@/test/mocks";
 import { currentPath, renderWithProviders } from "@/test/renderWithProviders";
@@ -50,7 +50,7 @@ const billing = (overrides: Partial<WorkspaceBilling> = {}) =>
     ...overrides,
   });
 
-function setup({ plans = view(), bill = billing(), role = "owner", route = "/subscription", locale = "en" as "en" | "ar", invoices = [] as unknown[] } = {}) {
+function setup({ plans = view(), bill = billing(), role = "owner", route = "/subscription", locale = "en" as "en" | "ar", invoices = [] as MerchantInvoice[] } = {}) {
   workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", role });
   api.getWorkspaceBilling.mockResolvedValue(bill);
   api.getSubscriptionPlans.mockResolvedValue(plans);
@@ -252,8 +252,8 @@ describe("SubscriptionPage", () => {
 });
 
 describe("cancelling a pending invoice (PLAN_SWITCH_ENABLED)", () => {
-  const pending = (overrides: Record<string, unknown> = {}) =>
-    fake({
+  const pending = (overrides: Partial<MerchantInvoice> = {}) =>
+    fake<MerchantInvoice>({
       id: "inv_2",
       status: "pending",
       periodStart: "2030-02-01",
@@ -270,7 +270,7 @@ describe("cancelling a pending invoice (PLAN_SWITCH_ENABLED)", () => {
       ...overrides,
     });
 
-  function openInvoices(invoices: unknown[], { proofs = [] as unknown[], locale = "en" as "en" | "ar" } = {}) {
+  function openInvoices(invoices: MerchantInvoice[], { proofs = [] as BillingPaymentProof[], locale = "en" as "en" | "ar" } = {}) {
     api.getPaymentMethods.mockResolvedValue({ methods: [], currency: "EGP", contactSupport: false });
     api.listBillingPaymentProofs.mockResolvedValue({ proofs });
     return setup({ route: "/subscription?tab=invoices", locale, invoices });
@@ -314,7 +314,7 @@ describe("cancelling a pending invoice (PLAN_SWITCH_ENABLED)", () => {
 
     openInvoices([pending()], {
       proofs: [
-        fake({ id: "pp_1", status: "pending", purpose: "invoice", invoiceId: "inv_2", amount: 30000, currency: "EGP", createdAt: "2030-01-26", reviewNote: null, method: { code: "instapay", label: { ar: "إنستا باي", en: "InstaPay" } } }),
+        fake<BillingPaymentProof>({ id: "pp_1", status: "pending", purpose: "invoice", invoiceId: "inv_2", amount: 30000, currency: "EGP", createdAt: "2030-01-26", reviewNote: null, method: { code: "instapay", label: { ar: "إنستا باي", en: "InstaPay" } } }),
       ],
     });
     expect(await screen.findAllByText(/under review/i)).not.toHaveLength(0);
