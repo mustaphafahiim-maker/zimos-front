@@ -4,6 +4,7 @@ import { readColorMode, readPreviewTheme, type PreviewTheme } from "@/lib/brandT
 import { previewOwner, putPreview, type PreviewOptions } from "@/lib/previewStore";
 import { readShellOverride, type ShellOverride } from "@/lib/storeShell";
 import { STORE_PREVIEW_COOKIE, storePreviewCookieOptions } from "@/lib/storePreview";
+import { EDITOR_VIEW_PARAM } from "@/lib/editorView";
 
 /**
  * Receives a draft page tree from the dashboard's live preview (a form post
@@ -52,6 +53,28 @@ function readOrigin(value: FormDataEntryValue | null): string | null {
 }
 
 /**
+ * One of the store's own pages the editor asks to see (lib/editorView.ts):
+ * the catalogue, a product, the cart or checkout. "/product" is the store's
+ * first product, whichever it is.
+ */
+function readStorePath(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string") return null;
+  return /^\/(products(\/[A-Za-z0-9._~%-]{1,200})?|product|cart|checkout)$/.test(value) ? value : null;
+}
+
+/** The store's first product, for the editor's "a product" view; the catalogue when it has none. */
+async function firstProductPath(workspaceId: string): Promise<string> {
+  try {
+    const res = await fetch(`${API_BASE}/store/${workspaceId}/products?limit=1`, { cache: "no-store" });
+    const body = (await res.json()) as { data?: { products?: Array<{ slug?: string }> }; products?: Array<{ slug?: string }> };
+    const slug = (body.data?.products ?? body.products ?? [])[0]?.slug;
+    return slug ? `/products/${encodeURIComponent(slug)}` : "/products";
+  } catch {
+    return "/products";
+  }
+}
+
+/**
  * The website editor's extras (see PreviewOptions). All optional — a post
  * without them is a plain preview, exactly as before. A malformed theme or
  * shell is dropped rather than refused: the page still previews, in the saved
@@ -79,8 +102,9 @@ function readOptions(form: FormData): PreviewOptions | undefined {
     }
   }
   const colorMode = readColorMode(form.get("colorMode"));
+  const storePath = readStorePath(form.get("path"));
   if (!editable && !parentOrigin && !theme && !shell && !colorMode) return undefined;
-  return { editable: editable && parentOrigin !== null, parentOrigin, theme, shell, colorMode };
+  return { editable: editable && parentOrigin !== null, parentOrigin, theme, shell, colorMode, storePath };
 }
 
 /**
@@ -161,14 +185,17 @@ export async function POST(
     );
   }
 
-  putPreview(token, workspaceId, tree, readOptions(form));
+  const options = readOptions(form);
+  putPreview(token, workspaceId, tree, options);
   const viewToken = await storePreviewToken(workspaceId, accessToken);
+  // The editor showing one of the store's own pages: that page, in the unsaved look (lib/editorView).
+  const storePath = options?.parentOrigin && options.storePath ? (options.storePath === "/product" ? await firstProductPath(workspaceId) : options.storePath) : null;
   // 303 so the frame follows with a GET, whatever method brought it here.
   // Relative, not resolved against request.url: behind the host's proxy that
   // is the internal origin (https://localhost:8080), which the browser can't reach.
   const response = new NextResponse(null, {
     status: 303,
-    headers: { Location: `/store/${workspaceId}/preview/${token}` },
+    headers: { Location: storePath ? `/store/${workspaceId}${storePath}?${EDITOR_VIEW_PARAM}=${token}` : `/store/${workspaceId}/preview/${token}` },
   });
   if (viewToken) {
     const secure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https";

@@ -95,7 +95,7 @@ export function ProductCard({
       {/* `z-10` lifts this above the title's stretched link (below) so the
           swipe and the nav arrows receive their own pointer events; a plain
           tap still reaches the same product through the link inside it. */}
-      <div className="relative z-10 aspect-square overflow-hidden bg-paper">
+      <div className="zt-product-media relative z-10 aspect-square overflow-hidden bg-paper">
         {current ? (
           <StoreLink
             href={`/products/${product.slug}${from ? `?from=${from}` : ""}`}
@@ -179,8 +179,8 @@ export function ProductCard({
         {SHOPPER_ACCOUNTS_ENABLED && <WishlistHeart productId={product.id} className="absolute bottom-2 end-2" />}
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink sm:text-base">
+      <div className="zt-product-body flex flex-1 flex-col p-4">
+        <h3 className="zt-product-title line-clamp-2 text-sm font-semibold leading-snug text-ink sm:text-base">
           {/* The whole card is clickable via this stretched link. */}
           <StoreLink
             href={`/products/${product.slug}${from ? `?from=${from}` : ""}`}
@@ -189,7 +189,7 @@ export function ProductCard({
             {product.name}
           </StoreLink>
         </h3>
-        <p className="mt-2 flex flex-wrap items-baseline gap-x-2">
+        <p className="zt-product-price mt-2 flex flex-wrap items-baseline gap-x-2">
           <span className="text-base font-bold text-ink">
             {price !== undefined ? formatPrice(price, currency, locale, storeFormat) : "—"}
           </span>

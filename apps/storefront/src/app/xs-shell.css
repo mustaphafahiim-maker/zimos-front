@@ -1,0 +1,756 @@
+/*
+ * The shell of an xs look: the header and footer of an imported template
+ * (components/xs/XsHeader, XsFooter), drawn in place of the store's own on a
+ * store whose themeSettings name the look (`xsLook`, lib/xsShell.ts — the
+ * layout writes it on the wrapper as `data-xs-shell`). The bands themselves
+ * are in xs-sections.css.
+ *
+ * The shared rules lay the two out; a look names its colours, type and sizes
+ * in its `[data-xs-look="NN"]` block in xs-sections.css, which the header and
+ * footer carry too. The search, cart and phone-menu buttons inside the header
+ * are the storefront's own components, so their rules here undo the store's
+ * chip look (`.zt-icon-btn`) rather than restate it.
+ *
+ * Unlayered, like the store themes: Tailwind's utilities live in a cascade
+ * layer, so these win on the properties they name without `!important`.
+ */
+
+/* --- every look ------------------------------------------------------------ */
+
+/* A band reaches the edges of the page, with no rule above or below it. */
+.brand-theme:is([data-xs-shell], :has([data-xs-look])) .zt-sections,
+.brand-theme:is([data-xs-shell], :has([data-xs-look])) .zt-sections > * {
+  border: 0;
+}
+.brand-theme [data-zt-section]:has([data-xs-look]) {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.brand-theme[data-xs-shell] {
+  background: var(--xs-ground, #fff);
+}
+/*
+ * The store's own pages on a store that wears a template — the catalogue, a
+ * product, the cart, checkout, the account — in the template's type and
+ * colours: the storefront's design tokens, read from the look's. Each look's
+ * token block also sits on the store wrapper (`.brand-theme[data-xs-shell="NN"]`
+ * in its file), and the tokens are mapped one level down, where the look's
+ * values arrive already resolved: on the wrapper itself the look's font
+ * stacks name `--font-sans`, and setting it there would loop. The header and
+ * footer carry a look's token block of their own (data-xs-look), so for them
+ * the same holds one level further down.
+ */
+.brand-theme[data-xs-shell] > :not([data-xs-look]),
+.brand-theme[data-xs-shell] > [data-xs-look] > * {
+  --font-sans: var(--xs-sans);
+  --font-display: var(--xs-display, var(--xs-sans));
+  --color-ink: var(--xs-ink);
+  --color-ink-soft: var(--xs-ink-soft, var(--xs-ink));
+  --color-paper: var(--xs-ground);
+  --color-paper-raised: color-mix(in oklab, var(--xs-ground) 96%, var(--xs-ink));
+  --color-line: var(--xs-line);
+  --color-line-strong: color-mix(in oklab, var(--xs-line) 45%, var(--xs-ink));
+  --color-accent: var(--xs-accent, var(--color-accent));
+  --radius-card: min(var(--xs-btn-radius, 0.625rem), 14px);
+  font-family: var(--xs-sans);
+}
+
+/* On a store that wears the shell, the footer carries the attribution. */
+.brand-theme[data-xs-shell] .xs-credit {
+  display: none;
+}
+
+/* --- header ---------------------------------------------------------------- */
+
+.xs-header {
+  position: relative;
+  z-index: 30;
+  /* The strip scrolls away; the bar under it stays (it is fixed, below). */
+  padding-bottom: var(--xs-own-bar-h, 84px);
+}
+.xs-header__strip {
+  height: 40px;
+  background: var(--xs-dark);
+  color: var(--xs-footer-ink);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.xs-header__strip-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 100%;
+  max-width: var(--xs-container);
+  margin-inline: auto;
+  padding-inline: 15px;
+}
+.xs-header__notice {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.xs-header__strip a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.4s;
+}
+.xs-header__strip a:hover {
+  color: var(--xs-accent);
+}
+.xs-header__strip-links {
+  display: flex;
+  flex-shrink: 0;
+  align-items: stretch;
+  height: 100%;
+}
+.xs-header__strip-links > * {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-height: 0;
+  padding: 0 25px;
+  border: 0;
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+.xs-header__strip-links > :first-child {
+  border-inline-start: 1px solid rgba(255, 255, 255, 0.3);
+}
+.xs-header__strip-links > :hover {
+  background: none;
+  color: var(--xs-accent);
+}
+
+.xs-header__bar {
+  position: absolute;
+  inset-inline: 0;
+  top: 40px;
+  height: 84px;
+  background: var(--xs-ground);
+  transition: height 0.3s, background-color 0.3s, box-shadow 0.3s;
+}
+.xs-header[data-scrolled] .xs-header__bar {
+  position: fixed;
+  top: 0;
+  height: 70px;
+  background: var(--xs-ground);
+  box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.2);
+}
+.xs-header__bar-inner {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  max-width: var(--xs-container);
+  margin-inline: auto;
+  padding-inline: 15px;
+}
+.xs-header__logo {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  height: 65%;
+  margin-inline-end: 55px;
+  color: var(--xs-dark);
+  text-decoration: none;
+}
+.xs-header__logo-img {
+  width: auto;
+  max-width: 180px;
+  height: 100%;
+  object-fit: contain;
+}
+.xs-header__logo-name {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.xs-header__menu {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.xs-header__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline: 14px 4px;
+  padding-block: 25px;
+  padding-inline: 0 10px;
+  border: 0;
+  background: none;
+  color: var(--xs-ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.4s;
+}
+.xs-header__link:hover,
+.xs-header__link[aria-current="page"] {
+  color: var(--xs-accent);
+}
+.xs-header__icons {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+/* The template has a search icon that opens a panel, never a box in the bar. */
+.xs-header .zt-search-inline {
+  display: none;
+}
+.xs-header .zt-search-toggle {
+  display: block;
+}
+.xs-header .zt-icon-btn {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--xs-ink);
+  transition: color 0.4s;
+}
+.xs-header .zt-icon-btn:hover {
+  color: var(--xs-accent);
+}
+.xs-header .zt-icon-btn svg {
+  width: 24px;
+  height: 24px;
+}
+/* The cart's count: the template's small square badge. */
+.xs-header .zt-icon-btn > span {
+  top: 0;
+  inset-inline-end: 0;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 0;
+  background: var(--xs-badge, var(--xs-accent));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 15px;
+}
+
+/* A page that opens on the slider of a look whose template does so: the bar lies over it, clear until the page scrolls. */
+.brand-theme:is([data-xs-shell="01"], [data-xs-shell="05"]):has(.zt-sections > :first-child .xs-slider) .xs-header {
+  padding-bottom: 0;
+}
+.brand-theme:is([data-xs-shell="01"], [data-xs-shell="05"]):has(.zt-sections > :first-child .xs-slider) .xs-header:not([data-scrolled]) .xs-header__bar {
+  background: transparent;
+}
+.brand-theme:is([data-xs-shell="01"], [data-xs-shell="05"]):has(.zt-sections > :first-child .xs-slider) .xs-slider {
+  height: calc(100vh - 40px);
+}
+
+@media (max-width: 991px) {
+  .xs-header {
+    padding-bottom: 70px;
+  }
+  .xs-header__strip {
+    display: none;
+  }
+  .xs-header__bar,
+  .xs-header[data-scrolled] .xs-header__bar {
+    position: fixed;
+    top: 0;
+    height: 70px;
+    background: var(--xs-ground);
+    box-shadow: 0 0 3px 0 rgba(0, 0, 0, 0.2);
+  }
+  .xs-header__menu {
+    display: none;
+  }
+  .xs-header__logo {
+    margin-inline-end: 0;
+  }
+  .xs-header__logo-name {
+    font-size: 20px;
+  }
+  .brand-theme:is([data-xs-shell="01"], [data-xs-shell="05"]):has(.zt-sections > :first-child .xs-slider) .xs-header {
+    padding-bottom: 70px;
+  }
+  .brand-theme:is([data-xs-shell="01"], [data-xs-shell="05"]):has(.zt-sections > :first-child .xs-slider) .xs-header:not([data-scrolled]) .xs-header__bar {
+    background: var(--xs-ground);
+  }
+}
+
+/* --- footer ---------------------------------------------------------------- */
+
+.xs-footer {
+  margin-top: auto;
+  padding: 75px 15px 32px;
+  background: var(--xs-dark);
+  color: var(--xs-footer-ink);
+  font-size: 13px;
+  line-height: 1.923;
+}
+.xs-footer__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0 30px;
+  max-width: var(--xs-container);
+  margin-inline: auto;
+}
+.xs-footer__col {
+  padding-bottom: 50px;
+}
+.xs-footer__title {
+  margin: 0;
+  padding-bottom: 30px;
+  /* Named here because the storefront sets its display face on every heading. */
+  font-family: inherit;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+.xs-footer ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.xs-footer li {
+  padding-bottom: 10px;
+}
+/* Its own ink over the look's text colour: the look's token block sets `color` on every node it marks, this one included. */
+.xs-footer[data-xs-look] {
+  color: var(--xs-footer-ink);
+}
+.xs-footer a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.4s;
+}
+.xs-footer a:hover {
+  color: var(--xs-accent);
+}
+.xs-footer__text {
+  max-width: 270px;
+  margin: 0;
+  white-space: pre-line;
+}
+.xs-footer__social {
+  padding-top: 27px;
+}
+.xs-footer__social ul {
+  justify-content: flex-start;
+}
+.xs-footer__social a {
+  border: 0;
+  background: none;
+  color: var(--xs-footer-ink);
+}
+.xs-footer__bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  max-width: var(--xs-container);
+  margin-inline: auto;
+  padding-top: 40px;
+  text-align: center;
+}
+.xs-footer__bottom p {
+  margin: 0;
+}
+.xs-footer__bottom a {
+  text-decoration: underline;
+}
+
+/* The wish-list heart is a link drawn as one of the header's bare icon buttons. */
+.xs-header__wish {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+/* --- what a merchant restyles ---------------------------------------------- */
+
+/*
+ * The editor's Style panel sets an element's colours and sizes on the wrapper
+ * round it. Text colour, size and weight already reach a band's words (the
+ * page's style sheet pushes them onto the headings, paragraphs and links
+ * inside). A background would stop at the wrapper, hidden under the band's
+ * own ground — so it is laid over that ground here, as a flat layer of the
+ * chosen colour (`--zs-bg`, written by elementStyle.ts). Bands whose ground is
+ * a photograph keep the photograph.
+ */
+[data-zs] [data-xs-look]:not(.xs-slider, .xs-title, .xs-newsletter[data-picture]) {
+  background-image: linear-gradient(var(--zs-bg, transparent), var(--zs-bg, transparent));
+}
+
+/*
+ * A store that picked its own brand colour (Store look → Brand colour) wears
+ * it wherever a look would use its accent: buttons, links, badges, the
+ * coloured grounds. A store still on the colour the template brought keeps
+ * the look's own palette exactly.
+ */
+.brand-theme[data-xs-own-accent] [data-xs-look] {
+  --xs-accent: var(--color-primary);
+  --xs-brand: var(--color-primary);
+  --xs-button: var(--color-primary);
+  --xs-highlight: var(--color-primary);
+  --xs-badge: var(--color-primary);
+  --xs-grad: var(--color-primary);
+}
+
+/*
+ * A band's own look (components/page-renderer/xs/own.tsx): the wrapper round
+ * a band a merchant restyled takes no room of its own, and each marker on it
+ * turns one choice into the rules below. They outrank a look's own rules for
+ * the same band by one class, which is all they need.
+ */
+.xs-own {
+  display: contents;
+}
+/* Headings; the look's "ink" token too, which small bold text is drawn in. */
+.xs-own[data-own-heading] > [data-xs-look] {
+  --xs-ink: var(--xs-own-heading);
+}
+.xs-own[data-own-heading] > [data-xs-look] :is(h1, h2, h3, h4, h5) {
+  color: var(--xs-own-heading);
+}
+/* Running text. */
+.xs-own[data-own-text] > [data-xs-look] {
+  --xs-ink-soft: var(--xs-own-text);
+  --xs-muted: var(--xs-own-text);
+  color: var(--xs-own-text);
+}
+.xs-own[data-own-text] > [data-xs-look] :is(p, li, blockquote, figcaption span) {
+  color: var(--xs-own-text);
+}
+/* Buttons, links, badges, coloured grounds. */
+.xs-own[data-own-accent] > [data-xs-look] {
+  --xs-accent: var(--xs-own-accent);
+  --xs-brand: var(--xs-own-accent);
+  --xs-button: var(--xs-own-accent);
+  --xs-highlight: var(--xs-own-accent);
+  --xs-badge: var(--xs-own-accent);
+  --xs-grad: var(--xs-own-accent);
+}
+/* The band's ground: a flat colour, in place of the look's colour or photograph. */
+.xs-own[data-own-ground] > [data-xs-look] {
+  --xs-ground: var(--xs-own-ground);
+  background: var(--xs-own-ground);
+}
+/* Which side the picture stands on, for a band with a picture beside its words. */
+.xs-own[data-own-flip] > [data-xs-look] :is(.xs-hero__inner, .xs-split__inner) > :first-child {
+  order: 2;
+}
+@media (min-width: 992px) {
+  /* Columns on a wide screen; narrower screens keep the look's own steps down. */
+  .xs-own[data-own-cols] > [data-xs-look] :is(.xs-banners__grid, .xs-products__grid:not([data-layout="slider"]), .xs-features__list, .xs-team__grid, .xs-gallery__row, .xs-minis__inner, .xs-posts__grid) {
+    grid-template-columns: repeat(var(--xs-own-cols), minmax(0, 1fr)) !important;
+  }
+}
+
+/*
+ * A template header's and footer's own colours (the editor's Header and
+ * Footer panels → themeSettings.header.colors / footer.colors). Each is a
+ * property the component sets only when the merchant chose a colour, so every
+ * rule here falls back to "unset" — nothing — and the look's own rule stands.
+ * `!important`: a look's file styles these parts with three and four classes;
+ * a merchant's explicit choice is meant to beat all of them.
+ */
+.xs-header[style*="--xs-own-bar:"] .xs-header__bar {
+  background: var(--xs-own-bar) !important;
+}
+.xs-header[style*="--xs-own-bar:"] {
+  background: var(--xs-own-bar) !important;
+}
+.xs-header[style*="--xs-own-bar-text"] :is(.xs-header__link, .xs-header__logo, .xs-header__logo-name, .zt-icon-btn) {
+  color: var(--xs-own-bar-text) !important;
+  -webkit-text-fill-color: currentColor;
+  opacity: 1;
+}
+.xs-header[style*="--xs-own-strip:"] .xs-header__strip,
+.xs-header[style*="--xs-own-strip:"] .xs-header__strip-inner {
+  background: var(--xs-own-strip) !important;
+}
+.xs-header[style*="--xs-own-strip-text"] .xs-header__strip,
+.xs-header[style*="--xs-own-strip-text"] .xs-header__strip :is(a, button) {
+  color: var(--xs-own-strip-text) !important;
+}
+.xs-footer[style*="--xs-own-foot:"] {
+  background: var(--xs-own-foot) !important;
+}
+.xs-footer[style*="--xs-own-foot-text"],
+.xs-footer[style*="--xs-own-foot-text"] :is(p, a, li, span) {
+  color: var(--xs-own-foot-text) !important;
+}
+.xs-footer[style*="--xs-own-foot-heading"] .xs-footer__title {
+  color: var(--xs-own-foot-heading) !important;
+}
+
+/*
+ * A band's own sizes (page-renderer/xs/own.tsx): the editor's Layout, Type,
+ * Pictures and Buttons groups. Each rule is switched on by its marker and
+ * reads its custom property; `!important` because a look's own rule for the
+ * same part is usually the more specific one, and this is the merchant's say.
+ * Sizes are given for a wide screen; a phone gets them scaled down.
+ */
+
+/* Layout */
+.xs-own[data-own-width] > [data-xs-look] {
+  --xs-container: var(--xs-own-width);
+}
+.xs-own[data-own-padtop] > [data-xs-look] {
+  padding-top: var(--xs-own-pad-top) !important;
+}
+.xs-own[data-own-padbottom] > [data-xs-look] {
+  padding-bottom: var(--xs-own-pad-bottom) !important;
+}
+.xs-own[data-own-gap] > [data-xs-look] :is(.xs-banners__grid, .xs-products__grid, .xs-features__list, .xs-team__grid, .xs-gallery__row, .xs-minis__inner, .xs-posts__grid, .xs-hero__inner, .xs-split__inner, .xs-features__inner) {
+  gap: var(--xs-own-gap) !important;
+}
+.xs-own[data-own-align] > [data-xs-look],
+.xs-own[data-own-align] > [data-xs-look] :is(h1, h2, h3, h4, p, [class*="__intro"], [class*="__head"], [class*="__body"], [class*="__copy"], [class*="__text"]) {
+  text-align: var(--xs-own-align) !important;
+}
+.xs-own[data-own-align="start"] > [data-xs-look] :is(.xs-slider__inner, .xs-banners__text, .xs-banners__top) {
+  align-items: flex-start !important;
+}
+.xs-own[data-own-align="center"] > [data-xs-look] :is(.xs-slider__inner, .xs-banners__text, .xs-banners__top) {
+  align-items: center !important;
+}
+.xs-own[data-own-align="end"] > [data-xs-look] :is(.xs-slider__inner, .xs-banners__text, .xs-banners__top) {
+  align-items: flex-end !important;
+}
+.xs-own[data-own-align="center"] > [data-xs-look] :is(.xs-posts__head, .xs-products__head, .xs-hero__buttons) {
+  justify-content: center !important;
+}
+.xs-own[data-own-height] > :is(.xs-title, .xs-newsletter) {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(var(--xs-own-height) * 0.6);
+  padding-block: 16px;
+}
+.xs-own[data-own-height] > .xs-hero {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: calc(var(--xs-own-height) * 0.6);
+}
+.xs-own[data-own-height] > .xs-hero > .xs-hero__inner {
+  width: 100%;
+}
+@media (min-width: 768px) {
+  /* A slider's height on a wide screen; a phone keeps the look's own. */
+  .xs-own[data-own-height] > .xs-slider {
+    height: var(--xs-own-height) !important;
+    min-height: 0;
+    max-height: none;
+  }
+  .xs-own[data-own-height] > :is(.xs-title, .xs-newsletter, .xs-hero) {
+    min-height: var(--xs-own-height);
+  }
+}
+
+/* Type */
+.xs-own[data-own-hsize] > [data-xs-look] :is(h1, h2) {
+  font-size: max(20px, calc(var(--xs-own-hsize) * 0.66)) !important;
+  line-height: 1.2 !important;
+}
+.xs-own[data-own-hweight] > [data-xs-look] :is(h1, h2) {
+  font-weight: var(--xs-own-hweight) !important;
+}
+.xs-own[data-own-tsize] > [data-xs-look] :is(h3, h4, h5, .xs-banners__title, .xs-products__name) {
+  font-size: var(--xs-own-tsize) !important;
+  line-height: 1.35 !important;
+}
+.xs-own[data-own-psize] > [data-xs-look] :is(p, li, blockquote, dd, .xs-banners__info, .xs-slider__eyebrow, .xs-posts__meta, .xs-products__price) {
+  font-size: var(--xs-own-psize) !important;
+  line-height: 1.7 !important;
+}
+@media (min-width: 768px) {
+  .xs-own[data-own-hsize] > [data-xs-look] :is(h1, h2) {
+    font-size: var(--xs-own-hsize) !important;
+  }
+}
+
+/* Pictures */
+.xs-own[data-own-imgratio] > [data-xs-look] :is(.xs-banners__img, .xs-products__media, .xs-showcase__img, .xs-features__art img, .xs-split__pic img, .xs-minis__thumb img, .xs-gallery__item img, .xs-posts__pic img, .xs-story__zoom img, .xs-team__person img) {
+  height: auto !important;
+  aspect-ratio: var(--xs-own-img-ratio) !important;
+  object-fit: var(--xs-own-img-fit, cover) !important;
+}
+.xs-own[data-own-imgh] > [data-xs-look] :is(.xs-banners__img, .xs-products__media, .xs-showcase__img, .xs-features__art img, .xs-split__pic img, .xs-minis__thumb img, .xs-gallery__item img, .xs-posts__pic img, .xs-story__zoom img, .xs-team__person img) {
+  height: calc(var(--xs-own-img-h) * 0.7) !important;
+  aspect-ratio: auto !important;
+  object-fit: var(--xs-own-img-fit, cover) !important;
+}
+.xs-own[data-own-imgfit] > [data-xs-look] :is(.xs-banners__img, .xs-products__media, .xs-showcase__img, .xs-features__art img, .xs-split__pic img, .xs-minis__thumb img, .xs-gallery__item img, .xs-posts__pic img, .xs-story__zoom img, .xs-team__person img, .xs-products__img) {
+  object-fit: var(--xs-own-img-fit) !important;
+}
+.xs-own[data-own-imgradius] > [data-xs-look] :is(.xs-banners__img, .xs-products__media, .xs-showcase__img, .xs-features__art img, .xs-split__pic img, .xs-minis__thumb img, .xs-gallery__item img, .xs-posts__pic img, .xs-story__zoom img, .xs-team__person img, .xs-banners__item, .xs-posts__pic, .xs-story__zoom, .xs-gallery__item) {
+  overflow: hidden;
+  border-radius: var(--xs-own-img-radius) !important;
+}
+.xs-own[data-own-imgw] > [data-xs-look] :is(.xs-split__pic img, .xs-features__art img, .xs-story__frame) {
+  width: var(--xs-own-img-w) !important;
+  max-width: 100% !important;
+}
+.xs-own[data-own-imgw] > [data-xs-look] .xs-hero__art img {
+  width: min(var(--xs-own-img-w), 92vw) !important;
+  max-width: none !important;
+}
+@media (min-width: 768px) {
+  .xs-own[data-own-imgh] > [data-xs-look] :is(.xs-banners__img, .xs-products__media, .xs-showcase__img, .xs-features__art img, .xs-split__pic img, .xs-minis__thumb img, .xs-gallery__item img, .xs-posts__pic img, .xs-story__zoom img, .xs-team__person img) {
+    height: var(--xs-own-img-h) !important;
+  }
+}
+
+/* Buttons */
+.xs-own[data-own-bsize] > [data-xs-look] :is(.xs-btn, .xs-slider__button, .xs-contact__submit, .xs-products__more-btn, .xs-banners__link, .xs-posts__more, .xs-posts__all, .xs-products__all, .xs-minis__more, button[type="submit"]) {
+  font-size: var(--xs-own-bsize) !important;
+}
+.xs-own[data-own-btnradius] > [data-xs-look] {
+  --xs-btn-radius: var(--xs-own-btn-radius);
+}
+.xs-own[data-own-btnradius] > [data-xs-look] :is(.xs-btn, .xs-slider__button, .xs-contact__submit, .xs-products__more-btn, button[type="submit"], input:not([type="checkbox"]):not([type="radio"])) {
+  border-radius: var(--xs-own-btn-radius) !important;
+}
+
+/*
+ * A template header's and footer's own sizes (themeSettings.header.sizes /
+ * footer.sizes) are drawn per screen by components/xs/shellSizes.ts, as a
+ * small stylesheet beside the header and the footer.
+ */
+
+/* A logo picture in the footer's brand column: the column title's height, as wide as it needs. */
+.xs-footer__logo {
+  display: block;
+  width: auto;
+  max-width: 220px;
+  height: auto;
+  max-height: 56px;
+  object-fit: contain;
+}
+/* The template's logo in the bar keeps its own proportions within the bar's logo box. */
+.xs-header__logo-img[data-xs-logo="template"] {
+  width: auto;
+  max-width: 200px;
+  height: auto;
+  max-height: 100%;
+}
+/* A template logo drawn for the other ground than this look's bar: 13's is white on a white bar.
+   (16's is a solid picture on its own navy, the bar's exact colour: it is drawn as it is.) */
+.xs-header[data-xs-look="13"] .xs-header__logo-img[data-xs-logo="template"] {
+  filter: brightness(0);
+  opacity: 0.87;
+}
+
+/* The store's social accounts in a template's strip (06): small bare icons, as the template draws them. */
+.xs-header__strip-social ul {
+  gap: 0;
+}
+.xs-header__strip-social a {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+.xs-header__strip-social svg {
+  width: 14px;
+  height: 14px;
+}
+
+/*
+ * Arabic. A template set for Latin letters spaces them out, writes them in
+ * capitals and slants them; Arabic letters join, have no capitals and are
+ * not set in italics, so on an Arabic store (lang ar) every look drops all
+ * three and gives its lines more room — Arabic sits taller on the line.
+ */
+:lang(ar) :is([data-xs-look], [data-xs-look] *) {
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  font-style: normal !important;
+}
+:lang(ar) [data-xs-look] :is(p, li, blockquote, dd, figcaption) {
+  line-height: 1.85;
+}
+:lang(ar) [data-xs-look] :is(h1, h2, h3, h4, h5, h6) {
+  line-height: 1.45;
+}
+
+/*
+ * The header's and footer's parts as the merchant arranges them (lib/xsLayout): a part that is
+ * a component of its own sits in a box that takes no room, so the look's rules still reach it;
+ * where screens differ, each screen's own list of a zone shows only on that screen.
+ */
+.xs-part,
+.xs-on {
+  display: contents;
+}
+@media (min-width: 1024px) {
+  .xs-on:not([data-xs-on~="base"]) {
+    display: none;
+  }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .xs-on:not([data-xs-on~="tablet"]) {
+    display: none;
+  }
+}
+@media (max-width: 639px) {
+  .xs-on:not([data-xs-on~="mobile"]) {
+    display: none;
+  }
+}
+
+/* A footer column the merchant left off a screen (lib/xsLayout "hide"). */
+@media (min-width: 1024px) {
+  .xs-footer [data-xs-hide~="base"] {
+    display: none !important;
+  }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .xs-footer [data-xs-hide~="tablet"] {
+    display: none !important;
+  }
+}
+@media (max-width: 639px) {
+  .xs-footer [data-xs-hide~="mobile"] {
+    display: none !important;
+  }
+}
+
+/* The footer's payment methods (lib/xsLayout "payments"): small labels in the footer's own colour. */
+.xs-footer__pay {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.xs-footer__pay li {
+  padding: 3px 8px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 12px;
+  opacity: 0.85;
+}

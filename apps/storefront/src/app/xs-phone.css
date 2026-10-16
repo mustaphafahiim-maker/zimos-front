@@ -1,0 +1,579 @@
+/*
+ * The header of an xs look on a phone or a tablet: the button that opens the
+ * menu, and the menu itself (components/xs/XsPhoneMenu).
+ *
+ * The store's own header gives every store one sheet. A template has its own
+ * and they are not alike, so the look names how its menu opens
+ * (lib/xsShell.ts → `data-mode`) and this file draws the four ways, then each
+ * look's colours, sizes and order of parts — taken from the template's own
+ * rules for a narrow screen.
+ *
+ * Last in xs.css: these are the narrow-screen answers to what the look files
+ * say about the bar.
+ */
+
+/* --- the button ------------------------------------------------------------ */
+
+.xs-phone {
+  display: none;
+  /* It carries the look's name, and with it the ground every xs box is given: the bar's own shows instead. */
+  background: none;
+}
+.xs-header .xs-phone__toggle {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+}
+.xs-phone__toggle i {
+  display: block;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  transition: transform 0.3s, opacity 0.2s;
+}
+.xs-phone__toggle[aria-expanded="true"] i:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.xs-phone__toggle[aria-expanded="true"] i:nth-child(2) {
+  opacity: 0;
+}
+.xs-phone__toggle[aria-expanded="true"] i:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+@media (max-width: 991px) {
+  .xs-phone {
+    display: block;
+  }
+}
+
+/* --- the layer ------------------------------------------------------------- */
+
+.xs-phone__layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  /* It carries the look's name for its colours, and with it the ground every xs box is given: clear it, the page shows through the veil. */
+  background: none;
+  font-family: var(--xs-sans);
+  font-size: 15px;
+  line-height: 1.5;
+}
+@media (min-width: 992px) {
+  .xs-phone__layer {
+    display: none;
+  }
+}
+.xs-phone__veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.xs-phone__layer[data-open] .xs-phone__veil {
+  opacity: 1;
+}
+.xs-phone__panel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--xs-own-bar, var(--xs-ph-ground, #fff));
+  color: var(--xs-own-bar-text, var(--xs-ph-ink, var(--xs-ink)));
+  transition: transform 0.4s ease, opacity 0.4s;
+}
+.xs-phone__panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.xs-phone__panel a,
+.xs-phone__panel button {
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+}
+.xs-phone__link {
+  display: block;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  text-align: start;
+  transition: color 0.3s, opacity 0.3s;
+}
+.xs-phone__link:hover,
+.xs-phone__link[aria-current="page"],
+.xs-phone__extra:hover {
+  color: var(--xs-own-bar-text, var(--xs-ph-accent, var(--xs-accent)));
+}
+.xs-phone__sub {
+  padding-inline-start: 18px !important;
+  font-size: 0.93em;
+  opacity: 0.85;
+}
+.xs-phone__extras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 20px;
+}
+.xs-phone__extras button {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.xs-phone__notice {
+  margin: 0;
+  font-size: 13px;
+}
+.xs-phone__brand {
+  display: none;
+  height: 44px;
+  color: inherit;
+}
+.xs-phone__close {
+  position: absolute;
+  top: 14px;
+  inset-inline-end: 14px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* drop — a list that opens under the bar; the bar stays, its button closes it. */
+.xs-phone__layer[data-mode="drop"] {
+  top: var(--xs-ph-bar, 70px);
+}
+.xs-phone__layer[data-mode="drop"] .xs-phone__veil {
+  background: rgba(0, 0, 0, 0.25);
+}
+.xs-phone__layer[data-mode="drop"] .xs-phone__panel {
+  top: 0;
+  inset-inline: 0;
+  max-height: 100%;
+  opacity: 0;
+  transform: translateY(-14px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+.xs-phone__layer[data-mode="drop"][data-open] .xs-phone__panel {
+  opacity: 1;
+  transform: none;
+}
+.xs-phone__layer[data-mode="drop"] .xs-phone__nav {
+  padding: 10px 20px;
+}
+.xs-phone__layer[data-mode="drop"] :is(.xs-phone__extras, .xs-phone__notice) {
+  padding: 10px 20px;
+  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+/* start, end — a sheet from a side. */
+.xs-phone__layer:is([data-mode="start"], [data-mode="end"]) .xs-phone__panel {
+  inset-block: 0;
+  width: min(300px, 86vw);
+  padding: 70px 24px 30px;
+  gap: 22px;
+}
+.xs-phone__layer[data-mode="start"] .xs-phone__panel {
+  inset-inline-start: 0;
+  transform: translateX(-100%);
+}
+.xs-phone__layer[data-mode="end"] .xs-phone__panel {
+  inset-inline-end: 0;
+  transform: translateX(100%);
+}
+[dir="rtl"] .xs-phone__layer[data-mode="start"] .xs-phone__panel {
+  transform: translateX(100%);
+}
+[dir="rtl"] .xs-phone__layer[data-mode="end"] .xs-phone__panel {
+  transform: translateX(-100%);
+}
+.xs-phone__layer:is([data-mode="start"], [data-mode="end"])[data-open] .xs-phone__panel {
+  transform: none;
+}
+
+/* cover — the whole screen, everything in the middle. */
+.xs-phone__layer[data-mode="cover"] .xs-phone__veil {
+  display: none;
+}
+.xs-phone__layer[data-mode="cover"] .xs-phone__panel {
+  inset: 0;
+  align-items: center;
+  gap: 26px;
+  padding: 100px 24px 40px;
+  text-align: center;
+  transform: translateY(-100%);
+}
+.xs-phone__layer[data-mode="cover"][data-open] .xs-phone__panel {
+  transform: none;
+}
+.xs-phone__layer[data-mode="cover"] .xs-phone__link {
+  text-align: center;
+}
+.xs-phone__layer[data-mode="cover"] .xs-phone__extras {
+  justify-content: center;
+}
+
+/* --- each look ------------------------------------------------------------- */
+
+/* 01 — the brand's colour under the bar; the strip's line and links as dark rows above the menu. */
+.xs-phone__layer[data-xs-look="01"] .xs-phone__panel {
+  --xs-ph-ground: var(--xs-brand);
+  --xs-ph-ink: #fff;
+  --xs-ph-accent: #fff;
+}
+.xs-phone__layer[data-xs-look="01"] .xs-phone__nav {
+  order: 3;
+  padding: 10px 20px;
+}
+.xs-phone__layer[data-xs-look="01"] .xs-phone__link {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 2.8;
+}
+.xs-phone__layer[data-xs-look="01"] .xs-phone__link:hover {
+  opacity: 0.8;
+}
+.xs-phone__layer[data-xs-look="01"] :is(.xs-phone__notice, .xs-phone__extras) {
+  padding: 8px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: #222;
+  color: #b2b2b2;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.xs-phone__layer[data-xs-look="01"] .xs-phone__extra:hover {
+  color: #fff;
+}
+
+/* 02 — the bar's own green carries on down; quiet white links that light up. */
+.xs-phone__layer[data-xs-look="02"] .xs-phone__panel {
+  --xs-ph-ground: var(--xs-brand);
+  --xs-ph-ink: #fff;
+  --xs-ph-accent: #fff;
+  box-shadow: none;
+}
+.xs-phone__layer[data-xs-look="02"] .xs-phone__link {
+  font-size: 16px;
+  font-weight: 500;
+  opacity: 0.5;
+}
+.xs-phone__layer[data-xs-look="02"] .xs-phone__link:is(:hover, [aria-current="page"]) {
+  opacity: 1;
+}
+.xs-phone__layer[data-xs-look="02"] :is(.xs-phone__extras, .xs-phone__notice) {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* 03 — a white sheet from the far side, capitals with air between them. */
+.xs-phone__layer[data-xs-look="03"] .xs-phone__panel {
+  width: min(400px, 90vw);
+  padding: 76px 24px 30px;
+}
+.xs-phone__layer[data-xs-look="03"] .xs-phone__link {
+  padding: 10px 0;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.xs-phone__layer[data-xs-look="03"] :is(.xs-phone__extras, .xs-phone__notice) {
+  padding-top: 18px;
+  border-top: 1px solid var(--xs-line);
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+/* 04 — a white sheet from the near side: a round close button, the logo, heavy links, then the rest on one line. */
+.xs-phone__layer[data-xs-look="04"] .xs-phone__panel {
+  padding-block: 90px 30px;
+  padding-inline: 30px 20px;
+  gap: 20px;
+}
+.xs-phone__layer[data-xs-look="04"] .xs-phone__close {
+  top: 25px;
+  inset-inline-end: 30px;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+}
+.xs-phone__layer[data-xs-look="04"] .xs-phone__brand {
+  display: flex;
+  align-items: center;
+}
+.xs-phone__layer[data-xs-look="04"] .xs-phone__link {
+  padding: 7px 0;
+  color: #111;
+  font-weight: 600;
+}
+.xs-phone__layer[data-xs-look="04"] .xs-phone__extras {
+  gap: 4px 0;
+  font-weight: 500;
+}
+.xs-phone__layer[data-xs-look="04"] .xs-phone__extras li + li::before {
+  content: "/";
+  margin-inline: 8px;
+  font-size: 13px;
+}
+.xs-phone__layer[data-xs-look="04"] .xs-phone__notice {
+  order: 5;
+}
+
+/* 05 — the same sheet, opening on the small capital links and closing on the store's line. */
+.xs-phone__layer[data-xs-look="05"] .xs-phone__panel {
+  padding-block: 50px 30px;
+  padding-inline: 30px 20px;
+  gap: 26px;
+}
+.xs-phone__layer[data-xs-look="05"] .xs-phone__close {
+  top: 6px;
+  inset-inline-end: 6px;
+}
+.xs-phone__layer[data-xs-look="05"] .xs-phone__extras {
+  order: -1;
+  justify-content: center;
+  gap: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.xs-phone__layer[data-xs-look="05"] .xs-phone__link {
+  padding: 7px 0;
+  color: #111;
+  font-weight: 600;
+}
+.xs-phone__layer[data-xs-look="05"] .xs-phone__notice {
+  order: 5;
+  color: #111;
+  font-size: 15px;
+}
+
+/* 06 — the bar's white carries on down under a boxed button. */
+.xs-header[data-xs-look="06"] .xs-phone__toggle,
+.xs-header[data-xs-look="07"] .xs-phone__toggle {
+  width: 50px;
+  padding: 0 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+.xs-phone__layer[data-xs-look="06"] .xs-phone__link {
+  padding: 10px 0;
+  color: #1c1c1c;
+  font-weight: 500;
+}
+.xs-phone__layer[data-xs-look="06"] .xs-phone__link:is(:hover, [aria-current="page"]) {
+  color: var(--xs-brand);
+}
+
+/* 07 — the same, with the look's green on the button's bars and the link under the finger. */
+.xs-header[data-xs-look="07"] .xs-phone__toggle {
+  color: var(--xs-brand);
+  height: 42px;
+  gap: 4px;
+}
+.xs-header[data-xs-look="07"] .xs-phone__toggle i {
+  height: 3px;
+}
+.xs-phone__layer[data-xs-look="07"] .xs-phone__link {
+  padding: 10px 0;
+  font-size: 16px;
+}
+.xs-phone__layer[data-xs-look="07"] .xs-phone__link:is(:hover, [aria-current="page"]) {
+  color: var(--xs-brand);
+}
+
+/* 08 — small capitals, each on its own roomy row. */
+.xs-header[data-xs-look="08"] .xs-phone__toggle {
+  color: #000;
+  padding: 0 10px;
+}
+.xs-phone__layer[data-xs-look="08"] .xs-phone__nav {
+  padding: 20px;
+}
+.xs-phone__layer[data-xs-look="08"] .xs-phone__link {
+  padding: 10px;
+  color: #222;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.xs-phone__layer[data-xs-look="08"] :is(.xs-phone__extras, .xs-phone__notice) {
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+/* 09 — everything in the middle. */
+.xs-phone__layer[data-xs-look="09"] .xs-phone__panel {
+  text-align: center;
+}
+.xs-phone__layer[data-xs-look="09"] .xs-phone__link {
+  padding: 15px;
+  color: #000;
+  font-size: 16px;
+  text-align: center;
+  text-transform: capitalize;
+}
+.xs-phone__layer[data-xs-look="09"] .xs-phone__extras {
+  justify-content: center;
+}
+
+/* 10 — red bars; plain links that turn red. */
+.xs-header[data-xs-look="10"] .xs-phone__toggle {
+  color: var(--xs-brand);
+}
+.xs-header[data-xs-look="10"] .xs-phone__toggle i {
+  height: 3px;
+}
+.xs-phone__layer[data-xs-look="10"] .xs-phone__link {
+  padding: 7px 10px;
+  color: #000;
+  font-size: 16px;
+  text-transform: capitalize;
+}
+.xs-phone__layer[data-xs-look="10"] .xs-phone__link:is(:hover, [aria-current="page"]) {
+  color: var(--xs-brand);
+}
+
+/* 11 — near-black over the whole screen, heavy capitals in the middle. */
+.xs-phone__layer[data-xs-look="11"] .xs-phone__panel {
+  --xs-ph-ground: rgba(0, 0, 0, 0.9);
+  --xs-ph-ink: #fff;
+}
+.xs-phone__layer[data-xs-look="11"] .xs-phone__link {
+  font-family: var(--xs-display, var(--xs-sans));
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.xs-phone__layer[data-xs-look="11"] .xs-phone__nav li + li {
+  margin-top: 6px;
+}
+
+/* 12 — a wide pale-blue sheet from the far side, very large grey capitals. */
+.xs-phone__layer[data-xs-look="12"] .xs-phone__panel {
+  --xs-ph-ground: #edf1f3;
+  --xs-ph-ink: #717171;
+  width: min(500px, 100vw);
+  padding-block: 80px 30px;
+  padding-inline: 44px 30px;
+}
+.xs-phone__layer[data-xs-look="12"] .xs-phone__link {
+  padding: 6px 0;
+  font-size: 2em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+.xs-phone__layer[data-xs-look="12"] .xs-phone__sub .xs-phone__link {
+  font-size: 1.2em;
+}
+.xs-phone__layer[data-xs-look="12"] :is(.xs-phone__extras, .xs-phone__notice) {
+  text-transform: uppercase;
+}
+
+/* 13 — a narrow see-through black sheet from the near side, small heavy white capitals. */
+.xs-phone__layer[data-xs-look="13"] .xs-phone__panel {
+  --xs-ph-ground: rgba(0, 0, 0, 0.8);
+  --xs-ph-ink: #fff;
+  width: 260px;
+  padding: 54px 0 30px;
+  gap: 14px;
+}
+.xs-phone__layer[data-xs-look="13"] .xs-phone__close {
+  top: 8px;
+  inset-inline-end: 8px;
+}
+.xs-phone__layer[data-xs-look="13"] .xs-phone__link {
+  padding-block: 10px;
+  padding-inline: 15px 22px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.xs-phone__layer[data-xs-look="13"] .xs-phone__sub .xs-phone__link {
+  text-transform: none;
+}
+.xs-phone__layer[data-xs-look="13"] :is(.xs-phone__extras, .xs-phone__notice) {
+  padding-inline: 15px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+/* 04, 05 — the templates' small boxed button. */
+.xs-header:is([data-xs-look="04"], [data-xs-look="05"]) .xs-phone__toggle {
+  width: 35px;
+  height: 35px;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+}
+.xs-header:is([data-xs-look="04"], [data-xs-look="05"]) .xs-phone__toggle[aria-expanded="true"] i:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+.xs-header:is([data-xs-look="04"], [data-xs-look="05"]) .xs-phone__toggle[aria-expanded="true"] i:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* --- the bar on a phone, each template's own way ---------------------------- */
+
+@media (max-width: 991px) {
+  /* Only the logo and the menu button, as these templates' phone bars have it: their icons sit in
+     the menu instead (the cart and the account are listed there, after the store's own links). */
+  .xs-header:is(
+      [data-xs-look="02"],
+      [data-xs-look="04"],
+      [data-xs-look="05"],
+      [data-xs-look="07"],
+      [data-xs-look="08"],
+      [data-xs-look="12"],
+      [data-xs-look="13"],
+      [data-xs-look="14"],
+      [data-xs-look="17"],
+      [data-xs-look="18"],
+      [data-xs-look="19"],
+      [data-xs-look="20"],
+      [data-xs-look="21"],
+      [data-xs-look="22"]
+    )
+    .xs-header__icons
+    > :not(.xs-phone, :has(> .xs-phone)) {
+    /* (the menu button may sit in its part's box: components/xs/XsHeader) */
+    display: none;
+  }
+
+  /* 09 — the menu button at the start, the logo in the middle, the icons at the end. */
+  .xs-header[data-xs-look="09"] .xs-header__icons {
+    display: contents;
+  }
+  .xs-header[data-xs-look="09"] .xs-phone {
+    order: -1;
+  }
+  .xs-header[data-xs-look="09"] .xs-header__logo {
+    margin-inline: auto;
+  }
+
+  /* 19 — the logo in the middle of the bar, the menu button at its end. */
+  .xs-header[data-xs-look="19"] .xs-header__bar-inner {
+    position: relative;
+    justify-content: center;
+  }
+  .xs-header[data-xs-look="19"] .xs-header__icons {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 15px;
+  }
+}

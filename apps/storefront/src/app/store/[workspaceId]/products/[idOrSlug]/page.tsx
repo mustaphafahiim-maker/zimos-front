@@ -36,6 +36,9 @@ import { getStoreMeta, getStorefrontProduct } from "@/lib/storeMeta";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { PageRenderer } from "@/components/page-renderer";
 import { RelatedProducts } from "@/components/product/RelatedProducts";
+import { XsPageStrip } from "@/components/xs/XsPageStrip";
+import { readXsStorePages, storePageAttrs } from "@/lib/xsStorePages";
+import { readStoreWords, withStoreWords } from "@/lib/storeWords";
 
 export const revalidate = 60;
 
@@ -125,7 +128,10 @@ export default async function ProductPage({ params }: { params: Params }) {
     }
   }
 
-  const t = getDictionary(locale);
+  // The dictionary with the store's own words on its shop pages (lib/storeWords).
+  const t = withStoreWords(getDictionary(locale), readStoreWords(store.themeSettings, locale));
+  // On a store that wears a template: its shop's strip, pictures and tabs (lib/xsStorePages).
+  const xsPages = readXsStorePages(store.themeSettings);
   // The merchant's bump — not on its own product's page.
   const bump = orderBumpOf(store.orderBump, [product.id]);
   // The product page's own settings and content, defaults filled in.
@@ -195,7 +201,7 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   return (
     // Room at the end for the sticky order bar on a phone, home indicator included.
-    <main className="flex-1 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0">
+    <main className="flex-1 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0" {...storePageAttrs("product", xsPages)}>
       {/* Lets a pixel scoped to this product receive this visit (Marketing → Tracking tools). */}
       <PixelScope productIds={[product.id]} />
       {/* schema.org Product for search engines and Google Merchant. */}
@@ -213,17 +219,26 @@ export default async function ProductPage({ params }: { params: Params }) {
           }}
         />
       )}
+      {xsPages && (
+        <XsPageStrip
+          pages={xsPages}
+          label={t.catalog.breadcrumbs}
+          crumbs={[{ label: t.common.home, href: "/" }, { label: xsPages.titles.catalog ?? t.catalog.allProducts, href: "/products" }, { label: product.name }]}
+        />
+      )}
       <div className={`${container} py-6 sm:py-8`}>
-        <StoreLink
-          href="/"
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-medium text-ink-soft transition-colors hover:text-primary"
-        >
-          <ArrowIcon size={16} className="rotate-180 rtl:rotate-0" />
-          {t.product.back}
-        </StoreLink>
+        {!xsPages && (
+          <StoreLink
+            href="/"
+            className="zt-pdp-back inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-medium text-ink-soft transition-colors hover:text-primary"
+          >
+            <ArrowIcon size={16} className="rotate-180 rtl:rotate-0" />
+            {t.product.back}
+          </StoreLink>
+        )}
 
         <div className="zt-pdp mt-2 grid gap-8 md:grid-cols-2 lg:gap-12">
-          <div className="md:sticky md:top-24 md:self-start">
+          <div className="zt-pdp-media md:sticky md:top-24 md:self-start">
             <TestedProductGallery workspaceId={workspaceId} product={product} />
             <ProductVideos product={product} label={product.name} />
           </div>
@@ -250,7 +265,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           <ProductReviews workspaceId={workspaceId} productId={product.id} {...storefrontProductReviews(product)} />
         )}
 
-        <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
+        <div className="zt-pdp-more mt-12 grid gap-10 lg:grid-cols-[1fr_24rem]">
           <ProductTabs tabs={tabs} />
           <aside className="lg:pt-1">
             {/* The merchant's own shipping / returns / COD cards, when written; nothing invented otherwise. */}
@@ -268,7 +283,9 @@ export default async function ProductPage({ params }: { params: Params }) {
         )}
 
         {/* Similar products, unless the page settings hide them. */}
-        {!ps.hide_related_products && <RelatedProducts workspaceId={workspaceId} product={product} currency={store.currency} locale={locale} />}
+        {!ps.hide_related_products && (
+          <RelatedProducts workspaceId={workspaceId} product={product} currency={store.currency} locale={locale} title={xsPages?.related ?? undefined} look={xsPages?.look} />
+        )}
       </div>
     </main>
   );

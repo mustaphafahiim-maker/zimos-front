@@ -30,7 +30,7 @@ export function OptionPicker({
   const type = display?.displayType ?? "buttons";
 
   const legend = (
-    <legend className="mb-2 text-sm font-semibold text-ink">
+    <legend className="zt-option-legend mb-2 text-sm font-semibold text-ink">
       {group.name}
       {selected && <span className="ms-2 font-normal text-ink-soft">{selected}</span>}
     </legend>
@@ -38,7 +38,7 @@ export function OptionPicker({
 
   if (type === "dropdown") {
     return (
-      <fieldset>
+      <fieldset className="zt-option">
         {legend}
         <select
           aria-label={text.choose(group.name)}
@@ -61,7 +61,7 @@ export function OptionPicker({
   }
 
   return (
-    <fieldset>
+    <fieldset className="zt-option">
       {legend}
       <div className="flex flex-wrap gap-2">
         {group.values.map((value) => {
@@ -84,7 +84,7 @@ export function OptionPicker({
               <button
                 key={value}
                 {...common}
-                className={`relative h-11 w-11 rounded-full border-2 p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${ring} ${off}`}
+                className={`zt-swatch relative h-11 w-11 rounded-full border-2 p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${ring} ${off}`}
               >
                 <span className="block h-full w-full rounded-full border border-black/10" style={{ backgroundColor: color }} />
                 {!ok && <span aria-hidden className="absolute inset-x-1 top-1/2 h-0.5 -rotate-45 bg-ink-soft" />}
@@ -111,7 +111,7 @@ export function OptionPicker({
             <button
               key={value}
               {...common}
-              className={`min-h-11 min-w-11 rounded-xl border-2 px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+              className={`zt-option-btn min-h-11 min-w-11 rounded-xl border-2 px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                 isSelected
                   ? "border-primary bg-primary-soft text-primary"
                   : "border-line bg-paper-raised text-ink hover:border-primary"

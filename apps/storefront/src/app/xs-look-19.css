@@ -1,0 +1,1029 @@
+/*
+ * Look 19 · Tasty (FreeHTML5.co, CC BY 3.0) — a restaurant. Everything that is
+ * this one template's: its colours and type, how its header and footer differ
+ * from the shared layout in xs-shell.css, how its menu opens on a phone, and
+ * how it draws the bands it shares with other looks. Deleting this file (and
+ * its import, its pictures under public/xs/19 and its entries in
+ * lib/xsShell.ts and the editor's xsBlocks.ts) removes the template.
+ *
+ * The template is one dark page: black under a fine noise, white words, one
+ * red, and a yellow for prices. It is set in Cormorant Garamond with Satisfy
+ * for its script headings; neither is served here, so its words are in
+ * Marcellus and its script in Cookie (xs-fonts.css) — one weight each, which
+ * is why no bold is synthesised. Arabic text falls through to the store's own
+ * face.
+ */
+
+[data-xs-look="19"],
+.brand-theme[data-xs-shell="19"] {
+  --xs-sans: "Marcellus", "XS Ar Amiri", var(--font-display), serif;
+  --xs-display: "Marcellus", "XS Ar Amiri", var(--font-display), serif;
+  --xs-script: "Cookie", "XS Ar Aref Ruqaa", var(--font-display), serif;
+  --xs-ink: #fff;
+  --xs-ink-soft: rgba(255, 255, 255, 0.3);
+  --xs-muted: rgba(255, 255, 255, 0.3);
+  --xs-brand: #ea272d;
+  --xs-accent: #ea272d;
+  --xs-button: #ea272d;
+  --xs-highlight: #fee856;
+  --xs-tint: rgba(255, 255, 255, 0.03);
+  --xs-dark: #000;
+  --xs-line: #434343;
+  /* The template paints #000 under an opaque noise tile: this is the tile's own tone, for whatever is drawn without it. */
+  --xs-ground: #1a1a1a;
+  --xs-noise: #1a1a1a url("/xs/19/noise.png");
+  --xs-footer-ink: rgba(255, 255, 255, 0.5);
+  --xs-badge: #ea272d;
+  --xs-btn-radius: 0;
+  --xs-container: 1170px;
+  /* The room above and below a band, and under a band's opening words. */
+  --xs-pad: 7em;
+  --xs-lead: 170px;
+  color: var(--xs-ink-soft);
+  font-size: 18px;
+  font-synthesis: style;
+  line-height: 1.5;
+}
+
+/* --- shared: the page's ground, a section's script heading, the one button -- */
+
+/* Every band lies on the template's page; the bands that are a photograph (the cover, a page's title, the call to book) keep theirs. */
+:is(.xs-header, .xs-footer, .xs-split, .xs-products, .xs-quotes, .xs-showcase, .xs-posts, .xs-contact, .xs-story, .xs-gallery)[data-xs-look="19"] {
+  background: var(--xs-noise);
+}
+/* Cookie runs smaller than Satisfy: the template's 30px is 38px here. */
+[data-xs-look="19"] :is(.xs-heading, .xs-products__heading, .xs-quotes__heading, .xs-slider__heading, .xs-contact__heading) {
+  margin: 0 0 20px;
+  padding: 0;
+  color: var(--xs-ink);
+  font-family: var(--xs-script);
+  font-size: 38px;
+  font-weight: 400;
+  line-height: 1.1;
+  text-align: start;
+  text-transform: none;
+}
+[data-xs-look="19"] :is(.xs-split__text, .xs-showcase__intro) p {
+  margin: 0 0 30px;
+}
+/* A red outline round small white capitals, which fills with the red under the pointer. */
+[data-xs-look="19"] :is(.xs-btn, .xs-slider__button, .xs-products__all, .xs-products__more-btn, .xs-products__view, .xs-contact__submit, .xs-quick__go) {
+  display: inline-block;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  padding: 8px 20px;
+  border: 2px solid var(--xs-brand);
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  font-family: var(--xs-sans);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  line-height: 1.5;
+  text-align: center;
+  text-transform: uppercase;
+}
+[data-xs-look="19"] :is(.xs-btn, .xs-slider__button, .xs-products__all, .xs-products__more-btn, .xs-products__view, .xs-contact__submit, .xs-quick__go):hover {
+  border-color: var(--xs-brand);
+  background: var(--xs-brand);
+  color: #fff;
+  filter: none;
+}
+.xs-quick[data-xs-look="19"] .xs-quick__price {
+  color: var(--xs-highlight);
+}
+
+/* --- header: no strip; the name over a row of small capitals, both centred - */
+/*     clear over a page's opening picture, dark everywhere else                */
+
+.xs-header[data-xs-look="19"] {
+  padding-bottom: var(--xs-own-bar-h, 128px);
+}
+.xs-header[data-xs-look="19"] .xs-header__strip {
+  display: none;
+}
+.xs-header[data-xs-look="19"] .xs-header__bar,
+.xs-header[data-xs-look="19"][data-scrolled] .xs-header__bar {
+  top: 0;
+  height: 128px;
+  background: var(--xs-noise);
+  box-shadow: none;
+}
+.xs-header[data-xs-look="19"] .xs-header__bar-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-content: center;
+}
+.xs-header[data-xs-look="19"] .xs-header__logo {
+  grid-area: 1 / 2;
+  height: 71px;
+  margin: 0;
+}
+.xs-header[data-xs-look="19"] .xs-header__logo-name {
+  color: #fff;
+  font-size: 42px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.xs-header[data-xs-look="19"] .xs-header__logo-name::after {
+  content: ".";
+  color: var(--xs-brand);
+}
+.xs-header[data-xs-look="19"] .xs-header__menu {
+  grid-area: 2 / 1 / 3 / 4;
+  justify-content: center;
+  margin-top: 5px;
+}
+.xs-header[data-xs-look="19"] .xs-header__link {
+  position: relative;
+  margin-inline: 0;
+  padding: 0 15px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  line-height: 1.7;
+  text-transform: uppercase;
+  transition: color 0.5s;
+}
+.xs-header[data-xs-look="19"] .xs-header__link:hover,
+.xs-header[data-xs-look="19"] .xs-header__link[aria-current="page"] {
+  color: #fff;
+}
+.xs-header[data-xs-look="19"] .xs-header__link[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -5px;
+  width: 30px;
+  height: 2px;
+  margin-inline: auto;
+  background: var(--xs-brand);
+}
+/* A list under a link: the template's red box with a small arrow on top. */
+.xs-header[data-xs-look="19"] .zs-drop__panel {
+  min-width: 140px;
+  padding: 20px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--xs-brand);
+  box-shadow: 0 14px 16px -9px rgba(0, 0, 0, 0.75);
+}
+.xs-header[data-xs-look="19"] .zs-drop__panel::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  inset-inline-start: 32px;
+  border: 8px solid transparent;
+  border-bottom-color: var(--xs-brand);
+}
+.xs-header[data-xs-look="19"] .zs-drop__item,
+.xs-header[data-xs-look="19"] .zs-drop__item:hover {
+  padding: 2px 0 7px;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+}
+.xs-header[data-xs-look="19"] .xs-header__icons {
+  grid-area: 1 / 3;
+  justify-self: end;
+}
+.xs-header[data-xs-look="19"] .zt-icon-btn {
+  color: rgba(255, 255, 255, 0.7);
+}
+.xs-header[data-xs-look="19"] .zt-icon-btn:hover {
+  color: #fff;
+}
+/* A page that opens on the cover, or on a page's title picture: the bar lies over it, clear until the page scrolls. */
+.brand-theme[data-xs-shell="19"]:has(.zt-sections > :is(:first-child, style:first-child + *) :is(.xs-hero, .xs-title)[data-xs-look="19"]) .xs-header {
+  padding-bottom: 0;
+}
+.brand-theme[data-xs-shell="19"]:has(.zt-sections > :is(:first-child, style:first-child + *) :is(.xs-hero, .xs-title)[data-xs-look="19"]) .xs-header:not([data-scrolled]) .xs-header__bar {
+  background: transparent;
+}
+@media (min-width: 992px) {
+  /* Scrolled, the template slides its name out of sight and keeps the row of links. */
+  .xs-header[data-xs-look="19"][data-scrolled] .xs-header__bar {
+    height: 46px;
+  }
+  .xs-header[data-xs-look="19"][data-scrolled] .xs-header__logo {
+    display: none;
+  }
+  .xs-header[data-xs-look="19"][data-scrolled] .xs-header__menu {
+    grid-row: 1;
+    margin-top: 0;
+  }
+}
+
+/* --- footer: the same dark page; small capital titles over half-white links, */
+/*     the store's own column first                                             */
+
+.xs-footer[data-xs-look="19"] {
+  padding-top: var(--xs-pad);
+  font-size: 18px;
+  line-height: 1.7;
+}
+.xs-footer[data-xs-look="19"] .xs-footer__col:last-child {
+  order: -1;
+}
+.xs-footer[data-xs-look="19"] .xs-footer__title {
+  padding-bottom: 20px;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 1px;
+}
+.xs-footer[data-xs-look="19"] li {
+  padding-bottom: 0;
+}
+.xs-footer[data-xs-look="19"] a:hover {
+  text-decoration: underline;
+}
+.xs-footer[data-xs-look="19"] .xs-footer__social a {
+  color: var(--xs-brand);
+}
+.xs-footer[data-xs-look="19"] .xs-footer__bottom {
+  font-size: 85%;
+}
+
+/* --- xs_hero: the cover — a photograph as tall as the screen under a half-    */
+/*     black veil, a very large heading and an italic line in its middle        */
+
+.xs-hero[data-xs-look="19"] {
+  position: relative;
+  z-index: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: calc(9em * var(--xs-space, 1)) 15px;
+  overflow: hidden;
+  background: #000;
+  text-align: center;
+}
+.xs-hero[data-xs-look="19"] .xs-hero__inner {
+  display: block;
+  width: 100%;
+}
+.xs-hero[data-xs-look="19"] .xs-hero__text {
+  max-width: none;
+}
+.xs-hero[data-xs-look="19"] .xs-hero__heading {
+  margin: 0;
+  font-family: var(--xs-sans);
+  font-size: 80px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+.xs-hero[data-xs-look="19"] .xs-hero__line {
+  margin: 0 0 30px;
+  color: #fff;
+  font-size: 30px;
+  font-style: italic;
+}
+.xs-hero[data-xs-look="19"] .xs-hero__buttons {
+  justify-content: center;
+}
+/* The picture is the band's ground. */
+.xs-hero[data-xs-look="19"] .xs-hero__art {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+.xs-hero[data-xs-look="19"] .xs-hero__art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  object-fit: cover;
+}
+.xs-hero[data-xs-look="19"] .xs-hero__art::after {
+  inset: 0;
+  z-index: 3;
+  display: block;
+  width: auto;
+  height: auto;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* --- xs_split: a photograph that runs off the edge of the page, and beside   */
+/*     it a script heading, the story and the outlined button                  */
+
+.xs-split[data-xs-look="19"] {
+  padding: calc(var(--xs-pad) * var(--xs-space, 1)) 15px;
+  overflow: hidden;
+}
+.xs-split[data-xs-look="19"] .xs-split__inner {
+  gap: 0;
+}
+.xs-split[data-xs-look="19"] .xs-split__grid {
+  display: block;
+}
+.xs-split[data-xs-look="19"] .xs-split__grid::before {
+  display: none;
+}
+.xs-split[data-xs-look="19"] .xs-split__pic {
+  padding: 0;
+}
+.xs-split[data-xs-look="19"] .xs-split__pic:not([data-slot="1"]) {
+  display: none;
+}
+/* At its own 800px, its far edge two thirds of the way across its column: the rest hangs off the page. */
+.xs-split[data-xs-look="19"] .xs-split__pic img {
+  width: 800px;
+  max-width: none;
+  margin-inline-start: calc(65.5% - 800px);
+  border-radius: 0;
+}
+/* A blank line in the text starts a new paragraph. */
+.xs-split[data-xs-look="19"] .xs-split__text p {
+  white-space: pre-line;
+}
+@media (max-width: 991px) {
+  .xs-split[data-xs-look="19"] .xs-split__inner {
+    gap: 30px;
+  }
+  .xs-split[data-xs-look="19"] .xs-split__pic img {
+    width: 100%;
+    margin-inline-start: 0;
+  }
+}
+
+/* --- xs_products: the menu — a script heading, then dishes whose every other */
+/*     card hangs lower: a picture, a white name, a yellow price               */
+
+.xs-products[data-xs-look="19"] {
+  padding: calc(var(--xs-pad) * var(--xs-space, 1)) 15px;
+}
+.xs-products[data-xs-look="19"] .xs-products__heading {
+  margin-bottom: 0;
+}
+.xs-products[data-xs-look="19"] .xs-products__bar {
+  margin-top: 30px;
+}
+.xs-products[data-xs-look="19"] .xs-products__tab {
+  padding: 0 0 5px;
+  border-bottom-width: 2px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.xs-products[data-xs-look="19"] .xs-products__tab:hover,
+.xs-products[data-xs-look="19"] .xs-products__tab[data-active] {
+  border-bottom-color: var(--xs-brand);
+  color: #fff;
+}
+.xs-products[data-xs-look="19"] .xs-products__stage:not(:first-child) {
+  margin-top: var(--xs-lead);
+}
+.xs-products[data-xs-look="19"] .xs-products__grid {
+  gap: 30px 40px;
+  margin-top: 0;
+}
+.xs-products[data-xs-look="19"] .xs-products__grid:not([data-layout="slider"]) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.xs-products[data-xs-look="19"] .xs-products__grid:not([data-layout="slider"]) > :nth-child(even) {
+  margin-top: 150px;
+}
+.xs-products[data-xs-look="19"] .xs-products__media {
+  aspect-ratio: 3 / 2;
+  background: #000;
+}
+.xs-products[data-xs-look="19"] .xs-products__view:not(:hover) {
+  background: rgba(0, 0, 0, 0.6);
+}
+.xs-products[data-xs-look="19"] .xs-products__badge {
+  border-radius: 0;
+  background: var(--xs-badge);
+}
+.xs-products[data-xs-look="19"] .xs-products__meta {
+  padding-top: 30px;
+}
+.xs-products[data-xs-look="19"] .xs-products__name {
+  padding-bottom: 0;
+  color: var(--xs-ink);
+  font-size: 24px;
+  line-height: 1.1;
+}
+.xs-products[data-xs-look="19"] .xs-products__name:hover {
+  color: var(--xs-brand);
+}
+.xs-products[data-xs-look="19"] .xs-products__price {
+  align-items: baseline;
+  color: var(--xs-highlight);
+  font-size: 30px;
+  line-height: 1.7;
+}
+.xs-products[data-xs-look="19"] .xs-products__price s {
+  font-size: 18px;
+}
+@media (max-width: 991px) {
+  .xs-products[data-xs-look="19"] .xs-products__grid:not([data-layout="slider"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .xs-products[data-xs-look="19"] .xs-products__grid:not([data-layout="slider"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .xs-products[data-xs-look="19"] .xs-products__grid:not([data-layout="slider"]) > :nth-child(even) {
+    margin-top: 0;
+  }
+}
+
+/* --- xs_quotes: a large photograph, the customer's words in a tall white     */
+/*     italic laid over its edge                                               */
+
+.xs-quotes[data-xs-look="19"] {
+  padding: calc(var(--xs-pad) * var(--xs-space, 1)) 15px;
+}
+.xs-quotes[data-xs-look="19"] .xs-quotes__heading {
+  max-width: var(--xs-container);
+  margin: 0 auto var(--xs-lead);
+}
+.xs-quotes[data-xs-look="19"] .xs-quotes__item {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: auto auto 1fr;
+  max-width: none;
+  margin: 0;
+  text-align: start;
+}
+.xs-quotes[data-xs-look="19"] .xs-quotes__item figcaption {
+  display: contents;
+}
+.xs-quotes[data-xs-look="19"] .xs-quotes__face {
+  grid-area: 1 / 1 / 4 / 9;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  border-radius: 0;
+}
+.xs-quotes[data-xs-look="19"] .xs-quotes__item :is(blockquote, .xs-quotes__name, .xs-quotes__role) {
+  position: relative;
+  grid-column: 6 / 13;
+  padding-inline: 20px;
+}
+.xs-quotes[data-xs-look="19"] .xs-quotes__item blockquote {
+  grid-row: 1;
+  margin: 100px 0 30px;
+}
+.xs-quotes[data-xs-look="19"] blockquote p {
+  color: var(--xs-ink);
+  font-size: 40px;
+  font-style: italic;
+  line-height: 50px;
+}
+.xs-quotes[data-xs-look="19"] .xs-quotes__name {
+  grid-row: 2;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 30px;
+  font-style: italic;
+  font-weight: 400;
+}
+.xs-quotes[data-xs-look="19"] .xs-quotes__name::before {
+  content: "\2014\00a0";
+}
+.xs-quotes[data-xs-look="19"] .xs-quotes__role {
+  grid-row: 3;
+}
+/* Without a photograph the words take the whole width. */
+.xs-quotes[data-xs-look="19"] .xs-quotes__item:not(:has(.xs-quotes__face)) :is(blockquote, .xs-quotes__name, .xs-quotes__role) {
+  grid-column: 1 / -1;
+}
+/* More than one: the template's slider dots — red, the one showing a white ring. */
+.xs-quotes[data-xs-look="19"] .xs-quotes__dots button {
+  width: 12px;
+  height: 12px;
+  border: 2px solid transparent;
+  background: var(--xs-brand);
+}
+.xs-quotes[data-xs-look="19"] .xs-quotes__dots button[data-active] {
+  border-color: #fff;
+  background: transparent;
+}
+@media (max-width: 991px) {
+  .xs-quotes[data-xs-look="19"] .xs-quotes__item {
+    display: flex;
+    flex-direction: column;
+  }
+  .xs-quotes[data-xs-look="19"] .xs-quotes__face {
+    order: -1;
+    margin-bottom: 20px;
+  }
+  .xs-quotes[data-xs-look="19"] .xs-quotes__item blockquote {
+    margin-top: 0;
+  }
+  .xs-quotes[data-xs-look="19"] blockquote p {
+    font-size: 30px;
+    line-height: 40px;
+  }
+}
+
+/* --- xs_showcase: a script heading and a line on the start side; beside them */
+/*     the store's dishes as pictures — one large, the rest small — each named */
+/*     in white over its dark foot                                             */
+
+.xs-showcase[data-xs-look="19"] {
+  padding: calc(var(--xs-pad) * var(--xs-space, 1)) 15px;
+}
+.xs-showcase[data-xs-look="19"] .xs-showcase__inner {
+  gap: 20px;
+  align-items: start;
+}
+.xs-showcase[data-xs-look="19"] .xs-showcase__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  height: 200px;
+  padding: 20px;
+  overflow: hidden;
+  background: #000;
+  text-align: start;
+}
+.xs-showcase[data-xs-look="19"] .xs-showcase__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  aspect-ratio: auto;
+  object-fit: cover;
+  transition: transform 0.5s;
+}
+.xs-showcase[data-xs-look="19"] .xs-showcase__item:hover .xs-showcase__img {
+  top: 0;
+  transform: scale(1.05);
+}
+.xs-showcase[data-xs-look="19"] .xs-showcase__item::before,
+.xs-showcase[data-xs-look="19"] .xs-showcase__item:hover::before {
+  inset: 0;
+  z-index: 1;
+  height: auto;
+  border-radius: 0;
+  background: linear-gradient(transparent 40%, rgba(0, 0, 0, 0.8));
+}
+.xs-showcase[data-xs-look="19"] :is(.xs-showcase__name, .xs-showcase__price) {
+  position: relative;
+  z-index: 2;
+  font-weight: 400;
+}
+.xs-showcase[data-xs-look="19"] .xs-showcase__name {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.1;
+}
+.xs-showcase[data-xs-look="19"] .xs-showcase__price {
+  color: var(--xs-highlight);
+  font-size: 20px;
+}
+/* The round "add" mark becomes a small red-outlined square in the picture's far corner. */
+.xs-showcase[data-xs-look="19"] .xs-showcase__plus,
+.xs-showcase[data-xs-look="19"] .xs-showcase__item:hover .xs-showcase__plus {
+  top: 20px;
+  bottom: auto;
+  inset-inline: auto 20px;
+  z-index: 2;
+  margin: 0;
+  transform: none;
+  border: 2px solid var(--xs-brand);
+  border-radius: 0;
+  background: transparent;
+}
+.xs-showcase[data-xs-look="19"] .xs-showcase__item:hover .xs-showcase__plus {
+  background: var(--xs-brand);
+}
+@media (min-width: 992px) {
+  /* The words keep the start half; the first dish is large over the others, two to a row. */
+  .xs-showcase[data-xs-look="19"] .xs-showcase__inner[data-intro] {
+    grid-template-columns: minmax(0, 6fr) repeat(2, minmax(0, 3fr));
+  }
+  .xs-showcase[data-xs-look="19"] .xs-showcase__intro {
+    grid-row: 1 / span 2;
+    padding-inline-end: 16.667%;
+  }
+  .xs-showcase[data-xs-look="19"] [data-intro] > .xs-showcase__item:nth-child(odd) {
+    grid-column: 2;
+  }
+  .xs-showcase[data-xs-look="19"] [data-intro] > .xs-showcase__item:nth-child(even) {
+    grid-column: 3;
+  }
+  .xs-showcase[data-xs-look="19"] [data-intro] > .xs-showcase__item:nth-child(2) {
+    grid-column: 2 / 4;
+    height: 420px;
+    padding: 2em;
+  }
+  .xs-showcase[data-xs-look="19"] [data-intro] > .xs-showcase__item:nth-child(2) .xs-showcase__name {
+    font-size: 30px;
+  }
+}
+
+/* --- xs_posts: a centred script heading and line; cards of a picture over a  */
+/*     faintly lit panel — a date, a white title, a sentence, a red link       */
+
+.xs-posts[data-xs-look="19"] {
+  padding: calc(var(--xs-pad) * var(--xs-space, 1)) 15px;
+}
+.xs-posts[data-xs-look="19"] .xs-posts__head {
+  justify-content: center;
+  margin-bottom: var(--xs-lead);
+  text-align: center;
+}
+.xs-posts[data-xs-look="19"] .xs-posts__head > div {
+  max-width: 760px;
+}
+.xs-posts[data-xs-look="19"] .xs-posts__head .xs-heading {
+  text-align: center;
+}
+.xs-posts[data-xs-look="19"] .xs-posts__pic img {
+  height: 300px;
+  aspect-ratio: auto;
+}
+.xs-posts[data-xs-look="19"] .xs-posts__body {
+  padding: 30px;
+  background: var(--xs-tint);
+}
+.xs-posts[data-xs-look="19"] .xs-posts__meta {
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+.xs-posts[data-xs-look="19"] .xs-posts__item h3 {
+  margin-bottom: 20px;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.xs-posts[data-xs-look="19"] .xs-posts__item p {
+  font-size: 18px;
+  line-height: 1.5;
+}
+.xs-posts[data-xs-look="19"] .xs-posts__more {
+  display: block;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--xs-brand);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-align: end;
+  text-transform: none;
+}
+@media (max-width: 991px) {
+  .xs-posts[data-xs-look="19"] .xs-posts__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+}
+
+/* --- xs_slider: the call to book — a photograph under a deep veil, a script  */
+/*     heading, a line and the outlined button in the middle; as tall as its   */
+/*     words                                                                   */
+
+.xs-slider[data-xs-look="19"] {
+  display: grid;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+/* Every slide shares one cell, so the band is as tall as the longest. */
+.xs-slider[data-xs-look="19"] .xs-slider__slide {
+  position: relative;
+  grid-area: 1 / 1;
+}
+.xs-slider[data-xs-look="19"] .xs-slider__slide::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+}
+/* In the middle, so the words read in the page's own direction. */
+.xs-slider[data-xs-look="19"] .xs-slider__inner {
+  position: relative;
+  direction: inherit;
+  align-items: center;
+  max-width: 790px;
+  padding: var(--xs-pad) 15px;
+  text-align: center;
+}
+.xs-slider[data-xs-look="19"] .xs-slider__heading {
+  text-align: center;
+}
+.xs-slider[data-xs-look="19"] .xs-slider__line {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 20px;
+}
+
+/* --- inner pages: a page opens as the home page does — its name very large   */
+/*     over a dimmed photograph as tall as the screen                          */
+
+.xs-title[data-xs-look="19"] {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(9em * var(--xs-space, 1)) 15px;
+}
+.xs-title[data-xs-look="19"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+.xs-title[data-xs-look="19"] .xs-title__heading {
+  position: relative;
+  font-size: 80px;
+  font-weight: 400;
+}
+@media (min-width: 769px) {
+  /* The height of the screen, short of running away with a preview that grows to fit its page. */
+  :is(.xs-hero, .xs-title)[data-xs-look="19"] {
+    min-height: min(100vh, 900px);
+  }
+}
+
+/* --- xs_contact: the store's details on the start side, the form in a faint  */
+/*     frame on the other; what is typed is in the script                      */
+
+.xs-contact[data-xs-look="19"] {
+  padding: calc(var(--xs-pad) * var(--xs-space, 1)) 15px;
+}
+.xs-contact[data-xs-look="19"] .xs-contact__grid {
+  gap: 30px;
+  align-items: start;
+}
+.xs-contact[data-xs-look="19"] .xs-contact__box {
+  grid-area: 1 / 2;
+  padding: 30px;
+  border: 4px solid rgba(255, 255, 255, 0.04);
+}
+.xs-contact[data-xs-look="19"] .xs-contact__info {
+  grid-area: 1 / 1;
+  gap: 20px;
+  padding: 30px 0;
+  border: 0;
+}
+.xs-contact[data-xs-look="19"] :is(.xs-contact__field, .xs-contact__message) {
+  margin-bottom: 30px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+.xs-contact[data-xs-look="19"] :is(.xs-contact__field:focus-within, .xs-contact__message:focus) {
+  border-color: #fff;
+}
+.xs-contact[data-xs-look="19"] .xs-contact__field svg {
+  margin-inline: 16px 10px;
+}
+.xs-contact[data-xs-look="19"] :is(.xs-contact__field input, .xs-contact__message) {
+  font-family: var(--xs-script);
+  font-size: 24px;
+  line-height: 1.2;
+}
+.xs-contact[data-xs-look="19"] .xs-contact__message {
+  padding: 12px 16px;
+}
+/* The template's labels stand over its boxes; here they are the hints inside them. */
+.xs-contact[data-xs-look="19"] :is(input, textarea)::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--xs-sans);
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.xs-contact[data-xs-look="19"] .xs-contact__submit {
+  padding: 10px 36px;
+}
+.xs-contact[data-xs-look="19"] .xs-contact__row svg {
+  width: 40px;
+  height: 22px;
+  color: rgba(255, 255, 255, 0.3);
+}
+.xs-contact[data-xs-look="19"] .xs-contact__value,
+.xs-contact[data-xs-look="19"] .xs-contact__value[data-accent] {
+  max-width: none;
+  padding-top: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 18px;
+}
+@media (max-width: 767px) {
+  .xs-contact[data-xs-look="19"] :is(.xs-contact__box, .xs-contact__info) {
+    grid-area: auto;
+  }
+}
+
+/* --- xs_story: the template's timeline — a line down the page, a red mark    */
+/*     for each part, the words to one side of it and then the other           */
+
+.xs-story[data-xs-look="19"] {
+  position: relative;
+  padding: calc(var(--xs-pad) * var(--xs-space, 1)) 15px;
+}
+.xs-story[data-xs-look="19"]::before {
+  content: "";
+  position: absolute;
+  inset-block: var(--xs-pad);
+  inset-inline-start: 36px;
+  width: 2px;
+  background: var(--xs-line);
+}
+.xs-story[data-xs-look="19"] .xs-story__part,
+.xs-story[data-xs-look="19"] .xs-story__part[data-flip] {
+  position: relative;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  min-height: 84px;
+  padding-inline-start: 74px;
+}
+.xs-story[data-xs-look="19"] .xs-story__part + .xs-story__part {
+  margin-top: 20px;
+}
+.xs-story[data-xs-look="19"] .xs-story__part::before {
+  content: "";
+  position: absolute;
+  top: 40px;
+  inset-inline-start: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--xs-brand);
+}
+.xs-story[data-xs-look="19"] .xs-story__part .xs-story__text {
+  order: 0;
+  padding: 0;
+}
+.xs-story[data-xs-look="19"] .xs-story__title {
+  padding-bottom: 20px;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+.xs-story[data-xs-look="19"] .xs-story__body {
+  padding-bottom: 0;
+  color: var(--xs-ink-soft);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.xs-story[data-xs-look="19"] .xs-story__frame {
+  width: auto;
+  margin: 0;
+}
+.xs-story[data-xs-look="19"] .xs-story__frame::before {
+  display: none;
+}
+@media (min-width: 992px) {
+  .xs-story[data-xs-look="19"]::before {
+    inset-inline-start: calc(50% - 1px);
+  }
+  .xs-story[data-xs-look="19"] .xs-story__part,
+  .xs-story[data-xs-look="19"] .xs-story__part[data-flip] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 10%;
+    padding-inline-start: 0;
+  }
+  .xs-story[data-xs-look="19"] .xs-story__part::before {
+    inset-inline-start: calc(50% - 22px);
+  }
+  .xs-story[data-xs-look="19"] .xs-story__part .xs-story__text {
+    grid-area: 1 / 1;
+    text-align: end;
+  }
+  .xs-story[data-xs-look="19"] .xs-story__part .xs-story__frame {
+    grid-area: 1 / 2;
+  }
+  .xs-story[data-xs-look="19"] .xs-story__part[data-flip] .xs-story__text {
+    grid-area: 1 / 2;
+    text-align: start;
+  }
+  .xs-story[data-xs-look="19"] .xs-story__part[data-flip] .xs-story__frame {
+    grid-area: 1 / 1;
+  }
+}
+
+/* --- xs_gallery: the template's wall of photographs — in every five, one     */
+/*     large picture among four small ones                                     */
+
+.xs-gallery[data-xs-look="19"] {
+  padding: calc(var(--xs-pad) * var(--xs-space, 1)) 15px;
+}
+.xs-gallery[data-xs-look="19"] .xs-gallery__intro {
+  max-width: var(--xs-container);
+  margin-bottom: var(--xs-lead);
+  padding-inline: 0;
+  text-align: start;
+}
+.xs-gallery[data-xs-look="19"] .xs-gallery__intro p {
+  max-width: 570px;
+}
+.xs-gallery[data-xs-look="19"]:not([data-variant="logos"]) .xs-gallery__row {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  grid-auto-rows: 200px;
+  grid-auto-flow: dense;
+  gap: 20px;
+  max-width: var(--xs-container);
+  margin-inline: auto;
+}
+.xs-gallery[data-xs-look="19"]:not([data-variant="logos"]) .xs-gallery__item img {
+  height: 100%;
+  aspect-ratio: auto;
+}
+@media (min-width: 768px) {
+  /* Ten to a pattern: two, the large one, two; then two, two, the large one. */
+  .xs-gallery[data-xs-look="19"]:not([data-variant="logos"]) .xs-gallery__item:is(:nth-child(10n + 1), :nth-child(10n + 2), :nth-child(10n + 6), :nth-child(10n + 7)) {
+    grid-column: 1;
+  }
+  .xs-gallery[data-xs-look="19"]:not([data-variant="logos"]) .xs-gallery__item:is(:nth-child(10n + 8), :nth-child(10n + 9)) {
+    grid-column: 2;
+  }
+  .xs-gallery[data-xs-look="19"]:not([data-variant="logos"]) .xs-gallery__item:is(:nth-child(10n + 4), :nth-child(10n + 5)) {
+    grid-column: 4;
+  }
+  .xs-gallery[data-xs-look="19"]:not([data-variant="logos"]) .xs-gallery__item:nth-child(10n + 3) {
+    grid-area: span 2 / 2 / auto / span 2;
+  }
+  .xs-gallery[data-xs-look="19"]:not([data-variant="logos"]) .xs-gallery__item:nth-child(10n) {
+    grid-area: span 2 / 3 / auto / span 2;
+  }
+}
+@media (max-width: 767px) {
+  .xs-gallery[data-xs-look="19"]:not([data-variant="logos"]) .xs-gallery__row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* --- narrow screens: the template's own closer spacing and smaller cover ---- */
+
+@media (max-width: 768px) {
+  [data-xs-look="19"] {
+    --xs-pad: 3em;
+    --xs-lead: 50px;
+  }
+  .xs-hero[data-xs-look="19"] .xs-hero__heading,
+  .xs-title[data-xs-look="19"] .xs-title__heading {
+    font-size: 42px;
+    line-height: 50px;
+  }
+  .xs-posts[data-xs-look="19"] .xs-posts__pic img {
+    height: 400px;
+  }
+}
+
+/* --- phone: the bar stays dark (clear over a cover) with white bars for a    */
+/*     button; a dark sheet slides in from the far side, its links at reading  */
+/*     size                                                                    */
+
+.xs-phone[data-xs-look="19"],
+.xs-phone__layer[data-xs-look="19"] {
+  background: none;
+}
+.xs-header[data-xs-look="19"] .xs-phone__toggle {
+  padding: 0 7px;
+  color: #fff;
+}
+.xs-phone__layer[data-xs-look="19"][data-mode] .xs-phone__panel {
+  --xs-ph-ground: var(--xs-noise);
+  --xs-ph-ink: rgba(255, 255, 255, 0.5);
+  --xs-ph-accent: rgba(255, 255, 255, 0.8);
+  width: min(270px, 86vw);
+  padding: 75px 40px 40px;
+}
+.xs-phone__layer[data-xs-look="19"] .xs-phone__link {
+  padding: 0;
+  font-size: 18px;
+  line-height: 1.7;
+}
+.xs-phone__layer[data-xs-look="19"] .xs-phone__close {
+  color: #fff;
+}
+.xs-phone__layer[data-xs-look="19"] :is(.xs-phone__extras, .xs-phone__notice) {
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+@media (max-width: 991px) {
+  .xs-header[data-xs-look="19"] {
+    padding-bottom: 70px;
+  }
+  .xs-header[data-xs-look="19"] .xs-header__bar,
+  .xs-header[data-xs-look="19"][data-scrolled] .xs-header__bar {
+    height: 70px;
+  }
+  .xs-header[data-xs-look="19"] .xs-header__bar-inner {
+    display: flex;
+  }
+  .xs-header[data-xs-look="19"] .xs-header__logo {
+    height: 44px;
+  }
+  .xs-header[data-xs-look="19"] .xs-header__logo-name {
+    font-size: 32px;
+  }
+}

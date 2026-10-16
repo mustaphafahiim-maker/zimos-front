@@ -17,6 +17,7 @@ import {
 } from "@/lib/storePreview";
 import { resolveCustomHost, type ResolvedHost } from "@/lib/customDomains";
 import { STORE_REF_HEADER } from "@/lib/documentLocale";
+import { EDITOR_VIEW_HEADER, EDITOR_VIEW_PARAM, isViewToken } from "@/lib/editorView";
 import { EDGE_CLIENT_IP_HEADER, EDGE_SECRET_HEADER, visitorHost, type VisitorHost } from "@/lib/edgeHost";
 import { edgeCacheControl } from "@/lib/edgeCache";
 
@@ -52,7 +53,11 @@ async function route(request: NextRequest) {
  * untouched.
  */
 function withEdgeCache(request: NextRequest, response: NextResponse) {
-  const linked = request.nextUrl.searchParams.get(STORE_PREVIEW_PARAM) ?? request.nextUrl.searchParams.get(PAYMENTS_PREVIEW_PARAM);
+  // The website editor's view of a store page (lib/editorView) is a preview too: never kept at the edge.
+  const linked =
+    request.nextUrl.searchParams.get(STORE_PREVIEW_PARAM) ??
+    request.nextUrl.searchParams.get(PAYMENTS_PREVIEW_PARAM) ??
+    request.nextUrl.searchParams.get(EDITOR_VIEW_PARAM);
   const value = edgeCacheControl({
     enabled: process.env.STOREFRONT_EDGE_CACHE === "true",
     method: request.method,
@@ -64,6 +69,13 @@ function withEdgeCache(request: NextRequest, response: NextResponse) {
   });
   if (value) response.headers.set("Cache-Control", value);
   return response;
+}
+
+/** The website editor's view token (lib/editorView): from the address, never from a header a visitor sent. */
+function passEditorView(headers: Headers, request: NextRequest) {
+  headers.delete(EDITOR_VIEW_HEADER);
+  const token = request.nextUrl.searchParams.get(EDITOR_VIEW_PARAM);
+  if (isViewToken(token)) headers.set(EDITOR_VIEW_HEADER, token);
 }
 
 /**
@@ -167,6 +179,7 @@ function platformProxy(request: NextRequest, visitor: VisitorHost = { host: requ
   const headers = new Headers(request.headers);
   headers.delete(STORE_PREVIEW_HEADER);
   passEdgeHeaders(headers, visitor);
+  passEditorView(headers, request);
   if (preview) headers.set(STORE_PREVIEW_HEADER, preview);
   const secure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https";
   const keep = (response: NextResponse) => {
@@ -253,6 +266,7 @@ async function customDomainProxy(request: NextRequest, visitor: VisitorHost) {
   headers.delete(STORE_PREVIEW_HEADER);
   headers.delete(STORE_REF_HEADER);
   passEdgeHeaders(headers, visitor);
+  passEditorView(headers, request);
   if (preview) headers.set(STORE_PREVIEW_HEADER, preview);
   const secure = (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https";
   const keep = (response: NextResponse) => {

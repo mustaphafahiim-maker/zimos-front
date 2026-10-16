@@ -279,7 +279,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
                 onClick={() => setActive(i)}
                 aria-label={`${name} — ${i + 1}/${images.length}`}
                 aria-pressed={i === active}
-                className={`relative block h-16 w-16 cursor-pointer overflow-hidden rounded-xl border-2 transition-colors sm:h-20 sm:w-20 ${
+                className={`zt-gallery-thumb relative block h-16 w-16 cursor-pointer overflow-hidden rounded-xl border-2 transition-colors sm:h-20 sm:w-20 ${
                   i === active ? "border-primary" : "border-line hover:border-primary"
                 }`}
               >

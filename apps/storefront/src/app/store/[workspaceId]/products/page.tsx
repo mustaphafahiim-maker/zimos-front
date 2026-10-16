@@ -23,6 +23,10 @@ import { getDictionary, type Dictionary, type Locale } from "@/lib/i18n";
 import { createServerStorefrontApiClient } from "@/lib/serverApiClient";
 import { getStoreLocale } from "@/lib/storeLocale";
 import { getStoreCollections, getStoreMeta } from "@/lib/storeMeta";
+import { XsPageStrip } from "@/components/xs/XsPageStrip";
+import { XsShopGrid } from "@/components/xs/XsShopGrid";
+import { readXsStorePages, storePageAttrs, stripHoldsTitle } from "@/lib/xsStorePages";
+import { readStoreWords, withStoreWords } from "@/lib/storeWords";
 
 export const revalidate = 60;
 
@@ -88,7 +92,8 @@ export default async function ProductsPage({ params, searchParams }: { params: P
   if (!store) notFound();
 
   const locale = await getStoreLocale(store);
-  const t = getDictionary(locale);
+  // The dictionary with the store's own words on its shop pages (lib/storeWords).
+  const t = withStoreWords(getDictionary(locale), readStoreWords(store.themeSettings, locale));
   const catalog = store.catalog ?? DEFAULT_CATALOG_SETTINGS;
   const state = readCatalogState(query);
   const client = await createServerStorefrontApiClient();
@@ -112,6 +117,8 @@ export default async function ProductsPage({ params, searchParams }: { params: P
   const title = state.q ? t.catalog.searchTitle(state.q) : (listing.collection?.name ?? t.catalog.allProducts);
   const clearHref = catalogHref(state, { collection: null, tags: [], min: null, max: null, options: {} });
 
+  // On a store that wears a template, its shop's strip holds the title and the trail (lib/xsStorePages).
+  const xsPages = readXsStorePages(store.themeSettings);
   // The list as it always was: what the page shows unless a specification filter is ticked.
   const results = (
     <>
@@ -125,6 +132,9 @@ export default async function ProductsPage({ params, searchParams }: { params: P
             </StoreLink>
           )}
         </EmptyState>
+      ) : xsPages ? (
+        // A template's own product cards (components/xs/XsShopGrid); the pages below stay the catalogue's.
+        <XsShopGrid look={xsPages.look} workspaceId={workspaceId} products={listing.products} currency={store.currency} locale={locale} />
       ) : (
         <ProductGrid products={listing.products} currency={store.currency} locale={locale} />
       )}
@@ -144,12 +154,16 @@ export default async function ProductsPage({ params, searchParams }: { params: P
     />
   ) : null;
 
-  return (
-    <main className="flex-1">
-      <div className={`${container} py-8 sm:py-10`}>
-        <Breadcrumbs t={t} listing={listing} searching={Boolean(state.q)} />
+  const stripped = stripHoldsTitle(xsPages);
+  const stripTitle = !state.q && !listing.collection && xsPages?.titles.catalog ? xsPages.titles.catalog : title;
 
-        <header className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  return (
+    <main className="flex-1" {...storePageAttrs("catalog", xsPages)}>
+      {xsPages && <XsPageStrip pages={xsPages} title={stripped ? stripTitle : undefined} label={t.catalog.breadcrumbs} crumbs={catalogCrumbs(t, listing, Boolean(state.q))} />}
+      <div className={`${container} py-8 sm:py-10`}>
+        {!xsPages && <Breadcrumbs t={t} listing={listing} searching={Boolean(state.q)} />}
+
+        <header className="zt-catalog-head mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             {listing.collection?.imageUrl && (
               <StoreImage
@@ -162,7 +176,7 @@ export default async function ProductsPage({ params, searchParams }: { params: P
               />
             )}
             <div className="min-w-0">
-              <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">{title}</h1>
+              {!stripped && <h1 className="zt-page-title font-display text-2xl font-bold text-ink sm:text-3xl">{title}</h1>}
               {listing.collection?.description && (
                 <p className="mt-1 max-w-2xl text-sm text-ink-soft">{listing.collection.description}</p>
               )}
@@ -204,7 +218,7 @@ export default async function ProductsPage({ params, searchParams }: { params: P
 
         <div className={sidebar ? "mt-8 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10" : "mt-8"}>
           {sidebar && (
-            <aside aria-label={t.catalog.filters} className="hidden lg:block">
+            <aside aria-label={t.catalog.filters} className="zt-filters hidden lg:block">
               {refined && (
                 <div className="mb-4 flex min-h-11 items-center justify-between gap-3 border-b border-line pb-2">
                   <p className="font-display text-base font-bold text-ink">{t.catalog.filters}</p>
@@ -317,7 +331,8 @@ function SearchResults({
 }
 
 /** Home › All products › the collection's parents › the collection (or the search). */
-function Breadcrumbs({ t, listing, searching }: { t: Dictionary; listing: StorefrontListing; searching: boolean }) {
+/** Home, all products, then the collection's own trail. */
+function catalogCrumbs(t: Dictionary, listing: StorefrontListing, searching: boolean): Array<{ label: string; href?: string }> {
   const crumbs: Array<{ label: string; href?: string }> = [{ label: t.common.home, href: "/" }];
   const trail = listing.breadcrumbs ?? [];
   if (trail.length > 0 || searching) crumbs.push({ label: t.catalog.allProducts, href: "/products" });
@@ -325,6 +340,11 @@ function Breadcrumbs({ t, listing, searching }: { t: Dictionary; listing: Storef
   trail.forEach((c, i) =>
     crumbs.push({ label: c.name, href: i < trail.length - 1 ? `/products?collection=${encodeURIComponent(c.slug)}` : undefined })
   );
+  return crumbs;
+}
+
+function Breadcrumbs({ t, listing, searching }: { t: Dictionary; listing: StorefrontListing; searching: boolean }) {
+  const crumbs = catalogCrumbs(t, listing, searching);
   return (
     <nav aria-label={t.catalog.breadcrumbs}>
       <ol className="flex flex-wrap items-center gap-1 text-sm text-ink-soft">

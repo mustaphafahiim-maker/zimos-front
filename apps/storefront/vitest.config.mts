@@ -20,6 +20,8 @@ const config = {
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.tsx"],
+    // The page renderer's lazily loaded parts, drawn in full as Next's server render draws them (src/test/setup.ts).
+    setupFiles: ["./src/test/setup.ts"],
   },
 };
 

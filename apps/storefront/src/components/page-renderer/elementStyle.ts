@@ -55,6 +55,8 @@ function declarations(style: Style | undefined): string[] {
 
   col("color", "color");
   col("background", "background-color");
+  // The same colour as a property a band that paints its own ground can read (app/xs-shell.css).
+  col("background", "--zs-bg");
   px("fontSize", "font-size", 8, 160);
   if (typeof style.fontWeight === "number" && WEIGHTS.has(style.fontWeight)) out.push(`font-weight:${style.fontWeight}`);
   const lineHeight = intIn(style.lineHeight, 80, 300);

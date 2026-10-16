@@ -57,6 +57,7 @@ import {
   UpsellActionElement,
 } from "./builderElements";
 import { ShowcaseElement, isShowcaseElement } from "./showcase";
+import { XsCredit, XsElement, XsPageStyles, isXsElement } from "./xs";
 import { columnClasses, heroSectionIndex, openingSectionIndex, rowClasses, sectionClasses, sectionHooks, sectionMinHeight } from "./layout";
 import { SPAN_CLASS, propsOf, resolveHref, str } from "./props";
 import { btnPrimary } from "@/components/ui";
@@ -93,7 +94,7 @@ function StyledElement({ element, ctx }: { element: PageElement; ctx: Ctx }) {
  * section's minimum height is not applied (SectionNode).
  */
 function isBand(element: PageElement): boolean {
-  return typeof element?.type === "string" && isShowcaseElement(element.type);
+  return typeof element?.type === "string" && (isShowcaseElement(element.type) || isXsElement(element.type));
 }
 
 function holdsBand(section: PageSection): boolean {
@@ -299,6 +300,10 @@ function ElementNode({ element, ctx }: { element: PageElement; ctx: Ctx }) {
       // Gallery with thumbnails, variant and bundle pickers, review form (./builderExtras).
       if (EXTRA_ELEMENT_TYPES.has(element.type)) {
         return <BuilderExtraElement type={element.type} props={props} workspaceId={ctx.workspaceId} editable={ctx.editable === true} />;
+      }
+      // Bands in the look of an imported template (./xs).
+      if (isXsElement(element.type)) {
+        return <XsElement type={element.type} props={props} ctx={{ workspaceId: ctx.workspaceId, currency: ctx.currency, locale: ctx.locale, editable: ctx.editable === true, elementId: element.id, eager: ctx.opening === true }} />;
       }
       // The showcase sections (./showcase) draw their own types; anything
       // else is a type this renderer does not know, and a tree written for a
@@ -547,6 +552,8 @@ export async function PageRenderer({
     <div className="zt-sections divide-y divide-line">
       {/* Built only from clamped numbers, keywords and hex colours — see elementStyle.ts. */}
       {css && <style dangerouslySetInnerHTML={{ __html: css }} />}
+      {/* Each imported template's look its bands use, one small stylesheet each (./xs). */}
+      <XsPageStyles tree={tree} />
       {sections.map((section, index) =>
         editable ? (
           <EditableSectionNode key={section.id} section={section} index={index} ctx={index === opening ? openingCtx : ctx} hero={index === hero} />
@@ -554,6 +561,8 @@ export async function PageRenderer({
           <SectionNode key={section.id} section={section} ctx={index === opening ? openingCtx : ctx} hero={index === hero} />
         )
       )}
+      {/* The attribution owed for an imported template's bands (./xs), wherever they are drawn. */}
+      <XsCredit tree={tree} />
     </div>
   );
 }

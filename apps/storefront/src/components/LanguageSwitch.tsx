@@ -11,7 +11,8 @@ import { iconBtn } from "./ui";
  * (including the store layout, which sets lang/dir) render in it on the next
  * request; `router.refresh()` re-renders the current page in place.
  */
-export function LanguageSwitch() {
+/** `partId`: its place in an imported template's header (lib/xsLayout), for the editor's canvas. */
+export function LanguageSwitch({ partId }: { partId?: string } = {}) {
   const { locale, t, store } = useStore();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -30,6 +31,7 @@ export function LanguageSwitch() {
       aria-label={switchLabel(t, next)}
       title={switchLabel(t, next)}
       className={`${iconBtn} text-sm font-semibold disabled:opacity-60`}
+      data-xs-part={partId}
     >
       <span lang={next}>{LOCALE_SHORT[next]}</span>
     </button>
