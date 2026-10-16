@@ -20,7 +20,8 @@ export default defineConfig({
         test: {
           name: "logic",
           environment: "node",
-          include: ["src/**/*.test.ts"],
+          // scripts/: the console import's own tests (templateImport.test.mjs).
+          include: ["src/**/*.test.ts", "scripts/**/*.test.mjs"],
         },
       },
       {
