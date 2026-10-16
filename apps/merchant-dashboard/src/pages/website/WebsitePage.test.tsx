@@ -165,6 +165,58 @@ describe("WebsitePage template gallery", () => {
   });
 });
 
+describe("WebsitePage template card shape", () => {
+  const phoneMatchMedia = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = phoneMatchMedia;
+  });
+
+  /** A screen at least 1024px wide (Tailwind's `lg`): only that query matches. */
+  function onDesktop() {
+    window.matchMedia = ((query: string) => ({
+      ...phoneMatchMedia(query),
+      matches: query === "(min-width: 64rem)",
+    })) as typeof window.matchMedia;
+  }
+
+  // A name of its own per test: the page shows the last list it fetched (kept
+  // for the session) before the new one arrives, and that card is replaced.
+  async function renderCard(id: string) {
+    api.listWebsiteTemplates.mockResolvedValue([template(id, `Store ${id}`, "general")]);
+    renderWithProviders(<WebsitePage />, { route: "/website" });
+    const card = (await screen.findByRole("button", { name: `Preview Store ${id}` })).closest("li")!;
+    act(() => FakeIntersectionObserver.scrollAllIntoView());
+    await waitFor(() => expect(card.querySelector("iframe")).not.toBeNull());
+    const frame = card.querySelector("iframe")!;
+    return { card, frame, box: frame.closest('[class*="aspect-"]')! };
+  }
+
+  it("two columns on a phone, three from 640px, and two landscape ones from 1024px", async () => {
+    const { card } = await renderCard("shape_grid");
+    const grid = card.closest("ul")!;
+    expect(grid).toHaveClass("grid-cols-2", "sm:grid-cols-3", "lg:grid-cols-2");
+    expect(grid).not.toHaveClass("lg:grid-cols-4");
+    // The picture's box: a portrait, a landscape from `lg`.
+    expect(card.querySelector('[class~="aspect-[3/4]"]')).toHaveClass("lg:aspect-[16/10]");
+  });
+
+  it("keeps the phone page in a 3:4 box below 1024px", async () => {
+    const { frame, box } = await renderCard("shape_phone");
+    expect(frame.style.width).toBe("390px");
+    expect(frame.style.height).toBe("520px");
+    expect(box).toHaveClass("aspect-[3/4]");
+  });
+
+  it("shows the desktop page in a 16:10 box from 1024px", async () => {
+    onDesktop();
+    const { frame, box } = await renderCard("shape_desktop");
+    expect(frame.style.width).toBe("1280px");
+    expect(frame.style.height).toBe("800px");
+    expect(box).toHaveClass("aspect-[16/10]");
+    expect(box).not.toHaveClass("aspect-[3/4]");
+  });
+});
+
 describe("WebsitePage template colour", () => {
   /** Opens the one template, lets its detail load, and creates the site from it. */
   async function createFromTemplate() {

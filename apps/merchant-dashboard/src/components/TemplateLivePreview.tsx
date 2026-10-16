@@ -108,8 +108,8 @@ export function TemplateLivePreview({
   fallback: ReactNode;
   variant?: "card" | "full";
   device?: "desktop" | "mobile";
-  /** The card's box (card variant only): landscape as before, or portrait. */
-  aspect?: "4/3" | "3/4";
+  /** The card's box (card variant only): landscape as before, portrait, or the wider landscape of the website gallery's desktop cards. */
+  aspect?: "4/3" | "3/4" | "16/10";
   /** The viewport a card lays the page out at (card variant only). The full variant follows `device`. */
   cardLayout?: "desktop" | "mobile";
   className?: string;
@@ -232,7 +232,9 @@ export function TemplateLivePreview({
   const fit = width > 0 ? width / layoutWidth : 0.25;
   const scale = card && cardLayout === "mobile" ? fit : Math.min(1, fit);
   const portrait = aspect === "3/4";
-  const layoutHeight = card ? (portrait ? (layoutWidth * 4) / 3 : (layoutWidth * 3) / 4) : height > 0 ? height / scale : 800;
+  const wide = aspect === "16/10";
+  const cardHeight = portrait ? (layoutWidth * 4) / 3 : wide ? (layoutWidth * 10) / 16 : (layoutWidth * 3) / 4;
+  const layoutHeight = card ? cardHeight : height > 0 ? height / scale : 800;
   const showFrame = slot && phase !== "failed";
 
   return (
@@ -240,7 +242,7 @@ export function TemplateLivePreview({
       ref={rootRef}
       className={cn(
         "relative w-full overflow-hidden bg-paper",
-        card ? (portrait ? "aspect-[3/4]" : "aspect-[4/3]") : "h-full",
+        card ? (portrait ? "aspect-[3/4]" : wide ? "aspect-[16/10]" : "aspect-[4/3]") : "h-full",
         className
       )}
     >
