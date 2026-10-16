@@ -24,6 +24,7 @@ import type {
   AdminStoreAccess,
   AdminRecordPaymentResult,
   AdminReversePaymentResult,
+  AdminVoidChargeResult,
   AdminWorkspaceCharges,
   AdminAgentDetail,
   AdminAgentList,
@@ -550,6 +551,10 @@ export function recordPayment(
 
 export function reversePayment(chargeId: string, reason?: string): Promise<AdminReversePaymentResult> {
   return apiClient.adminReversePayment(chargeId, reason ? { reason } : {});
+}
+
+export function voidCharge(chargeId: string, reason: string): Promise<AdminVoidChargeResult> {
+  return apiClient.adminVoidCharge(chargeId, reason);
 }
 
 export function setBillingCycle(workspaceId: string, billingCycle: "monthly" | "yearly"): Promise<AdminWorkspaceCharges> {

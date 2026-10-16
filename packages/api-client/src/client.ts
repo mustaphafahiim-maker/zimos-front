@@ -28,6 +28,7 @@ import type {
   AdminAgentList,
   AdminCharge,
   AdminRecordPaymentResult,
+  AdminVoidChargeResult,
   AdminReversePaymentResult,
   AdminSpecialTerm,
   AdminSpecialTermsInput,
@@ -38,6 +39,8 @@ import type {
   PlanSwitchPreview,
   PlanSwitchStartResult,
   PlanSwitchCancelResult,
+  PlanSwitchTiming,
+  BillingChargeCancelResult,
   ReferralCodePreview,
   MerchantInvoice,
   MerchantInvoicePage,
@@ -1222,7 +1225,7 @@ export class ApiClient {
    * 422 PLAN_NOT_AVAILABLE, 409 PLAN_CHANGE_NEEDS_SUPPORT / MANUAL_PRICING /
    * SPECIAL_TERMS_ACTIVE.
    */
-  async previewPlanSwitch(workspaceId: string, payload: { planId: string; billingCycle?: BillingCycle }) {
+  async previewPlanSwitch(workspaceId: string, payload: { planId: string; billingCycle?: BillingCycle; timing?: PlanSwitchTiming }) {
     return this.request<{ preview: PlanSwitchPreview }>(`/workspaces/${workspaceId}/billing/plan-switch/preview`, {
       method: "POST",
       body: payload,
@@ -1237,7 +1240,10 @@ export class ApiClient {
    * PROOF_UNDER_REVIEW, PLAN_SWITCH_ALREADY_BILLED, NO_PAYMENT_METHOD,
    * PLAN_SWITCH_BUSY, and the preview's refusals.
    */
-  async startPlanSwitch(workspaceId: string, payload: { planId: string; billingCycle?: BillingCycle; expectedAmount?: number }) {
+  async startPlanSwitch(
+    workspaceId: string,
+    payload: { planId: string; billingCycle?: BillingCycle; timing?: PlanSwitchTiming; expectedAmount?: number }
+  ) {
     return this.request<PlanSwitchStartResult>(`/workspaces/${workspaceId}/billing/plan-switch`, {
       method: "POST",
       body: payload,
@@ -1251,6 +1257,19 @@ export class ApiClient {
    */
   async cancelPlanSwitch(workspaceId: string) {
     return this.request<PlanSwitchCancelResult>(`/workspaces/${workspaceId}/billing/plan-switch/cancel`, {
+      method: "POST",
+      body: {},
+    });
+  }
+
+  /**
+   * Cancels a pending charge of the store (a renewal, an upgrade's, a move's):
+   * void, and a plan switch waiting for it with it (PLAN_SWITCH_ENABLED). 409
+   * PROOF_UNDER_REVIEW, CHARGE_ALREADY_PAID, CHARGE_NOT_PENDING; 404
+   * PLAN_SWITCH_DISABLED.
+   */
+  async cancelBillingCharge(workspaceId: string, chargeId: string) {
+    return this.request<BillingChargeCancelResult>(`/workspaces/${workspaceId}/billing/charges/${chargeId}/cancel`, {
       method: "POST",
       body: {},
     });
@@ -2280,6 +2299,16 @@ export class ApiClient {
       voidedCommission: body.voidedCommission ?? null,
       subscriptionStatus: body.subscriptionStatus,
     };
+  }
+
+  /**
+   * Voids a pending charge with a reason, kept on it and in the audit log
+   * (PLAN_SWITCH_ENABLED). 409 CHARGE_ALREADY_PAID / CHARGE_NOT_PENDING /
+   * PROOF_UNDER_REVIEW (review the transfer first); 404 PLAN_SWITCH_DISABLED.
+   */
+  async adminVoidCharge(chargeId: string, reason: string): Promise<AdminVoidChargeResult> {
+    const body = await this.request<unknown>(`/admin/charges/${chargeId}/void`, { method: "POST", body: { reason } });
+    return { charge: unwrapObject<AdminCharge>(body, "charge") };
   }
 
   /** Monthly or annual from the next charge (subscriptions.manage). 409 OPEN_CHARGE_EXISTS. */

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Banknote, Gift, Receipt, Undo2 } from "lucide-react";
+import { Ban, Banknote, Gift, Receipt, Undo2 } from "lucide-react";
 import { Alert, Button, Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
 import type { AdminCharge, AdminOnlinePayment, AdminWorkspaceCharges } from "@store-builder/api-client";
 import { DataState, EmptyBlock } from "@/components/DataState";
@@ -16,7 +16,7 @@ import * as adminApi from "@/lib/adminApi";
 import { formatDate, formatDateTime, formatMinorMoneyExact, minorUnitDigits } from "@/lib/format";
 import { P } from "@/lib/permissions";
 import { describeDiscount } from "@/lib/referrals";
-import { planMoveLabel } from "@/lib/planMove";
+import { planMoveLabel, voidLabel } from "@/lib/planMove";
 
 /**
  * A workspace's subscription charges, on its Subscription tab.
@@ -29,6 +29,8 @@ import { planMoveLabel } from "@/lib/planMove";
  * that moment, and the commission ledger row is written from the amount
  * actually received. A payment recorded here — never an online one — can be
  * reversed: the charge goes back to pending and its ledger row is voided.
+ * A pending charge the server marks `voidable` (PLAN_SWITCH_ENABLED, no
+ * transfer for it waiting for review) can be voided with a reason.
  */
 export function SubscriptionCharges({ workspaceId }: { workspaceId: string }) {
   const toast = useToast();
@@ -53,6 +55,7 @@ export function SubscriptionCharges({ workspaceId }: { workspaceId: string }) {
   const [pricing, setPricing] = useState(false);
   const [recording, setRecording] = useState<AdminCharge | null>(null);
   const [reversing, setReversing] = useState<AdminCharge | null>(null);
+  const [voiding, setVoiding] = useState<AdminCharge | null>(null);
 
   async function priceNextCharge() {
     setPricing(true);
@@ -94,6 +97,7 @@ export function SubscriptionCharges({ workspaceId }: { workspaceId: string }) {
                 charges={data.charges}
                 onRecord={canRecord ? setRecording : undefined}
                 onReverse={canRecord ? setReversing : undefined}
+                onVoid={canRecord ? setVoiding : undefined}
               />
             )}
             <OnlinePaymentsPanel charges={data.charges} />
@@ -132,6 +136,17 @@ export function SubscriptionCharges({ workspaceId }: { workspaceId: string }) {
                 : `Special price granted for the next ${next.term.chargesTotal} charge(s).`
             );
             setGranting(false);
+          }}
+        />
+      )}
+      {voiding && (
+        <VoidChargeModal
+          charge={voiding}
+          onClose={() => setVoiding(null)}
+          onVoided={() => {
+            toast.success("Charge voided. Nothing is owed for it.");
+            setVoiding(null);
+            void refresh({ silent: true });
           }}
         />
       )}
@@ -567,12 +582,14 @@ function ChargesTable({
   charges,
   onRecord,
   onReverse,
+  onVoid,
 }: {
   charges: AdminCharge[];
   onRecord?: (charge: AdminCharge) => void;
   onReverse?: (charge: AdminCharge) => void;
+  onVoid?: (charge: AdminCharge) => void;
 }) {
-  const actions = Boolean(onRecord || onReverse);
+  const actions = Boolean(onRecord || onReverse || onVoid);
   return (
     <Panel flush>
       <Table>
@@ -628,6 +645,8 @@ function ChargesTable({
                     <span className="mt-1 block text-xs text-ink-soft">{c.failureReason}</span>
                   )}
                   {c.paymentNote && <span className="block text-xs text-ink-soft">{c.paymentNote}</span>}
+                  {voidLabel(c) && <span className="mt-1 block text-xs text-ink-soft">{voidLabel(c)}</span>}
+                  {c.status === "void" && c.voidNote && <span className="block text-xs text-ink-soft">Reason: {c.voidNote}</span>}
                 </Td>
                 <Td className="text-sm whitespace-nowrap">
                   {c.commission ? (
@@ -652,6 +671,12 @@ function ChargesTable({
                     {c.status === "paid" && c.paymentSource === "manual" && onReverse && (
                       <Button size="sm" variant="ghost" onClick={() => onReverse(c)}>
                         <Undo2 className="text-danger" /> Reverse payment
+                      </Button>
+                    )}
+                    {/* The server says when: pending, and no transfer for it waiting for review. */}
+                    {c.status === "pending" && c.voidable === true && onVoid && (
+                      <Button size="sm" variant="ghost" onClick={() => onVoid(c)}>
+                        <Ban className="text-danger" /> Void
                       </Button>
                     )}
                   </Td>
@@ -793,6 +818,85 @@ function RecordPaymentModal({
           rows={3}
           placeholder="e.g. Bank transfer, ref 1234"
           hint="Optional. Kept on the charge and in the audit log."
+        />
+      </form>
+    </Modal>
+  );
+}
+
+function VoidChargeModal({
+  charge,
+  onClose,
+  onVoided,
+}: {
+  charge: AdminCharge;
+  onClose: () => void;
+  onVoided: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const due = charge.payableNow ? charge.payableNow.amountDue : charge.amountDue;
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!reason.trim()) {
+      setError("Enter why this charge is voided.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await adminApi.voidCharge(charge.id, reason.trim());
+      onVoided();
+    } catch (err) {
+      setError(getErrorMessage(err));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={() => !busy && onClose()}
+      title="Void charge"
+      description={`${formatMinorMoneyExact(due, charge.currency)} due for ${formatDate(charge.periodStart)} – ${formatDate(charge.periodEnd)}.`}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button type="submit" form="void-charge-form" variant="destructive" disabled={busy}>
+            {busy ? "Voiding…" : "Void charge"}
+          </Button>
+        </>
+      }
+    >
+      <form id="void-charge-form" onSubmit={submit} className="space-y-4">
+        {error && <Alert variant="danger">{error}</Alert>}
+        <Alert>
+          The charge stops asking for money: it is marked void, with your reason kept on it and in the audit log, and
+          nothing is owed for it. The subscription itself does not change.
+          {charge.targetPlanId ? " The plan change it was for is dropped: the store keeps its plan." : ""}
+          {charge.specialTermsId ? " The special-terms charge it used is given back." : ""}
+        </Alert>
+        {charge.onlinePaymentInProgress && (
+          <Alert variant="danger">
+            The merchant has an online payment in progress for this charge. Voiding closes it in Zimos, but
+            Fawaterak&rsquo;s payment link can&rsquo;t be cancelled: if they pay it anyway, the money is applied or credited
+            to their balance, never lost.
+          </Alert>
+        )}
+        <TextAreaField
+          label="Reason"
+          required
+          autoFocus
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          maxLength={500}
+          rows={3}
+          placeholder="e.g. Agreed with the merchant by phone"
+          hint="Required. Kept on the charge and in the audit log."
         />
       </form>
     </Modal>

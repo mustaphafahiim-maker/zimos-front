@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Alert, Button, Spinner } from "@store-builder/ui";
+import { Alert, Button, Spinner, cn } from "@store-builder/ui";
 import type {
   BillingCycle,
   PlanSwitch,
   PlanSwitchPreview,
   PlanSwitchStartResult,
+  PlanSwitchTiming,
   SubscriptionPlan,
   SubscriptionPlans,
 } from "@store-builder/api-client";
@@ -15,7 +16,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useErrorMessage } from "@/lib/errorMessages";
 import { formatDate, formatDateTime, formatMinorMoney } from "@/lib/format";
 import { formatDays } from "@/lib/planDisplay";
-import { formatHours, renewalLine } from "./planSwitchMode";
+import { formatHours, renewalLine, timingChoices, toPayPerOrder, withTiming } from "./planSwitchMode";
 import { useLocale, useT, fmt } from "@/i18n/LocaleContext";
 import { useToast } from "@/components/Toast";
 import { Modal } from "@/components/Modal";
@@ -50,6 +51,7 @@ function useSwitchErrors() {
         PLAN_SWITCH_ALREADY_BILLED: s.blockedBilled,
         NO_PAYMENT_METHOD: fmt(s.blockedNoMethod, { currency }),
         SWITCH_AMOUNT_CHANGED: s.amountChanged,
+        SWITCH_TIMING_NOT_AVAILABLE: s.timingNotAvailable,
         PLAN_SWITCH_BUSY: s.busy,
         OPEN_CHARGE_EXISTS: t.moveOtherCharge,
         WALLET_DEBT_OUTSTANDING: t.moveDebtError,
@@ -73,8 +75,9 @@ function SupportLink() {
 
 // ------------------------------------------------------------ the dialog
 
+/** A plan card's switch, or the pay-per-order card's (its plan from `payPerOrder.plan`). */
 export interface SwitchTarget {
-  plan: SubscriptionPlan;
+  plan: Pick<SubscriptionPlan, "id" | "name">;
   cycle: BillingCycle;
 }
 
@@ -82,6 +85,9 @@ export interface SwitchTarget {
  * The confirmation: asks the server what switching to `target` would do,
  * shows it, and only then starts it, with the amount shown as
  * `expectedAmount`. If that amount no longer holds the preview is read again.
+ * An upgrade inside a paid period offers two timings (the days left first):
+ * upgrade now at the full price, or wait for the end of the subscription;
+ * the one chosen is sent as `timing`.
  */
 export function PlanSwitchDialog({
   target,
@@ -123,6 +129,7 @@ function SwitchBody({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [timing, setTiming] = useState<PlanSwitchTiming>("now");
 
   useEffect(() => {
     let live = true;
@@ -135,8 +142,12 @@ function SwitchBody({
     };
   }, [workspaceId, target.plan.id, target.cycle, asked, describeError]);
 
+  // The timings to choose between (an upgrade), and the preview as it reads for the one chosen.
+  const choices = preview ? timingChoices(preview) : null;
+  const shown = preview && choices ? withTiming(preview, choices.includes(timing) ? timing : choices[0]) : preview;
+
   async function confirm() {
-    if (!preview) return;
+    if (!preview || !shown) return;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -144,14 +155,16 @@ function SwitchBody({
       const result = await apiClient.startPlanSwitch(workspaceId, {
         planId: target.plan.id,
         billingCycle: target.cycle,
-        expectedAmount: preview.amountDue,
+        // Sent only when there was a choice: any other switch has one timing.
+        ...(choices && shown.timing ? { timing: shown.timing } : {}),
+        expectedAmount: shown.amountDue,
       });
       onDone(result);
     } catch (err) {
       const code = apiErrorCode(err);
-      if (code === "SWITCH_AMOUNT_CHANGED" || code === "PLAN_SWITCH_BUSY") {
+      if (code === "SWITCH_AMOUNT_CHANGED" || code === "PLAN_SWITCH_BUSY" || code === "SWITCH_TIMING_NOT_AVAILABLE") {
         // Read again: the merchant confirms what is true now.
-        setNotice(code === "SWITCH_AMOUNT_CHANGED" ? s.amountChanged : s.busy);
+        setNotice(code === "SWITCH_AMOUNT_CHANGED" ? s.amountChanged : code === "PLAN_SWITCH_BUSY" ? s.busy : s.timingNotAvailable);
         setPreview(null);
         setAsked((n) => n + 1);
       } else {
@@ -175,7 +188,7 @@ function SwitchBody({
       </div>
     );
   }
-  if (!preview) {
+  if (!preview || !shown) {
     return (
       <div className="space-y-3">
         {notice && <Alert role="status">{notice}</Alert>}
@@ -186,14 +199,18 @@ function SwitchBody({
     );
   }
 
-  const confirmLabel = confirmLabelOf(preview, s);
+  const confirmLabel = confirmLabelOf(shown, s);
   return (
     <div className="space-y-4">
       {notice && <Alert role="status">{notice}</Alert>}
-      <PreviewDetails preview={preview} view={view} />
-      {preview.blockedBy && (
+      {preview.currentPeriod && (choices || toPayPerOrder(preview)) && <DaysLeft period={preview.currentPeriod} />}
+      {choices && shown.timing && (
+        <TimingChoice preview={preview} choices={choices} value={shown.timing} disabled={busy} onChange={setTiming} />
+      )}
+      <PreviewDetails preview={shown} view={view} />
+      {shown.blockedBy && (
         <Alert variant="danger" role="alert">
-          {blockedText(preview, s)} {preview.blockedBy === "NO_PAYMENT_METHOD" && <SupportLink />}
+          {blockedText(shown, s)} {shown.blockedBy === "NO_PAYMENT_METHOD" && <SupportLink />}
         </Alert>
       )}
       {error && (
@@ -206,12 +223,72 @@ function SwitchBody({
           {s.close}
         </Button>
         {confirmLabel && (
-          <Button type="button" className="min-h-11" onClick={() => void confirm()} disabled={busy || Boolean(preview.blockedBy)}>
+          <Button type="button" className="min-h-11" onClick={() => void confirm()} disabled={busy || Boolean(shown.blockedBy)}>
             {busy ? s.confirming : confirmLabel}
           </Button>
         )}
       </div>
     </div>
+  );
+}
+
+/** "15 days left in your current subscription (ends on …)": the paid period running now. */
+function DaysLeft({ period }: { period: NonNullable<PlanSwitchPreview["currentPeriod"]> }) {
+  const s = useT(PLAN_SWITCH_STRINGS);
+  const { locale } = useLocale();
+  return (
+    <p className="text-sm font-medium text-ink">{fmt(s.daysLeftLine, { days: formatDays(period.remainingDays, locale), date: formatDate(period.endsAt) })}</p>
+  );
+}
+
+/** An upgrade's two timings: now at the full price, or at the end of the subscription with its renewal then. */
+function TimingChoice({
+  preview,
+  choices,
+  value,
+  disabled,
+  onChange,
+}: {
+  preview: PlanSwitchPreview;
+  choices: PlanSwitchTiming[];
+  value: PlanSwitchTiming;
+  disabled: boolean;
+  onChange: (next: PlanSwitchTiming) => void;
+}) {
+  const s = useT(PLAN_SWITCH_STRINGS);
+  const groupId = useId();
+  const plan = preview.to.planName;
+  return (
+    <fieldset className="space-y-2" disabled={disabled}>
+      <legend id={groupId} className="mb-1 text-sm font-medium text-ink">
+        {fmt(s.timingLegend, { plan })}
+      </legend>
+      <div role="radiogroup" aria-labelledby={groupId} className="grid gap-2">
+        {choices.map((choice) => {
+          const option = preview.options![choice]!;
+          const renewal = option.nextRenewal ? formatMinorMoney(option.nextRenewal.amount, option.nextRenewal.currency) : "";
+          const hint =
+            choice === "now"
+              ? fmt(s.timingNowHint, { amount: formatMinorMoney(option.amountDue, option.currency), plan })
+              : fmt(s.timingLaterHint, { plan, date: formatDate(option.effectiveAt), amount: renewal });
+          return (
+            <label
+              key={choice}
+              className={cn(
+                "flex min-h-11 cursor-pointer items-start gap-3 rounded-[10px] border px-3 py-2.5 text-sm",
+                value === choice ? "border-primary bg-primary-soft text-ink" : "border-line text-ink-soft"
+              )}
+            >
+              <input type="radio" name={`switch-timing-${groupId}`} value={choice} checked={value === choice} onChange={() => onChange(choice)} className="mt-1" />
+              <span className="min-w-0">
+                <span className="block font-medium text-ink">{choice === "now" ? s.timingNow : s.timingLater}</span>
+                <span className="block text-xs text-ink-soft">{hint}</span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
@@ -225,7 +302,12 @@ function blockedText(preview: PlanSwitchPreview, s: PlanSwitchText): string {
 function confirmLabelOf(preview: PlanSwitchPreview, s: PlanSwitchText): string | null {
   if (preview.kind === "none") return preview.replaces ? s.confirmKeep : null;
   if (preview.amountDue > 0) return fmt(s.confirmPay, { amount: formatMinorMoney(preview.amountDue, preview.currency) });
-  if (preview.kind === "scheduled") return s.confirmSchedule;
+  if (preview.kind === "scheduled") {
+    const date = formatDate(preview.effectiveAt);
+    if (preview.reason === "upgrade") return fmt(s.confirmLater, { date });
+    if (preview.reason === "to_pay_per_order") return fmt(s.confirmPayPerOrder, { date });
+    return s.confirmSchedule;
+  }
   return s.confirmNow;
 }
 
@@ -241,7 +323,10 @@ function PreviewDetails({ preview, view }: { preview: PlanSwitchPreview; view: S
   let body: string;
   switch (preview.kind) {
     case "upgrade":
-      body = fmt(s.upgradeBody, { plan, from, days: formatDays(proration?.remainingDays ?? 0, locale) });
+      // The full price for a full period; an older API priced the days left.
+      body = proration
+        ? fmt(s.upgradeProratedBody, { plan, from, days: formatDays(proration.remainingDays, locale) })
+        : fmt(s.upgradeBody, { plan, from });
       break;
     case "move":
       body = fmt(s.moveBody, { plan });
@@ -249,11 +334,17 @@ function PreviewDetails({ preview, view }: { preview: PlanSwitchPreview; view: S
     case "scheduled":
       if (preview.reason === "cycle_change") body = fmt(preview.to.billingCycle === "yearly" ? s.toYearlyBody : s.toMonthlyBody, { date });
       else if (preview.reason === "currency") body = fmt(s.currencyBody, { plan, currency: preview.to.currency, date });
+      else if (preview.reason === "upgrade") {
+        const amount = preview.nextRenewal ? formatMinorMoney(preview.nextRenewal.amount, preview.nextRenewal.currency) : "";
+        body = fmt(s.upgradeLaterBody, { plan, from, date, amount });
+      } else if (preview.reason === "to_pay_per_order") body = fmt(s.toPayPerOrderBody, { from, date });
       else body = fmt(s.downgradeBody, { plan, from, date });
       break;
     case "immediate":
       body =
-        preview.reason === "period_ended"
+        preview.reason === "to_pay_per_order"
+          ? s.toPayPerOrderNowBody
+          : preview.reason === "period_ended"
           ? fmt(s.endedBody, { plan })
           : preview.reason === "free_plan" || preview.nextRenewal === null
             ? fmt(s.freeBody, { plan })
@@ -346,8 +437,10 @@ function replacesText(preview: PlanSwitchPreview, view: SubscriptionPlans, s: Pl
 /**
  * The switch waiting, above the cards: an upgrade (or a move) with its
  * amount, Pay now (the Invoices tab's Pay dialog) and Cancel; a scheduled
- * change with its date and Cancel. Shown whenever the server lists one, also
- * with PLAN_SWITCH_ENABLED off (cancelling still works then).
+ * change with its date and Cancel ("Deferred change" for an upgrade left for
+ * the end of the subscription and the move to pay per order). Shown whenever
+ * the server lists one, also with PLAN_SWITCH_ENABLED off (cancelling still
+ * works then).
  */
 export function PlanSwitchBanner({
   open,
@@ -386,19 +479,27 @@ export function PlanSwitchBanner({
   // Cancel stays, and its 409 PROOF_UNDER_REVIEW is worded above).
   const underReview = open.status === "pending" && open.proofUnderReview === true;
   const sameCycleChange = open.status === "scheduled" && open.from.planId === open.to.planId;
+  // Left for the end of the paid period by the merchant's choice: an upgrade, or the move to pay per order.
+  const deferredUpgrade = open.status === "scheduled" && open.reason === "upgrade";
+  const deferredPayPerOrder = open.status === "scheduled" && toPayPerOrder(open);
+  const date = formatDate(open.effectiveAt);
   let body: string;
   if (open.status === "pending") {
     body = fmt(s.pendingBody, { ...names, amount: open.amountDue != null && open.currency ? formatMinorMoney(open.amountDue, open.currency) : "" });
+  } else if (deferredPayPerOrder) {
+    body = fmt(s.scheduledPayPerOrderBody, { ...names, date });
+  } else if (deferredUpgrade) {
+    body = fmt(s.scheduledUpgradeBody, { ...names, date });
   } else if (sameCycleChange) {
-    body = fmt(open.to.billingCycle === "yearly" ? s.toYearlyBody : s.toMonthlyBody, { date: formatDate(open.effectiveAt) });
+    body = fmt(open.to.billingCycle === "yearly" ? s.toYearlyBody : s.toMonthlyBody, { date });
   } else {
-    body = fmt(s.scheduledBody, { ...names, date: formatDate(open.effectiveAt) });
+    body = fmt(s.scheduledBody, { ...names, date });
   }
 
   return (
     <section aria-labelledby="plan-switch-title" className="space-y-2 rounded-[var(--radius-card)] border border-line bg-paper-raised p-4">
       <h2 id="plan-switch-title" className="font-display text-base font-medium text-ink">
-        {s.bannerTitle}
+        {deferredUpgrade || deferredPayPerOrder ? s.deferredTitle : s.bannerTitle}
       </h2>
       <Alert role="status">{body}</Alert>
       {underReview ? (

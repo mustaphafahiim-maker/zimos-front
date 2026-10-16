@@ -143,7 +143,12 @@ function SubscriptionView() {
   );
 }
 
-/** Tabs, with arrow keys between them (the WAI-ARIA tabs pattern). */
+/**
+ * Tabs, with arrow keys between them (the WAI-ARIA tabs pattern). They
+ * scroll sideways on a narrow screen with no scrollbar shown, and never up
+ * and down: the hairline under them is an inset shadow the active tab's
+ * underline paints over, so nothing hangs below the row to overflow it.
+ */
 function TabBar({
   tabs,
   value,
@@ -167,7 +172,12 @@ function TabBar({
     document.getElementById(`subscription-tab-${next.value}`)?.focus();
   }
   return (
-    <div role="tablist" aria-label={label} className="flex gap-1 overflow-x-auto border-b border-line" id={baseId}>
+    <div
+      role="tablist"
+      aria-label={label}
+      className="flex gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain shadow-[inset_0_-1px_0_var(--color-line)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      id={baseId}
+    >
       {tabs.map((x) => (
         <button
           key={x.value}
@@ -180,7 +190,7 @@ function TabBar({
           onClick={() => onChange(x.value)}
           onKeyDown={onKeyDown}
           className={cn(
-            "-mb-px min-h-11 shrink-0 cursor-pointer border-b-2 px-4 text-sm font-medium transition-colors",
+            "min-h-11 shrink-0 cursor-pointer border-b-2 px-4 text-sm font-medium transition-colors",
             value === x.value ? "border-primary text-ink" : "border-transparent text-ink-soft hover:text-ink"
           )}
         >

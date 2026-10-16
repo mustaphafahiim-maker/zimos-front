@@ -3862,8 +3862,29 @@ export interface PlanSwitchSummary {
 /** Why a plan is changed through Zimos support. */
 export type PlanSwitchSupportReason = "PLAN_CHANGE_NEEDS_SUPPORT" | "MANUAL_PRICING" | "SPECIAL_TERMS_ACTIVE";
 
-/** upgrade: the difference for the days left; move: a full period (from a free plan); scheduled: at the end of the paid period; immediate: at once, nothing to pay. */
+/**
+ * upgrade: the new plan's full price for a full period from its payment (an
+ * older API: the difference for the days left); move: a full period (from a
+ * free plan); scheduled: at the end of the paid period (a downgrade, an
+ * upgrade left for then, pay per order); immediate: at once, nothing to pay.
+ */
 export type PlanSwitchKind = "upgrade" | "move" | "scheduled" | "immediate";
+
+/** When an upgrade takes effect: "now" (on its payment) or "period_end" (when the paid period ends). */
+export type PlanSwitchTiming = "now" | "period_end";
+
+/** One timing of a switch, as the preview shows it (PlanSwitchPreview.options). */
+export interface PlanSwitchOption {
+  effective: "on_payment" | "period_end" | "now" | null;
+  effectiveAt: string | null;
+  /** Due now, minor units. */
+  amountDue: number;
+  currency: string;
+  chargeExpiry: { hours: number; expiresAt: string } | null;
+  nextRenewal: { at: string | null; amount: number; currency: string; billingCycle: BillingCycle } | null;
+  payable: boolean | null;
+  blockedBy: PlanSwitchBlock | null;
+}
 
 /** pending (its charge waits) and scheduled are open; the rest are final. */
 export type PlanSwitchStatus = "pending" | "scheduled" | "applied" | "cancelled" | "replaced" | "expired" | "dropped";
@@ -3888,6 +3909,14 @@ export interface PlanSwitch {
   status: PlanSwitchStatus;
   from: { planId: string | null; planName: string | null; billingCycle: BillingCycle };
   to: { planId: string | null; planName: string | null; billingCycle: BillingCycle };
+  /**
+   * Why it is this kind: downgrade, cycle_change, currency, upgrade (an
+   * upgrade, now or left for the period's end), to_pay_per_order,
+   * period_ended, …; null otherwise. Absent from an older API.
+   */
+  reason?: string | null;
+  /** An upgrade: "now" (its charge) or "period_end" (scheduled); null for any other switch. Absent from an older API. */
+  timing?: PlanSwitchTiming | null;
   /** A scheduled switch: when it takes effect (the end of the paid period). */
   effectiveAt: string | null;
   appliedAt: string | null;
@@ -3923,15 +3952,26 @@ export interface PlanSwitchPreview {
     | "nothing_due"
     | "from_free"
     | "pay_per_order"
+    | "upgrade"
+    | "to_pay_per_order"
     | null;
+  /** The timing described by the fields below: the one asked, else "now" or the only one. Absent from an older API. */
+  timing?: PlanSwitchTiming;
+  /** The timings on offer: ["now", "period_end"] for an upgrade inside a paid period, one otherwise. Absent from an older API. */
+  timings?: PlanSwitchTiming[];
+  /** Each timing's own terms; `timing` is the one copied to the top level. Absent from an older API. */
+  options?: Partial<Record<PlanSwitchTiming, PlanSwitchOption>>;
+  /** The paid period running now ("N days left, ends on …"); null for a free plan or pay per order. Absent from an older API. */
+  currentPeriod?: { endsAt: string; remainingDays: number } | null;
   /** on_payment (upgrade, move), period_end (scheduled), now (immediate, trial_change), null (none). */
   effective: "on_payment" | "period_end" | "now" | null;
   effectiveAt: string | null;
   from: { planId: string; planName: string; billingCycle: BillingCycle; currency: string } | null;
   to: { planId: string; planName: string; billingCycle: BillingCycle; currency: string };
-  /** Due now, minor units: 0 for anything but an upgrade or a move. */
+  /** Due now, minor units: 0 for anything but an upgrade "now" or a move. */
   amountDue: number;
   currency: string;
+  /** An older API's upgrade, priced for the days left; null now (the full price is due). */
   proration: (PlanSwitchProration & { periodCycle: BillingCycle; standardPeriod: boolean; difference: number }) | null;
   trial: boolean;
   /**
@@ -4006,10 +4046,16 @@ export interface ReferralCodePreview {
   plans: { planId: string; prices: { monthly: PlanPrice; yearly: PlanPrice } }[];
 }
 
+/**
+ * Why a charge stopped asking for money: cancelled, replaced or expired (a
+ * plan change's), cancelled_by_merchant, voided_by_admin, payment_failed.
+ */
+export type ChargeVoidReason = "cancelled" | "replaced" | "expired" | "cancelled_by_merchant" | "voided_by_admin" | "payment_failed";
+
 /** A subscription charge as the merchant sees it. */
 export interface MerchantInvoice {
   id: string;
-  /** "void": a plan move's charge that no longer asks for money (see voidReason). */
+  /** "void": a charge that no longer asks for money (see voidReason). */
   status: "pending" | "paid" | "failed" | "void";
   periodStart: string;
   periodEnd: string;
@@ -4024,8 +4070,20 @@ export interface MerchantInvoice {
   /** A pay-per-order store's move: the plan and cycle it switches to when paid. */
   targetPlanId?: string | null;
   targetBillingCycle?: BillingCycle | null;
-  /** Why a void move charge stopped asking for money. */
-  voidReason?: "cancelled" | "replaced" | "expired" | null;
+  /** Why a void charge stopped asking for money. */
+  voidReason?: ChargeVoidReason | null;
+  /**
+   * The merchant may cancel it (POST .../billing/charges/:id/cancel):
+   * PLAN_SWITCH_ENABLED, pending, no transfer for it being checked. Only in
+   * the invoices list; absent from an older API (then never offered).
+   */
+  cancellable?: boolean;
+}
+
+/** `POST /workspaces/:id/billing/charges/:chargeId/cancel` — the charge, now void, and the plans list. */
+export interface BillingChargeCancelResult {
+  invoice: MerchantInvoice;
+  plans: SubscriptionPlans;
 }
 
 /** `GET /workspaces/:id/billing/invoices` — newest first. */
@@ -4343,9 +4401,12 @@ export interface AdminCharge {
   targetPlanId?: string | null;
   targetBillingCycle?: "monthly" | "yearly" | null;
   targetPlanName?: string | null;
-  /** A move's charge that no longer asks for money, and why. */
+  /** A charge that no longer asks for money, why, and the console's reason when it voided it. */
   voidedAt?: string | null;
-  voidReason?: "cancelled" | "replaced" | "expired" | null;
+  voidReason?: ChargeVoidReason | null;
+  voidNote?: string | null;
+  /** The console's Void applies: PLAN_SWITCH_ENABLED, pending, no transfer for it waiting. Absent from an older API. */
+  voidable?: boolean;
   failureReason: string | null;
   externalReference: string | null;
   paymentNote: string | null;
@@ -4454,6 +4515,11 @@ export interface AdminStoreAccess extends Omit<WorkspaceAccess, "suspension"> {
     suspensionReason: string | null;
     suspendedBy: { id: string; fullName: string } | null;
   };
+}
+
+/** `POST /admin/charges/:chargeId/void` — the charge, now void. */
+export interface AdminVoidChargeResult {
+  charge: AdminCharge;
 }
 
 export interface AdminRecordPaymentResult {

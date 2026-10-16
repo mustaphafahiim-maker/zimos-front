@@ -56,7 +56,7 @@ const billing = fake<WorkspaceBilling>({
 
 const ON: PlanSwitchSummary = { enabled: true, mode: "switch", reason: null, open: null };
 
-function setup(planSwitch?: PlanSwitchSummary, { locale = "en" as "en" | "ar" } = {}) {
+function setup(planSwitch?: PlanSwitchSummary, { locale = "en" as "en" | "ar", view: extraView = {} as Partial<SubscriptionPlans> } = {}) {
   workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", role: "owner" });
   const view = fake<SubscriptionPlans>({
     subscription: { status: "active", billingCycle: "monthly", planId: "plan_starter", trialEndsAt: null, currentPeriodEnd: "2030-02-01T00:00:00Z", draft: false },
@@ -67,6 +67,7 @@ function setup(planSwitch?: PlanSwitchSummary, { locale = "en" as "en" | "ar" } 
     payPerOrder: { available: false, current: false, plan: null },
     move: null,
     ...(planSwitch ? { planSwitch } : {}),
+    ...extraView,
   });
   api.getWorkspaceBilling.mockResolvedValue(billing);
   api.getSubscriptionPlans.mockResolvedValue(view);
@@ -149,7 +150,130 @@ describe("with the switch off, or support deciding: today's page", () => {
   });
 });
 
-describe("an upgrade", () => {
+/** An upgrade inside a paid period as the server sends it now: the full price now, or nothing until the period ends. */
+const fullUpgrade = (overrides: Partial<PlanSwitchPreview> = {}): PlanSwitchPreview =>
+  upgrade({
+    reason: "upgrade",
+    timing: "now",
+    timings: ["now", "period_end"],
+    amountDue: 60000,
+    proration: null,
+    currentPeriod: { endsAt: "2030-02-01T00:00:00.000Z", remainingDays: 15 },
+    chargeExpiry: { hours: 48, expiresAt: "2030-01-19T12:00:00.000Z" },
+    nextRenewal: { at: null, amount: 60000, currency: "EGP", billingCycle: "monthly" },
+    options: {
+      now: {
+        effective: "on_payment",
+        effectiveAt: null,
+        amountDue: 60000,
+        currency: "EGP",
+        chargeExpiry: { hours: 48, expiresAt: "2030-01-19T12:00:00.000Z" },
+        nextRenewal: { at: null, amount: 60000, currency: "EGP", billingCycle: "monthly" },
+        payable: true,
+        blockedBy: null,
+      },
+      period_end: {
+        effective: "period_end",
+        effectiveAt: "2030-02-01T00:00:00.000Z",
+        amountDue: 0,
+        currency: "EGP",
+        chargeExpiry: null,
+        nextRenewal: { at: "2030-02-01T00:00:00.000Z", amount: 60000, currency: "EGP", billingCycle: "monthly" },
+        payable: null,
+        blockedBy: null,
+      },
+    },
+    ...overrides,
+  });
+
+describe("an upgrade: now at the full price, or at the end of the subscription", () => {
+  it("shows the days left and both choices; now pays the full price, then opens Pay", async () => {
+    const { user, view } = setup(ON);
+    api.previewPlanSwitch.mockResolvedValue({ preview: fullUpgrade() });
+    const invoice = fake<MerchantInvoice>({ id: "inv_1", status: "pending", amountDue: 60000, currency: "EGP", targetPlanId: "plan_pro", targetBillingCycle: "monthly" });
+    api.startPlanSwitch.mockImplementation(async () => {
+      api.listBillingInvoices.mockResolvedValue({ invoices: [invoice], page: 1, pageSize: 10, total: 1 });
+      return { kind: "upgrade", created: true, changed: false, switch: openSwitch({ amountDue: 60000, proration: null }), invoice, plans: { ...view, planSwitch: { ...ON, open: openSwitch() } } };
+    });
+    api.getPaymentMethods.mockResolvedValue({ methods: [fake({ code: "instapay", kind: "manual", label: { ar: "إنستا باي", en: "InstaPay" } })], currency: "EGP", contactSupport: false });
+    api.listBillingPaymentProofs.mockResolvedValue({ proofs: [] });
+
+    expect(await screen.findByText(/an upgrade starts a new full period at the new plan's price/)).toBeInTheDocument();
+    await user.click(within(await cardOf("Pro")).getByRole("button", { name: "Switch to this plan" }));
+    const dialog = await screen.findByRole("dialog", { name: "Switch to Pro" });
+    expect(await within(dialog).findByText(/15 days left in your current subscription \(ends on .*2030\)/)).toBeInTheDocument();
+    const now = within(dialog).getByRole("radio", { name: /Upgrade now/ });
+    const later = within(dialog).getByRole("radio", { name: /Wait for the end of the subscription/ });
+    expect(now).toBeChecked();
+    expect(later).not.toBeChecked();
+    expect(within(dialog).getByText(/You pay the full price of Pro for a new full period/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/one period after the payment/)).toBeInTheDocument();
+    expect(within(dialog).queryByText("Left in this period")).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: /Switch and pay .*600/ }));
+    await waitFor(() =>
+      expect(api.startPlanSwitch).toHaveBeenCalledWith("ws_1", { planId: "plan_pro", billingCycle: "monthly", timing: "now", expectedAmount: 60000 })
+    );
+    await waitFor(() => expect(api.openBillingInvoice).toHaveBeenCalled());
+  });
+
+  it("waiting for the end of the subscription: nothing to pay now, the renewal at the new price, sent as period_end", async () => {
+    const { user, view } = setup(ON);
+    api.previewPlanSwitch.mockResolvedValue({ preview: fullUpgrade() });
+    const scheduled = openSwitch({
+      kind: "scheduled",
+      status: "scheduled",
+      reason: "upgrade",
+      timing: "period_end",
+      effectiveAt: "2030-02-01T00:00:00.000Z",
+      invoiceId: null,
+      amountDue: null,
+      currency: null,
+      expiresAt: null,
+      proration: null,
+    });
+    api.startPlanSwitch.mockImplementation(async () => {
+      api.getSubscriptionPlans.mockResolvedValue({ ...view, planSwitch: { ...ON, open: scheduled } });
+      return { kind: "scheduled", created: true, changed: false, switch: scheduled, invoice: null, plans: { ...view, planSwitch: { ...ON, open: scheduled } } };
+    });
+    await user.click(within(await cardOf("Pro")).getByRole("button", { name: "Switch to this plan" }));
+    const dialog = await screen.findByRole("dialog", { name: "Switch to Pro" });
+    await user.click(await within(dialog).findByRole("radio", { name: /Wait for the end of the subscription/ }));
+    expect(within(dialog).getByText(/You keep Starter until .*2030, when your current subscription ends. Then Pro starts, and its renewal invoice of .*600/)).toBeInTheDocument();
+    expect(within(dialog).queryByText("Due now")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/If it isn't paid/)).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: /Upgrade on .*2030/ }));
+    await waitFor(() =>
+      expect(api.startPlanSwitch).toHaveBeenCalledWith("ws_1", { planId: "plan_pro", billingCycle: "monthly", timing: "period_end", expectedAmount: 0 })
+    );
+    // The deferred banner, with Cancel and no Pay.
+    expect(await screen.findByRole("heading", { name: "Deferred change" })).toBeInTheDocument();
+    expect(screen.getByText(/Your upgrade to Pro \(monthly\) takes effect on .*2030, when your current subscription ends/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel this change" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pay now" })).not.toBeInTheDocument();
+  });
+
+  it("a timing no longer on offer: reads the preview again", async () => {
+    const { user } = setup(ON);
+    api.previewPlanSwitch.mockResolvedValue({ preview: fullUpgrade() });
+    api.startPlanSwitch.mockRejectedValueOnce(new ApiError("timing", 409, "SWITCH_TIMING_NOT_AVAILABLE", { timing: "period_end", available: ["now"] }));
+    await user.click(within(await cardOf("Pro")).getByRole("button", { name: "Switch to this plan" }));
+    const dialog = await screen.findByRole("dialog", { name: "Switch to Pro" });
+    await user.click(await within(dialog).findByRole("radio", { name: /Wait for the end/ }));
+    await user.click(within(dialog).getByRole("button", { name: /Upgrade on/ }));
+    expect(await within(dialog).findByText(/That timing isn't available for this change any more/)).toBeInTheDocument();
+    await waitFor(() => expect(api.previewPlanSwitch).toHaveBeenCalledTimes(2));
+  });
+
+  it("is in Arabic", async () => {
+    const dialog = await confirmationFor("Pro", fullUpgrade(), { locale: "ar" });
+    expect(within(dialog).getByText(/متبقٍ .* في اشتراكك الحالي \(ينتهي في/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("radio", { name: /الترقية الآن/ })).toBeChecked();
+    expect(within(dialog).getByRole("radio", { name: /الانتظار حتى نهاية الاشتراك/ })).toBeInTheDocument();
+  });
+});
+
+describe("an upgrade from an older API (priced for the days left)", () => {
   it("previews the difference before anything is written, starts it with the amount shown, then opens Pay", async () => {
     const { user, view } = setup(ON);
     api.previewPlanSwitch.mockResolvedValue({ preview: upgrade() });
@@ -161,7 +285,6 @@ describe("an upgrade", () => {
     api.getPaymentMethods.mockResolvedValue({ methods: [fake({ code: "instapay", kind: "manual", label: { ar: "إنستا باي", en: "InstaPay" } })], currency: "EGP", contactSupport: false });
     api.listBillingPaymentProofs.mockResolvedValue({ proofs: [] });
 
-    expect(await screen.findByText(/an upgrade costs only the difference for the days left/)).toBeInTheDocument();
     await user.click(within(await cardOf("Pro")).getByRole("button", { name: "Switch to this plan" }));
     await waitFor(() => expect(api.previewPlanSwitch).toHaveBeenCalledWith("ws_1", { planId: "plan_pro", billingCycle: "monthly" }));
     const dialog = await screen.findByRole("dialog", { name: "Switch to Pro" });
@@ -171,11 +294,16 @@ describe("an upgrade", () => {
     expect(within(dialog).getByText("Next renewal")).toBeInTheDocument();
     expect(api.startPlanSwitch).not.toHaveBeenCalled();
 
+    // No timings from an older API: no choice, and none sent.
+    expect(within(dialog).queryByRole("radio", { name: /Upgrade now/ })).not.toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: /Switch and pay/ }));
     await waitFor(() => expect(api.startPlanSwitch).toHaveBeenCalledWith("ws_1", { planId: "plan_pro", billingCycle: "monthly", expectedAmount: 14500 }));
     // The usual Pay dialog, which pays the charge waiting.
     await waitFor(() => expect(api.openBillingInvoice).toHaveBeenCalled());
   });
+});
+
+describe("an upgrade, whatever its price", () => {
 
   it("reads the preview again when the amount changed, and confirms the new one", async () => {
     const { user } = setup(ON);
@@ -424,6 +552,86 @@ describe("a transfer under review (open.proofUnderReview)", () => {
     setup({ ...ON, open: openSwitch({ proofUnderReview: true }) }, { locale: "ar" });
     expect(await screen.findByText(/تجري مراجعة تحويل لهذه الدفعة/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "إلغاء هذا التغيير" })).not.toBeInTheDocument();
+  });
+});
+
+describe("a move to pay per order", () => {
+  const ppoPlan = { id: "plan_ppo", name: "Pay per order", fee: 400, currency: "EGP" };
+  const ppoPreview = (): PlanSwitchPreview =>
+    upgrade({
+      kind: "scheduled",
+      reason: "to_pay_per_order",
+      timing: "period_end",
+      timings: ["period_end"],
+      effective: "period_end",
+      effectiveAt: "2030-02-01T00:00:00.000Z",
+      to: { planId: "plan_ppo", planName: "Pay per order", billingCycle: "monthly", currency: "EGP" },
+      amountDue: 0,
+      proration: null,
+      currentPeriod: { endsAt: "2030-02-01T00:00:00.000Z", remainingDays: 15 },
+      chargeExpiry: null,
+      nextRenewal: null,
+      payable: false,
+    });
+  const deferred = openSwitch({
+    kind: "scheduled",
+    status: "scheduled",
+    reason: "to_pay_per_order",
+    to: { planId: "plan_ppo", planName: "Pay per order", billingCycle: "monthly" },
+    effectiveAt: "2030-02-01T00:00:00.000Z",
+    invoiceId: null,
+    amountDue: null,
+    currency: null,
+    expiresAt: null,
+    proration: null,
+  });
+
+  it("its card opens the confirmation like the others: at the end of the period, nothing paid, nothing refunded", async () => {
+    const { user, view: withPpo } = setup(ON, { view: { payPerOrder: { available: true, current: false, plan: ppoPlan } } });
+    api.previewPlanSwitch.mockResolvedValue({ preview: ppoPreview() });
+    api.startPlanSwitch.mockImplementation(async () => {
+      api.getSubscriptionPlans.mockResolvedValue({ ...withPpo, planSwitch: { ...ON, open: deferred } });
+      return { kind: "scheduled", created: true, changed: false, switch: deferred, invoice: null, plans: { ...withPpo, planSwitch: { ...ON, open: deferred } } };
+    });
+    await user.click(await screen.findByRole("button", { name: "Switch to pay per order" }));
+    await waitFor(() => expect(api.previewPlanSwitch).toHaveBeenCalledWith("ws_1", { planId: "plan_ppo", billingCycle: "monthly" }));
+    const dialog = await screen.findByRole("dialog", { name: "Switch to Pay per order" });
+    expect(await within(dialog).findByText(/15 days left in your current subscription/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/You move to pay per order on .*2030, when your paid period ends, and keep Starter until then. Nothing is paid now and nothing is refunded/)).toBeInTheDocument();
+    expect(within(dialog).queryByRole("radio")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Due now")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Next renewal")).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: /Move to pay per order on .*2030/ }));
+    await waitFor(() => expect(api.startPlanSwitch).toHaveBeenCalledWith("ws_1", { planId: "plan_ppo", billingCycle: "monthly", expectedAmount: 0 }));
+    expect(api.choosePayPerOrder).not.toHaveBeenCalled();
+    // The deferred banner, and the card saying when.
+    expect(await screen.findByRole("heading", { name: "Deferred change" })).toBeInTheDocument();
+    expect(screen.getByText(/You move to pay per order on .*2030, when your paid period ends. You keep Starter until then; nothing is refunded./)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Switch to pay per order" })).not.toBeInTheDocument();
+  });
+
+  it("the deferred move is cancelled from its banner", async () => {
+    const { user, view } = setup({ ...ON, open: deferred });
+    api.cancelPlanSwitch.mockImplementation(async () => {
+      api.getSubscriptionPlans.mockResolvedValue({ ...view, planSwitch: ON });
+      return { cancelled: true, switch: { ...deferred, status: "cancelled" }, plans: { ...view, planSwitch: ON } };
+    });
+    expect(await screen.findByRole("heading", { name: "Deferred change" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel this change" }));
+    await waitFor(() => expect(api.cancelPlanSwitch).toHaveBeenCalledWith("ws_1"));
+    expect(await screen.findByText("The change was cancelled. Nothing is due, and your plan stays as it is.")).toBeInTheDocument();
+  });
+
+  it("with the switch off, the card is as before: support once paid", async () => {
+    setup({ enabled: false, mode: null, reason: null, open: null }, { view: { payPerOrder: { available: true, current: false, plan: ppoPlan } } });
+    expect(within(await cardOf("Pay per order")).getByRole("button", { name: "Contact support to switch" })).toHaveAttribute("href", "/support");
+    expect(screen.queryByRole("button", { name: "Switch to pay per order" })).not.toBeInTheDocument();
+  });
+
+  it("the deferred move is in Arabic", async () => {
+    setup({ ...ON, open: deferred }, { locale: "ar" });
+    expect(await screen.findByRole("heading", { name: "تغيير مؤجَّل" })).toBeInTheDocument();
+    expect(screen.getByText(/تنتقل إلى الدفع لكل طلب في .* عند انتهاء فترتك المدفوعة/)).toBeInTheDocument();
   });
 });
 

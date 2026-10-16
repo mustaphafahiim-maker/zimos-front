@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Button, cn } from "@store-builder/ui";
+import { Alert, Button, cn } from "@store-builder/ui";
 import type { MerchantInvoice, BillingPaymentProof, WorkspaceBilling } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { Modal } from "@/components/Modal";
 import { formatDate, formatMinorMoney } from "@/lib/format";
 import { useLocale, useT, fmt } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
@@ -26,6 +28,8 @@ type PayText = Record<keyof (typeof PAY_STRINGS)["en"], string>;
  * were reviewed, and, back from a gateway, what became of the payment.
  * `payRequested` (the Plans tab's "Pay now") opens the Pay dialog once it is
  * known that something is due and can be paid, then `onPayRequestDone`.
+ * A pending invoice the server marks `cancellable` (PLAN_SWITCH_ENABLED, no
+ * transfer for it being checked) can be cancelled, after a confirmation.
  */
 export function InvoicesTab({
   billing,
@@ -48,6 +52,7 @@ export function InvoicesTab({
   const workspaceId = useWorkspaceId();
   const [page, setPage] = useState(1);
   const [paying, setPaying] = useState(false);
+  const [cancelling, setCancelling] = useState<MerchantInvoice | null>(null);
   const invoices = useAsync(() => apiClient.listBillingInvoices(workspaceId, { page, pageSize: PAGE_SIZE }), [workspaceId, page]);
   const methods = useAsync(() => apiClient.getPaymentMethods(workspaceId), [workspaceId]);
   const proofs = useAsync(() => apiClient.listBillingPaymentProofs(workspaceId), [workspaceId]);
@@ -114,6 +119,7 @@ export function InvoicesTab({
               p={p}
               proof={latestFor(invoice.id)}
               onPay={invoice.status === "pending" && canPay ? () => setPaying(true) : null}
+              onCancel={invoice.status === "pending" && invoice.cancellable === true ? () => setCancelling(invoice) : null}
             />
           ))}
         </ul>
@@ -129,6 +135,18 @@ export function InvoicesTab({
           </nav>
         )}
       </DataState>
+
+      <CancelInvoiceDialog
+        invoice={cancelling}
+        onClose={() => setCancelling(null)}
+        onCancelled={() => {
+          setCancelling(null);
+          toast.success(t.invoiceCancelled);
+          void invoices.refresh({ silent: true });
+          // The summary, the plans and any change waiting follow.
+          onPaid();
+        }}
+      />
 
       <PayDialog
         open={paying}
@@ -241,18 +259,94 @@ function ProofBadge({ status, p }: { status: BillingPaymentProof["status"]; p: P
   );
 }
 
+/** "Cancel this invoice?": what cancelling it means, then the server voids it. */
+function CancelInvoiceDialog({
+  invoice,
+  onClose,
+  onCancelled,
+}: {
+  invoice: MerchantInvoice | null;
+  onClose: () => void;
+  onCancelled: () => void;
+}) {
+  const t = useT(SUBSCRIPTION_STRINGS);
+  const workspaceId = useWorkspaceId();
+  const errorMessage = useErrorMessage();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function close() {
+    if (busy) return;
+    setError(null);
+    onClose();
+  }
+
+  async function confirm() {
+    if (!invoice) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.cancelBillingCharge(workspaceId, invoice.id);
+      onCancelled();
+    } catch (err) {
+      setError(
+        errorMessage(err, {
+          PROOF_UNDER_REVIEW: t.cancelInvoiceProof,
+          CHARGE_ALREADY_PAID: t.cancelInvoicePaid,
+          CHARGE_NOT_PENDING: t.cancelInvoiceNotPending,
+          PLAN_SWITCH_DISABLED: t.cancelInvoiceDisabled,
+        })
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={Boolean(invoice)}
+      onClose={close}
+      title={t.cancelInvoiceTitle}
+      footer={
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button type="button" variant="outline" className="min-h-11" onClick={close} disabled={busy}>
+            {t.keepInvoice}
+          </Button>
+          <Button type="button" variant="destructive" className="min-h-11" onClick={() => void confirm()} disabled={busy}>
+            {busy ? t.cancellingInvoice : t.cancelInvoiceConfirm}
+          </Button>
+        </div>
+      }
+    >
+      {invoice && (
+        <div className="space-y-3">
+          <p className="text-sm text-ink">{fmt(t.cancelInvoiceBody, { amount: formatMinorMoney(invoice.amountDue, invoice.currency) })}</p>
+          {error && (
+            <Alert variant="danger" role="alert">
+              {error}
+            </Alert>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 function InvoiceRow({
   invoice,
   t,
   p,
   proof,
   onPay,
+  onCancel,
 }: {
   invoice: MerchantInvoice;
   t: SubscriptionText;
   p: PayText;
   proof: BillingPaymentProof | null;
   onPay: (() => void) | null;
+  /** The server says it may be cancelled (`cancellable`); null hides the button. */
+  onCancel: (() => void) | null;
 }) {
   const status =
     invoice.status === "paid"
@@ -293,11 +387,19 @@ function InvoiceRow({
         >
           {underReview ? p.transferUnderReview : status}
         </span>
-        {onPay && !underReview && (
-          <div className="mt-2">
-            <Button type="button" variant="outline" onClick={onPay} className="min-h-10">
-              {p.payInvoice}
-            </Button>
+        {((onPay && !underReview) || (onCancel && !underReview)) && (
+          <div className="mt-2 flex flex-wrap justify-end gap-2">
+            {onPay && !underReview && (
+              <Button type="button" variant="outline" onClick={onPay} className="min-h-10">
+                {p.payInvoice}
+              </Button>
+            )}
+            {/* Hidden while a transfer for it is being checked, as the server says too. */}
+            {onCancel && !underReview && (
+              <Button type="button" variant="ghost" onClick={onCancel} className="min-h-10 text-danger">
+                {t.cancelInvoice}
+              </Button>
+            )}
           </div>
         )}
       </div>
