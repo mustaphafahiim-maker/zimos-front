@@ -172,7 +172,7 @@ export function PlansTab({
             onSwitch={(target) => setSwitchTarget(target)}
           />
         ))}
-        <PayPerOrderCard view={view} onPlansChange={onPlansChange} onChanged={onChanged} />
+        <PayPerOrderCard view={view} onPlansChange={onPlansChange} onChanged={onChanged} onSwitch={(target) => setSwitchTarget(target)} />
       </div>
 
       <PlanSwitchDialog target={switchTarget} view={view} onClose={() => setSwitchTarget(null)} onDone={switched} />
@@ -548,20 +548,26 @@ function CodeField({
 
 /**
  * The pay-per-order plan (the prepaid balance, WALLET_ENABLED). Offered:
- * chosen at once from a draft or a trial, through support once paid. Not
- * offered (switched off, or no such plan): shown as coming soon.
+ * chosen at once from a draft or a trial; once paid, switched to like any
+ * plan while the store changes plan by itself (PLAN_SWITCH_ENABLED: the
+ * confirmation, then at the end of the paid period), else through support.
+ * Not offered (switched off, or no such plan): shown as coming soon.
  */
 function PayPerOrderCard({
   view,
   onPlansChange,
   onChanged,
+  onSwitch,
 }: {
   view: SubscriptionPlans;
   onPlansChange: (next: SubscriptionPlans) => void;
   onChanged: () => void;
+  /** Opens the switch's confirmation for pay per order (PlanSwitchDialog). */
+  onSwitch: (target: SwitchTarget) => void;
 }) {
   const t = useT(SUBSCRIPTION_STRINGS);
   const w = useT(WALLET_STRINGS);
+  const s = useT(PLAN_SWITCH_STRINGS);
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
@@ -569,6 +575,10 @@ function PayPerOrderCard({
   const [error, setError] = useState<string | null>(null);
   const ppo = view.payPerOrder;
   const plan = ppo?.plan ?? null;
+  // A paid subscription switching by itself; the move to it waiting, if any.
+  const selfServe = !view.move?.available && selfServeSwitch(view);
+  const open = view.planSwitch?.open ?? null;
+  const waiting = Boolean(plan && open && open.status === "scheduled" && open.to.planId === plan.id);
 
   if (!ppo || (!ppo.available && !ppo.current) || !plan) {
     return (
@@ -611,7 +621,21 @@ function PayPerOrderCard({
       <p className="tabular text-2xl font-semibold text-ink">{fmt(w.ppoFee, { fee: formatMinorMoney(plan.fee, plan.currency) })}</p>
       <p className="mt-2 flex-1 text-sm text-ink-soft">{w.ppoBalanceHint}</p>
       {!ppo.current &&
-        (view.planChange === "immediate" ? (
+        (selfServe && ppo.available ? (
+          waiting ? (
+            <p className="mt-4 rounded-[10px] border border-line bg-paper px-3 py-2 text-sm text-ink">
+              {fmt(s.cardScheduled, { date: formatDate(open?.effectiveAt) })}
+            </p>
+          ) : (
+            <Button
+              type="button"
+              className="mt-4 min-h-11 w-full"
+              onClick={() => onSwitch({ plan: { id: plan.id, name: plan.name }, cycle: view.subscription.billingCycle })}
+            >
+              {s.switchToPayPerOrder}
+            </Button>
+          )
+        ) : view.planChange === "immediate" ? (
           <Button type="button" className="mt-4 min-h-11 w-full" disabled={busy} onClick={() => void choose()}>
             {busy ? w.ppoChoosing : w.ppoChoose}
           </Button>
