@@ -50,11 +50,11 @@ const billing = (overrides: Partial<WorkspaceBilling> = {}) =>
     ...overrides,
   });
 
-function setup({ plans = view(), bill = billing(), role = "owner", route = "/subscription", locale = "en" as "en" | "ar" } = {}) {
+function setup({ plans = view(), bill = billing(), role = "owner", route = "/subscription", locale = "en" as "en" | "ar", invoices = [] as unknown[] } = {}) {
   workspaceMock.currentWorkspace = fake<Workspace>({ id: "ws_1", name: "Nile Store", role });
   api.getWorkspaceBilling.mockResolvedValue(bill);
   api.getSubscriptionPlans.mockResolvedValue(plans);
-  api.listBillingInvoices.mockResolvedValue({ invoices: [], page: 1, pageSize: 10, total: 0 });
+  api.listBillingInvoices.mockResolvedValue({ invoices, page: 1, pageSize: 10, total: invoices.length });
   return renderWithProviders(<SubscriptionPage />, { route, path: "/subscription", locale });
 }
 
@@ -248,6 +248,111 @@ describe("SubscriptionPage", () => {
     setup({ locale: "ar", bill: billing({ nextCharge: { grossAmount: 30000, discountAmount: 0, amount: 30000, currency: "EGP" } }) });
     expect(await screen.findByRole("button", { name: "ادفع الآن" })).toHaveAttribute("href", "/subscription?tab=invoices&pay=1");
     expect(screen.getByRole("link", { name: "ادفع واعرض الفواتير" })).toBeInTheDocument();
+  });
+});
+
+describe("cancelling a pending invoice (PLAN_SWITCH_ENABLED)", () => {
+  const pending = (overrides: Record<string, unknown> = {}) =>
+    fake({
+      id: "inv_2",
+      status: "pending",
+      periodStart: "2030-02-01",
+      periodEnd: "2030-03-01",
+      grossAmount: 30000,
+      discountAmount: 0,
+      amountDue: 30000,
+      amountPaid: null,
+      currency: "EGP",
+      paidAt: null,
+      paymentSource: null,
+      createdAt: "2030-01-25",
+      cancellable: true,
+      ...overrides,
+    });
+
+  function openInvoices(invoices: unknown[], { proofs = [] as unknown[], locale = "en" as "en" | "ar" } = {}) {
+    api.getPaymentMethods.mockResolvedValue({ methods: [], currency: "EGP", contactSupport: false });
+    api.listBillingPaymentProofs.mockResolvedValue({ proofs });
+    return setup({ route: "/subscription?tab=invoices", locale, invoices });
+  }
+
+  it("asks first, then cancels it and reads the list again", async () => {
+    const { user } = openInvoices([pending()]);
+    api.cancelBillingCharge.mockImplementation(async () => {
+      api.listBillingInvoices.mockResolvedValue({ invoices: [pending({ status: "void", voidReason: "cancelled_by_merchant", cancellable: false })], page: 1, pageSize: 10, total: 1 });
+      return { invoice: pending({ status: "void", voidReason: "cancelled_by_merchant", cancellable: false }), plans: view() };
+    });
+    await user.click(await screen.findByRole("button", { name: "Cancel invoice" }));
+    const dialog = await screen.findByRole("dialog", { name: "Cancel this invoice?" });
+    expect(within(dialog).getByText(/The invoice of .*300.* is cancelled and nothing is owed for it/)).toBeInTheDocument();
+    expect(api.cancelBillingCharge).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole("button", { name: "Cancel invoice" }));
+    await waitFor(() => expect(api.cancelBillingCharge).toHaveBeenCalledWith("ws_1", "inv_2"));
+    expect(await screen.findByText("The invoice was cancelled. Nothing is owed for it.")).toBeInTheDocument();
+    expect(await screen.findByText("Cancelled by you — not due")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel invoice" })).not.toBeInTheDocument();
+  });
+
+  it("Keep it closes the question with nothing sent", async () => {
+    const { user } = openInvoices([pending()]);
+    await user.click(await screen.findByRole("button", { name: "Cancel invoice" }));
+    await user.click(within(await screen.findByRole("dialog", { name: "Cancel this invoice?" })).getByRole("button", { name: "Keep it" }));
+    expect(screen.queryByRole("dialog", { name: "Cancel this invoice?" })).not.toBeInTheDocument();
+    expect(api.cancelBillingCharge).not.toHaveBeenCalled();
+  });
+
+  it("is not offered when the server says no, or an older API says nothing, or a transfer for it is being checked", async () => {
+    const { unmount } = openInvoices([pending({ cancellable: false })]);
+    expect(await screen.findByText("Due")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel invoice" })).not.toBeInTheDocument();
+    unmount();
+
+    const older = openInvoices([pending({ cancellable: undefined })]);
+    expect(await screen.findByText("Due")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel invoice" })).not.toBeInTheDocument();
+    older.unmount();
+
+    openInvoices([pending()], {
+      proofs: [
+        fake({ id: "pp_1", status: "pending", purpose: "invoice", invoiceId: "inv_2", amount: 30000, currency: "EGP", createdAt: "2030-01-26", reviewNote: null, method: { code: "instapay", label: { ar: "إنستا باي", en: "InstaPay" } } }),
+      ],
+    });
+    expect(await screen.findAllByText(/under review/i)).not.toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Cancel invoice" })).not.toBeInTheDocument();
+  });
+
+  it("a refusal is worded, and the invoice stays", async () => {
+    const { user } = openInvoices([pending()]);
+    api.cancelBillingCharge.mockRejectedValue(new ApiError("proof", 409, "PROOF_UNDER_REVIEW", { invoiceId: "inv_2" }));
+    await user.click(await screen.findByRole("button", { name: "Cancel invoice" }));
+    const dialog = await screen.findByRole("dialog", { name: "Cancel this invoice?" });
+    await user.click(within(dialog).getByRole("button", { name: "Cancel invoice" }));
+    expect(await within(dialog).findByText("A transfer for this invoice is being checked. You can cancel it once it has been reviewed.")).toBeInTheDocument();
+  });
+
+  it("names why a charge is void", async () => {
+    openInvoices([
+      pending({ id: "inv_3", status: "void", voidReason: "payment_failed", cancellable: false }),
+      pending({ id: "inv_4", status: "void", voidReason: "voided_by_admin", cancellable: false }),
+    ]);
+    expect(await screen.findByText("Payment didn't go through — not due")).toBeInTheDocument();
+    expect(screen.getByText("Cancelled by Zimos — not due")).toBeInTheDocument();
+  });
+
+  it("is in Arabic", async () => {
+    const { user } = openInvoices([pending()], { locale: "ar" });
+    await user.click(await screen.findByRole("button", { name: "إلغاء الفاتورة" }));
+    expect(await screen.findByRole("dialog", { name: "إلغاء هذه الفاتورة؟" })).toBeInTheDocument();
+  });
+});
+
+describe("the tabs row", () => {
+  it("scrolls sideways with no scrollbar shown, and never up and down", async () => {
+    setup();
+    const tablist = await screen.findByRole("tablist");
+    expect(tablist).toHaveClass("overflow-x-auto", "overflow-y-hidden", "[scrollbar-width:none]");
+    // Nothing hangs below the row: no negative margin on the tabs.
+    for (const tab of within(tablist).getAllByRole("tab")) expect(tab.className).not.toMatch(/-mb-px/);
   });
 });
 
