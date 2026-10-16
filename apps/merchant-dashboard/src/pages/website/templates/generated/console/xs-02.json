@@ -1,0 +1,814 @@
+{
+  "globalStyles": {
+    "primaryColor": "#3B5D50",
+    "themeSettings": {
+      "xsLook": "02",
+      "header": {
+        "menu": [
+          {
+            "label": "Home",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "Shop",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "About us",
+            "href": "/about",
+            "kind": "page"
+          },
+          {
+            "label": "Services",
+            "href": "/services",
+            "kind": "page"
+          },
+          {
+            "label": "Contact us",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "Store",
+            "links": [
+              {
+                "label": "Shop",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "Cart",
+                "href": "/cart",
+                "kind": "cart"
+              },
+              {
+                "label": "Track Order",
+                "href": "/track",
+                "kind": "track"
+              }
+            ]
+          },
+          {
+            "title": "Help",
+            "links": [
+              {
+                "label": "About us",
+                "href": "/about",
+                "kind": "page"
+              },
+              {
+                "label": "Contact us",
+                "href": "/contact",
+                "kind": "page"
+              }
+            ]
+          }
+        ],
+        "text": "We design modern furniture that brings comfort and quality together, giving every corner of your home a warm touch that lasts for years.",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "Home",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs02-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p1-s1-e1",
+                        "type": "xs_hero",
+                        "props": {
+                          "look": "02",
+                          "heading": "Modern Interior Design Studio",
+                          "text": "Carefully chosen furniture and designs that give your home a quiet elegance and a comfort you live with every day.",
+                          "image": "/xs/02/couch.png",
+                          "buttonLabel": "Shop Now",
+                          "buttonHref": "/products",
+                          "button2Label": "Explore",
+                          "button2Href": "/about"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs02-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p1-s2-e1",
+                        "type": "xs_showcase",
+                        "props": {
+                          "look": "02",
+                          "heading": "Crafted with excellent material.",
+                          "text": "Carefully chosen furniture and designs that give your home a quiet elegance and a comfort you live with every day.",
+                          "collection": "",
+                          "limit": 3,
+                          "buttonLabel": "Explore",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs02-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p1-s3-e1",
+                        "type": "xs_features",
+                        "props": {
+                          "look": "02",
+                          "heading": "Why Choose Us",
+                          "text": "Carefully chosen furniture and designs that give your home a quiet elegance and a comfort you live with every day.",
+                          "image": "/xs/02/why-choose-us-img.jpg",
+                          "items": [
+                            {
+                              "icon": "truck",
+                              "title": "Fast & Free Shipping",
+                              "text": "Free delivery to your door, carefully wrapped and on time."
+                            },
+                            {
+                              "icon": "bag",
+                              "title": "Easy to Shop",
+                              "text": "Browse, choose and order in a few clicks, with clear prices."
+                            },
+                            {
+                              "icon": "support",
+                              "title": "24/7 Support",
+                              "text": "Our team helps you choose, before and after you buy."
+                            },
+                            {
+                              "icon": "return",
+                              "title": "Hassle Free Returns",
+                              "text": "Changed your mind? Returns are simple and free of fuss."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs02-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p1-s4-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "02",
+                          "heading": "We Help You Make Modern Interior Design",
+                          "text": "We design modern furniture that brings comfort and quality together, giving every corner of your home a warm touch that lasts for years.",
+                          "images": [
+                            "/xs/02/img-grid-1.jpg",
+                            "/xs/02/img-grid-2.jpg",
+                            "/xs/02/img-grid-3.jpg"
+                          ],
+                          "points": [
+                            "Modern designs thought out for every space",
+                            "Solid materials built to last for years",
+                            "Free design advice for your room",
+                            "Delivery and assembly at your home"
+                          ],
+                          "buttonLabel": "Explore",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs02-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p1-s5-e1",
+                        "type": "xs_minis",
+                        "props": {
+                          "look": "02",
+                          "collection": "",
+                          "limit": 3,
+                          "linkLabel": "Read More"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs02-p1-s6",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p1-s6-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p1-s6-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p1-s6-e1",
+                        "type": "xs_quotes",
+                        "props": {
+                          "look": "02",
+                          "heading": "Testimonials",
+                          "items": [
+                            {
+                              "quote": "We furnished our whole living room from them, and it turned out better than we imagined. The materials are excellent and the finish is precise; their design team helped us pick the right colours and sizes for our space, and delivery and assembly came exactly on time. We will be back for sure.",
+                              "name": "Maria Jones",
+                              "role": "CEO, Co-Founder, XYZ Inc.",
+                              "image": "/xs/02/person-1.png"
+                            },
+                            {
+                              "quote": "I was looking for a comfortable chair for my reading corner and found a design that is both cosy and modern. You can feel the quality at first touch, and customer service was helpful and quick to reply. I recommend them to anyone furnishing a home.",
+                              "name": "Maria Jones",
+                              "role": "CEO, Co-Founder, XYZ Inc.",
+                              "image": "/xs/02/person-1.png"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs02-p1-s7",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p1-s7-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p1-s7-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p1-s7-e1",
+                        "type": "xs_newsletter",
+                        "props": {
+                          "look": "02",
+                          "heading": "Subscribe to Newsletter",
+                          "text": "Be the first to see our new designs and offers.",
+                          "placeholder": "Enter your email",
+                          "buttonLabel": "Subscribe"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs02-p1-s8",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p1-s8-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p1-s8-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p1-s8-e1",
+                        "type": "xs_posts",
+                        "props": {
+                          "look": "02",
+                          "heading": "Recent Blog",
+                          "items": [
+                            {
+                              "image": "/xs/02/post-1.jpg",
+                              "meta": "by Kristin Watson on Dec 19, 2021",
+                              "title": "First Time Home Owner Ideas",
+                              "text": "",
+                              "linkLabel": "",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/02/post-2.jpg",
+                              "meta": "by Robert Fox on Dec 15, 2021",
+                              "title": "How To Keep Your Furniture Clean",
+                              "text": "",
+                              "linkLabel": "",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/02/post-3.jpg",
+                              "meta": "by Kristin Watson on Dec 12, 2021",
+                              "title": "Small Space Furniture Apartment Ideas",
+                              "text": "",
+                              "linkLabel": "",
+                              "href": ""
+                            }
+                          ],
+                          "linkLabel": "View All Posts",
+                          "linkHref": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/services",
+      "title": "Services",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs02-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "02",
+                          "heading": "Services",
+                          "image": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs02-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p2-s2-e1",
+                        "type": "xs_features",
+                        "props": {
+                          "look": "02",
+                          "heading": "Our Services",
+                          "text": "Carefully chosen furniture and designs that give your home a quiet elegance and a comfort you live with every day.",
+                          "image": "/xs/02/why-choose-us-img.jpg",
+                          "items": [
+                            {
+                              "icon": "truck",
+                              "title": "Fast & Free Shipping",
+                              "text": "Free delivery to your door, carefully wrapped and on time."
+                            },
+                            {
+                              "icon": "bag",
+                              "title": "Easy to Shop",
+                              "text": "Browse, choose and order in a few clicks, with clear prices."
+                            },
+                            {
+                              "icon": "support",
+                              "title": "24/7 Support",
+                              "text": "Our team helps you choose, before and after you buy."
+                            },
+                            {
+                              "icon": "return",
+                              "title": "Hassle Free Returns",
+                              "text": "Changed your mind? Returns are simple and free of fuss."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs02-p2-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p2-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p2-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p2-s3-e1",
+                        "type": "xs_showcase",
+                        "props": {
+                          "look": "02",
+                          "heading": "Crafted with excellent material.",
+                          "text": "Carefully chosen furniture and designs that give your home a quiet elegance and a comfort you live with every day.",
+                          "collection": "",
+                          "limit": 3,
+                          "buttonLabel": "Explore",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/about",
+      "title": "About us",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs02-p3-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p3-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p3-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p3-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "02",
+                          "heading": "About us",
+                          "image": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs02-p3-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p3-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p3-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p3-s2-e1",
+                        "type": "xs_team",
+                        "props": {
+                          "look": "02",
+                          "heading": "Our Team",
+                          "items": [
+                            {
+                              "image": "/xs/02/person_1.jpg",
+                              "name": "Lawson Arnold",
+                              "role": "CEO, Founder, Atty.",
+                              "text": "A passion for design and years of experience turning houses into comfortable homes that reflect the people who live in them."
+                            },
+                            {
+                              "image": "/xs/02/person_2.jpg",
+                              "name": "Jeremy Walker",
+                              "role": "CEO, Founder, Atty.",
+                              "text": "A passion for design and years of experience turning houses into comfortable homes that reflect the people who live in them."
+                            },
+                            {
+                              "image": "/xs/02/person_3.jpg",
+                              "name": "Patrik White",
+                              "role": "CEO, Founder, Atty.",
+                              "text": "A passion for design and years of experience turning houses into comfortable homes that reflect the people who live in them."
+                            },
+                            {
+                              "image": "/xs/02/person_4.jpg",
+                              "name": "Kathryn Ryan",
+                              "role": "CEO, Founder, Atty.",
+                              "text": "A passion for design and years of experience turning houses into comfortable homes that reflect the people who live in them."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "Contact us",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs02-p4-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p4-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p4-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p4-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "02",
+                          "heading": "Contact",
+                          "image": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs02-p4-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs02-p4-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs02-p4-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs02-p4-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "02",
+                          "heading": "Get In Touch",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "Address",
+                              "text": "Mohandessin, Giza"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "Email",
+                              "text": "Send us a message and we reply within a day"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "Phone",
+                              "text": "Call us any day from 10 am to 10 pm"
+                            }
+                          ],
+                          "contactPlaceholder": "Email address",
+                          "messagePlaceholder": "Message",
+                          "buttonLabel": "Send Message"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

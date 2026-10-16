@@ -1,0 +1,767 @@
+{
+  "globalStyles": {
+    "primaryColor": "#8C907E",
+    "themeSettings": {
+      "xsLook": "03",
+      "header": {
+        "menu": [
+          {
+            "label": "الرئيسية",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "المتجر",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "تواصل معنا",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "روابط سريعة",
+            "links": [
+              {
+                "label": "الرئيسية",
+                "href": "/",
+                "kind": "home"
+              },
+              {
+                "label": "المتجر",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "تواصل معنا",
+                "href": "/contact",
+                "kind": "page"
+              }
+            ]
+          },
+          {
+            "title": "المساعدة والمعلومات",
+            "links": [
+              {
+                "label": "تتبّع طلبك",
+                "href": "/track",
+                "kind": "track"
+              },
+              {
+                "label": "سلة التسوق",
+                "href": "/cart",
+                "kind": "cart"
+              }
+            ]
+          }
+        ],
+        "text": "أزياء عصرية بخامات مريحة وقصّات مدروسة، نختارها لك بعناية لتعبّر عن أسلوبك في كل يوم.",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "الرئيسية",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs03-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s1-e1",
+                        "type": "xs_banners",
+                        "props": {
+                          "look": "03",
+                          "items": [
+                            {
+                              "image": "/xs/03/banner-image-6.jpg",
+                              "title": "جواكت جلد ناعمة",
+                              "text": "جلد ناعم الملمس وقصّات عصرية تكمل إطلالتك في كل المواسم.",
+                              "linkLabel": "اكتشف الآن",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/03/banner-image-1.jpg",
+                              "title": "جواكت جلد ناعمة",
+                              "text": "جلد ناعم الملمس وقصّات عصرية تكمل إطلالتك في كل المواسم.",
+                              "linkLabel": "اكتشف الآن",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/03/banner-image-2.jpg",
+                              "title": "جواكت جلد ناعمة",
+                              "text": "جلد ناعم الملمس وقصّات عصرية تكمل إطلالتك في كل المواسم.",
+                              "linkLabel": "اكتشف الآن",
+                              "href": "/products"
+                            }
+                          ],
+                          "variant": "card",
+                          "heading": "تشكيلات جديدة",
+                          "text": "قطع جديدة تصلنا كل أسبوع، بخامات مختارة وتفاصيل مدروسة تمنحك إطلالة أنيقة دون مجهود. اكتشف التشكيلة واختر ما يشبهك."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s2-e1",
+                        "type": "xs_features",
+                        "props": {
+                          "look": "03",
+                          "heading": "",
+                          "text": "",
+                          "image": "",
+                          "items": [
+                            {
+                              "icon": "support",
+                              "image": "/xs/03/ico-1.svg",
+                              "title": "احجز موعدك",
+                              "text": "احجز موعدًا للتنسيق في الوقت الذي يناسبك."
+                            },
+                            {
+                              "icon": "bag",
+                              "image": "/xs/03/ico-2.svg",
+                              "title": "استلم من الفرع",
+                              "text": "اطلب أونلاين واستلم من فرعنا في اليوم نفسه."
+                            },
+                            {
+                              "icon": "truck",
+                              "image": "/xs/03/ico-3.svg",
+                              "title": "تغليف مميز",
+                              "text": "كل طلب يصلك في علبة أنيقة جاهزة للإهداء."
+                            },
+                            {
+                              "icon": "return",
+                              "image": "/xs/03/ico-4.svg",
+                              "title": "استرجاع مجاني",
+                              "text": "إرجاع سهل ومجاني خلال 14 يومًا."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s3-e1",
+                        "type": "xs_banners",
+                        "props": {
+                          "look": "03",
+                          "items": [
+                            {
+                              "image": "/xs/03/cat-item1.jpg",
+                              "title": "تسوّق للرجال",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/03/cat-item2.jpg",
+                              "title": "تسوّق للسيدات",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/03/cat-item3.jpg",
+                              "title": "تسوّق الإكسسوارات",
+                              "href": "/products"
+                            }
+                          ],
+                          "variant": "tile"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s4-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "03",
+                          "heading": "وصل حديثًا",
+                          "collection": "",
+                          "limit": 8,
+                          "showDiscount": true,
+                          "showTabs": false,
+                          "showSearch": false,
+                          "layout": "slider",
+                          "quickView": true,
+                          "allLabel": "كل المنتجات",
+                          "searchLabel": "بحث",
+                          "searchPlaceholder": "بحث",
+                          "loadMoreLabel": "عرض المزيد",
+                          "openLabel": "أضف للسلة",
+                          "viewLabel": "أضف للسلة",
+                          "linkLabel": "عرض كل المنتجات",
+                          "linkHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s5-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "03",
+                          "heading": "تشكيلة الشتاء الكلاسيكية",
+                          "text": "دفء بلا تنازل عن الأناقة: معاطف وكنزات وقطع أساسية بخامات فاخرة وألوان هادئة، صُممت لترافقك طوال الموسم وتتناغم مع كل إطلالة.",
+                          "images": [
+                            "/xs/03/single-image-2.jpg"
+                          ],
+                          "points": [],
+                          "buttonLabel": "تسوّق التشكيلة",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p1-s6",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s6-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s6-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s6-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "03",
+                          "heading": "الأكثر مبيعًا",
+                          "collection": "",
+                          "limit": 8,
+                          "showDiscount": true,
+                          "showTabs": false,
+                          "showSearch": false,
+                          "layout": "slider",
+                          "quickView": true,
+                          "allLabel": "كل المنتجات",
+                          "searchLabel": "بحث",
+                          "searchPlaceholder": "بحث",
+                          "loadMoreLabel": "عرض المزيد",
+                          "openLabel": "أضف للسلة",
+                          "viewLabel": "أضف للسلة",
+                          "linkLabel": "عرض كل المنتجات",
+                          "linkHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p1-s7",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s7-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s7-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s7-e1",
+                        "type": "xs_video",
+                        "props": {
+                          "look": "03",
+                          "heading": "",
+                          "url": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p1-s8",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s8-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s8-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s8-e1",
+                        "type": "xs_quotes",
+                        "props": {
+                          "look": "03",
+                          "heading": "كلماتكم تسعدنا",
+                          "items": [
+                            {
+                              "quote": "قميص دنيم أبيض بسيط فاق توقعاتي؛ ناعم جدًا ومريح ومقاسه مثالي.",
+                              "name": "سلمى عادل"
+                            },
+                            {
+                              "quote": "أفضل قميص دنيم أبيض جرّبته؛ ناعم ومرن وخامته أجمل من الصور.",
+                              "name": "يوسف طارق"
+                            },
+                            {
+                              "quote": "القصّة ممتازة والخامة ناعمة ومرنة، ووصلني الطلب أسرع مما توقعت. سأطلب مرة أخرى بالتأكيد.",
+                              "name": "هبة منصور"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p1-s9",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s9-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s9-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s9-e1",
+                        "type": "xs_gallery",
+                        "props": {
+                          "look": "03",
+                          "heading": "",
+                          "images": [
+                            "/xs/03/logo1.png",
+                            "/xs/03/logo2.png",
+                            "/xs/03/logo3.png",
+                            "/xs/03/logo4.png",
+                            "/xs/03/logo5.png"
+                          ],
+                          "variant": "logos"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p1-s10",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s10-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s10-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s10-e1",
+                        "type": "xs_newsletter",
+                        "props": {
+                          "look": "03",
+                          "heading": "اشترك في نشرتنا البريدية",
+                          "text": "سجّل الآن ليصلك جديدنا وأقوى العروض أولًا.",
+                          "placeholder": "بريدك الإلكتروني",
+                          "buttonLabel": "اشترك"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p1-s11",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s11-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s11-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s11-e1",
+                        "type": "xs_gallery",
+                        "props": {
+                          "look": "03",
+                          "heading": "",
+                          "images": [
+                            "/xs/03/insta-item1.jpg",
+                            "/xs/03/insta-item2.jpg",
+                            "/xs/03/insta-item3.jpg",
+                            "/xs/03/insta-item4.jpg",
+                            "/xs/03/insta-item5.jpg",
+                            "/xs/03/insta-item6.jpg"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p1-s12",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p1-s12-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p1-s12-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p1-s12-e1",
+                        "type": "xs_posts",
+                        "props": {
+                          "look": "03",
+                          "heading": "من مدونتنا",
+                          "items": [
+                            {
+                              "image": "/xs/03/post-1.jpg",
+                              "meta": "موضة / 11 يوليو 2022",
+                              "title": "كيف تتألقين بألوان الباستيل",
+                              "text": "دليل بسيط لتنسيق درجات الباستيل الهادئة في إطلالاتك اليومية بلمسة لافتة...",
+                              "linkLabel": "",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/03/post-2.jpg",
+                              "meta": "موضة / 11 يوليو 2022",
+                              "title": "أهم 10 صيحات موضة لهذا الصيف",
+                              "text": "من القصّات الواسعة إلى الألوان المشرقة، تعرّفي على أبرز ما يميز موضة الصيف...",
+                              "linkLabel": "",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/03/post-3.jpg",
+                              "meta": "موضة / 11 يوليو 2022",
+                              "title": "إطلالات جريئة للحظات لا تُنسى",
+                              "text": "من القصّات الواسعة إلى الألوان المشرقة، تعرّفي على أبرز ما يميز موضة الصيف...",
+                              "linkLabel": "",
+                              "href": ""
+                            }
+                          ],
+                          "linkLabel": "عرض الكل",
+                          "linkHref": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "تواصل معنا",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs03-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "03",
+                          "heading": "تواصل معنا",
+                          "image": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs03-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs03-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs03-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs03-p2-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "03",
+                          "heading": "تواصل معنا",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "المكتب",
+                              "text": "مصر الجديدة، القاهرة"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "الهاتف",
+                              "text": "اتصل بنا يوميًا من 10 صباحًا حتى 10 مساءً"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "البريد الإلكتروني",
+                              "text": "أرسل لنا رسالة وسنرد عليك خلال يوم"
+                            }
+                          ],
+                          "contactPlaceholder": "بريدك الإلكتروني",
+                          "messagePlaceholder": "اكتب رسالتك هنا",
+                          "buttonLabel": "إرسال"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

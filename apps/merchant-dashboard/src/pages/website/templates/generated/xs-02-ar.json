@@ -1,0 +1,826 @@
+{
+  "key": "xs-02-ar",
+  "name": "XS 02 عربي",
+  "category": "home_living",
+  "kind": "store",
+  "tags": [
+    "xs",
+    "ar"
+  ],
+  "rtl": true,
+  "primaryColor": "#3B5D50",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#3B5D50",
+      "themeSettings": {
+        "xsLook": "02",
+        "header": {
+          "menu": [
+            {
+              "label": "الرئيسية",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "المتجر",
+              "href": "/products",
+              "kind": "url"
+            },
+            {
+              "label": "من نحن",
+              "href": "/about",
+              "kind": "page"
+            },
+            {
+              "label": "خدماتنا",
+              "href": "/services",
+              "kind": "page"
+            },
+            {
+              "label": "تواصل معنا",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "التسوق",
+              "links": [
+                {
+                  "label": "المتجر",
+                  "href": "/products",
+                  "kind": "url"
+                },
+                {
+                  "label": "سلة التسوق",
+                  "href": "/cart",
+                  "kind": "cart"
+                },
+                {
+                  "label": "تتبّع طلبك",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            },
+            {
+              "title": "المساعدة",
+              "links": [
+                {
+                  "label": "من نحن",
+                  "href": "/about",
+                  "kind": "page"
+                },
+                {
+                  "label": "تواصل معنا",
+                  "href": "/contact",
+                  "kind": "page"
+                }
+              ]
+            }
+          ],
+          "text": "نصمم قطع أثاث عصرية تجمع بين الراحة والجودة، لتمنح كل ركن في بيتك لمسة دافئة تدوم لسنوات.",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "الرئيسية",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs02-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p1-s1-e1",
+                          "type": "xs_hero",
+                          "props": {
+                            "look": "02",
+                            "heading": "استوديو التصميم الداخلي العصري",
+                            "text": "قطع أثاث مختارة بعناية وتصميمات تمنح بيتك أناقة هادئة وراحة تعيشها كل يوم.",
+                            "image": "/xs/02/couch.png",
+                            "buttonLabel": "تسوّق الآن",
+                            "buttonHref": "/products",
+                            "button2Label": "اكتشف المزيد",
+                            "button2Href": "/about"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs02-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p1-s2-e1",
+                          "type": "xs_showcase",
+                          "props": {
+                            "look": "02",
+                            "heading": "مصنوعة من أجود الخامات.",
+                            "text": "قطع أثاث مختارة بعناية وتصميمات تمنح بيتك أناقة هادئة وراحة تعيشها كل يوم.",
+                            "collection": "",
+                            "limit": 3,
+                            "buttonLabel": "اكتشف المزيد",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs02-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p1-s3-e1",
+                          "type": "xs_features",
+                          "props": {
+                            "look": "02",
+                            "heading": "لماذا تختارنا؟",
+                            "text": "قطع أثاث مختارة بعناية وتصميمات تمنح بيتك أناقة هادئة وراحة تعيشها كل يوم.",
+                            "image": "/xs/02/why-choose-us-img.jpg",
+                            "items": [
+                              {
+                                "icon": "truck",
+                                "title": "شحن سريع ومجاني",
+                                "text": "توصيل مجاني حتى باب بيتك، بتغليف محكم وفي الموعد."
+                              },
+                              {
+                                "icon": "bag",
+                                "title": "تسوّق بسهولة",
+                                "text": "تصفّح واختر واطلب بخطوات قليلة وأسعار واضحة."
+                              },
+                              {
+                                "icon": "support",
+                                "title": "دعم على مدار الساعة",
+                                "text": "فريقنا يساعدك في الاختيار قبل الشراء وبعده."
+                              },
+                              {
+                                "icon": "return",
+                                "title": "استرجاع بلا تعقيد",
+                                "text": "غيّرت رأيك؟ الإرجاع سهل وبلا تعقيد."
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs02-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p1-s4-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "02",
+                            "heading": "نساعدك على تصميم بيت عصري يشبهك",
+                            "text": "نصمم قطع أثاث عصرية تجمع بين الراحة والجودة، لتمنح كل ركن في بيتك لمسة دافئة تدوم لسنوات.",
+                            "images": [
+                              "/xs/02/img-grid-1.jpg",
+                              "/xs/02/img-grid-2.jpg",
+                              "/xs/02/img-grid-3.jpg"
+                            ],
+                            "points": [
+                              "تصميمات عصرية مدروسة لكل مساحة",
+                              "خامات متينة تدوم لسنوات",
+                              "استشارة تصميم مجانية لمساحتك",
+                              "توصيل وتركيب في بيتك"
+                            ],
+                            "buttonLabel": "اكتشف المزيد",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs02-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p1-s5-e1",
+                          "type": "xs_minis",
+                          "props": {
+                            "look": "02",
+                            "collection": "",
+                            "limit": 3,
+                            "linkLabel": "اقرأ المزيد"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs02-p1-s6",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p1-s6-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p1-s6-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p1-s6-e1",
+                          "type": "xs_quotes",
+                          "props": {
+                            "look": "02",
+                            "heading": "آراء عملائنا",
+                            "items": [
+                              {
+                                "quote": "اخترنا أثاث الصالة بالكامل من عندهم، وجاءت النتيجة أجمل مما تخيلنا. الخامات ممتازة والتشطيب دقيق، وساعدنا فريق التصميم في اختيار الألوان والمقاسات المناسبة لمساحتنا، وتم التوصيل والتركيب في الموعد تمامًا. تجربة سنكررها بكل ثقة.",
+                                "name": "مريم جمال",
+                                "role": "شريكة مؤسسة ومديرة تنفيذية",
+                                "image": "/xs/02/person-1.png"
+                              },
+                              {
+                                "quote": "كنت أبحث عن كرسي مريح لركن القراءة، فوجدت لديهم تصميمًا يجمع بين الراحة والشكل العصري. الجودة واضحة من أول لمسة، وخدمة العملاء متعاونة وسريعة الرد. أنصح بهم كل من يجهّز بيته.",
+                                "name": "مريم جمال",
+                                "role": "شريكة مؤسسة ومديرة تنفيذية",
+                                "image": "/xs/02/person-1.png"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs02-p1-s7",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p1-s7-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p1-s7-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p1-s7-e1",
+                          "type": "xs_newsletter",
+                          "props": {
+                            "look": "02",
+                            "heading": "اشترك في النشرة البريدية",
+                            "text": "احصل على أحدث التصميمات والعروض أولًا بأول.",
+                            "placeholder": "أدخل بريدك الإلكتروني",
+                            "buttonLabel": "اشترك"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs02-p1-s8",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p1-s8-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p1-s8-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p1-s8-e1",
+                          "type": "xs_posts",
+                          "props": {
+                            "look": "02",
+                            "heading": "أحدث المقالات",
+                            "items": [
+                              {
+                                "image": "/xs/02/post-1.jpg",
+                                "meta": "بقلم كريمة وليد · 19 ديسمبر 2021",
+                                "title": "أفكار لمن يجهّز بيته الأول",
+                                "text": "",
+                                "linkLabel": "",
+                                "href": ""
+                              },
+                              {
+                                "image": "/xs/02/post-2.jpg",
+                                "meta": "بقلم رامي فوزي · 15 ديسمبر 2021",
+                                "title": "كيف تحافظ على أثاثك نظيفًا كالجديد",
+                                "text": "",
+                                "linkLabel": "",
+                                "href": ""
+                              },
+                              {
+                                "image": "/xs/02/post-3.jpg",
+                                "meta": "بقلم كريمة وليد · 12 ديسمبر 2021",
+                                "title": "أفكار أثاث ذكية للمساحات الصغيرة",
+                                "text": "",
+                                "linkLabel": "",
+                                "href": ""
+                              }
+                            ],
+                            "linkLabel": "كل المقالات",
+                            "linkHref": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/services",
+        "title": "خدماتنا",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs02-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "02",
+                            "heading": "خدماتنا",
+                            "image": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs02-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p2-s2-e1",
+                          "type": "xs_features",
+                          "props": {
+                            "look": "02",
+                            "heading": "خدماتنا",
+                            "text": "قطع أثاث مختارة بعناية وتصميمات تمنح بيتك أناقة هادئة وراحة تعيشها كل يوم.",
+                            "image": "/xs/02/why-choose-us-img.jpg",
+                            "items": [
+                              {
+                                "icon": "truck",
+                                "title": "شحن سريع ومجاني",
+                                "text": "توصيل مجاني حتى باب بيتك، بتغليف محكم وفي الموعد."
+                              },
+                              {
+                                "icon": "bag",
+                                "title": "تسوّق بسهولة",
+                                "text": "تصفّح واختر واطلب بخطوات قليلة وأسعار واضحة."
+                              },
+                              {
+                                "icon": "support",
+                                "title": "دعم على مدار الساعة",
+                                "text": "فريقنا يساعدك في الاختيار قبل الشراء وبعده."
+                              },
+                              {
+                                "icon": "return",
+                                "title": "استرجاع بلا تعقيد",
+                                "text": "غيّرت رأيك؟ الإرجاع سهل وبلا تعقيد."
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs02-p2-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p2-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p2-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p2-s3-e1",
+                          "type": "xs_showcase",
+                          "props": {
+                            "look": "02",
+                            "heading": "مصنوعة من أجود الخامات.",
+                            "text": "قطع أثاث مختارة بعناية وتصميمات تمنح بيتك أناقة هادئة وراحة تعيشها كل يوم.",
+                            "collection": "",
+                            "limit": 3,
+                            "buttonLabel": "اكتشف المزيد",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/about",
+        "title": "من نحن",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs02-p3-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p3-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p3-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p3-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "02",
+                            "heading": "من نحن",
+                            "image": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs02-p3-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p3-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p3-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p3-s2-e1",
+                          "type": "xs_team",
+                          "props": {
+                            "look": "02",
+                            "heading": "فريقنا",
+                            "items": [
+                              {
+                                "image": "/xs/02/person_1.jpg",
+                                "name": "لؤي عادل",
+                                "role": "المؤسس والرئيس التنفيذي",
+                                "text": "شغف بالتصميم وخبرة طويلة في تحويل البيوت إلى مساحات مريحة تنبض بالحياة وتعبّر عن أصحابها."
+                              },
+                              {
+                                "image": "/xs/02/person_2.jpg",
+                                "name": "جمال وجدي",
+                                "role": "المؤسس والرئيس التنفيذي",
+                                "text": "شغف بالتصميم وخبرة طويلة في تحويل البيوت إلى مساحات مريحة تنبض بالحياة وتعبّر عن أصحابها."
+                              },
+                              {
+                                "image": "/xs/02/person_3.jpg",
+                                "name": "باسم وهبة",
+                                "role": "المؤسس والرئيس التنفيذي",
+                                "text": "شغف بالتصميم وخبرة طويلة في تحويل البيوت إلى مساحات مريحة تنبض بالحياة وتعبّر عن أصحابها."
+                              },
+                              {
+                                "image": "/xs/02/person_4.jpg",
+                                "name": "كاميليا رمزي",
+                                "role": "المؤسس والرئيس التنفيذي",
+                                "text": "شغف بالتصميم وخبرة طويلة في تحويل البيوت إلى مساحات مريحة تنبض بالحياة وتعبّر عن أصحابها."
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "تواصل معنا",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs02-p4-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p4-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p4-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p4-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "02",
+                            "heading": "تواصل معنا",
+                            "image": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs02-p4-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs02-p4-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs02-p4-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs02-p4-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "02",
+                            "heading": "يسعدنا تواصلك",
+                            "info": [
+                              {
+                                "icon": "address",
+                                "title": "العنوان",
+                                "text": "المهندسين، الجيزة"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "البريد الإلكتروني",
+                                "text": "أرسل لنا رسالة وسنرد عليك خلال يوم"
+                              },
+                              {
+                                "icon": "phone",
+                                "title": "الهاتف",
+                                "text": "اتصل بنا يوميًا من 10 صباحًا حتى 10 مساءً"
+                              }
+                            ],
+                            "contactPlaceholder": "بريدك الإلكتروني",
+                            "messagePlaceholder": "رسالتك",
+                            "buttonLabel": "أرسل الرسالة"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

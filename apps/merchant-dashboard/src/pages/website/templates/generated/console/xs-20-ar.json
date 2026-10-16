@@ -1,0 +1,836 @@
+{
+  "globalStyles": {
+    "primaryColor": "#FEA116",
+    "themeSettings": {
+      "xsLook": "20",
+      "header": {
+        "menu": [
+          {
+            "label": "الرئيسية",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "من نحن",
+            "href": "/about",
+            "kind": "page"
+          },
+          {
+            "label": "المنيو",
+            "href": "/menu",
+            "kind": "page"
+          },
+          {
+            "label": "تواصل معنا",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "عن المطعم",
+            "links": [
+              {
+                "label": "من نحن",
+                "href": "/about",
+                "kind": "page"
+              },
+              {
+                "label": "اتصل بنا",
+                "href": "/contact",
+                "kind": "page"
+              },
+              {
+                "label": "حجز طاولة",
+                "href": "/contact",
+                "kind": "page"
+              }
+            ]
+          },
+          {
+            "title": "قائمة الطعام",
+            "links": [
+              {
+                "label": "المنيو",
+                "href": "/menu",
+                "kind": "page"
+              },
+              {
+                "label": "السلة",
+                "href": "/cart",
+                "kind": "cart"
+              },
+              {
+                "label": "تتبّع طلبك",
+                "href": "/track",
+                "kind": "track"
+              }
+            ]
+          }
+        ],
+        "text": "المهندسين، الجيزة\nاتصل بنا يوميًا لحجز طاولتك\nراسلنا من صفحة التواصل\nالاثنين - السبت: 9 صباحًا - 9 مساءً\nالأحد: 10 صباحًا - 8 مساءً",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "الرئيسية",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs20-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p1-s1-e1",
+                        "type": "xs_hero",
+                        "props": {
+                          "look": "20",
+                          "heading": "استمتع بأشهى الأطباق",
+                          "text": "أطباق طازجة يحضّرها أمهر الطهاة بمكوّنات مختارة بعناية، في أجواء دافئة تليق بلمّة العائلة والأصدقاء.",
+                          "image": "/xs/20/hero.png",
+                          "buttonLabel": "احجز طاولتك",
+                          "buttonHref": "/contact"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs20-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p1-s2-e1",
+                        "type": "xs_features",
+                        "props": {
+                          "look": "20",
+                          "heading": "",
+                          "text": "",
+                          "image": "",
+                          "items": [
+                            {
+                              "icon": "support",
+                              "title": "طهاة محترفون",
+                              "text": "طهاة محترفون يضعون شغفهم في كل طبق."
+                            },
+                            {
+                              "icon": "bag",
+                              "title": "جودة بلا تنازل",
+                              "text": "مكوّنات طازجة نختارها كل صباح لمذاق حقيقي."
+                            },
+                            {
+                              "icon": "truck",
+                              "title": "اطلب أونلاين",
+                              "text": "اطلب أونلاين واستمتع بوجبتك ساخنة في بيتك."
+                            },
+                            {
+                              "icon": "return",
+                              "title": "خدمة على مدار الساعة",
+                              "text": "نهتم بكل تفصيلة لنقدّم لك تجربة طعام تستحق أن تتكرر."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs20-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p1-s3-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "20",
+                          "heading": "مرحبًا بك في Restoran",
+                          "text": "منذ أكثر من خمسة عشر عامًا ونحن نقدّم لضيوفنا طعامًا يجمع بين أصالة المذاق ولمسة المطبخ العصري، بمكوّنات طازجة نختارها كل صباح.\n\nفريقنا من الطهاة المحترفين يضع شغفه في كل طبق، لتستمتع بوجبة متقنة وخدمة ودودة سواء جئت إلينا أو طلبت أونلاين.",
+                          "images": [
+                            "/xs/20/about-1.jpg",
+                            "/xs/20/about-2.jpg",
+                            "/xs/20/about-3.jpg"
+                          ],
+                          "points": [
+                            "15 عامًا من الخبرة",
+                            "50 طاهيًا محترفًا"
+                          ],
+                          "buttonLabel": "اقرأ المزيد",
+                          "buttonHref": "/about"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs20-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p1-s4-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "20",
+                          "heading": "الأكثر طلبًا",
+                          "collection": "",
+                          "limit": 8,
+                          "showDiscount": true,
+                          "showTabs": true,
+                          "showSearch": false,
+                          "layout": "grid",
+                          "quickView": true,
+                          "allLabel": "كل الأصناف",
+                          "searchLabel": "بحث",
+                          "searchPlaceholder": "بحث",
+                          "loadMoreLabel": "عرض المزيد",
+                          "viewLabel": "نظرة سريعة",
+                          "openLabel": "أضف للسلة",
+                          "linkLabel": "قائمة الطعام",
+                          "linkHref": "/menu"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs20-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p1-s5-e1",
+                        "type": "xs_video",
+                        "props": {
+                          "look": "20",
+                          "heading": "",
+                          "url": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs20-p1-s6",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p1-s6-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p1-s6-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p1-s6-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "20",
+                          "heading": "احجز طاولتك أونلاين",
+                          "info": [
+                            {
+                              "icon": "phone",
+                              "title": "حجز طاولة",
+                              "text": "اتصل بنا يوميًا لحجز طاولتك"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "الحجوزات",
+                              "text": "املأ النموذج وسنؤكد حجز طاولتك"
+                            },
+                            {
+                              "icon": "address",
+                              "title": "تواصل معنا",
+                              "text": "المهندسين، الجيزة"
+                            }
+                          ],
+                          "contactPlaceholder": "بريدك الإلكتروني",
+                          "messagePlaceholder": "طلبات خاصة",
+                          "buttonLabel": "احجز الآن"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs20-p1-s7",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p1-s7-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p1-s7-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p1-s7-e1",
+                        "type": "xs_team",
+                        "props": {
+                          "look": "20",
+                          "heading": "طهاتنا المحترفون",
+                          "items": [
+                            {
+                              "image": "/xs/20/team-1.jpg",
+                              "name": "يوسف عادل",
+                              "role": "مساعد الشيف"
+                            },
+                            {
+                              "image": "/xs/20/team-2.jpg",
+                              "name": "كريم منصور",
+                              "role": "شيف تنفيذي"
+                            },
+                            {
+                              "image": "/xs/20/team-3.jpg",
+                              "name": "عمر فتحي",
+                              "role": "رئيس الطهاة"
+                            },
+                            {
+                              "image": "/xs/20/team-4.jpg",
+                              "name": "طارق نبيل",
+                              "role": "شيف المشويات"
+                            }
+                          ],
+                          "text": "فريق العمل"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs20-p1-s8",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p1-s8-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p1-s8-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p1-s8-e1",
+                        "type": "xs_quotes",
+                        "props": {
+                          "look": "20",
+                          "heading": "ماذا يقول ضيوفنا؟",
+                          "items": [
+                            {
+                              "quote": "طعام طازج بمذاق يذكّرك بأكل البيت، وخدمة سريعة وراقية. أصبح مكاننا المفضل كل أسبوع.",
+                              "name": "سارة محمود",
+                              "role": "مهندسة معمارية",
+                              "image": "/xs/20/testimonial-1.jpg"
+                            },
+                            {
+                              "quote": "طعام طازج بمذاق يذكّرك بأكل البيت، وخدمة سريعة وراقية. أصبح مكاننا المفضل كل أسبوع.",
+                              "name": "أحمد سمير",
+                              "role": "مهندس",
+                              "image": "/xs/20/testimonial-2.jpg"
+                            },
+                            {
+                              "quote": "طعام طازج بمذاق يذكّرك بأكل البيت، وخدمة سريعة وراقية. أصبح مكاننا المفضل كل أسبوع.",
+                              "name": "مصطفى كمال",
+                              "role": "مصوّر",
+                              "image": "/xs/20/testimonial-3.jpg"
+                            },
+                            {
+                              "quote": "طعام طازج بمذاق يذكّرك بأكل البيت، وخدمة سريعة وراقية. أصبح مكاننا المفضل كل أسبوع.",
+                              "name": "نور هاني",
+                              "role": "معلّمة",
+                              "image": "/xs/20/testimonial-4.jpg"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/about",
+      "title": "من نحن",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs20-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "20",
+                          "heading": "من نحن",
+                          "image": "/xs/20/bg-hero.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs20-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p2-s2-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "20",
+                          "heading": "مرحبًا بك في Restoran",
+                          "text": "منذ أكثر من خمسة عشر عامًا ونحن نقدّم لضيوفنا طعامًا يجمع بين أصالة المذاق ولمسة المطبخ العصري، بمكوّنات طازجة نختارها كل صباح.\n\nفريقنا من الطهاة المحترفين يضع شغفه في كل طبق، لتستمتع بوجبة متقنة وخدمة ودودة سواء جئت إلينا أو طلبت أونلاين.",
+                          "images": [
+                            "/xs/20/about-1.jpg",
+                            "/xs/20/about-2.jpg",
+                            "/xs/20/about-3.jpg"
+                          ],
+                          "points": [
+                            "15 عامًا من الخبرة",
+                            "50 طاهيًا محترفًا"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs20-p2-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p2-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p2-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p2-s3-e1",
+                        "type": "xs_team",
+                        "props": {
+                          "look": "20",
+                          "heading": "طهاتنا المحترفون",
+                          "items": [
+                            {
+                              "image": "/xs/20/team-1.jpg",
+                              "name": "يوسف عادل",
+                              "role": "مساعد الشيف"
+                            },
+                            {
+                              "image": "/xs/20/team-2.jpg",
+                              "name": "كريم منصور",
+                              "role": "شيف تنفيذي"
+                            },
+                            {
+                              "image": "/xs/20/team-3.jpg",
+                              "name": "عمر فتحي",
+                              "role": "رئيس الطهاة"
+                            },
+                            {
+                              "image": "/xs/20/team-4.jpg",
+                              "name": "طارق نبيل",
+                              "role": "شيف المشويات"
+                            }
+                          ],
+                          "text": "فريق العمل"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/menu",
+      "title": "المنيو",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs20-p3-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p3-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p3-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p3-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "20",
+                          "heading": "قائمة الطعام",
+                          "image": "/xs/20/bg-hero.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs20-p3-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p3-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p3-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p3-s2-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "20",
+                          "heading": "الأكثر طلبًا",
+                          "collection": "",
+                          "limit": 16,
+                          "showDiscount": true,
+                          "showTabs": true,
+                          "showSearch": false,
+                          "layout": "grid",
+                          "quickView": true,
+                          "allLabel": "كل الأصناف",
+                          "searchLabel": "بحث",
+                          "searchPlaceholder": "بحث",
+                          "loadMoreLabel": "عرض المزيد",
+                          "viewLabel": "نظرة سريعة",
+                          "openLabel": "أضف للسلة",
+                          "linkLabel": "قائمة الطعام",
+                          "linkHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "تواصل معنا",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs20-p4-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p4-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p4-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p4-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "20",
+                          "heading": "اتصل بنا",
+                          "image": "/xs/20/bg-hero.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs20-p4-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs20-p4-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs20-p4-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs20-p4-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "20",
+                          "heading": "تواصل معنا لأي استفسار",
+                          "info": [
+                            {
+                              "icon": "email",
+                              "title": "الحجوزات",
+                              "text": "املأ النموذج وسنؤكد حجز طاولتك"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "استفسارات عامة",
+                              "text": "للاستفسارات والملاحظات عبر النموذج"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "الدعم الفني",
+                              "text": "للمساعدة في الطلبات الأونلاين عبر النموذج"
+                            }
+                          ],
+                          "contactPlaceholder": "بريدك الإلكتروني",
+                          "messagePlaceholder": "اكتب رسالتك هنا",
+                          "buttonLabel": "أرسل الرسالة"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

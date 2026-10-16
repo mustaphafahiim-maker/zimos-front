@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Writable } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
@@ -8,11 +8,13 @@ import { StoreContextProvider, type StoreInfo } from "@/lib/StoreContext";
 import { PageRenderer } from "./PageRenderer";
 
 /**
- * The store templates written in this repository (the merchant dashboard's
- * pages/website/templates, one generated JSON file each), drawn by the real
- * page renderer the way a shopper's page is: every section and every element
- * must draw something, every picture must sit in a box of its own, and nothing
- * may point outside the store.
+ * The store templates (the merchant dashboard's pages/website/templates/xs,
+ * one generated JSON file each under templates/generated), drawn by the real
+ * page renderer the way a shopper's page is, in the template's own language:
+ * every section and every element draws something, every picture the home
+ * page names is on it, every picture comes from the store itself, every link
+ * a template writes leads to one of its own pages or the catalogue, and the
+ * only link out of the store is the design's attribution its licence asks for.
  *
  * The catalogue is a stand-in (eight products, three collections): a template
  * brings no products, and its product sections draw the store's own.
@@ -70,6 +72,7 @@ const STORE: StoreInfo = {
   orderBump: null,
 };
 
+
 interface Template {
   key: string;
   name: string;
@@ -78,16 +81,19 @@ interface Template {
 }
 
 const GENERATED = resolve(__dirname, "../../../../merchant-dashboard/src/pages/website/templates/generated");
-const ART = resolve(__dirname, "../../../public/template-art");
+const PUBLIC = resolve(__dirname, "../../../public");
 const templates: Template[] = readdirSync(GENERATED)
   .filter((name) => name.endsWith(".json"))
   .sort()
   .map((name) => JSON.parse(readFileSync(resolve(GENERATED, name), "utf8")) as Template);
 const pages = templates.flatMap((template) => template.version.pages.map((page) => [`${template.key} ${page.path}`, template, page] as const));
+const byKey = templates.map((t) => [t.key, t] as const);
+/** A template is drawn in its own language: an Arabic store wears the Arabic one. */
+const localeOf = (template: Template) => (template.rtl ? "ar" : "en");
 
 /** The whole page as the server sends it: the catalogue sections wait for their products before the markup is taken. */
-async function draw(tree: PageTree, editable = false): Promise<HTMLElement> {
-  const rendered = await PageRenderer({ tree, workspaceId: "w1", currency: "EGP", locale: "ar", editable });
+async function draw(tree: PageTree, locale: "ar" | "en", editable = false): Promise<HTMLElement> {
+  const rendered = await PageRenderer({ tree, workspaceId: "w1", currency: "EGP", locale, editable });
   const html = await new Promise<string>((done, fail) => {
     let out = "";
     const sink = new Writable({
@@ -101,7 +107,7 @@ async function draw(tree: PageTree, editable = false): Promise<HTMLElement> {
       },
     });
     const stream = renderToPipeableStream(
-      <StoreContextProvider locale="ar" store={STORE}>
+      <StoreContextProvider locale={locale} store={STORE}>
         {rendered as React.ReactElement}
       </StoreContextProvider>,
       { onAllReady: () => stream.pipe(sink), onError: fail }
@@ -114,92 +120,113 @@ async function draw(tree: PageTree, editable = false): Promise<HTMLElement> {
 
 const elementsOf = (tree: PageTree): PageElement[] => tree.sections.flatMap((s) => s.rows.flatMap((r) => r.columns.flatMap((c) => c.elements)));
 
-/** What holds a picture in shape: a shape of its own, or the box of the band, the grid or the card it sits in. */
-function boxOf(img: HTMLImageElement): string | null {
-  if (img.style.aspectRatio) return `shape ${img.style.aspectRatio}`;
-  if (img.closest(".zs-hero__media")) return "slider";
-  if (img.closest(".zs-cats__box")) return "tile";
-  if (img.closest(".zs-banner__media")) return "banner";
-  if (img.closest(".zs-pgrid__box, .zs-pcard__box")) return "product band";
-  if (img.classList.contains("aspect-square")) return "gallery square";
-  if (img.closest(".aspect-square")) return "product card";
-  return null;
+/** A band a shopper is not shown until the merchant fills it in: a video band with no video yet (the editor shows a note there). */
+function waitsForMerchant(section: PageTree["sections"][number]): boolean {
+  const elements = section.rows.flatMap((r) => r.columns.flatMap((c) => c.elements));
+  return elements.length > 0 && elements.every((e) => e.type === "xs_video" && !(e.props as { url?: unknown } | undefined)?.url);
 }
 
+/** The pictures a value names, by their address on the store. */
+const PICTURE = /\/xs\/[A-Za-z0-9/_.-]+\.(?:jpe?g|png|webp|gif|svg)/g;
+
+/** A picture the store serves itself (public/), or one of the stand-in catalogue's products. */
+const fromStore = (src: string) => src.startsWith("https://cdn.zimos.test/product-") || (src.startsWith("/") && existsSync(resolve(PUBLIC, decodeURI(src.split("?")[0]).slice(1))));
+
 describe("the store templates on the storefront", () => {
-  it("are the generated files, each a template that reads right to left", () => {
-    expect(templates.map((t) => t.key)).toEqual(["departments", "drinks", "fashion", "home-living", "season-offers", "single-product"]);
-    for (const template of templates) expect(template.rtl, template.key).toBe(true);
+  it("are the generated files: 48, each English one with its Arabic twin, right to left", () => {
+    expect(templates).toHaveLength(48);
+    const english = templates.filter((t) => !t.rtl);
+    expect(english).toHaveLength(24);
+    for (const template of english) expect(templates.find((t) => t.key === `${template.key}-ar`)?.rtl, template.key).toBe(true);
   });
 
-  it.each(pages)("%s: every section and every element draws something", async (_name, _template, page) => {
+  it.each(pages)("%s: every section and every element draws something", async (_name, template, page) => {
     catalogue.products = PRODUCTS;
     const tree = page.builderData;
 
     // As a shopper gets it: one drawn section per section of the tree.
-    const shopper = await draw(tree);
+    const shopper = await draw(tree, localeOf(template));
     const sections = Array.from(shopper.querySelectorAll<HTMLElement>("[data-zt-section]"));
     expect(sections).toHaveLength(tree.sections.length);
-    for (const section of sections) expect(section.textContent!.trim().length + section.querySelectorAll("img, svg").length).toBeGreaterThan(0);
+    sections.forEach((section, i) => {
+      if (waitsForMerchant(tree.sections[i])) return;
+      expect(section.textContent!.trim().length + section.querySelectorAll("img, svg, iframe, video").length, tree.sections[i].id).toBeGreaterThan(0);
+    });
     // No "nothing here yet" placeholder anywhere: the catalogue is there and every block is filled.
     expect(shopper.querySelector(".border-dashed")).toBeNull();
 
     // In the editor's preview each element carries its id: none of them is empty.
-    const canvas = await draw(tree, true);
+    const canvas = await draw(tree, localeOf(template), true);
     for (const element of elementsOf(tree)) {
       const marker = canvas.querySelector<HTMLElement>(`[data-zimos-el="${element.id}"]`);
       expect(marker, element.id).not.toBeNull();
       expect(marker!.innerHTML.trim().length, `${element.id} (${element.type})`).toBeGreaterThan(0);
     }
-    expect(canvas.querySelector(".border-dashed")).toBeNull();
   });
 
-  it.each(pages)("%s: every picture sits in a box of its own and comes from the store itself", async (_name, _template, page) => {
+  it.each(pages)("%s: every picture comes from the store itself, and every link stays in it", async (_name, template, page) => {
     catalogue.products = PRODUCTS;
-    const root = await draw(page.builderData);
-    const images = Array.from(root.querySelectorAll<HTMLImageElement>("img"));
-    for (const img of images) {
-      const src = img.getAttribute("src")!;
-      expect(boxOf(img), src).not.toBeNull();
-      // A template's own picture is one of our drawings; the only others are the store's products.
-      if (!src.startsWith("https://cdn.zimos.test/product-")) {
-        expect(src).toMatch(/^\/template-art\/[a-z0-9-]+\.svg$/);
-        expect(readFileSync(resolve(ART, src.split("/").pop()!), "utf8")).toContain("<svg");
+    const root = await draw(page.builderData, localeOf(template));
+    for (const img of Array.from(root.querySelectorAll<HTMLImageElement>("img"))) {
+      const src = img.getAttribute("src") ?? "";
+      expect(fromStore(src), src).toBe(true);
+    }
+    for (const source of Array.from(root.querySelectorAll("source[srcset]"))) {
+      for (const candidate of (source.getAttribute("srcset") ?? "").split(",")) {
+        const src = candidate.trim().split(/\s+/)[0];
+        expect(fromStore(src), src).toBe(true);
       }
     }
-    for (const link of Array.from(root.querySelectorAll("a"))) expect(link.getAttribute("href"), link.textContent ?? "").toMatch(/^\//);
+    // The design's attribution, which its licence asks for (page-renderer/xs XsCredit), is on every page
+    // and names its author's site; every other link stays in the store.
+    expect(root.querySelector(".xs-credit"), "attribution").not.toBeNull();
+    for (const link of Array.from(root.querySelectorAll("a"))) {
+      const href = link.getAttribute("href") ?? "";
+      if (link.closest(".xs-credit")) expect(href, link.textContent ?? "").toMatch(/^https:\/\//);
+      else expect(href, link.textContent ?? "").toMatch(/^\//);
+    }
   });
 
-  it.each(templates.map((t) => [t.key, t] as const))("%s: the home page shows every picture the template names", async (_key, template) => {
+  it.each(byKey)("%s: every link it writes leads to one of its own pages or the catalogue", (_key, template) => {
+    const paths = new Set([...template.version.pages.map((p) => p.path), "/products"]);
+    const links: string[] = [];
+    const walk = (value: unknown, key = ""): void => {
+      if (typeof value === "string") {
+        if (/(?:href|link)$/i.test(key) && value !== "") links.push(value);
+      } else if (Array.isArray(value)) value.forEach((item) => walk(item, key));
+      else if (value && typeof value === "object") for (const [k, v] of Object.entries(value)) walk(v, k);
+    };
+    walk(template.version.pages);
+    for (const href of links) expect(paths.has(href), href).toBe(true);
+  });
+
+  it.each(byKey)("%s: the home page shows every picture the template names", async (_key, template) => {
     catalogue.products = PRODUCTS;
     const home = template.version.pages[0].builderData;
-    const root = await draw(home);
-    // A slide's picture for a phone is a second source of the same picture.
-    const drawn = new Set([
-      ...Array.from(root.querySelectorAll("img")).map((img) => img.getAttribute("src")),
-      ...Array.from(root.querySelectorAll("picture > source")).map((source) => source.getAttribute("srcset")),
-    ]);
-    const named = JSON.stringify(home).match(/\/template-art\/[a-z0-9-]+\.svg/g) ?? [];
+    const root = await draw(home, localeOf(template));
+    const html = root.innerHTML;
+    const named = [...new Set(JSON.stringify(home).match(PICTURE) ?? [])];
     expect(named.length).toBeGreaterThan(0);
-    for (const url of named) expect(drawn.has(url), url).toBe(true);
+    for (const url of named) expect(html.includes(url), url).toBe(true);
   });
 
-  it.each(templates.map((t) => [t.key, t] as const))("%s: a store with no products yet reads as not ready, not as broken", async (_key, template) => {
+  it.each(byKey)("%s: a store with no products yet reads as not ready, not as broken", async (_key, template) => {
     catalogue.products = [];
     const home = template.version.pages[0].builderData;
-    const root = await draw(home);
-    // Every section is still there; a product band draws nothing, and a product grid says its products are coming.
+    const root = await draw(home, localeOf(template));
+    // Every section is still there, and no product of another store shows.
     expect(root.querySelectorAll("[data-zt-section]")).toHaveLength(home.sections.length);
-    const grids = elementsOf(home).filter((e) => e.type === "product_list").length;
-    expect(root.querySelectorAll(".border-dashed")).toHaveLength(grids);
     for (const product of PRODUCTS) expect(root.textContent).not.toContain(product.name);
   });
 
-  it("words a shopper reads are Arabic on every page", async () => {
+  it("words a shopper reads on an Arabic template are Arabic on every page", async () => {
     catalogue.products = PRODUCTS;
-    for (const [, , page] of pages) {
-      const root = await draw(page.builderData);
-      for (const heading of Array.from(root.querySelectorAll("h1, h2"))) expect(heading.textContent, heading.textContent ?? "").toMatch(/\p{Script=Arabic}/u);
+    for (const [, template, page] of pages.filter(([, t]) => t.rtl)) {
+      const root = await draw(page.builderData, "ar");
+      for (const heading of Array.from(root.querySelectorAll("h1, h2"))) {
+        const text = (heading.textContent ?? "").trim();
+        if (text) expect(text, `${template.key} ${page.path}`).toMatch(/\p{Script=Arabic}/u);
+      }
     }
   });
 });

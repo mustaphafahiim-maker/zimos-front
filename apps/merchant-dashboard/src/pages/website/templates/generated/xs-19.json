@@ -1,0 +1,803 @@
+{
+  "key": "xs-19",
+  "name": "XS 19",
+  "category": "food_beverage",
+  "kind": "store",
+  "tags": [
+    "xs"
+  ],
+  "rtl": false,
+  "primaryColor": "#EA272D",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#EA272D",
+      "themeSettings": {
+        "xsLook": "19",
+        "header": {
+          "menu": [
+            {
+              "label": "Home",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "Menu",
+              "href": "/menu",
+              "kind": "page"
+            },
+            {
+              "label": "About",
+              "href": "/about",
+              "kind": "page"
+            },
+            {
+              "label": "Contact",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "Links",
+              "links": [
+                {
+                  "label": "Home",
+                  "href": "/",
+                  "kind": "home"
+                },
+                {
+                  "label": "About",
+                  "href": "/about",
+                  "kind": "page"
+                },
+                {
+                  "label": "Menu",
+                  "href": "/menu",
+                  "kind": "page"
+                },
+                {
+                  "label": "Contact",
+                  "href": "/contact",
+                  "kind": "page"
+                }
+              ]
+            },
+            {
+              "title": "Orders",
+              "links": [
+                {
+                  "label": "Cart",
+                  "href": "/cart",
+                  "kind": "cart"
+                },
+                {
+                  "label": "Track Order",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            }
+          ],
+          "text": "Specialty coffee and fresh dishes made with love every day. We would love to welcome you at our table or deliver your order to your door.",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "Home",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs19-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p1-s1-e1",
+                          "type": "xs_hero",
+                          "props": {
+                            "look": "19",
+                            "heading": "The Best Coffee & Restaurant in the Heart of Cairo",
+                            "text": "An authentic taste that brings you together at one table",
+                            "image": "/xs/19/hero.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs19-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p1-s2-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "19",
+                            "heading": "The Restaurant",
+                            "text": "Our story began with a cup of coffee and a simple idea: a warm place where every guest enjoys fresh, well-made food. We choose our ingredients every day from the best suppliers and cook every dish as if we were serving our own family.\n\nWhether you come for a quiet breakfast or dinner with family and friends, you will find friendly service and an atmosphere that brings you back again and again.",
+                            "images": [
+                              "/xs/19/hero.jpg"
+                            ],
+                            "points": [],
+                            "buttonLabel": "Our History",
+                            "buttonHref": "/about"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs19-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p1-s3-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "19",
+                            "heading": "Today's Menu",
+                            "collection": "",
+                            "limit": 4,
+                            "showDiscount": true,
+                            "showTabs": false,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "allLabel": "All Products",
+                            "searchLabel": "Search",
+                            "searchPlaceholder": "Search",
+                            "loadMoreLabel": "Load More",
+                            "viewLabel": "Quick View",
+                            "openLabel": "Learn More",
+                            "linkLabel": "See Our Menu",
+                            "linkHref": "/menu"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs19-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p1-s4-e1",
+                          "type": "xs_quotes",
+                          "props": {
+                            "look": "19",
+                            "heading": "Testimony",
+                            "items": [
+                              {
+                                "quote": "From the first sip of coffee to the last bite, every detail here is made with care. Fresh dishes, quick service and a warm atmosphere made this our favourite spot every week.",
+                                "name": "Jane Smith",
+                                "image": "/xs/19/person.jpg"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs19-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p1-s5-e1",
+                          "type": "xs_showcase",
+                          "props": {
+                            "look": "19",
+                            "heading": "Our Best & Unique Menu",
+                            "text": "A selection of our tastiest dishes, made daily with fresh ingredients and an unforgettable chef's touch.",
+                            "collection": "",
+                            "limit": 3,
+                            "buttonLabel": "Learn More",
+                            "buttonHref": "/menu"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs19-p1-s6",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p1-s6-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p1-s6-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p1-s6-e1",
+                          "type": "xs_posts",
+                          "props": {
+                            "look": "19",
+                            "heading": "Events",
+                            "items": [
+                              {
+                                "image": "/xs/19/gallery-1.jpg",
+                                "meta": "Feb. 15th 2016",
+                                "title": "Photoshoot On The Street",
+                                "text": "A special moment in our food journey, shared with guests who became part of our story.",
+                                "linkLabel": "Read More",
+                                "href": ""
+                              },
+                              {
+                                "image": "/xs/19/gallery-2.jpg",
+                                "meta": "Feb. 15th 2016",
+                                "title": "Surfing at Philippines",
+                                "text": "A special moment in our food journey, shared with guests who became part of our story.",
+                                "linkLabel": "Read More",
+                                "href": ""
+                              },
+                              {
+                                "image": "/xs/19/gallery-3.jpg",
+                                "meta": "Feb. 15th 2016",
+                                "title": "Focus On Uderwater",
+                                "text": "A special moment in our food journey, shared with guests who became part of our story.",
+                                "linkLabel": "Read More",
+                                "href": ""
+                              }
+                            ],
+                            "text": "Special evenings, tasting nights and themed days where we celebrate good food and good company. Follow our upcoming events and book your place early."
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs19-p1-s7",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p1-s7-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p1-s7-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p1-s7-e1",
+                          "type": "xs_slider",
+                          "props": {
+                            "look": "19",
+                            "slides": [
+                              {
+                                "image": "/xs/19/hero.jpg",
+                                "heading": "Book a Table",
+                                "text": "A family gathering, a romantic dinner or a celebration with friends? Book your table now and leave the rest to us.",
+                                "buttonLabel": "Book Now",
+                                "buttonHref": "/contact"
+                              }
+                            ],
+                            "autoplay": false,
+                            "seconds": 6
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "Contact",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs19-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "19",
+                            "heading": "Get in Touch",
+                            "image": "/xs/19/hero.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs19-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p2-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "19",
+                            "heading": "Don't be shy, let's chat.",
+                            "info": [
+                              {
+                                "icon": "address",
+                                "title": "Address",
+                                "text": "Fifth Settlement, New Cairo"
+                              },
+                              {
+                                "icon": "phone",
+                                "title": "Phone",
+                                "text": "Call us any day to book your table"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "Email",
+                                "text": "Send us a message and we reply within a day"
+                              }
+                            ],
+                            "contactPlaceholder": "Your Email",
+                            "messagePlaceholder": "Your Message",
+                            "buttonLabel": "Submit Form"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/about",
+        "title": "About",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs19-p3-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p3-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p3-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p3-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "19",
+                            "heading": "About our Restaurant",
+                            "image": "/xs/19/hero.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs19-p3-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p3-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p3-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p3-s2-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "19",
+                            "heading": "The Restaurant",
+                            "text": "Our story began with a cup of coffee and a simple idea: a warm place where every guest enjoys fresh, well-made food. We choose our ingredients every day from the best suppliers and cook every dish as if we were serving our own family.\n\nWhether you come for a quiet breakfast or dinner with family and friends, you will find friendly service and an atmosphere that brings you back again and again.",
+                            "images": [
+                              "/xs/19/hero.jpg"
+                            ],
+                            "points": []
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs19-p3-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p3-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p3-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p3-s3-e1",
+                          "type": "xs_story",
+                          "props": {
+                            "look": "19",
+                            "items": [
+                              {
+                                "title": "The Founders Meet",
+                                "body": "A special moment in our food journey, shared with guests who became part of our story."
+                              },
+                              {
+                                "title": "Create A Restaurant",
+                                "body": "We started with a small kitchen and a big passion, and grew with your trust into a home for anyone looking for authentic flavour."
+                              },
+                              {
+                                "title": "Added 200+ Employees",
+                                "body": "A special moment in our food journey, shared with guests who became part of our story."
+                              },
+                              {
+                                "title": "Our First Branch Outside Egypt",
+                                "body": "We started with a small kitchen and a big passion, and grew with your trust into a home for anyone looking for authentic flavour."
+                              },
+                              {
+                                "title": "Franchise Restaurants Launched",
+                                "body": "A special moment in our food journey, shared with guests who became part of our story."
+                              },
+                              {
+                                "title": "Added 100K More Employees",
+                                "body": "We started with a small kitchen and a big passion, and grew with your trust into a home for anyone looking for authentic flavour."
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs19-p3-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p3-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p3-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p3-s4-e1",
+                          "type": "xs_gallery",
+                          "props": {
+                            "look": "19",
+                            "heading": "Our Gallery",
+                            "images": [
+                              "/xs/19/gallery-1.jpg",
+                              "/xs/19/gallery-2.jpg",
+                              "/xs/19/gallery-8.jpg",
+                              "/xs/19/gallery-4.jpg",
+                              "/xs/19/gallery-5.jpg",
+                              "/xs/19/gallery-5.jpg",
+                              "/xs/19/gallery-6.jpg",
+                              "/xs/19/gallery-7.jpg",
+                              "/xs/19/gallery-8.jpg",
+                              "/xs/19/gallery-9.jpg"
+                            ],
+                            "text": "Shots from our kitchen, our dining room and our favourite dishes, and sweet moments with our guests. Take a look, then come and live them yourself."
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/menu",
+        "title": "Menu",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs19-p4-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p4-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p4-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p4-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "19",
+                            "heading": "See Our Menu",
+                            "image": "/xs/19/hero.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs19-p4-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs19-p4-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs19-p4-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs19-p4-s2-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "19",
+                            "heading": "Our Delicous Menu",
+                            "collection": "",
+                            "limit": 8,
+                            "showDiscount": true,
+                            "showTabs": true,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "allLabel": "All Products",
+                            "searchLabel": "Search",
+                            "searchPlaceholder": "Search",
+                            "loadMoreLabel": "Load More",
+                            "viewLabel": "Quick View",
+                            "openLabel": "Learn More"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

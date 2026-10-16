@@ -1,5 +1,6 @@
 /**
- * The stand-in pictures the store templates ship with: flat drawings made
+ * The stand-in pictures Zimos's own pages ship with — today the one-product
+ * funnel page's (singleProduct.ts SINGLE_PRODUCT_ART): flat drawings made
  * here, of plain shapes, in the colours of the theme a template wears. They
  * are ours from the first line — nothing is traced, copied or downloaded — and
  * a merchant replaces each one with a photo of their own.
@@ -7,7 +8,7 @@
  * A drawing is an SVG file under the storefront's `public/template-art/`, so a
  * template names it by a path on the store's own host (`/template-art/…`),
  * which the page renderer and the server both accept as a picture's address.
- * The files are written by storeTemplates.test.ts (`npm run templates:build`)
+ * The files are written by singleProduct.test.ts (`npm run templates:build`)
  * and that test fails when one no longer matches what this file draws.
  *
  * Every drawing has a size of its own (so a browser lays it out like a photo)

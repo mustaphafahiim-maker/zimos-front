@@ -1,0 +1,575 @@
+{
+  "key": "xs-10",
+  "name": "XS 10",
+  "category": "fashion",
+  "kind": "store",
+  "tags": [
+    "xs"
+  ],
+  "rtl": false,
+  "primaryColor": "#FF003C",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#FF003C",
+      "themeSettings": {
+        "xsLook": "10",
+        "header": {
+          "announcement": {
+            "enabled": true,
+            "text": "The new winter collection is here"
+          },
+          "menu": [
+            {
+              "label": "Home",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "Latest",
+              "href": "/products",
+              "kind": "url"
+            },
+            {
+              "label": "About",
+              "href": "/about",
+              "kind": "page"
+            },
+            {
+              "label": "Contact",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [
+              {
+                "id": "strip-0",
+                "type": "link",
+                "label": "My Account",
+                "href": "/account"
+              },
+              {
+                "id": "strip-1",
+                "type": "link",
+                "label": "Wish List",
+                "href": "/account/wishlist"
+              },
+              {
+                "id": "strip-2",
+                "type": "link",
+                "label": "Shopping Cart",
+                "href": "/cart"
+              },
+              {
+                "id": "strip-3",
+                "type": "link",
+                "label": "Checkout",
+                "href": "/checkout"
+              }
+            ],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "Quick Links",
+              "links": [
+                {
+                  "label": "Latest",
+                  "href": "/products",
+                  "kind": "url"
+                },
+                {
+                  "label": "Shopping Cart",
+                  "href": "/cart",
+                  "kind": "cart"
+                }
+              ]
+            },
+            {
+              "title": "Support",
+              "links": [
+                {
+                  "label": "About",
+                  "href": "/about",
+                  "kind": "page"
+                },
+                {
+                  "label": "Contact",
+                  "href": "/contact",
+                  "kind": "page"
+                },
+                {
+                  "label": "Track Order",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            }
+          ],
+          "text": "Modern fashion in chosen fabrics at prices that suit you, with fast delivery across Egypt.",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "Home",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs10-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs10-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs10-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs10-p1-s1-e1",
+                          "type": "xs_hero",
+                          "props": {
+                            "look": "10",
+                            "heading": "Winter Collection",
+                            "text": "60% Discount",
+                            "image": "/xs/10/hero_man.png",
+                            "buttonLabel": "Shop Now",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs10-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs10-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs10-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs10-p1-s2-e1",
+                          "type": "xs_banners",
+                          "props": {
+                            "look": "10",
+                            "items": [
+                              {
+                                "image": "/xs/10/cat1.jpg",
+                                "title": "Owmen`s",
+                                "text": "Best New Deals",
+                                "linkLabel": "New Collection",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/xs/10/cat2.jpg",
+                                "title": "Winter Cloth",
+                                "text": "Discount!",
+                                "linkLabel": "New Collection",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/xs/10/cat3.jpg",
+                                "title": "Man`s Cloth",
+                                "text": "Best New Deals",
+                                "linkLabel": "New Collection",
+                                "href": "/products"
+                              }
+                            ],
+                            "heading": "Shop by Category"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs10-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs10-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs10-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs10-p1-s3-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "10",
+                            "heading": "Latest Products",
+                            "collection": "",
+                            "limit": 6,
+                            "showDiscount": true,
+                            "showTabs": true,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "searchLabel": "Search",
+                            "viewLabel": "Quick View",
+                            "openLabel": "Add to cart",
+                            "allLabel": "All",
+                            "searchPlaceholder": "Search keyword",
+                            "loadMoreLabel": "Load More"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs10-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs10-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs10-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs10-p1-s4-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "10",
+                            "heading": "Find The Best Product from Our Shop",
+                            "text": "Pieces made by designers who love the details, to suit your look every day.",
+                            "images": [
+                              "/xs/10/card-man.png"
+                            ],
+                            "points": [],
+                            "buttonLabel": "Shop Now",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs10-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs10-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs10-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs10-p1-s5-e1",
+                          "type": "xs_features",
+                          "props": {
+                            "look": "10",
+                            "heading": "",
+                            "text": "",
+                            "image": "",
+                            "items": [
+                              {
+                                "icon": "truck",
+                                "image": "/xs/10/ico-1.svg",
+                                "title": "Free Shipping Method",
+                                "text": "Free delivery on every order, straight to your door."
+                              },
+                              {
+                                "icon": "bag",
+                                "image": "/xs/10/ico-2.svg",
+                                "title": "Secure Payment System",
+                                "text": "Pay by card or cash on delivery, safely."
+                              },
+                              {
+                                "icon": "support",
+                                "image": "/xs/10/ico-3.svg",
+                                "title": "Secure Payment System",
+                                "text": "A service that keeps your shopping comfortable and safe from the first order."
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/about",
+        "title": "About",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs10-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs10-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs10-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs10-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "10",
+                            "heading": "About",
+                            "image": "/xs/10/category.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs10-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs10-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs10-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs10-p2-s2-e1",
+                          "type": "xs_story",
+                          "props": {
+                            "look": "10",
+                            "items": [
+                              {
+                                "title": "Our Mission",
+                                "body": "We believe style is for everyone, so we choose every piece with care to bring good fabric, modern design and a fair price together.\n\nFrom warm winter collections to everyday casual looks, we bring you the latest fashion with fast service and a shopping experience worthy of your trust.",
+                                "image": "/xs/10/about_us_video.png"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "Contact",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs10-p3-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs10-p3-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs10-p3-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs10-p3-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "10",
+                            "heading": "Contact us",
+                            "image": "/xs/10/contact_hero.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs10-p3-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs10-p3-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs10-p3-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs10-p3-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "10",
+                            "heading": "Get in Touch",
+                            "info": [
+                              {
+                                "icon": "address",
+                                "title": "Fifth Settlement, New Cairo.",
+                                "text": "Open daily from 10 am to 10 pm"
+                              },
+                              {
+                                "icon": "phone",
+                                "title": "Call Us",
+                                "text": "Mon to Fri 9am to 6pm"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "Email Us",
+                                "text": "Send us your query anytime!"
+                              }
+                            ],
+                            "contactPlaceholder": "Enter email address",
+                            "messagePlaceholder": "Enter Message",
+                            "buttonLabel": "Send Now"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

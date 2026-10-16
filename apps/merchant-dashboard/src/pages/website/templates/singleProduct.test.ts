@@ -1,14 +1,26 @@
+/// <reference types="node" />
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { PageElement, PageTree } from "@store-builder/api-client";
-import { singleProductSections, type SingleProductLang } from "./singleProduct";
-import { buildStoreTemplates } from "./storeTemplates";
+import { singleProductArt, singleProductSections, type SingleProductLang } from "./singleProduct";
+import { artUrl } from "./templateArt";
 import { buildPage } from "./templateTree";
 
 /**
  * The one-product page is written once: the store template's home page and
  * the funnel starter's sales page are the same sections, and differ only
- * where a store and a funnel differ.
+ * where a store and a funnel differ. Its stand-in pictures are the only
+ * drawings in the storefront's public/template-art/, checked in exactly as
+ * they are drawn (`npm run templates:build` writes them).
  */
+
+const ART = fileURLToPath(new URL("../../../../../storefront/public/template-art/", import.meta.url));
+/** `npm run templates:build` sets it: the drawings are written instead of compared. */
+const WRITE = process.env.UPDATE_STORE_TEMPLATES === "1";
+/** A checkout on Windows may hand the file back with CRLF line ends. */
+const read = (path: string) => readFileSync(path, "utf8").replace(/\r\n/g, "\n");
 
 const page = (use: "store" | "funnel", lang: SingleProductLang = "ar"): PageTree => buildPage("p", singleProductSections(use, lang));
 const elementsOf = (tree: PageTree): PageElement[] => tree.sections.flatMap((s) => s.rows.flatMap((r) => r.columns.flatMap((c) => c.elements)));
@@ -21,9 +33,25 @@ const body = (tree: PageTree, name: string) => {
 };
 
 describe("the one-product page", () => {
-  it("is the store template's home page", () => {
-    const template = buildStoreTemplates().find((t) => t.key === "single-product")!;
-    expect(template.version.pages[0].builderData).toEqual(buildPage("home", singleProductSections("store")));
+  it("names only its own drawings, each checked in exactly as it is drawn, and nothing else is in their folder", () => {
+    const art = singleProductArt();
+    if (WRITE) {
+      mkdirSync(ART, { recursive: true });
+      for (const stale of readdirSync(ART).filter((name) => name.endsWith(".svg") && !art.some((a) => a.file === name))) rmSync(join(ART, stale));
+      for (const { file, svg } of art) writeFileSync(join(ART, file), svg, "utf8");
+    }
+    expect(existsSync(ART) ? readdirSync(ART).filter((name) => name.endsWith(".svg")).sort() : []).toEqual(art.map((a) => a.file).sort());
+    for (const { file, svg } of art) expect(read(join(ART, file)), file).toBe(svg);
+    const named = new Set(
+      (["ar", "en"] as const).flatMap((lang) =>
+        (["store", "funnel"] as const).flatMap((use) =>
+          elementsOf(page(use, lang))
+            .map((e) => e.props?.src)
+            .filter((src): src is string => typeof src === "string" && src !== "")
+        )
+      )
+    );
+    expect([...named].sort()).toEqual(art.map((a) => artUrl(a.file.replace(/\.svg$/, ""))).sort());
   });
 
   it("keeps the same sections for a store and for a funnel, but for two", () => {

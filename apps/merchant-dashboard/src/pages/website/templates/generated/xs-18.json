@@ -1,0 +1,688 @@
+{
+  "key": "xs-18",
+  "name": "XS 18",
+  "category": "food_beverage",
+  "kind": "store",
+  "tags": [
+    "xs"
+  ],
+  "rtl": false,
+  "primaryColor": "#FFBE33",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#FFBE33",
+      "themeSettings": {
+        "xsLook": "18",
+        "header": {
+          "menu": [
+            {
+              "label": "Home",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "Menu",
+              "href": "/menu",
+              "kind": "page"
+            },
+            {
+              "label": "About",
+              "href": "/about",
+              "kind": "page"
+            },
+            {
+              "label": "Book Table",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "Contact Us",
+              "links": [
+                {
+                  "label": "Book Table",
+                  "href": "/contact",
+                  "kind": "page"
+                },
+                {
+                  "label": "Track Order",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            },
+            {
+              "title": "Our Menu",
+              "links": [
+                {
+                  "label": "Menu",
+                  "href": "/menu",
+                  "kind": "page"
+                },
+                {
+                  "label": "About",
+                  "href": "/about",
+                  "kind": "page"
+                },
+                {
+                  "label": "Cart",
+                  "href": "/cart",
+                  "kind": "cart"
+                }
+              ]
+            }
+          ],
+          "text": "Char-grilled burgers, pizza straight from the oven and pasta in our house sauce, made fresh the moment you order.\nOpening Hours: Everyday 10.00 Am -10.00 Pm",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "Home",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs18-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p1-s1-e1",
+                          "type": "xs_slider",
+                          "props": {
+                            "look": "18",
+                            "slides": [
+                              {
+                                "image": "/xs/18/hero-bg.jpg",
+                                "heading": "Fast Food Restaurant",
+                                "text": "Juicy burgers, hot pizza from the oven and crispy fries, freshly made for you in minutes. Order now and enjoy your meal hot wherever you are.",
+                                "buttonLabel": "Order Now",
+                                "buttonHref": "/menu"
+                              },
+                              {
+                                "image": "/xs/18/hero-bg.jpg",
+                                "heading": "Fast Food Restaurant",
+                                "text": "Juicy burgers, hot pizza from the oven and crispy fries, freshly made for you in minutes. Order now and enjoy your meal hot wherever you are.",
+                                "buttonLabel": "Order Now",
+                                "buttonHref": "/menu"
+                              },
+                              {
+                                "image": "/xs/18/hero-bg.jpg",
+                                "heading": "Fast Food Restaurant",
+                                "text": "Juicy burgers, hot pizza from the oven and crispy fries, freshly made for you in minutes. Order now and enjoy your meal hot wherever you are.",
+                                "buttonLabel": "Order Now",
+                                "buttonHref": "/menu"
+                              }
+                            ],
+                            "autoplay": true,
+                            "seconds": 6
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs18-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p1-s2-e1",
+                          "type": "xs_banners",
+                          "props": {
+                            "look": "18",
+                            "items": [
+                              {
+                                "image": "/xs/18/o1.jpg",
+                                "title": "Tasty Thursdays",
+                                "text": "20% Off",
+                                "linkLabel": "Order Now",
+                                "href": "/menu"
+                              },
+                              {
+                                "image": "/xs/18/o2.jpg",
+                                "title": "Pizza Days",
+                                "text": "15% Off",
+                                "linkLabel": "Order Now",
+                                "href": "/menu"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs18-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p1-s3-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "18",
+                            "heading": "Our Menu",
+                            "collection": "",
+                            "limit": 9,
+                            "showDiscount": true,
+                            "showTabs": true,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "searchLabel": "Search",
+                            "searchPlaceholder": "Search",
+                            "viewLabel": "Quick View",
+                            "openLabel": "Add to cart",
+                            "allLabel": "All",
+                            "loadMoreLabel": "View More"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs18-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p1-s4-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "18",
+                            "heading": "We Are Feane",
+                            "text": "At Feane we believe fast food deserves real care. We choose fresh meat every day, bake our pizza dough in our own kitchen and make our sauces from our own recipes. You will taste the difference from the first bite, whether you join us at the restaurant or order delivery to your door.",
+                            "images": [
+                              "/xs/18/about-img.png"
+                            ],
+                            "points": [],
+                            "buttonLabel": "Read More",
+                            "buttonHref": "/about"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs18-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p1-s5-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "18",
+                            "heading": "Book A Table",
+                            "info": [
+                              {
+                                "icon": "address",
+                                "title": "Opening Hours",
+                                "text": "Everyday 10.00 Am -10.00 Pm"
+                              },
+                              {
+                                "icon": "phone",
+                                "title": "Call",
+                                "text": "Call us during opening hours"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "Contact Us",
+                                "text": "Send us a message and we reply within a day"
+                              }
+                            ],
+                            "contactPlaceholder": "Phone Number",
+                            "messagePlaceholder": "How many persons?",
+                            "buttonLabel": "Book Now"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs18-p1-s6",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p1-s6-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p1-s6-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p1-s6-e1",
+                          "type": "xs_quotes",
+                          "props": {
+                            "look": "18",
+                            "heading": "What Says Our Customers",
+                            "items": [
+                              {
+                                "quote": "The burgers are juicy, the pizza dough is light and crispy, and our order arrived hot and early. Feane is now our first choice for weekend nights.",
+                                "name": "Moana Michell",
+                                "role": "Regular customer",
+                                "image": "/xs/18/client1.jpg"
+                              },
+                              {
+                                "quote": "The burgers are juicy, the pizza dough is light and crispy, and our order arrived hot and early. Feane is now our first choice for weekend nights.",
+                                "name": "Mike Hamell",
+                                "role": "Regular customer",
+                                "image": "/xs/18/client2.jpg"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/menu",
+        "title": "Menu",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs18-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "18",
+                            "heading": "Menu",
+                            "image": "/xs/18/hero-bg.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs18-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p2-s2-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "18",
+                            "heading": "Our Menu",
+                            "collection": "",
+                            "limit": 9,
+                            "showDiscount": true,
+                            "showTabs": true,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "searchLabel": "Search",
+                            "searchPlaceholder": "Search",
+                            "viewLabel": "Quick View",
+                            "openLabel": "Add to cart",
+                            "allLabel": "All",
+                            "loadMoreLabel": "View More"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/about",
+        "title": "About",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs18-p3-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p3-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p3-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p3-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "18",
+                            "heading": "About",
+                            "image": "/xs/18/hero-bg.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs18-p3-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p3-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p3-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p3-s2-e1",
+                          "type": "xs_story",
+                          "props": {
+                            "look": "18",
+                            "items": [
+                              {
+                                "title": "We Are Feane",
+                                "body": "At Feane we believe fast food deserves real care. We choose fresh meat every day, bake our pizza dough in our own kitchen and make our sauces from our own recipes. You will taste the difference from the first bite, whether you join us at the restaurant or order delivery to your door.",
+                                "image": "/xs/18/about-img.png"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "Book Table",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs18-p4-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p4-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p4-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p4-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "18",
+                            "heading": "Book Table",
+                            "image": "/xs/18/hero-bg.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs18-p4-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs18-p4-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs18-p4-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs18-p4-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "18",
+                            "heading": "Book A Table",
+                            "info": [
+                              {
+                                "icon": "address",
+                                "title": "Opening Hours",
+                                "text": "Everyday 10.00 Am -10.00 Pm"
+                              },
+                              {
+                                "icon": "phone",
+                                "title": "Call",
+                                "text": "Call us during opening hours"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "Contact Us",
+                                "text": "Send us a message and we reply within a day"
+                              }
+                            ],
+                            "contactPlaceholder": "Phone Number",
+                            "messagePlaceholder": "How many persons?",
+                            "buttonLabel": "Book Now"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}
