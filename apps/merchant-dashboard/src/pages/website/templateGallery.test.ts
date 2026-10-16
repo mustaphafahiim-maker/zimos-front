@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import type { WebsiteTemplateSummary } from "@store-builder/api-client";
-import { ALL_CATEGORIES, filterTemplates, templateCategories } from "./templateGallery";
+import {
+  ALL_CATEGORIES,
+  filterTemplates,
+  isArabicLocale,
+  templateCategories,
+  templatesInLanguage,
+  templateTwins,
+} from "./templateGallery";
 import { createSlotQueue, homeTreeOf } from "@/lib/templatePreview";
 
 // templatePreview talks to the API only through these; the tests here never do.
@@ -49,6 +56,56 @@ describe("filterTemplates", () => {
     expect(ids(filterTemplates(templates, { category: ALL_CATEGORIES, query: "بسيط و" }))).toEqual(["1"]);
     expect(ids(filterTemplates(templates, { category: "perfume", query: "عطورات" }))).toEqual(["5"]);
     expect(ids(filterTemplates([template("6", "إضاءة", "home_decor")], { category: ALL_CATEGORIES, query: "اضاءه" }))).toEqual(["6"]);
+  });
+});
+
+describe("template languages", () => {
+  const ids = (list: WebsiteTemplateSummary[]) => list.map((t) => t.id);
+  const lang = (id: string, name: string, rtl: boolean, tags: string[]): WebsiteTemplateSummary => ({
+    ...template(id, name, "fashion"),
+    rtl,
+    tags,
+  });
+  // As the API lists them, by name.
+  const catalogue = [
+    lang("en01", "XS 01", false, ["xs"]),
+    lang("en01b", "XS 01 B", false, ["xs"]),
+    lang("ar01b", "XS 01 B عربي", true, ["xs", "ar"]),
+    lang("ar01", "XS 01 عربي", true, ["xs", "ar"]),
+    template("funnel", "Single product", "single_product"),
+    // Right-to-left and named like a twin, but not tagged `ar`: one language only.
+    lang("ar02", "XS 02 عربي", true, ["xs"]),
+    lang("en02", "XS 02", false, ["xs"]),
+    // Tagged and right-to-left, but no English template of that name.
+    lang("ar03", "XS 03 عربي", true, ["xs", "ar"]),
+  ];
+
+  it("pairs a design's English and Arabic templates by name, right-to-left and the ar tag", () => {
+    const twins = templateTwins(catalogue);
+    expect(twins.get("en01")?.id).toBe("ar01");
+    expect(twins.get("ar01")?.id).toBe("en01");
+    expect(twins.get("en01b")?.id).toBe("ar01b");
+    expect(twins.get("ar01b")?.id).toBe("en01b");
+    expect([...twins.keys()].sort()).toEqual(["ar01", "ar01b", "en01", "en01b"]);
+  });
+
+  it("pairs a name once, so a second template under it stays on its own", () => {
+    const twins = templateTwins([...catalogue, lang("en01dup", "XS 01", false, ["xs"])]);
+    expect(twins.get("ar01")?.id).toBe("en01");
+    expect(twins.has("en01dup")).toBe(false);
+  });
+
+  it("shows each design once, in the chosen language and in the place of its first template", () => {
+    expect(ids(templatesInLanguage(catalogue, "en"))).toEqual(["en01", "en01b", "funnel", "ar02", "en02", "ar03"]);
+    expect(ids(templatesInLanguage(catalogue, "ar"))).toEqual(["ar01", "ar01b", "funnel", "ar02", "en02", "ar03"]);
+  });
+
+  it("reads a store language with a region as its base language", () => {
+    expect(isArabicLocale("ar-EG")).toBe(true);
+    expect(isArabicLocale("ar")).toBe(true);
+    expect(isArabicLocale("AR_eg")).toBe(true);
+    expect(isArabicLocale("en-US")).toBe(false);
+    expect(isArabicLocale(undefined)).toBe(false);
   });
 });
 
