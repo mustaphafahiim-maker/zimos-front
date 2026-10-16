@@ -15,7 +15,8 @@ import { getDictionary, type Locale } from "@/lib/i18n";
 import type { ResolvedShellLink } from "@/lib/storeShell";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { XS_LOGOS } from "@/lib/xsShell";
-import { defaultHeaderZones, headerZonesByDevice, zoneGroups, type HeaderPart, type HeaderZone } from "@/lib/xsLayout";
+import { readShopperDisplay } from "@/lib/shopperDisplay";
+import { defaultHeaderZones, headerZonesByDevice, withLanguageSwitch, zoneGroups, type HeaderPart, type HeaderZone } from "@/lib/xsLayout";
 import { storefrontGeneralMeta } from "@store-builder/api-client";
 import { SocialLinks } from "@/components/SocialLinks";
 import { XsPhoneMenu } from "./XsPhoneMenu";
@@ -35,6 +36,8 @@ import { headerSizeCss } from "./shellSizes";
  *   strip, start side   the announcement line (its first message)
  *   strip, end side     the template's own links (lib/xsShell XS_STRIP_LINKS), then order
  *                       tracking and the language switch only if the merchant turns them on
+ *                       (the switch: Languages → "language button", lib/shopperDisplay; it
+ *                       takes the place of a template's "EN", which is left out otherwise)
  *   bar                 logo or store name · the menu · search, account, wish list, cart
  *
  * — the template's arrangement, which the merchant may change part by part and
@@ -61,10 +64,14 @@ export function XsHeader({ store, locale, look }: { store: StorefrontMeta; local
   const links: ResolvedShellLink[] = menu ?? [{ key: "home", label: t.common.home, href: "/", external: false }];
   const accountLink = useAccountMenuLink();
   const social = storefrontGeneralMeta(store).social;
-  // Where every part stands on each screen: the merchant's arrangement, else the template's.
-  const zones = headerZonesByDevice(
-    header.zones,
-    defaultHeaderZones(look, { cart: header.showCart, track: header.showTrackOrder, language: header.showLanguage })
+  // Where every part stands on each screen: the merchant's arrangement, else the template's — with the
+  // store's language button where the template wrote a word for it, if the store shows one (lib/xsLayout).
+  const zones = withLanguageSwitch(
+    headerZonesByDevice(
+      header.zones,
+      defaultHeaderZones(look, { cart: header.showCart, track: header.showTrackOrder, language: header.showLanguage })
+    ),
+    readShopperDisplay(store.themeSettings).localeSwitch
   );
   const onPhone = Object.values(zones.mobile).flat();
   const has = (type: HeaderPart["type"]) => onPhone.some((part) => part.type === type);
