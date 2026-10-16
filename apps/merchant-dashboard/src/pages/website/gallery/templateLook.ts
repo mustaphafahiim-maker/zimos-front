@@ -84,6 +84,42 @@ export function takeTemplateLook(current: Record<string, unknown>, globalStyles:
 }
 
 /**
+ * The imported template ("xs" look) a template is: `globalStyles.themeSettings.xsLook`,
+ * or null for one of Zimos's own. Such a template is its header and footer as
+ * much as its pages (storefront components/xs), so it is taken whole.
+ */
+export function templateXsLook(globalStyles: unknown): string | null {
+  const look = objectOf(objectOf(globalStyles)?.themeSettings)?.xsLook;
+  return typeof look === "string" && look.trim() !== "" ? look : null;
+}
+
+/**
+ * The store's theme settings after it takes an imported template: the
+ * template's shell — its look, menu, notice and footer columns — laid over
+ * the store's own, whatever look the store had. A store theme is dropped with
+ * it: the two would both dress the same header and headings.
+ */
+export function takeXsShell(current: Record<string, unknown>, globalStyles: unknown, colour: string | null): Record<string, unknown> {
+  const next = takeTemplateLook(current, globalStyles, colour ?? "");
+  if (!colour) {
+    if ("primaryColor" in current) next.primaryColor = current.primaryColor;
+    else delete next.primaryColor;
+    if ("primaryColorSource" in current) next.primaryColorSource = current.primaryColorSource;
+    else delete next.primaryColorSource;
+  }
+  delete next.storeTheme;
+  return next;
+}
+
+/** The settings without an imported template's shell, or null when the store wears none. */
+export function dropXsShell(current: Record<string, unknown>): Record<string, unknown> | null {
+  if (!("xsLook" in current)) return null;
+  const next = { ...current };
+  delete next.xsLook;
+  return next;
+}
+
+/**
  * The look a template's preview renders in: what applying it would give this
  * store — the template's accent on a store with no look of its own, the
  * store's own look otherwise (null: as saved). A template that wears a theme

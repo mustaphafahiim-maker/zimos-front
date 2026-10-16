@@ -1,3 +1,4 @@
+import type { CanvasKey, DeepMatch } from "@/lib/previewBridge";
 import type { Ref } from "react";
 import type { PageTree } from "@store-builder/api-client";
 import { StorefrontPreview } from "@/components/StorefrontPreview";
@@ -40,6 +41,7 @@ export function EditorCanvas({
   selectedShell,
   labels,
   inlineText,
+  deepText,
   scrollRequest,
   shellScrollRequest,
   onSelectSection,
@@ -52,7 +54,14 @@ export function EditorCanvas({
   onCanvasEdit,
   onCanvasStep,
   onTextEdit,
+  onCanvasKey,
+  storePath = null,
+  templateTools = false,
 }: {
+  /** One of the store's own pages to show instead of the page (StorePageList.tsx). */
+  storePath?: string | null;
+  /** An imported template's tools on the page (StorefrontPreview PreviewCanvas `templateTools`). */
+  templateTools?: boolean;
   workspaceId: string;
   tree: PageTree;
   look: StoreLook;
@@ -76,19 +85,23 @@ export function EditorCanvas({
   shellScrollRequest: { part: ShellPart; nonce: number } | null;
   onSelectSection: (sectionId: string) => void;
   onSelectElement: (target: { sectionId: string; elementId: string; elementType: string }) => void;
-  onSelectShell: (part: ShellPart) => void;
+  onSelectShell: (part: ShellPart, xsPart?: string) => void;
   onInsert: (index: number) => void;
   onMoveSection: (sectionId: string, direction: "up" | "down") => void;
   onSectionAction: (sectionId: string, action: SectionActionKind) => void;
-  onPickImage: (target: { sectionId: string; elementId: string; field: string }) => void;
+  onPickImage: (target: { sectionId: string; elementId: string; field: string; src?: string; nth?: number }) => void;
   onCanvasEdit: (edit: CanvasEdit) => void;
   onCanvasStep: (step: CanvasStep) => void;
-  onTextEdit: (elementId: string, text: string) => void;
+  onTextEdit: (elementId: string, text: string, match?: DeepMatch) => void;
+  /** Element id → the words in it a double-click edits where they stand. */
+  deepText: Record<string, string[]>;
+  onCanvasKey: (key: CanvasKey) => void;
 }) {
   const ui = editorUi(useEditorLocale());
   return (
     <StorefrontPreview
       className="bg-transparent"
+      storePath={storePath}
       workspaceId={workspaceId}
       tree={tree}
       labels={{
@@ -128,6 +141,15 @@ export function EditorCanvas({
           resizeHeight: ui.canvasResizeHeight,
           resizeColumns: ui.canvasResizeColumns,
           resizeImage: ui.canvasResizeImage,
+          resizePicture: ui.canvasResizePicture,
+          resizeLogo: ui.canvasResizeLogo,
+          moveShellPart: ui.canvasMoveShellPart,
+          focalPoint: ui.canvasFocalPoint,
+          moveItem: ui.canvasMoveItem,
+          duplicateItem: ui.canvasDuplicateItem,
+          deleteItem: ui.canvasDeleteItem,
+          original: ui.canvasOriginal,
+          everyPicture: ui.canvasEveryPicture,
           auto: ui.canvasAuto,
           editText: ui.canvasEditText,
         },
@@ -148,7 +170,10 @@ export function EditorCanvas({
         onCanvasEdit,
         onCanvasStep,
         inlineText,
+        deepText,
         onTextEdit,
+        onCanvasKey,
+        templateTools,
         onInsert,
         onMoveSection,
       }}

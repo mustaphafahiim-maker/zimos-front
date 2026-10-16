@@ -1,0 +1,129 @@
+{
+  "look": "21",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Breakfast",
+      "nameAr": "الفطار",
+      "slug": "breakfast"
+    },
+    {
+      "name": "Special",
+      "nameAr": "أطباق مميزة",
+      "slug": "special"
+    },
+    {
+      "name": "Desert",
+      "nameAr": "الحلويات",
+      "slug": "desert"
+    },
+    {
+      "name": "Dinner",
+      "nameAr": "العشاء",
+      "slug": "dinner"
+    }
+  ],
+  "products": [
+    {
+      "name": "Basil Chicken Pizza",
+      "nameAr": "بيتزا فراخ بالريحان",
+      "description": "Tender chicken pieces, tomato sauce and bubbling mozzarella finished with fresh basil.",
+      "descriptionAr": "قطع فراخ طرية مع صلصة الطماطم والموتزاريلا الذائبة ولمسة من الريحان الطازج.",
+      "price": 255,
+      "compareAt": 310,
+      "image": "/xs/21/products/p01.jpg",
+      "collections": [
+        "breakfast",
+        "special"
+      ]
+    },
+    {
+      "name": "Crispy Popcorn Shrimp",
+      "nameAr": "جمبري بوب كورن مقرمش",
+      "description": "Bite-sized breaded shrimp fried until golden, served with lemon and spicy cocktail sauce.",
+      "descriptionAr": "جمبري صغير مغطى بالبقسماط ومقلي حتى يصبح ذهبيًا، يُقدَّم مع الليمون وصوص الكوكتيل الحار.",
+      "price": 320,
+      "image": "/xs/21/products/p02.jpg",
+      "collections": [
+        "dinner",
+        "special"
+      ]
+    },
+    {
+      "name": "Fish & Chips",
+      "nameAr": "فيش آند تشيبس",
+      "description": "Flaky white fish in a light crispy batter with golden fries and tartar sauce.",
+      "descriptionAr": "فيليه سمك أبيض في عجينة خفيفة مقرمشة، مع بطاطس ذهبية وصوص التارتار.",
+      "price": 290,
+      "image": "/xs/21/products/p03.jpg",
+      "collections": [
+        "dinner"
+      ]
+    },
+    {
+      "name": "Mixed Appetizer Platter",
+      "nameAr": "بلاتر مقبلات مشكّل",
+      "description": "Spicy wings, crispy bites, seasoned beef and baked cheese dip with our signature sauce.",
+      "descriptionAr": "أجنحة حارة وقطع مقرمشة ولحم متبّل وديب جبنة بالفرن مع صوصنا الخاص.",
+      "price": 380,
+      "compareAt": 460,
+      "image": "/xs/21/products/p04.jpg",
+      "collections": [
+        "special"
+      ]
+    },
+    {
+      "name": "Beef Bacon Cheeseburger",
+      "nameAr": "تشيز برجر بالبيكون البقري",
+      "description": "Juicy beef patty with cheddar, crispy beef bacon, tomato and lettuce in a toasted sesame bun.",
+      "descriptionAr": "قطعة لحم بقري مع جبنة شيدر وبيكون بقري مقرمش وطماطم وخس في عيش سمسم محمّص.",
+      "price": 230,
+      "image": "/xs/21/products/p05.jpg",
+      "collections": [
+        "dinner"
+      ]
+    },
+    {
+      "name": "Baked Cheese Dip & Tortilla Chips",
+      "nameAr": "ديب الجبنة بالفرن مع تورتيلا تشيبس",
+      "description": "Creamy cheese dip baked until golden, served warm with crunchy tortilla chips.",
+      "descriptionAr": "ديب جبنة كريمي مخبوز حتى يصبح ذهبيًا، يُقدَّم ساخنًا مع رقائق التورتيلا المقرمشة.",
+      "price": 140,
+      "image": "/xs/21/products/p06.jpg",
+      "collections": [
+        "breakfast",
+        "special"
+      ]
+    },
+    {
+      "name": "Loaded Nachos",
+      "nameAr": "ناتشوز محمّلة",
+      "description": "Tortilla chips piled with melted cheese, diced tomato, black olives, jalapeños and spring onion.",
+      "descriptionAr": "رقائق تورتيلا مغطاة بالجبنة الذائبة والطماطم والزيتون الأسود والهالبينو والبصل الأخضر.",
+      "price": 165,
+      "image": "/xs/21/products/p07.jpg",
+      "collections": [
+        "desert",
+        "special"
+      ]
+    },
+    {
+      "name": "Fried Calamari with Tartar",
+      "nameAr": "كاليماري مقلي بصوص التارتار",
+      "description": "Tender calamari rings lightly fried until crisp, served with creamy herb tartar sauce.",
+      "descriptionAr": "حلقات كاليماري طرية مقلية حتى تصبح مقرمشة، تُقدَّم مع صوص التارتار بالأعشاب.",
+      "price": 260,
+      "compareAt": 320,
+      "image": "/xs/21/products/p08.jpg",
+      "collections": [
+        "dinner"
+      ]
+    }
+  ],
+  "wording": {
+    "allLabel": "All"
+  },
+  "wordingAr": {
+    "allLabel": "الكل"
+  }
+}

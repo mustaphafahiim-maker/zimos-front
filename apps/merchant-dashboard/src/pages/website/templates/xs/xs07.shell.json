@@ -1,0 +1,131 @@
+{
+  "xsLook": "07",
+  "header": {
+    "announcement": {
+      "enabled": true,
+      "text": "New Cairo · Fresh delivery every day"
+    },
+    "menu": [
+      {
+        "label": "Home",
+        "href": "/",
+        "kind": "home"
+      },
+      {
+        "label": "Shop",
+        "href": "/products",
+        "kind": "url"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact",
+        "kind": "page"
+      }
+    ],
+    "show": {
+      "theme": false,
+      "trackOrder": false,
+      "language": false
+    },
+    "zones": {
+      "notice": [
+        {
+          "id": "notice",
+          "type": "notice"
+        }
+      ],
+      "links": [
+        {
+          "id": "strip-0",
+          "type": "link",
+          "label": "Privacy Policy",
+          "href": "/policies/privacy-policy"
+        },
+        {
+          "id": "strip-1",
+          "type": "link",
+          "label": "Terms of Use",
+          "href": "/policies/terms-of-service"
+        },
+        {
+          "id": "strip-2",
+          "type": "link",
+          "label": "Sales and Refunds",
+          "href": "/policies/refund-policy"
+        }
+      ],
+      "brand": [
+        {
+          "id": "logo",
+          "type": "logo"
+        }
+      ],
+      "menu": [
+        {
+          "id": "menu",
+          "type": "menu"
+        }
+      ],
+      "icons": [
+        {
+          "id": "search",
+          "type": "search"
+        },
+        {
+          "id": "account",
+          "type": "account"
+        },
+        {
+          "id": "wishlist",
+          "type": "wishlist"
+        },
+        {
+          "id": "cart",
+          "type": "cart"
+        },
+        {
+          "id": "phone",
+          "type": "phone"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "groups": [
+      {
+        "title": "Shop Info",
+        "links": [
+          {
+            "label": "Shop",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Contact Us",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ]
+      },
+      {
+        "title": "Account",
+        "links": [
+          {
+            "label": "Shopping Cart",
+            "href": "/cart",
+            "kind": "cart"
+          },
+          {
+            "label": "Order History",
+            "href": "/track",
+            "kind": "track"
+          }
+        ]
+      }
+    ],
+    "text": "Fresh products every day, delivered to your door in New Cairo and nearby areas.",
+    "show": {
+      "help": false
+    }
+  }
+}

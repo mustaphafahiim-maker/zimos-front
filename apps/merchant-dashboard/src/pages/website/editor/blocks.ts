@@ -11,6 +11,7 @@ import { PICTURE_SHAPE_DEFAULT_ENABLED } from "@/lib/features";
 import { editorUi, elementLabel, presetText, type EditorLocale } from "./editorLocale";
 import { localizePresetContent } from "./presetCopy";
 import { SHOWCASE_ELEMENT_SPECS, SHOWCASE_PRESETS } from "./showcaseBlocks";
+import { XS_ELEMENT_SPECS, XS_PRESETS } from "./xsBlocks";
 import { BUTTON_ACTION_FIELDS, COLUMN_LAYOUT_SPECS, EXTRA_ELEMENT_SPECS, EXTRA_PRESETS, FORM_INPUT_FIELDS } from "./builderExtraBlocks";
 import type { ItemSubField } from "./ItemListField";
 
@@ -38,12 +39,14 @@ import type { ItemSubField } from "./ItemListField";
 // Field descriptors — what the inspector renders for one element's props
 // ---------------------------------------------------------------------------
 
-export type FieldSpec =
+export type FieldSpec = (
   | { key: string; label: string; kind: "text"; placeholder?: string; hint?: string }
   | { key: string; label: string; kind: "textarea"; placeholder?: string; hint?: string }
   | { key: string; label: string; kind: "number"; min?: number; max?: number; hint?: string }
   // A date and time, stored as an ISO string ("" = not set).
   | { key: string; label: string; kind: "datetime"; hint?: string }
+  // A colour as #rrggbb ("" or absent = not chosen: the element keeps its own).
+  | { key: string; label: string; kind: "color"; hint?: string }
   | { key: string; label: string; kind: "boolean"; hint?: string }
   | {
       key: string;
@@ -73,7 +76,15 @@ export type FieldSpec =
       max: number;
       fields: ItemSubField[];
       hint?: string;
-    };
+    }
+) & {
+  /**
+   * Set apart for each screen (lib/deviceValue.ts): the inspector edits the
+   * value of the screen being previewed, and a tablet or a phone without one
+   * of its own takes the next larger screen's.
+   */
+  perScreen?: boolean;
+};
 
 interface ElementSpec {
   label: string;
@@ -726,6 +737,8 @@ export const ELEMENT_SPECS: Record<PageElementType, ElementSpec> = {
   },
   // Showcase sections — full-width storefront bands (showcaseBlocks.ts).
   ...SHOWCASE_ELEMENT_SPECS,
+  // Bands in the look of an imported template (xsBlocks.ts).
+  ...XS_ELEMENT_SPECS,
   // Gallery with thumbnails, variant and bundle pickers, review form (builderExtraBlocks.ts).
   ...EXTRA_ELEMENT_SPECS,
 };
@@ -3169,7 +3182,7 @@ const STORE_KIT_PRESETS: BlockPreset[] = [
   }),
 ];
 
-export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS, ...SHOWCASE_PRESETS, ...EXTRA_PRESETS];
+export const BLOCK_PRESETS: BlockPreset[] = [...STORE_KIT_PRESETS, ...CORE_PRESETS, ...SHOWCASE_PRESETS, ...XS_PRESETS, ...EXTRA_PRESETS];
 
 export const BLOCK_GROUPS: BlockPreset["group"][] = [
   "store",

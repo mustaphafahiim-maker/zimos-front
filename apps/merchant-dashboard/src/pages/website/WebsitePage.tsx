@@ -1,3 +1,4 @@
+import { XS_ONLY } from "./editor/xsBlocks";
 import { useState } from "react";
 import { DirectionProvider } from "@base-ui/react/direction-provider";
 import type { Website } from "@store-builder/api-client";
@@ -222,7 +223,8 @@ export function WebsitePage() {
           ) : current ? (
             <>
               <SiteHero site={current} facts={facts} onDelete={() => setPendingDelete(current)} />
-              <StoreThemeRow />
+              {/* Zimos's own store looks: not offered while only the imported templates are (XS_ONLY). */}
+              {!XS_ONLY && <StoreThemeRow />}
               <OtherSites sites={others} onDelete={setPendingDelete} />
             </>
           ) : (

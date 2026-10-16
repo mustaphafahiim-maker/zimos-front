@@ -1,0 +1,144 @@
+{
+  "look": "15",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Laptops",
+      "nameAr": "لابتوبات",
+      "slug": "laptops"
+    },
+    {
+      "name": "Smartphones",
+      "nameAr": "موبايلات",
+      "slug": "smartphones"
+    },
+    {
+      "name": "Cameras",
+      "nameAr": "كاميرات",
+      "slug": "cameras"
+    },
+    {
+      "name": "Accessories",
+      "nameAr": "إكسسوارات",
+      "slug": "accessories"
+    }
+  ],
+  "products": [
+    {
+      "name": "Apple MacBook Pro 13\" Retina",
+      "nameAr": "لابتوب أبل ماك بوك برو 13 بوصة ريتنا",
+      "description": "13-inch Retina display, all-day battery and a Force Touch trackpad in a slim aluminium body.",
+      "descriptionAr": "شاشة ريتنا 13 بوصة وبطارية تكفي يومك كله ولوحة لمس Force Touch في هيكل ألومنيوم نحيف.",
+      "price": 58500,
+      "image": "/xs/15/products/p01.png",
+      "collections": [
+        "laptops"
+      ]
+    },
+    {
+      "name": "Studio Monitor Headphones",
+      "nameAr": "سماعة استوديو احترافية",
+      "description": "Semi-open over-ear headphones with soft leatherette pads and a self-adjusting headband for mixing and gaming.",
+      "descriptionAr": "سماعة أوفر إير شبه مفتوحة بوسائد جلد ناعمة وطوق رأس يضبط نفسه، مثالية للمونتاج والجيمنج.",
+      "price": 2450,
+      "compareAt": 2990,
+      "image": "/xs/15/products/p02.png",
+      "collections": [
+        "accessories"
+      ]
+    },
+    {
+      "name": "Apple MacBook Pro 15\" Retina",
+      "nameAr": "لابتوب أبل ماك بوك برو 15 بوصة ريتنا",
+      "description": "Big 15-inch Retina screen and pro-level performance for editing, design and multitasking.",
+      "descriptionAr": "شاشة ريتنا كبيرة 15 بوصة وأداء احترافي للمونتاج والتصميم وتعدد المهام.",
+      "price": 74900,
+      "image": "/xs/15/products/p03.png",
+      "collections": [
+        "laptops"
+      ]
+    },
+    {
+      "name": "Sony Xperia 10.1\" Android Tablet",
+      "nameAr": "تابلت سوني إكسبيريا 10.1 بوصة",
+      "description": "Slim 10.1-inch Android tablet with a vivid display and front camera for streaming, study and video calls.",
+      "descriptionAr": "تابلت أندرويد نحيف بشاشة 10.1 بوصة بألوان حيّة وكاميرا أمامية للمشاهدة والمذاكرة ومكالمات الفيديو.",
+      "price": 14500,
+      "compareAt": 17900,
+      "image": "/xs/15/products/p04.png",
+      "collections": [
+        "smartphones"
+      ]
+    },
+    {
+      "name": "Sony Stereo Over-Ear Headphones",
+      "nameAr": "سماعة سوني ستيريو أوفر إير",
+      "description": "Lightweight over-ear headphones with velour cushions and rich stereo sound for long listening sessions.",
+      "descriptionAr": "سماعة أوفر إير خفيفة بوسائد قطيفة وصوت ستيريو غني لساعات استماع طويلة.",
+      "price": 1350,
+      "image": "/xs/15/products/p05.png",
+      "collections": [
+        "accessories"
+      ]
+    },
+    {
+      "name": "MSI 15.6\" Gaming Laptop",
+      "nameAr": "لابتوب جيمنج MSI 15.6 بوصة",
+      "description": "15.6-inch gaming laptop with a full-size keyboard and red accents, built for smooth play and heavy workloads.",
+      "descriptionAr": "لابتوب جيمنج بشاشة 15.6 بوصة وكيبورد كامل ولمسات حمراء، مصمم للعب السلس والشغل التقيل.",
+      "price": 42999,
+      "compareAt": 51999,
+      "image": "/xs/15/products/p06.png",
+      "collections": [
+        "laptops"
+      ]
+    },
+    {
+      "name": "Samsung Galaxy Edge Smartphone – Gold",
+      "nameAr": "موبايل سامسونج جالاكسي إيدج ذهبي",
+      "description": "Curved-edge display, fast fingerprint unlock and a sharp camera in an elegant gold metal frame.",
+      "descriptionAr": "شاشة بحواف منحنية وبصمة سريعة وكاميرا واضحة في إطار معدني ذهبي أنيق.",
+      "price": 18500,
+      "image": "/xs/15/products/p07.png",
+      "collections": [
+        "smartphones"
+      ]
+    },
+    {
+      "name": "ASUS 11.6\" Compact Laptop",
+      "nameAr": "لابتوب أسوس 11.6 بوصة صغير",
+      "description": "Light 11.6-inch Windows laptop with HDMI output. Easy to carry for study, browsing and office work.",
+      "descriptionAr": "لابتوب ويندوز خفيف بشاشة 11.6 بوصة ومخرج HDMI، سهل الحمل للمذاكرة والتصفح وشغل المكتب.",
+      "price": 16999,
+      "image": "/xs/15/products/p08.png",
+      "collections": [
+        "laptops"
+      ]
+    },
+    {
+      "name": "Rekam Presto Pocket Digital Camera",
+      "nameAr": "كاميرا ديجيتال Rekam Presto صغيرة",
+      "description": "Silver point-and-shoot camera with built-in flash and LCD screen, small enough for any pocket.",
+      "descriptionAr": "كاميرا ديجيتال فضية سهلة الاستخدام بفلاش مدمج وشاشة LCD، صغيرة تدخل أي جيب.",
+      "price": 4800,
+      "image": "/xs/15/products/p09.png",
+      "collections": [
+        "cameras"
+      ]
+    }
+  ],
+  "wording": {
+    "allLabel": "All Categories",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search here",
+    "viewLabel": "quick view",
+    "openLabel": "add to cart"
+  },
+  "wordingAr": {
+    "allLabel": "كل الأقسام",
+    "searchLabel": "بحث",
+    "searchPlaceholder": "ابحث هنا",
+    "viewLabel": "نظرة سريعة",
+    "openLabel": "أضف للسلة"
+  }
+}

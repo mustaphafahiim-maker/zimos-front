@@ -1,0 +1,136 @@
+{
+  "look": "09",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Pillows",
+      "slug": "pillows",
+      "nameAr": "وسائد"
+    }
+  ],
+  "products": [
+    {
+      "name": "Amethyst Marble Cushion Cover",
+      "nameAr": "غطاء وسادة رخامي بنفسجي",
+      "description": "A soft printed cushion cover in amethyst marble with gold veining.",
+      "descriptionAr": "غطاء وسادة ناعم بطبعة رخام بنفسجي وعروق ذهبية.",
+      "price": 380,
+      "image": "/xs/09/products/p01.png",
+      "images": [
+        "/xs/09/products/p01.png",
+        "/xs/09/products/p01b.png",
+        "/xs/09/products/p01c.png"
+      ],
+      "collections": [
+        "pillows"
+      ]
+    },
+    {
+      "name": "Blush Memory Foam Neck Pillow",
+      "nameAr": "وسادة رقبة ميموري فوم وردي",
+      "description": "A U-shaped memory foam travel pillow in blush velvet that supports your neck.",
+      "descriptionAr": "وسادة رقبة على شكل U من الميموري فوم بقماش قطيفة وردي، تسند رقبتك في السفر.",
+      "price": 550,
+      "compareAt": 690,
+      "image": "/xs/09/products/p02.png",
+      "images": [
+        "/xs/09/products/p02.png",
+        "/xs/09/products/p02b.png",
+        "/xs/09/products/p02c.png"
+      ],
+      "collections": [
+        "pillows"
+      ]
+    },
+    {
+      "name": "Memory Foam Knee Pillow",
+      "nameAr": "وسادة ركبة ميموري فوم",
+      "description": "An ergonomic knee pillow (26 × 21 × 15 cm) that eases hip and back pain while you sleep.",
+      "descriptionAr": "وسادة ركبة طبية (26 × 21 × 15 سم) تخفف آلام الحوض والظهر أثناء النوم.",
+      "price": 650,
+      "image": "/xs/09/products/p03.png",
+      "images": [
+        "/xs/09/products/p03.png",
+        "/xs/09/products/p03b.png",
+        "/xs/09/products/p03c.png",
+        "/xs/09/products/p03d.png"
+      ],
+      "collections": [
+        "pillows"
+      ]
+    },
+    {
+      "name": "Sky Blue Memory Foam Neck Pillow",
+      "nameAr": "وسادة رقبة ميموري فوم لبني",
+      "description": "A slow-rebound neck pillow in sky blue velvet for flights, cars and office naps.",
+      "descriptionAr": "وسادة رقبة لبني من الميموري فوم بطيء الارتداد، للطائرة والسيارة وقيلولة المكتب.",
+      "price": 550,
+      "image": "/xs/09/products/p04.png",
+      "images": [
+        "/xs/09/products/p04.png",
+        "/xs/09/products/p04b.png",
+        "/xs/09/products/p04c.png",
+        "/xs/09/products/p04d.png",
+        "/xs/09/products/p04e.png"
+      ],
+      "collections": [
+        "pillows"
+      ]
+    },
+    {
+      "name": "Black Marble Cushion Cover",
+      "nameAr": "غطاء وسادة رخامي أسود",
+      "description": "A bold black marble print cushion cover that adds drama to any sofa.",
+      "descriptionAr": "غطاء وسادة بطبعة رخام أسود جريئة، يضيف لمسة فخامة لأي كنبة.",
+      "price": 380,
+      "compareAt": 480,
+      "image": "/xs/09/products/p05.png",
+      "images": [
+        "/xs/09/products/p05.png",
+        "/xs/09/products/p05b.png",
+        "/xs/09/products/p05c.png"
+      ],
+      "collections": [
+        "pillows"
+      ]
+    },
+    {
+      "name": "Gold Geometric Cushion Cover",
+      "nameAr": "غطاء وسادة هندسي ذهبي",
+      "description": "A white cushion cover with a fine gold geometric pattern for a modern living room.",
+      "descriptionAr": "غطاء وسادة أبيض بنقشة هندسية ذهبية رفيعة، لصالة عصرية.",
+      "price": 420,
+      "image": "/xs/09/products/p06.png",
+      "images": [
+        "/xs/09/products/p06.png",
+        "/xs/09/products/p06b.png"
+      ],
+      "collections": [
+        "pillows"
+      ]
+    },
+    {
+      "name": "Lime Mesh Trucker Cap",
+      "nameAr": "كاب تراكر شبك أخضر ليموني",
+      "description": "A white-front trucker cap with lime green mesh back and an adjustable snap.",
+      "descriptionAr": "كاب تراكر بواجهة بيضاء وظهر شبك أخضر ليموني وقفل قابل للتعديل.",
+      "price": 320,
+      "image": "/xs/09/products/p07.png",
+      "images": [
+        "/xs/09/products/p07.png",
+        "/xs/09/products/p07b.png"
+      ],
+      "collections": [
+        "pillows"
+      ]
+    }
+  ],
+  "wording": {
+    "searchPlaceholder": "Search keyword",
+    "loadMoreLabel": "Load More"
+  },
+  "wordingAr": {
+    "searchPlaceholder": "ابحث بكلمة",
+    "loadMoreLabel": "عرض المزيد"
+  }
+}

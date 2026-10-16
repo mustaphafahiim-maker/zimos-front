@@ -1,0 +1,53 @@
+{
+  "look": "02",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Furniture",
+      "nameAr": "أثاث",
+      "slug": "furniture"
+    }
+  ],
+  "products": [
+    {
+      "name": "Nordic Swivel Armchair",
+      "nameAr": "كرسي نوردك دوّار",
+      "description": "A beige upholstered armchair with a curved back and a dark wooden swivel base. Comfort with Nordic calm.",
+      "descriptionAr": "كرسي فوتيه بيج بظهر منحني وقاعدة خشب داكن دوّارة، راحة كاملة بروح التصميم الإسكندنافي.",
+      "price": 8900,
+      "compareAt": 11500,
+      "image": "/xs/02/products/p01.png",
+      "collections": [
+        "furniture"
+      ]
+    },
+    {
+      "name": "Aero Quilted Lounge Chair",
+      "nameAr": "كرسي استرخاء إيرو مبطّن",
+      "description": "A deep, quilted lounge chair in grey woven fabric on a solid pedestal base. Made for slow afternoons.",
+      "descriptionAr": "كرسي استرخاء عميق بتنجيد مبطّن من قماش رمادي وقاعدة معدن ثابتة، لأجمل لحظات الهدوء.",
+      "price": 12500,
+      "image": "/xs/02/products/p02.png",
+      "collections": [
+        "furniture"
+      ]
+    },
+    {
+      "name": "Sage Velvet Dining Armchair",
+      "nameAr": "كرسي سفرة قطيفة أخضر",
+      "description": "A dining armchair in soft sage velvet on solid beech legs. Adds warmth and colour to any table.",
+      "descriptionAr": "كرسي سفرة بمساند من القطيفة الخضراء الناعمة وأرجل خشب زان، يضيف لسفرتك دفئًا ولونًا.",
+      "price": 6800,
+      "image": "/xs/02/products/p03.png",
+      "collections": [
+        "furniture"
+      ]
+    }
+  ],
+  "wording": {
+    "viewLabel": "Read More"
+  },
+  "wordingAr": {
+    "viewLabel": "اعرف المزيد"
+  }
+}

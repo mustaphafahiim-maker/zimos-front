@@ -47,6 +47,7 @@ import { Segmented } from "@/components/Segmented";
 import { Sheet } from "@/components/Sheet";
 import { Textarea } from "@/components/Textarea";
 import { apiClient } from "@/lib/apiClient";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useEditorLocale } from "./editorLocale";
 import { AnnouncementSection } from "./StoreLookPanel";
@@ -56,6 +57,8 @@ import {
   LINK_HREF_MAX,
   LINK_KINDS,
   LINK_LABEL_MAX,
+  FOOTER_SIZES,
+  HEADER_SIZES,
   MAX_FOOTER_GROUPS,
   MAX_GROUP_LINKS,
   MAX_MENU_LINKS,
@@ -74,7 +77,14 @@ import {
   type LogoSize,
   type ShellLink,
   type ShellPart,
+  type ShellSizes,
+  withShellSize,
 } from "./storeShell";
+import { valueOnDevice } from "@/lib/deviceValue";
+import { FooterLayoutBlock, HeaderLayoutBlock } from "./ShellLayoutBlocks";
+import { NumberField } from "./inspector/controls";
+import { ImageField } from "./ImageField";
+import { ColorWell } from "./theme/ColorWell";
 import { LookBlock, SwitchRow, lookIconButtonClass, lookTextButtonClass } from "./theme/parts";
 import { lookUi, themeUi } from "./theme/themeLocale";
 
@@ -248,6 +258,13 @@ function HeaderFields({ look, onChange, pages }: { look: StoreLook; onChange: On
       </LookBlock>
 
       <LookBlock title={ui.logo}>
+        <ShellLogo
+          value={header.logoImage}
+          onChange={(logoImage) => set({ logoImage }, "shell:header:logo")}
+          part="header"
+          asName={header.logoAsName === true}
+          onAsName={(logoAsName) => set({ logoAsName })}
+        />
         <div className="space-y-1.5">
           <ControlLabel>{ui.logoSize}</ControlLabel>
           <Segmented<LogoSize>
@@ -290,7 +307,169 @@ function HeaderFields({ look, onChange, pages }: { look: StoreLook; onChange: On
       <LookBlock>
         <SwitchRow label={ui.stickyHeader} checked={header.sticky} onChange={(sticky) => set({ sticky })} />
       </LookBlock>
+
+      <ShellColours
+        colors={header.colors}
+        onChange={(colors) => set({ colors }, "shell:header:colors")}
+        wells={[
+          ["background", "Bar: background", "الشريط: الخلفية"],
+          ["text", "Bar: links and icons", "الشريط: الروابط والأيقونات"],
+          ["stripBackground", "Top strip: background", "الشريط العلوي: الخلفية"],
+          ["stripText", "Top strip: text", "الشريط العلوي: النص"],
+        ]}
+      />
+      <ShellSizesBlock
+        sizes={header.sizes}
+        ranges={HEADER_SIZES}
+        onChange={(sizes) => set({ sizes }, "shell:header:sizes")}
+        fields={[
+          ["logo", "Height of the logo", "ارتفاع اللوجو"],
+          ["bar", "Height of the bar (wide screens)", "ارتفاع الشريط (الشاشات العريضة)"],
+          ["menu", "Size of the menu's words", "حجم كلام القايمة"],
+          ["strip", "Size of the top strip's words", "حجم كلام الشريط العلوي"],
+        ]}
+      />
+      <HeaderLayoutBlock saved={header.zones} onChange={(zones, key) => set({ zones }, key)} />
     </>
+  );
+}
+
+/**
+ * The colours of an imported template's header or footer (storefront
+ * components/xs), offered only on a store that wears one — the store's own
+ * header and footer take their colours from the Store look instead. A colour
+ * left unset keeps the template's.
+ */
+function ShellColours({
+  colors,
+  onChange,
+  wells,
+}: {
+  colors: Record<string, string> | undefined;
+  onChange: (colors: Record<string, string> | undefined) => void;
+  wells: Array<[key: string, label: string, labelAr: string]>;
+}) {
+  const locale = useEditorLocale();
+  const { currentWorkspace } = useWorkspace();
+  const look = currentWorkspace?.themeSettings?.xsLook;
+  if (typeof look !== "string" || look === "") return null;
+  const ar = locale === "ar";
+
+  function setColour(key: string, hex: string | undefined) {
+    const next = { ...(colors ?? {}) };
+    if (hex) next[key] = hex;
+    else delete next[key];
+    onChange(Object.keys(next).length > 0 ? next : undefined);
+  }
+
+  return (
+    <LookBlock title={ar ? "الألوان" : "Colours"} hint={ar ? "اللون غير المختار يبقى على لون القالب." : "A colour you leave unset keeps the template's."}>
+      {wells.map(([key, label, labelAr]) => (
+        <ColorWell key={key} label={ar ? labelAr : label} value={colors?.[key] ?? null} fallback="#ffffff" onChange={(hex) => setColour(key, hex)}>
+          {colors?.[key] ? (
+            <button type="button" className="text-xs text-ink-soft underline underline-offset-2 hover:text-ink" onClick={() => setColour(key, undefined)}>
+              {ar ? "رجّع لون القالب" : "Back to the template's colour"}
+            </button>
+          ) : null}
+        </ColorWell>
+      ))}
+    </LookBlock>
+  );
+}
+
+/**
+ * The logo picture of an imported template's header or footer, on a store
+ * that wears one (storefront components/xs). Empty, the header shows the
+ * store's own logo from its settings and, without one, the template's own;
+ * the footer shows the template's light logo, or the store's name.
+ */
+function ShellLogo({
+  value,
+  onChange,
+  part,
+  asName,
+  onAsName,
+}: {
+  value: string | undefined;
+  onChange: (url: string | undefined) => void;
+  part: "header" | "footer";
+  /** The store's name in the template's lettering instead of any picture. */
+  asName: boolean;
+  onAsName: (asName: boolean) => void;
+}) {
+  const locale = useEditorLocale();
+  const { currentWorkspace } = useWorkspace();
+  const look = currentWorkspace?.themeSettings?.xsLook;
+  if (typeof look !== "string" || look === "") return null;
+  const ar = locale === "ar";
+  return (
+    <>
+    <SwitchRow
+      label={ar ? "اسم المتجر بدل اللوجو" : "Store name instead of a logo"}
+      checked={asName}
+      onChange={onAsName}
+    />
+    {asName ? null : (
+    <ImageField
+      label={ar ? (part === "header" ? "صورة اللوجو" : "صورة اللوجو في الفوتر") : part === "header" ? "Logo picture" : "Footer logo picture"}
+      hint={
+        ar
+          ? part === "header"
+            ? "بتظهر مكان اسم المتجر. لو فاضية بيظهر لوجو متجرك من الإعدادات، ولو مفيش بيظهر لوجو القالب."
+            : "بتظهر مكان اسم المتجر في الفوتر. لو فاضية بيظهر لوجو القالب لو ليه لوجو فوتر، وإلا اسم المتجر."
+          : part === "header"
+            ? "Shown in place of the store's name. Empty shows your store's logo from Settings, or else the template's."
+            : "Shown in place of the store's name in the footer. Empty shows the template's footer logo, or else the name."
+      }
+      value={value ?? ""}
+      onChange={(url) => onChange(url.trim() ? url.trim() : undefined)}
+    />
+    )}
+    </>
+  );
+}
+
+/**
+ * The sizes of an imported template's header or footer, in pixels, beside
+ * its colours and on the same stores. A size left empty keeps the template's.
+ * Each may differ by screen (lib/deviceValue); these fields set a computer's.
+ */
+function ShellSizesBlock({
+  sizes,
+  ranges,
+  onChange,
+  fields,
+}: {
+  sizes: ShellSizes | undefined;
+  ranges: Record<string, readonly [number, number]>;
+  onChange: (sizes: ShellSizes | undefined) => void;
+  fields: Array<[key: string, label: string, labelAr: string]>;
+}) {
+  const locale = useEditorLocale();
+  const { currentWorkspace } = useWorkspace();
+  const look = currentWorkspace?.themeSettings?.xsLook;
+  if (typeof look !== "string" || look === "") return null;
+  const ar = locale === "ar";
+
+  function setSize(key: string, value: number | "") {
+    onChange(withShellSize(sizes, key, "base", value === "" ? null : value));
+  }
+
+  return (
+    <LookBlock title={ar ? "المقاسات (بالبيكسل)" : "Sizes (pixels)"} hint={ar ? "المقاس الفاضي بيفضل على مقاس القالب." : "A size you leave empty keeps the template's."}>
+      {fields.map(([key, label, labelAr]) => (
+        <NumberField
+          key={key}
+          label={ar ? labelAr : label}
+          min={ranges[key][0]}
+          max={ranges[key][1]}
+          integer
+          strict
+          value={(valueOnDevice(sizes?.[key], "base") as number | undefined) ?? ""}
+          onChange={(value) => setSize(key, value)}
+        />
+      ))}
+    </LookBlock>
   );
 }
 
@@ -317,6 +496,15 @@ function FooterFields({ look, onChange, pages }: { look: StoreLook; onChange: On
           checked={footer.showBrand}
           onChange={(showBrand) => set({ showBrand })}
         />
+        {footer.showBrand && (
+          <ShellLogo
+            value={footer.logoImage}
+            onChange={(logoImage) => set({ logoImage }, "shell:footer:logo")}
+            part="footer"
+            asName={footer.logoAsName === true}
+            onAsName={(logoAsName) => set({ logoAsName })}
+          />
+        )}
         {footer.showBrand && (
           <Field label={ui.footerText} hint={ui.footerTextHint}>
             {({ id }) => (
@@ -416,6 +604,33 @@ function FooterFields({ look, onChange, pages }: { look: StoreLook; onChange: On
       <LookBlock>
         <SwitchRow label={ui.footerHelp} checked={footer.showHelp} onChange={(showHelp) => set({ showHelp })} />
       </LookBlock>
+
+      <ShellColours
+        colors={footer.colors}
+        onChange={(colors) => set({ colors }, "shell:footer:colors")}
+        wells={[
+          ["background", "Background", "الخلفية"],
+          ["heading", "Column titles", "عناوين الأعمدة"],
+          ["text", "Text and links", "النص والروابط"],
+        ]}
+      />
+      <ShellSizesBlock
+        sizes={footer.sizes}
+        ranges={FOOTER_SIZES}
+        onChange={(sizes) => set({ sizes }, "shell:footer:sizes")}
+        fields={[
+          ["title", "Size of the column titles", "حجم عناوين الأعمدة"],
+          ["text", "Size of the text and links", "حجم النص والروابط"],
+          ["logo", "Height of the logo", "ارتفاع اللوجو"],
+        ]}
+      />
+      <FooterLayoutBlock
+        columns={footer.columns}
+        bottom={footer.bottom}
+        groups={(footer.groups ?? []).map((group) => group.title)}
+        showBrand={footer.showBrand}
+        onChange={(patch, key) => set(patch, key)}
+      />
     </>
   );
 }

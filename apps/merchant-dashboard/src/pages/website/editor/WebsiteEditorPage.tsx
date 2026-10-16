@@ -27,11 +27,16 @@ import { namedStylesOf } from "./ElementStylePanel";
 import { StoreLookPanel, ThemePresetRow } from "./StoreLookPanel";
 import { NewPageDialog } from "./NewPageDialog";
 import { PageTabs } from "./PageTabs";
-import { inlineTextIds, sectionHidden } from "./canvasTools";
+import { deepTextOf, inlineTextIds, sectionHidden } from "./canvasTools";
 import { ShellPanel } from "./ShellPanels";
 import { sectionElements, sectionLabel, type BlockPreset } from "./blocks";
 import { EditorLocaleContext, editorUi, useEditorLocale } from "./editorLocale";
-import { shellPartLabel, type ShellPart } from "./storeShell";
+import { shellPartLabel, withShellSize, type ShellPart } from "./storeShell";
+import { stepEdit, type CanvasEdit } from "@/lib/canvasDrag";
+import { EditorScreenProvider, ShellPartFocusProvider, screenOf } from "./editorScreen";
+import { StorePageList, storePageName, type StorePath } from "./StorePageList";
+import { HEADER_ZONES, movePartBeside, withZonesOn, zonesOn, type HeaderZone } from "./xsShellLayout";
+import { XS_ONLY } from "./xsBlocks";
 import type { ColorMode } from "./storeThemes";
 import { EditorCanvas } from "./shell/EditorCanvas";
 import { EditorPageSettings } from "./shell/EditorPageSettings";
@@ -108,12 +113,42 @@ function WebsiteEditor() {
   const [searchParams, setSearchParams] = useSearchParams();
   const workspaceId = useWorkspaceId();
   const { currentWorkspace } = useWorkspace();
+  const xsLook = typeof currentWorkspace?.themeSettings?.xsLook === "string" && currentWorkspace.themeSettings.xsLook !== "" ? currentWorkspace.themeSettings.xsLook : null;
+  // The imported templates' extras — their bands in the library, their tools on the page, the store's
+  // own pages in the page list, copy and paste — on a store that wears one of those templates (or while
+  // XS_ONLY is on). Any other store's editor is as it was.
+  const xsEditor = xsLook !== null || XS_ONLY;
   const toast = useToast();
   const locale = useEditorLocale();
   const ui = editorUi(locale);
   const t = useT(SHELL_STRINGS);
 
   const doc = useEditorDocument(workspaceId, websiteId);
+
+  /**
+   * A template logo resized on the canvas (lib/canvasDrag.ts): its height on
+   * the screen being previewed, in the store look's header or footer — one
+   * undo step, or with `key` one per burst of arrow presses.
+   */
+  function resizeLogo(edit: Extract<CanvasEdit, { kind: "logo-size" }>, key?: string) {
+    const { look } = doc;
+    const part = look[edit.part];
+    doc.updateLook({ ...look, [edit.part]: { ...part, sizes: withShellSize(part.sizes, "logo", edit.device, edit.px) } }, key);
+  }
+
+  /**
+   * A template header's part moved on the canvas (xsShellLayout.ts), on the
+   * screen it was moved on: one undo step, or with `key` one per burst of
+   * arrow presses.
+   */
+  function moveShellPart(move: { id: string; zone: string; before: string | null; after: string | null; device: Extract<CanvasEdit, { kind: "shell-move" }>["device"] }, key?: string) {
+    if (!HEADER_ZONES.includes(move.zone as HeaderZone)) return;
+    const { look } = doc;
+    const zones = zonesOn(look.header.zones, move.device, xsLook);
+    const next = movePartBeside(zones, move.id, move.zone as HeaderZone, move.before, move.after);
+    if (JSON.stringify(next) === JSON.stringify(zones)) return;
+    doc.updateLook({ ...look, header: { ...look.header, zones: withZonesOn(look.header.zones, move.device, next, xsLook) } }, key);
+  }
   const { site, website, pages, page, sections, look, treeMeta } = doc;
 
   // --- layout ---------------------------------------------------------------
@@ -132,6 +167,9 @@ function WebsiteEditor() {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   /** The announcement bar, header or footer, when one of those is open instead of a section. */
   const [selectedShell, setSelectedShell] = useState<ShellPart | null>(null);
+  const [shellPartFocus, setShellPartFocus] = useState<{ id: string; nonce: number } | null>(null);
+  // One of the store's own pages in the preview instead of the open page (StorePageList.tsx).
+  const [storeView, setStoreView] = useState<StorePath | null>(null);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("content");
   /** Where "add a section here" pointed; the next block from the library lands there. */
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
@@ -187,6 +225,8 @@ function WebsiteEditor() {
   );
   const tree = useMemo(() => ({ ...treeMeta, sections }), [treeMeta, sections]);
   const inlineText = useMemo(() => inlineTextIds(sections), [sections]);
+  // The words of each band with many (an imported template's), which a double-click edits where they stand.
+  const deepText = useMemo(() => deepTextOf(sections), [sections]);
   const hasUnpublished = useMemo(() => pages.some((p) => pageChange(p) !== "same"), [pages]);
   const slug = currentWorkspace?.slug ?? "";
 
@@ -215,8 +255,9 @@ function WebsiteEditor() {
   }
 
   /** Opens the announcement bar's, header's or footer's panel — and, from the editor side, scrolls the preview to it. */
-  function selectShell(part: ShellPart, { scroll }: { scroll: boolean }) {
+  function selectShell(part: ShellPart, { scroll, xsPart }: { scroll: boolean; xsPart?: string }) {
     setSelectedShell(part);
+    setShellPartFocus((prev) => (xsPart ? { id: xsPart, nonce: (prev?.nonce ?? 0) + 1 } : null));
     setSelectedSectionId(null);
     setSelectedElementId(null);
     setSectionsOpen(false);
@@ -329,6 +370,13 @@ function WebsiteEditor() {
    * changes are stored first. Only if that fails is the merchant asked.
    * (An unsaved store look is workspace-wide and survives the switch.)
    */
+  /** One of the store's own pages in the preview: nothing on it is a section of the page to select. */
+  function openStoreView(path: StorePath) {
+    setStoreView(path);
+    setSelectedSectionId(null);
+    setSelectedElementId(null);
+  }
+
   async function requestPageSwitch(pageId: string) {
     if (pageId === doc.selectedPageId) return;
     const stored = await doc.flush();
@@ -400,6 +448,14 @@ function WebsiteEditor() {
       setPendingDelete(selected);
       return true;
     },
+    ...(xsEditor
+      ? {
+          copy: () => edits.copy(selectedSectionId, elementId),
+          // Pasting needs no selection: a copied section lands at the end of the page.
+          paste: () => edits.paste(selectedSectionId, elementId),
+          duplicate: () => edits.duplicateSelected(selectedSectionId, elementId),
+        }
+      : {}),
   });
 
   // --- what the zones show ------------------------------------------------------
@@ -480,15 +536,24 @@ function WebsiteEditor() {
     />
   );
 
+  // The store's own pages, shown in the preview in the unsaved look (StorePageList.tsx); with the template's extras only.
+  const shownStoreView = xsEditor ? storeView : null;
+  const storePages = xsEditor ? <StorePageList current={storeView} onSelect={openStoreView} /> : null;
   const pageList = (
-    <PageTabs
-      variant="list"
-      pages={pages}
-      selectedId={doc.selectedPageId}
-      onSelect={(pageId) => void requestPageSwitch(pageId)}
-      onDelete={setPendingPageDelete}
-      onAdd={() => setShowNewPage(true)}
-    />
+    <>
+      <PageTabs
+        variant="list"
+        pages={pages}
+        selectedId={shownStoreView ? null : doc.selectedPageId}
+        onSelect={(pageId) => {
+          setStoreView(null);
+          void requestPageSwitch(pageId);
+        }}
+        onDelete={setPendingPageDelete}
+        onAdd={() => setShowNewPage(true)}
+      />
+      {storePages}
+    </>
   );
 
   const lookPanel = (variant: "panel" | "sheet") => (
@@ -541,6 +606,9 @@ function WebsiteEditor() {
     // zones, and on a phone the bottom bar. Only the zones scroll, each on its own.
     // (`size-full`, not `h-full`: index.css has an old rule for the previous editor's bar keyed on
     // `.flex.h-full.flex-col > .border-b.bg-paper-raised:first-child`, which would outrank the toolbar's glass.)
+    // The screen the preview shows: what a per-screen setting is set for (editorScreen.tsx).
+    <EditorScreenProvider value={screenOf(roomy ? device : "phone")}>
+    <ShellPartFocusProvider value={shellPartFocus}>
     <div data-slot="editor" className="flex size-full flex-col">
       <EditorToolbar
         siteName={website ? website.name : ui.editorTitle}
@@ -550,7 +618,12 @@ function WebsiteEditor() {
             <PageSwitcher
               pages={pages}
               page={page}
-              onSelect={(pageId) => void requestPageSwitch(pageId)}
+              extra={storePages}
+              title={shownStoreView ? storePageName(shownStoreView, locale) : undefined}
+              onSelect={(pageId) => {
+                setStoreView(null);
+                void requestPageSwitch(pageId);
+              }}
               onDelete={setPendingPageDelete}
               onAdd={() => setShowNewPage(true)}
               asSheet={!roomy}
@@ -647,6 +720,8 @@ function WebsiteEditor() {
                 </div>
               ) : (
                 <EditorCanvas
+                  storePath={shownStoreView}
+                  templateTools={xsEditor}
                   workspaceId={workspaceId}
                   tree={tree}
                   look={look}
@@ -662,20 +737,50 @@ function WebsiteEditor() {
                   selectedShell={selectedShell}
                   labels={labels}
                   inlineText={inlineText}
+                  deepText={deepText}
                   scrollRequest={scrollRequest}
                   shellScrollRequest={shellScrollRequest}
                   onSelectSection={(id) => selectSection(id, { scroll: false })}
                   onSelectElement={selectElement}
-                  onSelectShell={(part) => selectShell(part, { scroll: false })}
+                  onSelectShell={(part, xsPart) => selectShell(part, { scroll: false, xsPart })}
                   onInsert={requestInsert}
                   onMoveSection={edits.moveBy}
                   onSectionAction={edits.act}
-                  onPickImage={(target) =>
-                    requestImage({ kind: "field", sectionId: target.sectionId, elementId: target.elementId, field: target.field })
+                  onPickImage={(target) => {
+                    // A band with many pictures names the one that was pressed by its address, not by a field.
+                    const { src, nth, elementId: picked } = target;
+                    if (src) requestImage({ kind: "apply", apply: (url) => edits.replacePicture(picked, src, nth ?? 0, url) });
+                    else requestImage({ kind: "field", sectionId: target.sectionId, elementId: picked, field: target.field });
+                  }}
+                  onCanvasEdit={(edit) =>
+                    edit.kind === "logo-size"
+                      ? resizeLogo(edit)
+                      : edit.kind === "shell-move"
+                        ? moveShellPart(edit)
+                        : edits.applyCanvas(edit)
                   }
-                  onCanvasEdit={(edit) => edits.applyCanvas(edit)}
-                  onCanvasStep={edits.stepCanvas}
+                  onCanvasStep={(step) => {
+                    if (step.kind === "shell-part") {
+                      // One arrow press, placed by the frame; a burst is one undo step.
+                      moveShellPart({ ...step, id: step.partId }, `canvas:part:${step.partId}`);
+                      return;
+                    }
+                    const edit = step.kind === "logo" ? stepEdit(step) : null;
+                    if (edit?.kind === "logo-size") resizeLogo(edit, `canvas:logo:${edit.part}`);
+                    else edits.stepCanvas(step);
+                  }}
                   onTextEdit={edits.editText}
+                  onCanvasKey={(key) => {
+                    // The same keys as on the editor itself (useEditorShortcuts), pressed while the page had the focus.
+                    // The frame hands them over only with the template's tools (templateTools).
+                    if (!xsEditor) return;
+                    if (key === "copy") edits.copy(selectedSectionId, elementId);
+                    else if (key === "paste") edits.paste(selectedSectionId, elementId);
+                    else if (key === "duplicate") edits.duplicateSelected(selectedSectionId, elementId);
+                    else if (key === "undo") doc.undo();
+                    else if (key === "redo") doc.redo();
+                    else if (key === "delete" && selected && !elementId) setPendingDelete(selected);
+                  }}
                 />
               )}
             </EditorStage>
@@ -750,6 +855,7 @@ function WebsiteEditor() {
         // Saved sections live in the library too, under their own chip.
         onInsertSaved={insertSaved}
         insertIndex={insertIndex}
+        templateBands={xsEditor}
       />
 
       <MediaPicker
@@ -856,5 +962,7 @@ function WebsiteEditor() {
         }}
       />
     </div>
+    </ShellPartFocusProvider>
+    </EditorScreenProvider>
   );
 }

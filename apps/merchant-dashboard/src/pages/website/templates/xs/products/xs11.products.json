@@ -1,0 +1,119 @@
+{
+  "look": "11",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "What’s trending",
+      "nameAr": "الأكثر رواجًا",
+      "slug": "whats-trending"
+    },
+    {
+      "name": "New Arrivals",
+      "nameAr": "وصل حديثًا",
+      "slug": "new-arrivals"
+    }
+  ],
+  "products": [
+    {
+      "name": "Burnt Orange Ribbed Beanie",
+      "nameAr": "طاقية تريكو برتقالي محروق",
+      "description": "Soft ribbed-knit beanie in burnt orange that adds a pop of colour to any winter outfit.",
+      "descriptionAr": "طاقية تريكو مضلّعة ناعمة باللون البرتقالي المحروق، تضيف لمسة لون لأي إطلالة شتوية.",
+      "price": 299,
+      "image": "/xs/11/products/p01.jpg",
+      "collections": [
+        "whats-trending"
+      ]
+    },
+    {
+      "name": "Black Leather Biker Jacket",
+      "nameAr": "جاكيت جلد أسود بايكر",
+      "description": "Classic black biker jacket in soft leather with an asymmetric zip and snap lapels.",
+      "descriptionAr": "جاكيت بايكر كلاسيك من الجلد الناعم باللون الأسود بسوستة جانبية وياقة بكباسين.",
+      "price": 2499,
+      "compareAt": 2999,
+      "image": "/xs/11/products/p02.jpg",
+      "collections": [
+        "whats-trending"
+      ]
+    },
+    {
+      "name": "Apricot Oversized Button-Down Shirt",
+      "nameAr": "قميص أوفر سايز مشمشي",
+      "description": "Relaxed oversized shirt in apricot with a chest pocket and dropped shoulders.",
+      "descriptionAr": "قميص أوفر سايز بلون مشمشي بجيب على الصدر وكتف واقع، مريح وعملي لكل يوم.",
+      "price": 649,
+      "image": "/xs/11/products/p03.jpg",
+      "collections": [
+        "whats-trending"
+      ]
+    },
+    {
+      "name": "Red Floral Cami Sundress",
+      "nameAr": "فستان صيفي أحمر مشجّر بحمالات",
+      "description": "Breezy red sundress with a ditsy floral print, V-neckline and thin straps.",
+      "descriptionAr": "فستان صيفي خفيف باللون الأحمر بنقشة ورود صغيرة وفتحة رقبة V وحمالات رفيعة.",
+      "price": 899,
+      "image": "/xs/11/products/p04.jpg",
+      "collections": [
+        "whats-trending"
+      ]
+    },
+    {
+      "name": "Sage Utility Overshirt Jacket",
+      "nameAr": "جاكيت أوفر شيرت يوتيليتي أخضر زيتي",
+      "description": "Washed sage utility jacket in sturdy cotton with flap chest pockets and button cuffs.",
+      "descriptionAr": "جاكيت يوتيليتي من القطن المتين بلون أخضر زيتي مغسول، بجيوب صدر بغطاء وأساور بزرار.",
+      "price": 1199,
+      "image": "/xs/11/products/p05.jpg",
+      "collections": [
+        "whats-trending",
+        "new-arrivals"
+      ]
+    },
+    {
+      "name": "Black Floral Slip Maxi Dress",
+      "nameAr": "فستان ماكسي أسود مشجّر بحمالات",
+      "description": "Flowing black slip dress with a large rose print, lace-trim neckline and adjustable straps.",
+      "descriptionAr": "فستان ماكسي أسود منسدل بطبعة ورود كبيرة وصدر بحواف دانتيل وحمالات قابلة للضبط.",
+      "price": 1099,
+      "compareAt": 1399,
+      "image": "/xs/11/products/p06.jpg",
+      "collections": [
+        "new-arrivals"
+      ]
+    },
+    {
+      "name": "Rust Cotton Bucket Hat",
+      "nameAr": "قبعة باكت قطن طوبي",
+      "description": "Everyday cotton bucket hat in a warm rust tone, soft and easy to fold for travel.",
+      "descriptionAr": "قبعة باكت من القطن بلون طوبي دافئ، خفيفة وسهلة الطي في الشنطة.",
+      "price": 349,
+      "image": "/xs/11/products/p07.jpg",
+      "collections": [
+        "new-arrivals"
+      ]
+    },
+    {
+      "name": "Blue Wax-Print Layered Shirt Top",
+      "nameAr": "توب قميص بطبعة أفريقية زرقاء",
+      "description": "Statement top with a vibrant blue wax-print panel layered over a crisp white shirt.",
+      "descriptionAr": "توب لافت بطبعة أفريقية زرقاء مبهجة فوق قميص أبيض كلاسيك، لإطلالة مختلفة.",
+      "price": 799,
+      "image": "/xs/11/products/p08.jpg",
+      "collections": [
+        "new-arrivals"
+      ]
+    }
+  ],
+  "wording": {
+    "searchPlaceholder": "SEARCH..",
+    "loadMoreLabel": "Shop All",
+    "openLabel": "Add to Cart"
+  },
+  "wordingAr": {
+    "searchPlaceholder": "ابحث...",
+    "loadMoreLabel": "تسوّق الكل",
+    "openLabel": "أضف للسلة"
+  }
+}

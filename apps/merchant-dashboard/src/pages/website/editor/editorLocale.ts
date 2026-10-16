@@ -2,6 +2,7 @@ import { EXTRA_AR } from "./builderExtraBlocks";
 import { createContext, useContext } from "react";
 import type { PageElementType } from "@store-builder/api-client";
 import { SHOWCASE_LABEL_AR } from "./showcaseBlocks";
+import { XS_CONTENT_AR, XS_FIELD_AR, XS_HINT_AR, XS_LABEL_AR, XS_OPTION_AR, XS_PRESET_AR, XS_TYPES } from "./xsBlocks";
 
 /**
  * Language for the shared page-editor pieces — the field inspector, the block
@@ -67,6 +68,7 @@ const ELEMENT_LABEL_AR: Record<PageElementType, string> = {
   upsell_decline_link: "رابط رفض العرض",
   repeater: "مكرِّر",
   ...SHOWCASE_LABEL_AR,
+  ...XS_LABEL_AR,
 };
 
 /** Keyed "<elementType>.<propKey>" first, then by the bare prop key. */
@@ -562,6 +564,15 @@ Object.assign(PRESET_AR, {
   "showcase-product-cards": { label: SHOWCASE_LABEL_AR.product_cards, description: "مجموعة منتجات في شبكة بطاقات مع زر الإضافة إلى السلة." },
   "showcase-image-banner": { label: SHOWCASE_LABEL_AR.image_banner, description: "صورة عريضة فوقها عنوان وسطر وزر." },
 } satisfies Record<string, { label: string; description: string }>);
+// Bands in the look of an imported template (xsBlocks.ts).
+Object.assign(PRESET_AR, XS_PRESET_AR);
+for (const [key, value] of Object.entries(XS_FIELD_AR)) FIELD_LABEL_AR[key] ??= value;
+// The bands' content fields, filed under each band's type: a plain key for all of them, `type.key` for one.
+for (const [key, value] of Object.entries(XS_CONTENT_AR)) if (key.includes(".")) FIELD_LABEL_AR[key] = value;
+for (const type of XS_TYPES) for (const [key, value] of Object.entries(XS_CONTENT_AR)) if (!key.includes(".")) FIELD_LABEL_AR[`${type}.${key}`] ??= value;
+// A hint is looked up by element type, so each xs band gets its own entry for the shared ones.
+for (const type of XS_TYPES) for (const [key, value] of Object.entries(XS_HINT_AR)) FIELD_HINT_AR[`${type}.${key}`] ??= value;
+for (const [key, value] of Object.entries(XS_OPTION_AR)) OPTION_LABEL_AR[key] ??= value;
 Object.assign(SECTION_SETTING_LABEL_AR, EXTRA_AR.sectionLabels);
 Object.assign(SECTION_SETTING_OPTION_AR, EXTRA_AR.sectionOptions);
 
@@ -810,6 +821,15 @@ const UI_EN = {
   canvasResizeHeight: "Drag to change the section's height. Shift: no snapping. Arrow keys: 8px steps.",
   canvasResizeColumns: "Drag to change the column widths (or use the arrow keys)",
   canvasResizeImage: "Drag to resize the picture. Shift: no snapping. Arrow keys: 5% steps.",
+  canvasResizePicture: "Drag to resize this picture. Shift: keep its shape. Alt: from the centre. Ctrl/⌘: every picture of the band. Arrow keys: step by step (Shift: 1px).",
+  canvasResizeLogo: "Drag to resize the logo. Arrow keys: 2px steps (Shift: 1px).",
+  canvasMoveShellPart: "Drag to move this part of the header. Arrow keys: along its row; up and down: to the row above or below.",
+  canvasFocalPoint: "Drag to set what the picture centres on. Arrow keys: 5% steps (Shift: 1%).",
+  canvasMoveItem: "Drag to move this item. Keyboard: Space to pick it up, the arrow keys to move it, Space to put it down.",
+  canvasDuplicateItem: "Duplicate this item",
+  canvasDeleteItem: "Delete this item",
+  canvasOriginal: "template size",
+  canvasEveryPicture: "every picture",
   canvasAuto: "Auto",
   minHeight: "Minimum height (px)",
   minHeightHint: "Empty is the section's natural height. You can also drag the handle under the section in the preview.",
@@ -1088,6 +1108,15 @@ const UI_AR: EditorUi = {
   canvasResizeHeight: "اسحب لتغيير ارتفاع القسم. Shift: بدون محاذاة. الأسهم: خطوات ٨ بكسل.",
   canvasResizeColumns: "اسحب لتغيير عرض الأعمدة (أو استخدم مفاتيح الأسهم)",
   canvasResizeImage: "اسحب لتغيير حجم الصورة. Shift: بدون محاذاة. الأسهم: خطوات ٥٪.",
+  canvasResizePicture: "اسحب لتغيير حجم الصورة دي. Shift: يحافظ على شكلها. Alt: من النص. Ctrl/⌘: كل صور القسم. الأسهم: خطوة بخطوة (Shift: بكسل واحد).",
+  canvasResizeLogo: "اسحب لتغيير حجم اللوجو. الأسهم: خطوات ٢ بكسل (Shift: بكسل واحد).",
+  canvasMoveShellPart: "اسحب لنقل هذا الجزء من رأس الصفحة. الأسهم: داخل صفّه؛ لأعلى ولأسفل: إلى الصف السابق أو التالي.",
+  canvasFocalPoint: "اسحب لتحديد النقطة اللي الصورة تتمركز عليها. الأسهم: خطوات ٥٪ (Shift: ١٪).",
+  canvasMoveItem: "اسحب لنقل العنصر ده. بالكيبورد: المسافة لمسكه، والأسهم لتحريكه، والمسافة تاني لتركه.",
+  canvasDuplicateItem: "كرّر العنصر ده",
+  canvasDeleteItem: "احذف العنصر ده",
+  canvasOriginal: "مقاس القالب",
+  canvasEveryPicture: "كل الصور",
   canvasAuto: "تلقائي",
   minHeight: "أقل ارتفاع (بكسل)",
   minHeightHint: "اتركه فارغًا ليأخذ القسم ارتفاعه الطبيعي. ويمكنك أيضًا سحب المقبض أسفل القسم في المعاينة.",

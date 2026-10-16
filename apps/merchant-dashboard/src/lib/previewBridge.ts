@@ -10,16 +10,22 @@
  *   { type: "zimos:select-section", sectionId }        a section was clicked
  *   { type: "zimos:select-element", sectionId, elementId, elementType }
  *                                                       an element of the selected section was clicked
- *   { type: "zimos:select-shell", part }                the header, footer or announcement bar was clicked
+ *   { type: "zimos:select-shell", part, xsPart? }       the header, footer or announcement bar was clicked
+ *                                                          (xsPart: the template header's part under the pointer)
  *   { type: "zimos:insert-section", index }             "add a section here"
  *   { type: "zimos:move-section", sectionId, direction } the section grip's arrow keys
  *   { type: "zimos:section-action", sectionId, action }  the selected section's floating bar
  *   { type: "zimos:pick-image", sectionId, elementId, field } "replace this picture"
+ *   { type: "zimos:bg-position", sectionId, elementId, path, x, y } a band's ground picture centred on a new point
+ *   { type: "zimos:item-action", sectionId, elementId, list, action, from, to? } one item of a band moved,
+ *                                                          duplicated or deleted
  *   { type: "zimos:section-rects", sections }            each section's box, while a drag is on
  *   { type: "zimos:canvas-drag", phase, … }               drag / resize on the page itself (lib/canvasDrag.ts)
  *   { type: "zimos:canvas-step", step }                   one arrow-key press on a canvas handle
  *   { type: "zimos:color-mode", mode }                    the page went light or dark (its own switch, or the OS)
- *   { type: "zimos:edit-text", elementId, text }          a double-click text edit was committed (item 95)
+ *   { type: "zimos:edit-text", elementId, text, was?, nth? } a double-click text edit was committed (item 95);
+ *                                                          `was`/`nth` name one word-run of a many-worded band
+ *   { type: "zimos:key", key }                            an editor key pressed while the page had the focus
  *
  * `zimos:preview-ready` also carries `colorMode`, the mode the page opened in.
  *
@@ -31,6 +37,7 @@
  *   { type: "zimos:drag-state", active, hoverIndex }     a library block is being dragged over the canvas
  *   { type: "zimos:canvas-feedback", feedback, done, committed }  what a canvas drag should draw
  *   { type: "zimos:patch", ops }                         small edits applied to the page's DOM at once
+ *   { type: "zimos:locate", elementId, text? }           outline an element, or the part of it showing `text`
  *
  * `shell` is the unsaved header/footer (and announcement bar) in the exact
  * shape a save writes into themeSettings (`header` / `footer`); the frame
@@ -110,6 +117,11 @@ export function isShellPart(value: unknown): value is ShellPart {
 export interface ShellPreview {
   header: Record<string, unknown>;
   footer: Record<string, unknown> | null;
+  /** An imported template's Template look (themeSettings.xsTokens); null keeps the template's own. */
+  tokens?: Record<string, unknown> | null;
+  /** The shop pages' settings and words (themeSettings.storePages / storeWords), for the store's own pages in the preview. */
+  storePages?: Record<string, unknown> | null;
+  storeWords?: Record<string, unknown> | null;
 }
 
 /** One section's box, as the frame measures it (its own viewport, `getBoundingClientRect()`). */
@@ -123,18 +135,52 @@ export interface SectionRect {
 
 export type FrameMessage =
   | { type: "zimos:preview-ready"; sectionIds: string[]; colorMode?: ColorMode }
+  | { type: "zimos:patched"; seq: number }
   | { type: "zimos:color-mode"; mode: ColorMode }
   | { type: "zimos:select-section"; sectionId: string }
   | { type: "zimos:select-element"; sectionId: string; elementId: string; elementType: string }
-  | { type: "zimos:select-shell"; part: ShellPart }
+  | { type: "zimos:select-shell"; part: ShellPart; xsPart?: string }
   | { type: "zimos:insert-section"; index: number }
   | { type: "zimos:move-section"; sectionId: string; direction: "up" | "down" }
   | { type: "zimos:section-action"; sectionId: string; action: SectionAction }
-  | { type: "zimos:pick-image"; sectionId: string; elementId: string; field: string }
+  | { type: "zimos:pick-image"; sectionId: string; elementId: string; field: string; src?: string; nth?: number }
+  | { type: "zimos:bg-position"; sectionId: string; elementId: string; path: string; x: number; y: number }
+  | { type: "zimos:item-action"; sectionId: string; elementId: string; list: string; action: "move" | "duplicate" | "delete"; from: number; to?: number }
   | { type: "zimos:section-rects"; sections: SectionRect[] }
   | CanvasDragMessage
   | { type: "zimos:canvas-step"; step: CanvasStep }
-  | { type: "zimos:edit-text"; elementId: string; text: string };
+  | { type: "zimos:edit-text"; elementId: string; text: string; was?: string; nth?: number }
+  | { type: "zimos:key"; key: CanvasKey };
+
+/** The editor's keys the page hands over when it has the focus. */
+export type CanvasKey = "copy" | "paste" | "duplicate" | "undo" | "redo" | "delete";
+const CANVAS_KEYS: readonly CanvasKey[] = ["copy", "paste", "duplicate", "undo", "redo", "delete"];
+
+/** Which of several equal word-runs (or pictures) of one band an edit on the page was made to. */
+export interface DeepMatch {
+  was: string;
+  nth: number;
+}
+const isNth = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0 && v < 1000;
+
+const LOCATE_EVENT = "zimos:editor-locate";
+/**
+ * "Show me what this changes": asks the open preview to outline an element —
+ * or, given `text`, the part of it that shows that text or that picture — for
+ * a moment. A field in the inspector calls it when it takes the focus; the
+ * preview (StorefrontPreview) listens and passes it into its frame.
+ */
+export function locateOnCanvas(elementId: string, text = ""): void {
+  window.dispatchEvent(new CustomEvent(LOCATE_EVENT, { detail: { elementId, text: text.slice(0, 4000) } }));
+}
+export function onLocateRequest(listener: (target: { elementId: string; text: string }) => void): () => void {
+  const handler = (event: Event) => {
+    const detail = (event as CustomEvent<{ elementId?: unknown; text?: unknown }>).detail;
+    if (detail && typeof detail.elementId === "string") listener({ elementId: detail.elementId, text: typeof detail.text === "string" ? detail.text : "" });
+  };
+  window.addEventListener(LOCATE_EVENT, handler);
+  return () => window.removeEventListener(LOCATE_EVENT, handler);
+}
 
 /**
  * The canvas's own words, in the editor's language: the section outline's
@@ -151,6 +197,20 @@ export interface CanvasStrings {
   resizeHeight?: string;
   resizeColumns?: string;
   resizeImage?: string;
+  /** The handles on a picture of an imported template's band, and on its header's or footer's logo. */
+  resizePicture?: string;
+  resizeLogo?: string;
+  /** The grip on a part of an imported template's header. */
+  moveShellPart?: string;
+  /** The dot on a band's ground picture that sets the point it centres on. */
+  focalPoint?: string;
+  /** The grip and buttons on an item of a band (its banners, cards, slides…). */
+  moveItem?: string;
+  duplicateItem?: string;
+  deleteItem?: string;
+  /** The size badge's notes: back at the template's own size; every picture of the band at once. */
+  original?: string;
+  everyPicture?: string;
   /** The size badge for "no minimum height". */
   auto?: string;
   /** The tooltip on text that a double-click edits. */
@@ -176,6 +236,8 @@ export interface CanvasAbilities {
   pickImage?: boolean;
   /** The buttons on the selected section's floating bar. */
   sectionActions?: SectionAction[];
+  /** A picture of a template band (and a template header's or footer's logo) can be resized from the canvas. */
+  resizePicture?: boolean;
 }
 
 export interface EditorStateMessage {
@@ -196,6 +258,8 @@ export interface EditorStateMessage {
   xray?: boolean;
   /** The elements whose text a double-click edits on the page. */
   inlineText?: string[];
+  /** Element id → the words in it a double-click edits where they stand (a band with many). */
+  deepText?: Record<string, string[]>;
   can?: CanvasAbilities;
   /** Element type → its name in the editor's language, for the selected element's chip. */
   elementLabels?: Record<string, string>;
@@ -236,11 +300,19 @@ export interface PatchOp {
   imageSrc?: string;
   hidden?: boolean;
   style?: Record<string, string>;
+  /** An imported template's band: every own prop as it now stands (storefront xs/own.tsx). */
+  own?: Record<string, unknown>;
+  /** A band's words that changed: [as they show, as they are now]. */
+  words?: Array<[string, string]>;
+  /** A band's pictures that changed, by their place in its props ("items.2.image"). */
+  pictures?: Record<string, string>;
 }
 
 export interface PatchMessage {
   type: "zimos:patch";
   ops: PatchOp[];
+  /** Answered by `zimos:patched` once the frame has painted the ops (lib/previewLatency.ts). */
+  seq?: number;
 }
 
 /** `scheme://host[:port]` of a URL, or null when it isn't one. */
@@ -288,6 +360,8 @@ export function readFrameMessage(
         sectionIds: Array.isArray(data.sectionIds) ? data.sectionIds.filter(isId) : [],
         ...(isColorMode(data.colorMode) ? { colorMode: data.colorMode } : {}),
       };
+    case "zimos:patched":
+      return typeof data.seq === "number" && Number.isSafeInteger(data.seq) ? { type: "zimos:patched", seq: data.seq } : null;
     case "zimos:color-mode":
       return isColorMode(data.mode) ? { type: "zimos:color-mode", mode: data.mode } : null;
     case "zimos:select-section":
@@ -305,7 +379,10 @@ export function readFrameMessage(
           }
         : null;
     case "zimos:select-shell":
-      return isShellPart(data.part) ? { type: "zimos:select-shell", part: data.part } : null;
+      if (!isShellPart(data.part)) return null;
+      return typeof data.xsPart === "string" && /^[A-Za-z0-9_-]{1,40}$/.test(data.xsPart)
+        ? { type: "zimos:select-shell", part: data.part, xsPart: data.xsPart }
+        : { type: "zimos:select-shell", part: data.part };
     case "zimos:insert-section":
       return typeof data.index === "number" && Number.isInteger(data.index) && data.index >= 0
         ? { type: "zimos:insert-section", index: data.index }
@@ -318,9 +395,28 @@ export function readFrameMessage(
       return isId(data.sectionId) && isSectionAction(data.action)
         ? { type: "zimos:section-action", sectionId: data.sectionId, action: data.action }
         : null;
+    case "zimos:bg-position": {
+      const pct = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 100;
+      return isId(data.sectionId) && isId(data.elementId) && typeof data.path === "string" && /^[A-Za-z][A-Za-z0-9]*(?:\.[0-9]{1,2}\.[A-Za-z][A-Za-z0-9]*)?$/.test(data.path) && pct(data.x) && pct(data.y)
+        ? { type: "zimos:bg-position", sectionId: data.sectionId, elementId: data.elementId, path: data.path, x: data.x, y: data.y }
+        : null;
+    }
+    case "zimos:item-action": {
+      const at = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0 && (v as number) < 100;
+      const action = data.action;
+      if (!isId(data.sectionId) || !isId(data.elementId) || typeof data.list !== "string" || !/^[A-Za-z][A-Za-z0-9]{0,30}$/.test(data.list) || !at(data.from)) return null;
+      if (action === "move") return at(data.to) ? { type: "zimos:item-action", sectionId: data.sectionId, elementId: data.elementId, list: data.list, action, from: data.from, to: data.to } : null;
+      return action === "duplicate" || action === "delete" ? { type: "zimos:item-action", sectionId: data.sectionId, elementId: data.elementId, list: data.list, action, from: data.from } : null;
+    }
     case "zimos:pick-image":
       return isId(data.sectionId) && isId(data.elementId) && typeof data.field === "string" && PROP_KEY.test(data.field)
-        ? { type: "zimos:pick-image", sectionId: data.sectionId, elementId: data.elementId, field: data.field }
+        ? {
+            type: "zimos:pick-image",
+            sectionId: data.sectionId,
+            elementId: data.elementId,
+            field: data.field,
+            ...(typeof data.src === "string" && data.src.length > 0 && data.src.length <= 2000 ? { src: data.src, nth: isNth(data.nth) ? data.nth : 0 } : {}),
+          }
         : null;
     case "zimos:section-rects":
       return Array.isArray(data.sections)
@@ -334,8 +430,15 @@ export function readFrameMessage(
     }
     case "zimos:edit-text":
       return isId(data.elementId) && typeof data.text === "string" && data.text.length <= 4000
-        ? { type: "zimos:edit-text", elementId: data.elementId, text: data.text }
+        ? {
+            type: "zimos:edit-text",
+            elementId: data.elementId,
+            text: data.text,
+            ...(typeof data.was === "string" && data.was.length > 0 && data.was.length <= 4000 ? { was: data.was, nth: isNth(data.nth) ? data.nth : 0 } : {}),
+          }
         : null;
+    case "zimos:key":
+      return CANVAS_KEYS.includes(data.key as CanvasKey) ? { type: "zimos:key", key: data.key as CanvasKey } : null;
     default:
       return null;
   }
@@ -557,6 +660,74 @@ function isBound(props: Json, key: string): boolean {
 }
 
 /** One element's change as a patch; null when it is more than a patch can show. */
+/** A band's own look (storefront xs/own.tsx OWN_KEYS): sent whole when any of it changes. */
+const XS_OWN_KEYS = new Set([
+  "headingColor", "textColor", "accentColor", "backgroundColor",
+  "columns", "height", "width", "paddingTop", "paddingBottom", "gap", "headingSize", "titleSize", "textSize", "buttonSize", "buttonRadius", "imageHeight", "imageWidth", "imageRadius",
+  "align", "headingWeight", "imageRatio", "imageFit", "flip",
+]);
+/** A band's props that hold a picture's address. */
+/** A band's string props that choose something rather than show words: only a render shows them. */
+const isSetting = (key: string) => /^(look|layout|collection|variant|kind|endsAt)$|href$|link$|url$/i.test(key);
+const isPictureKey = (key: string) => /^(image|images|photo|picture|logo|avatar|background)$|image$/i.test(key);
+
+/**
+ * An imported template's band (xs_*): its own look, its words and its
+ * pictures, as patches — the props it keeps in lists (items, slides) too,
+ * item by item while the list keeps its length. Anything else renders.
+ */
+function xsPatch(op: PatchOp, pa: Json, pb: Json): PatchOp | null {
+  const words: Array<[string, string]> = [];
+  const pictures: Record<string, string> = {};
+  let own = false;
+  const word = (was: unknown, is: unknown): boolean => {
+    if (typeof was !== "string" || typeof is !== "string" || !was.trim() || !is.trim() || is.length > PATCH_TEXT_MAX) return false;
+    words.push([was, is]);
+    return true;
+  };
+  const picture = (path: string, is: unknown): boolean => {
+    if (typeof is !== "string" || !isPatchableUrl(is)) return false;
+    pictures[path] = is.trim();
+    return true;
+  };
+  for (const key of new Set([...Object.keys(pa), ...Object.keys(pb)])) {
+    const was = pa[key];
+    const is = pb[key];
+    if (same(was, is)) continue;
+    if (isBound(pa, key) || isBound(pb, key)) return null;
+    if (XS_OWN_KEYS.has(key)) {
+      own = true;
+      continue;
+    }
+    if (typeof was === "string" || typeof is === "string") {
+      if (isSetting(key)) return null;
+      if (!(isPictureKey(key) ? picture(key, is) : word(was, is))) return null;
+      continue;
+    }
+    // A list that keeps its length: each item's words and pictures.
+    if (!Array.isArray(was) || !Array.isArray(is) || was.length !== is.length) return null;
+    for (let i = 0; i < is.length; i++) {
+      const wa = was[i];
+      const wb = is[i];
+      if (same(wa, wb)) continue;
+      if (typeof wb === "string") {
+        if (!picture(`${key}.${i}`, wb)) return null;
+        continue;
+      }
+      if (!isObject(wa) || !isObject(wb)) return null;
+      for (const field of new Set([...Object.keys(wa), ...Object.keys(wb)])) {
+        if (same(wa[field], wb[field])) continue;
+        if (isSetting(field)) return null;
+        if (!(isPictureKey(field) ? picture(`${key}.${i}.${field}`, wb[field]) : word(wa[field], wb[field]))) return null;
+      }
+    }
+  }
+  if (own) op.own = Object.fromEntries(Object.entries(pb).filter(([key]) => XS_OWN_KEYS.has(key)));
+  if (words.length > 0) op.words = words;
+  if (Object.keys(pictures).length > 0) op.pictures = pictures;
+  return op;
+}
+
 function elementPatch(before: PageElement, after: PageElement, width: number): PatchOp | null {
   const a = before as unknown as Json;
   const b = after as unknown as Json;
@@ -564,6 +735,21 @@ function elementPatch(before: PageElement, after: PageElement, width: number): P
   if (!sameExcept(a, b, ["props", "settings"])) return null;
   if (!isId(after.id)) return null;
   const op: PatchOp = { elementId: after.id };
+  if (after.type.startsWith("xs_")) {
+    const pa = isObject(a.props) ? a.props : {};
+    const pb = isObject(b.props) ? b.props : {};
+    if (!same(pa, pb) && !xsPatch(op, pa, pb)) return null;
+    const sa = isObject(a.settings) ? a.settings : {};
+    const sb = isObject(b.settings) ? b.settings : {};
+    if (!sameExcept(sa, sb, ["style"])) return null;
+    if (!same(sa.style, sb.style)) {
+      const style = stylePatch(sa.style, sb.style, width);
+      if (!style) return null;
+      if (style.style) op.style = style.style;
+      if (style.hidden !== undefined) op.hidden = style.hidden;
+    }
+    return op;
+  }
 
   const pa = isObject(a.props) ? a.props : {};
   const pb = isObject(b.props) ? b.props : {};
@@ -601,7 +787,24 @@ function elementPatch(before: PageElement, after: PageElement, width: number): P
 }
 
 function hasWork(op: PatchOp): boolean {
-  return op.text !== undefined || op.imageSrc !== undefined || op.hidden !== undefined || op.style !== undefined;
+  return (
+    op.text !== undefined ||
+    op.imageSrc !== undefined ||
+    op.hidden !== undefined ||
+    op.style !== undefined ||
+    op.own !== undefined ||
+    op.words !== undefined ||
+    op.pictures !== undefined
+  );
+}
+
+/** What kind of edit a patch shows, for lib/previewLatency.ts. */
+export function patchKind(ops: PatchOp[]): "text" | "colour" | "size" | "picture" {
+  if (ops.some((op) => op.imageSrc !== undefined || op.pictures !== undefined)) return "picture";
+  const colour = (key: string) => /color$/i.test(key);
+  if (ops.some((op) => (op.style && Object.keys(op.style).some(colour)) || (op.own && Object.keys(op.own).some(colour)))) return "colour";
+  if (ops.some((op) => op.style !== undefined || op.own !== undefined)) return "size";
+  return "text";
 }
 
 /**

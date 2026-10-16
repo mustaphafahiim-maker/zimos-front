@@ -1,4 +1,31 @@
 import { BLOCK_PRESETS, ELEMENT_SPECS, type BlockPreset } from "../blocks";
+import { XS_ONLY } from "../xsBlocks";
+
+/**
+ * The basic elements a store wearing a template still gets: a plain heading, text, button,
+ * picture, line and space. In such a store they take the look's faces and colours (storefront
+ * app/xs-shell.css maps the storefront's tokens to the look's; xs-store.css its buttons).
+ */
+export const XS_BASICS: readonly string[] = ["heading", "text", "button", "image", "divider", "spacer"];
+
+/** What the side library offers: every block, or the imported templates' bands and the basics (XS_ONLY). */
+export const LIBRARY_PRESETS: readonly BlockPreset[] = XS_ONLY
+  ? BLOCK_PRESETS.filter((preset) => isXsPreset(preset) || XS_BASICS.includes(preset.key))
+  : BLOCK_PRESETS;
+
+/** One of the imported templates' bands (xsBlocks.ts XS_PRESETS). */
+export function isXsPreset(preset: BlockPreset): boolean {
+  return preset.key.startsWith("xs-");
+}
+
+/**
+ * `presets` as a store is offered them: the imported templates' bands only
+ * with `templateBands` (a store that wears one of those templates, or while
+ * XS_ONLY is on); without, the library every store had before.
+ */
+export function offeredPresets(presets: readonly BlockPreset[], templateBands: boolean): BlockPreset[] {
+  return templateBands ? [...presets] : presets.filter((preset) => !isXsPreset(preset));
+}
 import { elementLabel, groupLabel, presetText, type EditorLocale } from "../editorLocale";
 import { leftUi, type LeftUi } from "./strings";
 
@@ -128,8 +155,10 @@ export function purposeLabel(purpose: Purpose, t: LeftUi): string {
  * trust the store, where to browse, what customers said, a place for
  * questions, a push to act — each the plainest preset of its kind.
  */
-const POPULAR_KEYS = ["hero", "features", "products", "testimonials", "faq", "cta-band"];
-export const POPULAR_PRESETS: BlockPreset[] = POPULAR_KEYS.map((key) => BLOCK_PRESETS.find((p) => p.key === key)).filter(
+const POPULAR_KEYS = XS_ONLY
+  ? ["xs-01-slider", "xs-02-hero", "xs-01-banners", "xs-01-products", "xs-02-features", "xs-02-quotes"]
+  : ["hero", "features", "products", "testimonials", "faq", "cta-band"];
+export const POPULAR_PRESETS: BlockPreset[] = POPULAR_KEYS.map((key) => LIBRARY_PRESETS.find((p) => p.key === key)).filter(
   (p): p is BlockPreset => p !== undefined
 );
 export const POPULAR_KEY_SET: ReadonlySet<string> = new Set(POPULAR_PRESETS.map((p) => p.key));
@@ -137,7 +166,7 @@ export const POPULAR_KEY_SET: ReadonlySet<string> = new Set(POPULAR_PRESETS.map(
 /** The presets of each purpose (primary or secondary), in the library's own order. */
 export const PRESETS_BY_PURPOSE: Record<Purpose, BlockPreset[]> = (() => {
   const table = Object.fromEntries(PURPOSES.map((purpose) => [purpose, [] as BlockPreset[]])) as Record<Purpose, BlockPreset[]>;
-  for (const preset of BLOCK_PRESETS) {
+  for (const preset of LIBRARY_PRESETS) {
     for (const purpose of purposesOf(preset)) table[purpose].push(preset);
   }
   return table;
@@ -146,7 +175,7 @@ export const PRESETS_BY_PURPOSE: Record<Purpose, BlockPreset[]> = (() => {
 /** Each preset once, under its primary purpose — what the unfiltered library lists. */
 export const PRESETS_BY_PRIMARY: Record<Purpose, BlockPreset[]> = (() => {
   const table = Object.fromEntries(PURPOSES.map((purpose) => [purpose, [] as BlockPreset[]])) as Record<Purpose, BlockPreset[]>;
-  for (const preset of BLOCK_PRESETS) table[primaryPurpose(preset)].push(preset);
+  for (const preset of LIBRARY_PRESETS) table[primaryPurpose(preset)].push(preset);
   return table;
 })();
 
@@ -204,7 +233,7 @@ const SEARCH_INDEX = new Map(BLOCK_PRESETS.map((preset) => [preset.key, { name: 
  * The presets matching every word of `query`, among `within` (default: all of
  * them). Those matched by their name come first; the rest keep the library's order.
  */
-export function searchPresets(query: string, within: readonly BlockPreset[] = BLOCK_PRESETS): BlockPreset[] {
+export function searchPresets(query: string, within: readonly BlockPreset[] = LIBRARY_PRESETS): BlockPreset[] {
   const words = foldForSearch(query).split(/\s+/).filter(Boolean);
   if (words.length === 0) return [...within];
   const byName: BlockPreset[] = [];

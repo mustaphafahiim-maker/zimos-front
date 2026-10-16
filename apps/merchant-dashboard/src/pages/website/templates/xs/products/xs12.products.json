@@ -1,0 +1,141 @@
+{
+  "look": "12",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Mobile Products",
+      "nameAr": "موبايلات",
+      "slug": "mobile-products"
+    },
+    {
+      "name": "Smart Watches",
+      "nameAr": "ساعات ذكية",
+      "slug": "smart-watches"
+    }
+  ],
+  "products": [
+    {
+      "name": "iPhone X 64GB – Silver (Renewed)",
+      "nameAr": "آيفون X سعة 64 جيجا فضي (مجدّد)",
+      "description": "Renewed iPhone X in silver with a 5.8\" OLED display and Face ID, fully tested with a 6-month warranty.",
+      "descriptionAr": "آيفون X فضي مجدّد بشاشة OLED مقاس 5.8 بوصة وبصمة وجه، مفحوص بالكامل بضمان 6 شهور.",
+      "price": 9999,
+      "image": "/xs/12/products/p01.jpg",
+      "collections": [
+        "mobile-products"
+      ]
+    },
+    {
+      "name": "Android Smartphone 6.4\" 128GB – Black",
+      "nameAr": "موبايل أندرويد 6.4 بوصة 128 جيجا أسود",
+      "description": "Slim Android phone with a 6.4\" waterdrop display, 128GB storage and an all-day battery.",
+      "descriptionAr": "موبايل أندرويد نحيف بشاشة 6.4 بوصة ونوتش صغير، ومساحة 128 جيجا وبطارية تكفي اليوم كله.",
+      "price": 9499,
+      "compareAt": 11499,
+      "image": "/xs/12/products/p02.jpg",
+      "collections": [
+        "mobile-products"
+      ]
+    },
+    {
+      "name": "Silicone iPhone Case – White",
+      "nameAr": "جراب سيليكون آيفون أبيض",
+      "description": "Soft-touch white silicone case with a microfibre lining that guards your iPhone against drops and scratches.",
+      "descriptionAr": "جراب سيليكون أبيض ناعم الملمس ببطانة قطيفة، يحمي الآيفون من الخدوش والصدمات.",
+      "price": 449,
+      "image": "/xs/12/products/p03.jpg",
+      "collections": [
+        "mobile-products"
+      ]
+    },
+    {
+      "name": "iPhone 11 Pro Max 256GB – Space Gray (Renewed)",
+      "nameAr": "آيفون 11 برو ماكس 256 جيجا رمادي (مجدّد)",
+      "description": "Renewed iPhone 11 Pro Max in space gray with a triple-camera system and a 6.5\" Super Retina display.",
+      "descriptionAr": "آيفون 11 برو ماكس رمادي مجدّد بثلاث كاميرات وشاشة Super Retina مقاس 6.5 بوصة.",
+      "price": 21999,
+      "compareAt": 25999,
+      "image": "/xs/12/products/p04.jpg",
+      "collections": [
+        "mobile-products"
+      ]
+    },
+    {
+      "name": "iPhone 12 Pro 256GB – Gold (Renewed)",
+      "nameAr": "آيفون 12 برو 256 جيجا ذهبي (مجدّد)",
+      "description": "Renewed iPhone 12 Pro in gold with 5G, a stainless-steel frame and Pro camera system.",
+      "descriptionAr": "آيفون 12 برو ذهبي مجدّد يدعم 5G، بإطار من الستانلس ستيل ونظام كاميرات احترافي.",
+      "price": 26999,
+      "image": "/xs/12/products/p05.jpg",
+      "collections": [
+        "mobile-products"
+      ]
+    },
+    {
+      "name": "Apple Watch Series 3 38mm – Rose Gold",
+      "nameAr": "ساعة أبل سيريس 3 مقاس 38 مم روز جولد",
+      "description": "Rose gold aluminium Apple Watch Series 3 with a white sport band. Tracks workouts, heart rate and notifications.",
+      "descriptionAr": "ساعة أبل سيريس 3 بإطار ألومنيوم روز جولد وسوار رياضي أبيض، تتابع تمارينك ونبضك وإشعاراتك.",
+      "price": 3999,
+      "compareAt": 4999,
+      "image": "/xs/12/products/p06.jpg",
+      "collections": [
+        "smart-watches"
+      ]
+    },
+    {
+      "name": "Apple Watch SE 44mm – Black Leather Link",
+      "nameAr": "ساعة أبل SE مقاس 44 مم بسوار جلد أسود",
+      "description": "Apple Watch SE in space gray paired with a magnetic black leather link band for a refined look.",
+      "descriptionAr": "ساعة أبل SE رمادي فلكي مع سوار جلد أسود مغناطيسي، لإطلالة أنيقة في العمل والسهرات.",
+      "price": 10999,
+      "image": "/xs/12/products/p07.jpg",
+      "collections": [
+        "smart-watches"
+      ]
+    },
+    {
+      "name": "Apple Watch Nike Series 3 42mm – Anthracite",
+      "nameAr": "ساعة أبل نايكي سيريس 3 مقاس 42 مم أنثراسايت",
+      "description": "Nike edition Apple Watch with a breathable perforated sport band and exclusive Nike watch faces.",
+      "descriptionAr": "إصدار نايكي من ساعة أبل بسوار رياضي مثقّب يسمح بالتهوية ووجوه ساعة حصرية من نايكي.",
+      "price": 4799,
+      "image": "/xs/12/products/p08.jpg",
+      "collections": [
+        "smart-watches"
+      ]
+    },
+    {
+      "name": "Apple Watch Series 6 44mm – Space Gray",
+      "nameAr": "ساعة أبل سيريس 6 مقاس 44 مم رمادي فلكي",
+      "description": "Apple Watch Series 6 with an always-on Retina display, blood-oxygen sensor and black leather loop.",
+      "descriptionAr": "ساعة أبل سيريس 6 بشاشة Retina تعمل دائمًا ومستشعر أكسجين الدم وسوار جلد أسود.",
+      "price": 12499,
+      "image": "/xs/12/products/p09.jpg",
+      "collections": [
+        "smart-watches"
+      ]
+    },
+    {
+      "name": "Apple Watch Series 7 45mm – Midnight",
+      "nameAr": "ساعة أبل سيريس 7 مقاس 45 مم ميدنايت",
+      "description": "Apple Watch Series 7 in midnight with a larger edge-to-edge display and a matching sport band.",
+      "descriptionAr": "ساعة أبل سيريس 7 بلون ميدنايت وشاشة أكبر من الحافة للحافة مع سوار رياضي بنفس اللون.",
+      "price": 14499,
+      "image": "/xs/12/products/p10.jpg",
+      "collections": [
+        "smart-watches"
+      ]
+    }
+  ],
+  "wording": {
+    "searchPlaceholder": "Type and press enter",
+    "loadMoreLabel": "Go to Shop",
+    "openLabel": "Add to Cart"
+  },
+  "wordingAr": {
+    "searchPlaceholder": "اكتب واضغط Enter",
+    "loadMoreLabel": "تصفّح المتجر",
+    "openLabel": "أضف للسلة"
+  }
+}

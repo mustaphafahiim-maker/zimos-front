@@ -295,7 +295,7 @@ describe("store look", () => {
       const look = baseLook({ footer: { ...DEFAULT_FOOTER_LOOK, text: "Cairo · since 2020", showHelp: false } });
       const preview = lookToShellPreview({ header: { keep: true } }, look);
       const saved = lookToWorkspacePatch({ header: { keep: true } }, look).themeSettings;
-      expect(preview).toEqual({ header: saved.header, footer: saved.footer });
+      expect(preview).toEqual({ header: saved.header, footer: saved.footer, tokens: saved.xsTokens ?? null, storePages: saved.storePages ?? null, storeWords: saved.storeWords ?? null });
     });
   });
 });

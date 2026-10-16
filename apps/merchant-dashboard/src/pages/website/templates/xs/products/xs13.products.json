@@ -1,0 +1,64 @@
+{
+  "look": "13",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Watches",
+      "nameAr": "ساعات",
+      "slug": "watches"
+    }
+  ],
+  "products": [
+    {
+      "name": "Apple Watch 42mm – Stainless Steel, White Sport Band",
+      "nameAr": "ساعة أبل 42 مم ستانلس ستيل بسوار أبيض",
+      "description": "Polished stainless-steel Apple Watch with a sapphire display and a soft white sport band.",
+      "descriptionAr": "ساعة أبل بإطار ستانلس ستيل لامع وشاشة سافير، مع سوار رياضي أبيض ناعم.",
+      "price": 11999,
+      "image": "/xs/13/products/p01.jpg",
+      "collections": [
+        "watches"
+      ]
+    },
+    {
+      "name": "Apple Watch Sport 42mm – Silver, Blue Band",
+      "nameAr": "ساعة أبل سبورت 42 مم فضي بسوار أزرق",
+      "description": "Lightweight silver aluminium Apple Watch Sport with a vivid blue fluoroelastomer band.",
+      "descriptionAr": "ساعة أبل سبورت خفيفة بإطار ألومنيوم فضي وسوار رياضي أزرق مبهج.",
+      "price": 7999,
+      "image": "/xs/13/products/p01b.jpg",
+      "collections": [
+        "watches"
+      ]
+    },
+    {
+      "name": "Apple Watch Sport 42mm – Gold, Cocoa Band",
+      "nameAr": "ساعة أبل سبورت 42 مم ذهبي بسوار كاكاو",
+      "description": "Gold aluminium Apple Watch Sport paired with a rich cocoa sport band for a warm, elegant look.",
+      "descriptionAr": "ساعة أبل سبورت بإطار ألومنيوم ذهبي وسوار رياضي بلون الكاكاو، لإطلالة دافئة وأنيقة.",
+      "price": 8499,
+      "compareAt": 10499,
+      "image": "/xs/13/products/p01c.jpg",
+      "collections": [
+        "watches"
+      ]
+    },
+    {
+      "name": "Apple Watch Sport 42mm – Rose Gold, Midnight Blue Band",
+      "nameAr": "ساعة أبل سبورت 42 مم روز جولد بسوار كحلي",
+      "description": "Rose gold aluminium Apple Watch Sport with a midnight blue sport band. Subtle, modern and comfortable.",
+      "descriptionAr": "ساعة أبل سبورت بإطار ألومنيوم روز جولد وسوار رياضي كحلي، هادئة وعصرية ومريحة.",
+      "price": 8499,
+      "image": "/xs/13/products/p01d.jpg",
+      "collections": [
+        "watches"
+      ]
+    }
+  ],
+  "wording": {
+    "openLabel": "Pre Order"
+  },
+  "wordingAr": {
+    "openLabel": "اطلب مسبقًا"
+  }
+}

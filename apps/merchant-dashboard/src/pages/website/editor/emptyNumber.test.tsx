@@ -57,7 +57,8 @@ describe("an emptied number field", () => {
       expect([name, onChange.mock.calls.at(-1)]).toEqual([name, [field.key, undefined]]);
       cleanup();
     }
-  });
+  // One render per number field in the editor: the count grows with every block, so the time does too.
+  }, 60_000);
 
   it("still stores a typed number as a number", async () => {
     const seconds = ELEMENT_SPECS.hero_slider.fields.find((field) => field.key === "seconds");

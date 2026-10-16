@@ -1,10 +1,10 @@
-import type { PageSection } from "@store-builder/api-client";
+import type { PageElement, PageSection } from "@store-builder/api-client";
 import { stepEdit, type CanvasEdit, type CanvasStep } from "@/lib/canvasDrag";
 import { useToast } from "@/components/Toast";
 import { fmt, useT } from "@/i18n/LocaleContext";
 import { createSection, insertSection, moveSection, sectionLabel, type BlockPreset } from "../blocks";
 import { applyCanvasEdit, nudgeElement } from "../canvasEdits";
-import { duplicateSection, sectionHidden, setElementText, setSectionHidden } from "../canvasTools";
+import { cloneElement, duplicateElement, duplicateSection, replaceDeepAddress, sectionHidden, setElementText, setSectionHidden } from "../canvasTools";
 import { useEditorLocale } from "../editorLocale";
 import { SHELL_STRINGS } from "./shellStrings";
 import { setElementField } from "./treeTools";
@@ -12,6 +12,9 @@ import type { EditorDocument } from "./useEditorDocument";
 
 /** What the small bar on a selected section can ask for (StorefrontPreview's onSectionAction). */
 export type SectionActionKind = "up" | "down" | "duplicate" | "hide" | "delete";
+
+/** Where a copied section or element waits to be pasted — on this page, another page, or another store's editor. */
+const CLIPBOARD_KEY = "zimos:editor-clipboard";
 
 /**
  * Every edit the shell makes to the open page's sections — from the canvas,
@@ -65,8 +68,92 @@ export function useSectionEdits({
   }
 
   /** Double-click text editing on the page (canvasTools.ts): one undo step per edit. */
-  function editText(elementId: string, text: string) {
-    setSections((prev) => setElementText(prev, elementId, text));
+  function editText(elementId: string, text: string, match?: { was: string; nth: number }) {
+    setSections((prev) => setElementText(prev, elementId, text, match));
+  }
+
+  /** A picture of a many-pictured band replaced from the page (canvasTools.ts): one undo step. */
+  function replacePicture(elementId: string, was: string, nth: number, url: string) {
+    setSections((prev) => replaceDeepAddress(prev, elementId, was, nth, url));
+  }
+
+  // --- copy and paste ------------------------------------------------------------
+  //
+  // Kept in the browser's own storage rather than in memory, so what was copied on one page (or in one
+  // store's editor) pastes on another. A pasted node gets new ids throughout, like a duplicate.
+
+  const elementsOf = (section: PageSection): PageElement[] =>
+    (section.rows ?? []).flatMap((row) => (row.columns ?? []).flatMap((column) => column.elements ?? []));
+
+  /** Copies the selected element, or else the selected section. False when nothing is selected. */
+  function copy(sectionId: string | null, elementId: string | null): boolean {
+    const section = sections.find((s) => s.id === sectionId);
+    if (!section) return false;
+    const element = elementId ? elementsOf(section).find((el) => el.id === elementId) : undefined;
+    try {
+      window.localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(element ? { kind: "element", node: element } : { kind: "section", node: section }));
+    } catch {
+      return false;
+    }
+    toast.success(element ? t.copiedElement : t.copiedSection);
+    return true;
+  }
+
+  /** Pastes what was copied: a section under the selected one (or at the end), an element after the selected one. */
+  function paste(sectionId: string | null, elementId: string | null): boolean {
+    let clip: { kind?: unknown; node?: unknown } | null = null;
+    try {
+      clip = JSON.parse(window.localStorage.getItem(CLIPBOARD_KEY) ?? "null");
+    } catch {
+      clip = null;
+    }
+    const node = clip?.node as { id?: unknown; type?: unknown } | undefined;
+    if (!clip || !node || typeof node.id !== "string" || typeof node.type !== "string") {
+      toast.error(t.nothingToPaste);
+      return false;
+    }
+    if (clip.kind === "section" && node.type === "section") {
+      const fresh = duplicateSection(node as PageSection);
+      const at = sections.findIndex((s) => s.id === sectionId);
+      setSections((prev) => insertSection(prev, fresh, at === -1 ? prev.length : at + 1));
+      onSelect(fresh.id, { scroll: true });
+      toast.success(t.pastedSection);
+      return true;
+    }
+    if (clip.kind !== "element") return false;
+    const target = sections.find((s) => s.id === sectionId);
+    if (!target) {
+      toast.error(t.pasteNeedsSection);
+      return false;
+    }
+    const fresh = cloneElement(node as PageElement);
+    let placed = false;
+    const rows = (target.rows ?? []).map((row, r) => ({
+      ...row,
+      columns: (row.columns ?? []).map((column, c) => {
+        const elements = column.elements ?? [];
+        const index = elementId ? elements.findIndex((el) => el.id === elementId) : -1;
+        // After the selected element; with none selected, at the end of the section's first column.
+        const here = elementId ? index !== -1 : r === 0 && c === 0;
+        if (placed || !here) return column;
+        placed = true;
+        const at = index === -1 ? elements.length : index + 1;
+        return { ...column, elements: [...elements.slice(0, at), fresh, ...elements.slice(at)] };
+      }),
+    }));
+    if (!placed) return false;
+    update({ ...target, rows });
+    toast.success(t.pastedElement);
+    return true;
+  }
+
+  /** A copy of the selected element right after it, or else of the selected section. */
+  function duplicateSelected(sectionId: string | null, elementId: string | null): boolean {
+    const section = sections.find((s) => s.id === sectionId);
+    if (!section) return false;
+    if (elementId) update(duplicateElement(section, elementId));
+    else duplicate(section.id);
+    return true;
   }
 
   /** Creates a section from `preset` and drops it at `index`, then selects and scrolls to it. */
@@ -167,5 +254,5 @@ export function useSectionEdits({
     setSections((prev) => setElementField(prev, target.sectionId, target.elementId, target.field, url));
   }
 
-  return { applyCanvas, stepCanvas, editText, addPreset, addSection, move, moveBy, update, duplicate, remove, toggleHidden, act, setImage };
+  return { replacePicture, copy, paste, duplicateSelected, applyCanvas, stepCanvas, editText, addPreset, addSection, move, moveBy, update, duplicate, remove, toggleHidden, act, setImage };
 }

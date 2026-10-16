@@ -1,3 +1,4 @@
+import { XS_ONLY } from "./xsBlocks";
 import type { CSSProperties } from "react";
 import {
   IconAnnounce,
@@ -23,6 +24,9 @@ import { STORE_SIDEBAR_ENABLED } from "@/lib/features";
 import { formatMoney } from "@/lib/format";
 import { useThemeFonts } from "@/lib/themeFonts";
 import { ImageField } from "./ImageField";
+import { StorePagesBlock } from "./StorePagesBlock";
+import { TemplateLookBlock } from "./TemplateLookBlock";
+import { StoreWordsBlock } from "./StoreWordsBlock";
 import { useEditorLocale, type EditorLocale, type EditorUi } from "./editorLocale";
 import {
   MAX_ANNOUNCEMENT_MESSAGES,
@@ -155,6 +159,8 @@ export function StoreLookPanel({
     <div data-slot="store-look" data-variant={variant} style={gutters} className="zimos-look">
       <p className="px-[var(--look-gutter)] pt-3 text-xs text-ink-soft">{ui.lookHint}</p>
 
+      {/* Zimos's own ready styles and themes: not offered while the editor offers only the imported templates (XS_ONLY). */}
+      {!XS_ONLY && (
       <LookBlock title={t.presets} hint={t.presetsHint}>
         <ThemePresetRow
           look={look}
@@ -164,6 +170,7 @@ export function StoreLookPanel({
           variant={variant}
         />
       </LookBlock>
+      )}
 
       <LookBlock title={t.brandColor} hint={ui.accentColorsHint}>
         {original ? (
@@ -313,6 +320,7 @@ export function StoreLookPanel({
         />
       </LookBlock>
 
+      {!XS_ONLY && (
       <LookBlock title={ui.theme}>
         <div
           role="radiogroup"
@@ -366,6 +374,7 @@ export function StoreLookPanel({
         </p>
         <p className="text-xs text-ink-soft">{original ? ui.themeOriginalHint : ui.themeHint}</p>
       </LookBlock>
+      )}
 
       {/* Where the store's navigation sits on a wide screen (lib/features); saved with the header, as `header.layout`. */}
       {STORE_SIDEBAR_ENABLED && (
@@ -380,6 +389,36 @@ export function StoreLookPanel({
           />
         </LookBlock>
       )}
+
+      {/* A template's one look — faces, corners, words, spacing; nothing on a store that wears none. */}
+      <TemplateLookBlock
+        saved={look.xsTokens}
+        onChange={(xsTokens, key) => {
+          const { xsTokens: _old, ...rest } = look;
+          void _old;
+          onChange(xsTokens ? { ...rest, xsTokens } : rest, key);
+        }}
+      />
+
+      {/* A template's own shop pages; nothing on a store that wears none. */}
+      <StorePagesBlock
+        saved={look.storePages}
+        onChange={(storePages, key) => {
+          const { storePages: _old, ...rest } = look;
+          void _old;
+          onChange(storePages ? { ...rest, storePages } : rest, key);
+        }}
+      />
+
+      {/* The words on the shop pages, the merchant's way; nothing on a store that wears no template (unless XS_ONLY). */}
+      <StoreWordsBlock
+        saved={look.storeWords}
+        onChange={(storeWords, key) => {
+          const { storeWords: _old, ...rest } = look;
+          void _old;
+          onChange(storeWords ? { ...rest, storeWords } : rest, key);
+        }}
+      />
 
       {onEditShell && (
         <LookBlock title={t.shellTitle} hint={ui.shellEditHint}>

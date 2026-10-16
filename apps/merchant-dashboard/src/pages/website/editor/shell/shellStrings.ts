@@ -96,6 +96,12 @@ export const SHELL_STRINGS = {
 
     // --- section actions ---
     sectionDeleted: "“{name}” deleted",
+    copiedSection: "Section copied. Ctrl+V pastes it under the selected one, on any page.",
+    copiedElement: "Block copied. Ctrl+V pastes it into the selected section.",
+    pastedSection: "Section pasted",
+    pastedElement: "Block pasted",
+    nothingToPaste: "Nothing copied yet. Select a section and press Ctrl+C.",
+    pasteNeedsSection: "Select the section to paste the block into first.",
     sectionHidden: "“{name}” is hidden from your store",
     pickImage: "Choose a picture",
 
@@ -241,6 +247,12 @@ export const SHELL_STRINGS = {
 
     // --- section actions ---
     sectionDeleted: "حُذف «{name}»",
+    copiedSection: "اتنسخ السكشن. ‎Ctrl+V‏ بيلصقه تحت السكشن المختار، في أي صفحة.",
+    copiedElement: "اتنسخ العنصر. ‎Ctrl+V‏ بيلصقه جوه السكشن المختار.",
+    pastedSection: "اتلصق السكشن",
+    pastedElement: "اتلصق العنصر",
+    nothingToPaste: "مفيش حاجة منسوخة. اختار سكشن واضغط ‎Ctrl+C‏.",
+    pasteNeedsSection: "اختار الأول السكشن اللي هتلصق فيه العنصر.",
     sectionHidden: "أُخفي «{name}» من متجرك",
     pickImage: "اختيار صورة",
 

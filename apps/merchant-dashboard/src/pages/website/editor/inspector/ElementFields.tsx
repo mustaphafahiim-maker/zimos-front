@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { IconClose, IconPlus } from "@/components/icons";
+import type { FocusEvent, ReactNode } from "react";
+import { IconClick, IconClose, IconContrast, IconHeading, IconImage, IconLayout, IconMessage, IconParagraph, IconPlus, type IconComponent } from "@/components/icons";
 import { Button, Input, Label } from "@store-builder/ui";
 import type { PageElement, PageElementType } from "@store-builder/api-client";
 import { Field, TextField } from "@/components/Field";
@@ -9,8 +9,14 @@ import { ELEMENT_SPECS, type FieldSpec } from "../blocks";
 import { editorUi, fieldHint, fieldLabel, optionLabel, useEditorLocale, type EditorUi } from "../editorLocale";
 import { ImageField, ImageListField } from "../ImageField";
 import { ItemListField } from "../ItemListField";
+import { ColorWell } from "../theme/ColorWell";
 import { ProductPickerField } from "../ProductPickerField";
-import { NumberField, SwitchRow } from "./controls";
+import { locateOnCanvas } from "@/lib/previewBridge";
+import { XS_FIELD_GROUPS, isXsType, xsFieldGroup, type XsFieldGroup } from "../xsBlocks";
+import { Group, NumberField, SwitchRow } from "./controls";
+import { deviceParts, valueOnDevice, withDeviceValue } from "@/lib/deviceValue";
+import type { ScreenDevice } from "@/lib/canvasDrag";
+import { useEditorScreen } from "../editorScreen";
 import { BilingualField, LinkTargetNote, isLinkKey, pairByLanguage, type LanguageSlot } from "./fields";
 
 /**
@@ -414,15 +420,22 @@ export function ElementField({
   props,
   onChange,
   slot,
+  inherited,
 }: {
   elementType: PageElementType;
   spec: FieldSpec;
   props: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
   slot?: LanguageSlot;
+  /** What this screen shows while it has no value of its own (a per-screen field, PerScreenField). */
+  inherited?: unknown;
 }) {
   const locale = useEditorLocale();
   const ui = editorUi(locale);
+  const screen = useEditorScreen();
+  if (spec.perScreen && !slot) {
+    return <PerScreenField elementType={elementType} spec={spec} props={props} onChange={onChange} screen={screen} />;
+  }
   const raw = props[spec.key];
   const label = slot?.label ?? fieldLabel(elementType, spec.key, spec.label, locale);
   const hint = slot ? undefined : fieldHint(elementType, spec.key, spec.hint, locale);
@@ -481,7 +494,18 @@ export function ElementField({
       // The prop stays numeric — the storefront renderer expects a number. An
       // emptied field is "not set": the prop is taken out (setElementProp),
       // never stored as "" — the server refuses "" where it checks a range.
-      return <NumberField label={label} hint={hint} min={spec.min} max={spec.max} value={asNumber(raw)} onChange={(v) => onChange(spec.key, v === "" ? undefined : v)} />;
+      return (
+        <NumberField
+          label={label}
+          hint={hint}
+          min={spec.min}
+          max={spec.max}
+          value={asNumber(raw)}
+          placeholder={typeof inherited === "number" ? String(inherited) : undefined}
+          startAt={typeof inherited === "number" ? inherited : undefined}
+          onChange={(v) => onChange(spec.key, v === "" ? undefined : v)}
+        />
+      );
 
     case "datetime": {
       // datetime-local speaks the editor's own clock; the prop is an ISO date.
@@ -508,6 +532,9 @@ export function ElementField({
         </Field>
       );
     }
+
+    case "color":
+      return <ColorField label={label} hint={hint} value={raw} onChange={(hex) => onChange(spec.key, hex)} />;
 
     case "boolean":
       return <SwitchRow label={label} hint={hint} checked={raw === true} onChange={(checked) => onChange(spec.key, checked)} />;
@@ -583,6 +610,7 @@ export function ElementField({
           fields={spec.fields}
           max={spec.max}
           onChange={(next) => onChange(spec.key, next)}
+          arrange={isXsType(elementType)}
         />
       );
 
@@ -596,9 +624,42 @@ function filled(v: unknown): boolean {
   return asString(v).trim() !== "";
 }
 
+const XS_GROUP_ICON: Record<XsFieldGroup, IconComponent> = {
+  content: IconParagraph,
+  layout: IconLayout,
+  type: IconHeading,
+  pictures: IconImage,
+  buttons: IconClick,
+  colours: IconContrast,
+  wording: IconMessage,
+};
+
+/** Whether a prop holds a choice of the merchant's (what a group's count adds up). */
+function chosen(value: unknown): boolean {
+  if (value === undefined || value === null || value === "" || value === false) return false;
+  return !Array.isArray(value) || value.length > 0;
+}
+
+/**
+ * "Show me what this changes": a field that takes the focus asks the preview
+ * to outline what it edits — the words or the picture it holds when it holds
+ * some, or else the whole element (lib/previewBridge.ts locateOnCanvas).
+ */
+function locateField(elementId: string, event: FocusEvent<HTMLElement>) {
+  const target = event.target as HTMLElement;
+  const typed = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ? target.value : "";
+  const text = target instanceof HTMLInputElement && target.type !== "text" && target.type !== "url" ? "" : typed;
+  // A paragraph of a longer text is one run on the page: the first of them is enough to find it.
+  locateOnCanvas(elementId, text.trim().length >= 2 ? (text.split(/\n+/).find((part) => part.trim()) ?? "") : "");
+}
+
 /**
  * Every field of an element, in the order its spec lists them. A field with
  * an English twin (`title` + `titleEn`) is drawn once, as a two-language field.
+ *
+ * A band of an imported template has many (its content, then everything about
+ * its look), so its fields come in titled groups that fold — Content open,
+ * the rest showing how many of their choices are set (xsBlocks.ts).
  */
 export function ElementFields({
   element,
@@ -610,6 +671,33 @@ export function ElementFields({
   const locale = useEditorLocale();
   const spec = ELEMENT_SPECS[element.type];
   const props = (element.props ?? {}) as Record<string, unknown>;
+
+  if (isXsType(element.type)) {
+    return (
+      <div className="-mx-4 -my-4" onFocusCapture={(event) => locateField(element.id, event)}>
+        {XS_FIELD_GROUPS.map((group) => {
+          const fields = spec.fields.filter((field) => xsFieldGroup(field.key) === group.id);
+          if (fields.length === 0) return null;
+          return (
+            <Group
+              key={group.id}
+              id={`xs:${group.id}`}
+              title={locale === "ar" ? group.titleAr : group.title}
+              hint={locale === "ar" ? group.hintAr : group.hint}
+              icon={XS_GROUP_ICON[group.id]}
+              mark={group.id === "content" ? undefined : fields.filter((field) => chosen(props[field.key])).length}
+              collapsible
+              defaultOpen={group.id === "content"}
+            >
+              {fields.map((field) => (
+                <ElementField key={field.key} elementType={element.type} spec={field} props={props} onChange={onPropChange} />
+              ))}
+            </Group>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -631,5 +719,94 @@ export function ElementFields({
         )
       )}
     </>
+  );
+}
+
+const SCREEN_WORDS = {
+  en: {
+    tablet: "Tablet",
+    mobile: "Phone",
+    own: (screen: string) => `Set for the ${screen.toLowerCase()} only`,
+    same: (from: string, value: string) => (value ? `Same as the ${from.toLowerCase()} (${value})` : `Same as the ${from.toLowerCase()}`),
+    reset: (from: string) => `Use the ${from.toLowerCase()}'s`,
+    computer: "Computer",
+    others: (screens: string) => `${screens}: set apart`,
+  },
+  ar: {
+    tablet: "التابلت",
+    mobile: "الموبايل",
+    own: (screen: string) => `مضبوط لـ${screen} بس`,
+    same: (from: string, value: string) => (value ? `زي ${from} (${value})` : `زي ${from}`),
+    reset: (from: string) => `ارجع لقيمة ${from}`,
+    computer: "الكمبيوتر",
+    others: (screens: string) => `${screens} ليه قيمة خاصة`,
+  },
+};
+
+/**
+ * A field set apart for each screen (FieldSpec perScreen): it shows and edits
+ * the previewed screen's own value; without one, the screen takes the next
+ * larger screen's, shown as the field's placeholder and in a note. A badge
+ * marks a screen's own value, with the way back to the larger screen's.
+ */
+function PerScreenField({
+  elementType,
+  spec,
+  props,
+  onChange,
+  screen,
+}: {
+  elementType: PageElementType;
+  spec: FieldSpec;
+  props: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
+  screen: ScreenDevice;
+}) {
+  const w = SCREEN_WORDS[useEditorLocale() === "ar" ? "ar" : "en"];
+  const raw = props[spec.key];
+  const parts = deviceParts(raw);
+  const own = parts[screen];
+  const larger: ScreenDevice = screen === "mobile" ? "tablet" : "base";
+  const inherited = screen === "base" ? undefined : valueOnDevice(raw, larger);
+  const name = (device: ScreenDevice) => (device === "base" ? w.computer : w[device]);
+  const from = name(screen === "mobile" && parts.tablet !== undefined ? "tablet" : "base");
+  const set = (key: string, value: unknown) => onChange(key, withDeviceValue(raw, screen, value === "" ? undefined : value));
+  const shown = (value: unknown) => (typeof value === "number" || (typeof value === "string" && value.length <= 24) ? String(value) : typeof value === "boolean" ? (value ? "✓" : "✗") : "");
+  const others = screen === "base" ? (["tablet", "mobile"] as const).filter((device) => parts[device] !== undefined) : [];
+
+  return (
+    <div className="space-y-1" data-per-screen={spec.key}>
+      <ElementField elementType={elementType} spec={{ ...spec, perScreen: false }} props={{ ...props, [spec.key]: own }} onChange={set} inherited={inherited} />
+      {screen !== "base" && (
+        <div className="flex min-h-7 flex-wrap items-center gap-2 text-xs">
+          {own !== undefined ? (
+            <>
+              <span className="rounded-full bg-primary-soft px-2 py-0.5 font-semibold text-primary">{w.own(name(screen))}</span>
+              <button type="button" className="font-medium text-primary underline-offset-2 hover:underline" onClick={() => onChange(spec.key, withDeviceValue(raw, screen, null))}>
+                {w.reset(from)}
+              </button>
+            </>
+          ) : (
+            <span className="text-ink-soft">{w.same(from, shown(inherited))}</span>
+          )}
+        </div>
+      )}
+      {others.length > 0 && <p className="text-xs text-ink-soft">{w.others(others.map(name).join(" · "))}</p>}
+    </div>
+  );
+}
+
+/** A colour prop: the well, and a way back to "not chosen" — the element then keeps its own colour. */
+function ColorField({ label, hint, value, onChange }: { label: string; hint?: string; value: unknown; onChange: (hex: string | undefined) => void }) {
+  const locale = useEditorLocale();
+  const chosen = typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : null;
+  return (
+    <ColorWell label={label} hint={hint} value={chosen} fallback="#ffffff" onChange={onChange}>
+      {chosen ? (
+        <button type="button" className="text-xs text-ink-soft underline underline-offset-2 hover:text-ink" onClick={() => onChange(undefined)}>
+          {locale === "ar" ? "رجّع لون القالب" : "Back to the template's colour"}
+        </button>
+      ) : null}
+    </ColorWell>
   );
 }

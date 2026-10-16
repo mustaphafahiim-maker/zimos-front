@@ -10,6 +10,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
+import { recordLatency, type EditKind } from "@/lib/previewLatency";
 import { IconClose, IconDesktop, IconInspect, IconMoon, IconPhoneDevice, IconRefresh, IconSun, IconTablet } from "@/components/icons";
 import { Button, Spinner, cn } from "@store-builder/ui";
 import type { PageElementType, PageTree } from "@store-builder/api-client";
@@ -23,6 +24,7 @@ import { useCanvasDragSession } from "./useCanvasDragSession";
 import {
   PREVIEW_DEVICE_WIDTH,
   diffTreePatch,
+  patchKind,
   nearestGapIndex,
   originOf,
   readFrameMessage,
@@ -40,6 +42,9 @@ import {
   type SectionRect,
   type ShellPart,
   type ShellPreview,
+  onLocateRequest,
+  type CanvasKey,
+  type DeepMatch,
 } from "@/lib/previewBridge";
 
 export type { PatchOp, PreviewDevice, SectionAction } from "@/lib/previewBridge";
@@ -98,7 +103,8 @@ export interface PreviewCanvas {
   /** Unsaved header/footer settings, applied in the frame without a reload. Null shows the saved ones. */
   shell?: ShellPreview | null;
   /** The header, footer or announcement bar was clicked in the frame. */
-  onSelectShell?: (part: ShellPart) => void;
+  /** `xsPart`: the template header's part that was clicked (xsShellLayout.ts). */
+  onSelectShell?: (part: ShellPart, xsPart?: string) => void;
   /** Scrolls the frame to the header or footer; a new `nonce` asks again. */
   shellScrollRequest?: { part: ShellPart; nonce: number } | null;
   /**
@@ -111,8 +117,19 @@ export interface PreviewCanvas {
   onCanvasStep?: (step: CanvasStep) => void;
   /** The elements whose text a double-click edits on the page (editor/canvasTools.ts). */
   inlineText?: string[];
-  /** A double-click text edit was committed in the frame. */
-  onTextEdit?: (elementId: string, text: string) => void;
+  /** Element id → the words in it a double-click edits where they stand (editor/canvasTools.ts `deepTextOf`). */
+  deepText?: Record<string, string[]>;
+  /** A double-click text edit was committed in the frame; `match` names one word-run of a many-worded band. */
+  onTextEdit?: (elementId: string, text: string, match?: DeepMatch) => void;
+  /** An editor key (copy, paste, undo…) pressed while the page had the focus. */
+  onCanvasKey?: (key: CanvasKey) => void;
+  /**
+   * The imported templates' tools on the page — resizing a band's pictures and
+   * a logo, moving a header part, a ground picture's focus, a band's items —
+   * and the editor's keys handed over from the frame. Only for a store that
+   * wears an imported template; any other store's preview is as it was.
+   */
+  templateTools?: boolean;
 }
 
 /** What the preview's own bar does, for a shell that draws those controls itself (`chrome="none"`). */
@@ -227,7 +244,8 @@ function elementLabelsOf(tree: PageTree, locale: "en" | "ar"): Record<string, st
  * that only touches an element's text, picture, visibility or a few simple
  * style values (lib/previewBridge.ts `diffTreePatch`) is posted to the
  * showing frame at once as `zimos:patch`, and the render waits for 1.5s of
- * quiet instead of 0.7s. Anything else renders as it always did.
+ * quiet instead of 0.7s (0.3s with an imported template's tools). Anything
+ * else renders as it always did.
  *
  * The device frame: phone (390), tablet (768) or desktop (1280). With `fit`
  * the frame is laid out at that true width and scaled down to fit the stage,
@@ -241,6 +259,7 @@ export function StorefrontPreview({
   onClose,
   className,
   canvas,
+  storePath = null,
   colorMode: controlledMode,
   onColorModeChange,
   onSelectElement,
@@ -262,6 +281,12 @@ export function StorefrontPreview({
   className?: string;
   canvas?: PreviewCanvas;
   /**
+   * One of the store's own pages to show in the frame instead of the tree
+   * ("/products", "/product", "/cart", "/checkout"), drawn by the storefront in
+   * the unsaved look (storefront lib/editorView.ts). Null shows the tree.
+   */
+  storePath?: string | null;
+  /**
    * The preview's own light/dark mode, separate from the dashboard's. Null
    * (or leaving it out) shows the page in whatever mode it opens in — the
    * shopper-side stored choice or the system setting — until the switch in
@@ -276,7 +301,7 @@ export function StorefrontPreview({
   /** The floating bar on the selected section. Left out, the bar keeps its two move buttons (`canvas.onMoveSection`). */
   onSectionAction?: (sectionId: string, action: SectionAction) => void;
   /** "Replace this picture" on a selected element; `field` is the prop that holds it. */
-  onPickImage?: (target: { sectionId: string; elementId: string; field: string }) => void;
+  onPickImage?: (target: { sectionId: string; elementId: string; field: string; src?: string; nth?: number }) => void;
   /** "phone" | "tablet" | "desktop". Uncontrolled it starts at `defaultDevice` (desktop, as before). */
   device?: PreviewDevice;
   onDeviceChange?: (device: PreviewDevice) => void;
@@ -360,6 +385,8 @@ export function StorefrontPreview({
   const canvasRef = useRef(canvas);
   const themeRef = useRef(themeJson);
   const shellRef = useRef(shellJson);
+  const storePathRef = useRef(storePath ?? "");
+  storePathRef.current = storePath ?? "";
   const handlersRef = useRef({ onSelectElement, onSectionAction, onPickImage });
   useEffect(() => {
     canvasRef.current = canvas;
@@ -405,17 +432,32 @@ export function StorefrontPreview({
     if (theme) theme.value = themeRef.current;
     const shell = form.elements.namedItem("shell") as HTMLInputElement | null;
     if (shell) shell.value = shellRef.current;
+    const path = form.elements.namedItem("path") as HTMLInputElement | null;
+    if (path) path.value = storePathRef.current;
     (form.elements.namedItem("colorMode") as HTMLInputElement).value = chosenRef.current ?? "";
     setLoading(true);
     form.submit();
   }, [baseName]);
+
+  // The store's own pages are drawn by the storefront from the look (storePath): another page, or a
+  // change to the unsaved look while one shows, renders the frame again — a page at once, a look after a pause.
+  const lastStoreView = useRef<{ path: string; shell: string } | null>(null);
+  useEffect(() => {
+    if (!editing) return;
+    const now = { path: storePath ?? "", shell: storePath ? shellJson : "" };
+    const was = lastStoreView.current;
+    lastStoreView.current = now;
+    if (!was || (was.path === now.path && was.shell === now.shell)) return;
+    const handle = window.setTimeout(() => void post(serializedRef.current), was.path !== now.path ? 0 : 300);
+    return () => window.clearTimeout(handle);
+  }, [storePath, shellJson, editing, post]);
 
   // A drag on the canvas (lib/canvasDrag.ts): held here in a ref, so the
   // pointer moving re-renders nothing. A release that changes the page is one
   // tree edit, posted straight away.
   const canvasDrag = useCanvasDragSession({
     origin: STOREFRONT_ORIGIN,
-    labels: { auto: canvas?.strings.auto ?? "Auto" },
+    labels: { auto: canvas?.strings.auto ?? "Auto", original: canvas?.strings.original, everyPicture: canvas?.strings.everyPicture },
     onEdit: (edit) => {
       urgentPost.current = true;
       canvasRef.current?.onCanvasEdit?.(edit);
@@ -435,6 +477,13 @@ export function StorefrontPreview({
    * can: true when the page now reflects it (the render can wait), false when
    * only a render will do.
    */
+  // How long each edit takes to show (lib/previewLatency.ts): when the tree last changed, whether that
+  // change is on the screen yet, and the patches the frame has not yet said it painted.
+  const changedAt = useRef(0);
+  const changeShown = useRef(true);
+  const patchSeq = useRef(0);
+  const patchSent = useRef(new Map<number, { at: number; kind: EditKind }>());
+
   const patchFrame = useCallback(
     (index: 0 | 1): boolean => {
       const page = shown.current[index];
@@ -456,11 +505,24 @@ export function StorefrontPreview({
             delete rest.text;
             return rest;
           })
-          .filter((op) => op.text !== undefined || op.imageSrc !== undefined || op.hidden !== undefined || op.style !== undefined);
+          .filter(
+            (op) =>
+              op.text !== undefined ||
+              op.imageSrc !== undefined ||
+              op.hidden !== undefined ||
+              op.style !== undefined ||
+              op.own !== undefined ||
+              op.words !== undefined ||
+              op.pictures !== undefined
+          );
       }
       if (ops.length > 0) {
-        const message: PatchMessage = { type: "zimos:patch", ops };
+        // Timed from the change to the frame's "painted" (lib/previewLatency.ts).
+        const seq = ++patchSeq.current;
+        patchSent.current.set(seq, { at: changedAt.current, kind: patchKind(ops) });
+        const message: PatchMessage = { type: "zimos:patch", ops, seq };
         win.postMessage(message, STOREFRONT_ORIGIN);
+        changeShown.current = true;
       }
       shown.current[index] = { json, tree: treeRef.current };
       return true;
@@ -468,8 +530,13 @@ export function StorefrontPreview({
     []
   );
 
+  // With an imported template's tools (PreviewCanvas templateTools), a change only a render can show
+  // waits for a short pause in typing (300ms); any other store's preview keeps its longer one.
+  const renderPause = canvas?.templateTools === true ? 300 : 700;
   useEffect(() => {
-    let delay = firstPost.current || urgentPost.current ? 0 : 700;
+    changedAt.current = performance.now();
+    changeShown.current = false;
+    let delay = firstPost.current || urgentPost.current ? 0 : renderPause;
     firstPost.current = false;
     urgentPost.current = false;
     // A small edit shows at once as a patch, and the render waits for a longer pause.
@@ -483,7 +550,7 @@ export function StorefrontPreview({
       void post(serialized);
     }, delay);
     return () => window.clearTimeout(handle);
-  }, [serialized, post, canvasDrag, editing, patchFrame]);
+  }, [serialized, post, canvasDrag, editing, patchFrame, renderPause]);
 
   // A plain preview has no bridge in the frame to switch it live, so a new
   // mode is a new render. (The editor's canvas switches in place: the mode
@@ -548,10 +615,12 @@ export function StorefrontPreview({
         colorMode: chosen,
         xray,
         inlineText: canvas.inlineText ?? [],
+        deepText: canvas.deepText ?? {},
         can: {
           selectElement: canSelectElement,
           pickImage: canPickImage,
           sectionActions: hasSectionAction ? ALL_SECTION_ACTIONS : hasMoveSection ? ["up", "down"] : [],
+          resizePicture: canvas?.onCanvasEdit !== undefined && canvas.templateTools === true,
         },
         elementLabels,
       } satisfies EditorStateMessage)
@@ -587,6 +656,14 @@ export function StorefrontPreview({
   const [hoverGapIndex, setHoverGapIndex] = useState<number | null>(null);
   // A drag that ends forgets its gap — adjusted during render rather than in
   // an effect, so no stale gap is ever posted when the next drag starts.
+  // "Show me what this changes" from a field in the inspector (lib/previewBridge.ts locateOnCanvas).
+  useEffect(() => {
+    if (!STOREFRONT_ORIGIN) return undefined;
+    return onLocateRequest(({ elementId, text }) => {
+      for (const win of frames()) win?.postMessage({ type: "zimos:locate", elementId, text }, STOREFRONT_ORIGIN);
+    });
+  }, [frames]);
+
   const [wasDragActive, setWasDragActive] = useState(dragActive);
   if (wasDragActive !== dragActive) {
     setWasDragActive(dragActive);
@@ -686,9 +763,20 @@ export function StorefrontPreview({
       const current = canvasRef.current;
       const handlers = handlersRef.current;
       switch (message.type) {
+        case "zimos:patched": {
+          const sent = patchSent.current.get(message.seq);
+          patchSent.current.delete(message.seq);
+          if (sent) recordLatency(sent.kind, performance.now() - sent.at);
+          break;
+        }
         case "zimos:preview-ready": {
           const source = event.source as Window | null;
           if (!source || !STOREFRONT_ORIGIN) break;
+          // A change only a render could show: shown now.
+          if (!changeShown.current && changedAt.current > 0) {
+            recordLatency("render", performance.now() - changedAt.current);
+            changeShown.current = true;
+          }
           if (message.colorMode) setFrameMode(message.colorMode);
           const index = source === frameA.current?.contentWindow ? 0 : 1;
           frameSections.current[index] = message.sectionIds;
@@ -726,7 +814,7 @@ export function StorefrontPreview({
           break;
         case "zimos:select-shell":
           setOwnElementId(null);
-          current?.onSelectShell?.(message.part);
+          current?.onSelectShell?.(message.part, message.xsPart);
           break;
         case "zimos:insert-section":
           current?.onInsert(message.index);
@@ -742,8 +830,15 @@ export function StorefrontPreview({
             current?.onMoveSection?.(message.sectionId, message.action);
           }
           break;
+        case "zimos:item-action":
+          current?.onCanvasEdit?.({ kind: "band-item", sectionId: message.sectionId, elementId: message.elementId, list: message.list, action: message.action, from: message.from, to: message.to });
+          break;
+        case "zimos:bg-position":
+          // A band's ground picture centred on the canvas: a canvas edit like the others, one undo step.
+          current?.onCanvasEdit?.({ kind: "bg-position", sectionId: message.sectionId, elementId: message.elementId, path: message.path, x: message.x, y: message.y });
+          break;
         case "zimos:pick-image":
-          handlers.onPickImage?.({ sectionId: message.sectionId, elementId: message.elementId, field: message.field });
+          handlers.onPickImage?.({ sectionId: message.sectionId, elementId: message.elementId, field: message.field, src: message.src, nth: message.nth });
           break;
         case "zimos:section-rects": {
           const source = event.source as Window | null;
@@ -762,7 +857,10 @@ export function StorefrontPreview({
         case "zimos:edit-text":
           // The frame's page already shows this text: no patch back.
           frameEdit.current = { elementId: message.elementId, text: message.text };
-          current?.onTextEdit?.(message.elementId, message.text);
+          current?.onTextEdit?.(message.elementId, message.text, message.was ? { was: message.was, nth: message.nth ?? 0 } : undefined);
+          break;
+        case "zimos:key":
+          current?.onCanvasKey?.(message.key);
           break;
         case "zimos:color-mode":
           // The page's own moon (or the OS) switched it: follow, so the next
@@ -973,6 +1071,7 @@ export function StorefrontPreview({
             <input type="hidden" name="parentOrigin" value={window.location.origin} />
             <input type="hidden" name="theme" />
             <input type="hidden" name="shell" />
+            <input type="hidden" name="path" />
           </>
         )}
       </form>

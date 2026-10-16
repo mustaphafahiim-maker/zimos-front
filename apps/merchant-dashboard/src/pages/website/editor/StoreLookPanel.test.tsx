@@ -6,6 +6,10 @@ import { StoreLookPanel } from "./StoreLookPanel";
 import { readStoreLook, type StoreLook } from "./storeLook";
 import { accentGrounds } from "./storeThemes";
 
+// These tests cover the ready styles and store themes, which the editor hides while it offers only the
+// imported templates (xsBlocks.ts XS_ONLY): they run with that switch off.
+vi.mock("./xsBlocks", async (importOriginal) => ({ ...(await importOriginal<typeof import("./xsBlocks")>()), XS_ONLY: false }));
+
 function look(themeSettings: Record<string, unknown>): StoreLook {
   return readStoreLook({ themeSettings, logoUrl: null });
 }

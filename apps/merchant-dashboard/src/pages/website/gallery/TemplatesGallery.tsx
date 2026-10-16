@@ -9,6 +9,7 @@ import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { apiClient } from "@/lib/apiClient";
 import { pluralOf } from "@/lib/plural";
 import { useCachedAsync } from "@/lib/useCachedAsync";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { ALL_CATEGORIES, normalizeSearch, templateCategories } from "../templateGallery";
 import { useCodeLabel } from "./codes";
 import { TemplateCard } from "./TemplateCard";
@@ -121,14 +122,16 @@ export function TemplatesGallery({
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const currentVersion = currentSite?.sourceTemplateVersionId ?? null;
+  // A store in Arabic sees the right-to-left (Arabic) templates first, any other store the rest first.
+  const { currentWorkspace } = useWorkspace();
+  const arabicStore = currentWorkspace?.defaultLocale === "ar";
   const list = useMemo(() => {
     const all: WebsiteTemplateSummary[] = templates.data ?? [];
-    if (!currentVersion) return all;
-    // The one in use first (the sort is stable: the rest keep the catalogue's order).
-    return [...all].sort(
-      (a, b) => Number(b.templateVersionId === currentVersion) - Number(a.templateVersionId === currentVersion)
-    );
-  }, [templates.data, currentVersion]);
+    // The one in use first, then the store's own language (the sort is stable: the rest keep the catalogue's order).
+    const rank = (template: WebsiteTemplateSummary) =>
+      (template.templateVersionId === currentVersion ? 0 : 2) + ((template.rtl === true) === arabicStore ? 0 : 1);
+    return [...all].sort((a, b) => rank(a) - rank(b));
+  }, [templates.data, currentVersion, arabicStore]);
   const categories = useMemo(() => templateCategories(list), [list]);
 
   // By name, or by kind — in the dashboard's language or as the catalogue spells it.

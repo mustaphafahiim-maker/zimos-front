@@ -159,3 +159,14 @@ export const STORE_SIDEBAR_ENABLED = import.meta.env.VITE_STORE_SIDEBAR_ENABLED 
  * with it: it only decides what the editor writes for a new block.
  */
 export const PICTURE_SHAPE_DEFAULT_ENABLED = import.meta.env.VITE_PICTURE_SHAPE_DEFAULT_ENABLED === "true";
+
+/**
+ * The website editor offers only the imported templates' bands ("xs" looks):
+ * the side library lists those and the basic elements, and Zimos's own ready
+ * styles, store themes and the store theme row are not shown. Pages that use
+ * Zimos's own blocks keep them and can still be edited; nothing is deleted.
+ * Off: every block, style and theme is offered as before, and a store that
+ * wears an imported template also finds that template's bands in the library.
+ * No storefront or API switch pairs with it.
+ */
+export const XS_ONLY_ENABLED = import.meta.env.VITE_XS_ONLY_ENABLED === "true";
