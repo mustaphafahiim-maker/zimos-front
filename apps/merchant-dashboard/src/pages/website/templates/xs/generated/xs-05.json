@@ -1,0 +1,719 @@
+{
+  "key": "xs-05",
+  "name": "XS 05",
+  "category": "fashion",
+  "kind": "store",
+  "tags": [
+    "xs"
+  ],
+  "rtl": false,
+  "primaryColor": "#E53637",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#E53637",
+      "themeSettings": {
+        "xsLook": "05",
+        "header": {
+          "announcement": {
+            "enabled": true,
+            "text": "Free shipping, 30-day return or refund guarantee."
+          },
+          "menu": [
+            {
+              "label": "Home",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "Shop",
+              "href": "/products",
+              "kind": "url"
+            },
+            {
+              "label": "About Us",
+              "href": "/about",
+              "kind": "page"
+            },
+            {
+              "label": "Contacts",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [
+              {
+                "id": "strip-0",
+                "type": "link",
+                "label": "Sign in",
+                "href": "/account"
+              },
+              {
+                "id": "strip-1",
+                "type": "link",
+                "label": "FAQs",
+                "href": "/contact"
+              },
+              {
+                "id": "strip-2",
+                "type": "text",
+                "label": "EGP"
+              }
+            ],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "Shopping",
+              "links": [
+                {
+                  "label": "Clothing Store",
+                  "href": "/products",
+                  "kind": "url"
+                },
+                {
+                  "label": "Cart",
+                  "href": "/cart",
+                  "kind": "cart"
+                }
+              ]
+            },
+            {
+              "title": "Help",
+              "links": [
+                {
+                  "label": "About Us",
+                  "href": "/about",
+                  "kind": "page"
+                },
+                {
+                  "label": "Contact Us",
+                  "href": "/contact",
+                  "kind": "page"
+                },
+                {
+                  "label": "Track Order",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            }
+          ],
+          "text": "The customer is at the heart of our unique business model, which includes design.",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "Home",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs05-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p1-s1-e1",
+                          "type": "xs_slider",
+                          "props": {
+                            "look": "05",
+                            "slides": [
+                              {
+                                "image": "/xs/05/hero-1.jpg",
+                                "eyebrow": "Summer Collection",
+                                "heading": "Fall - Winter Collections 2030",
+                                "text": "A specialist label creating luxury essentials. Ethically crafted with an unwavering commitment to exceptional quality.",
+                                "buttonLabel": "Shop Now",
+                                "buttonHref": "/products"
+                              },
+                              {
+                                "image": "/xs/05/hero-2.jpg",
+                                "eyebrow": "Summer Collection",
+                                "heading": "Fall - Winter Collections 2030",
+                                "text": "A specialist label creating luxury essentials. Ethically crafted with an unwavering commitment to exceptional quality.",
+                                "buttonLabel": "Shop Now",
+                                "buttonHref": "/products"
+                              }
+                            ],
+                            "autoplay": true,
+                            "seconds": 6
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs05-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p1-s2-e1",
+                          "type": "xs_banners",
+                          "props": {
+                            "look": "05",
+                            "items": [
+                              {
+                                "image": "/xs/05/banner-1.jpg",
+                                "title": "Clothing Collections 2030",
+                                "linkLabel": "Shop Now",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/xs/05/banner-2.jpg",
+                                "title": "Accessories",
+                                "linkLabel": "Shop Now",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/xs/05/banner-3.jpg",
+                                "title": "Shoes Spring 2030",
+                                "linkLabel": "Shop Now",
+                                "href": "/products"
+                              }
+                            ],
+                            "variant": "card"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs05-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p1-s3-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "05",
+                            "heading": "",
+                            "collection": "",
+                            "limit": 8,
+                            "showDiscount": true,
+                            "showTabs": true,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "searchLabel": "Search",
+                            "loadMoreLabel": "Load More",
+                            "viewLabel": "Quick View",
+                            "allLabel": "Best Sellers",
+                            "searchPlaceholder": "Search...",
+                            "openLabel": "+ Add To Cart"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs05-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p1-s4-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "05",
+                            "heading": "Multi-pocket Chest Bag Black",
+                            "text": "Deal Of The Week",
+                            "images": [
+                              "/xs/05/product-sale.png"
+                            ],
+                            "points": [],
+                            "buttonLabel": "Shop Now",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs05-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p1-s5-e1",
+                          "type": "xs_gallery",
+                          "props": {
+                            "look": "05",
+                            "heading": "Instagram",
+                            "images": [
+                              "/xs/05/instagram-1.jpg",
+                              "/xs/05/instagram-2.jpg",
+                              "/xs/05/instagram-3.jpg",
+                              "/xs/05/instagram-4.jpg",
+                              "/xs/05/instagram-5.jpg",
+                              "/xs/05/instagram-6.jpg"
+                            ],
+                            "text": "Follow us on Instagram for our latest looks and behind-the-scenes shoots, and be the first to hear about new offers."
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs05-p1-s6",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p1-s6-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p1-s6-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p1-s6-e1",
+                          "type": "xs_posts",
+                          "props": {
+                            "look": "05",
+                            "heading": "Fashion New Trends",
+                            "items": [
+                              {
+                                "image": "/xs/05/post-1.jpg",
+                                "meta": "16 February 2020",
+                                "title": "What Curling Irons Are The Best Ones",
+                                "text": "",
+                                "linkLabel": "Read More",
+                                "href": ""
+                              },
+                              {
+                                "image": "/xs/05/post-2.jpg",
+                                "meta": "21 February 2020",
+                                "title": "Eternity Bands Do Last Forever",
+                                "text": "",
+                                "linkLabel": "Read More",
+                                "href": ""
+                              },
+                              {
+                                "image": "/xs/05/post-3.jpg",
+                                "meta": "28 February 2020",
+                                "title": "The Health Benefits Of Sunglasses",
+                                "text": "",
+                                "linkLabel": "Read More",
+                                "href": ""
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/about",
+        "title": "About Us",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs05-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "05",
+                            "heading": "About Us",
+                            "image": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs05-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p2-s2-e1",
+                          "type": "xs_story",
+                          "props": {
+                            "look": "05",
+                            "items": [
+                              {
+                                "title": "Who We Are ?",
+                                "body": "We are an Egyptian label born from a passion for detail, designing premium essentials that fit the rhythm of your day and stay with you for years.\n\nWe choose our fabrics with care and work with skilled local workshops, because we believe real quality starts with respect for the craft and the people behind it.\n\nOur goal is simple: that you find something here that speaks for you, with smooth shopping and service that looks after you before and after your order.",
+                                "quote": "Going out after work? Take your butane curling iron with you to the office, heat it up, style your hair before you leave the office and you won’t have to make a trip back home.",
+                                "quoteAuthor": "Augusta Schultz",
+                                "image": "/xs/05/about-us.jpg"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs05-p2-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p2-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p2-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p2-s3-e1",
+                          "type": "xs_team",
+                          "props": {
+                            "look": "05",
+                            "heading": "Meet Our Team",
+                            "items": [
+                              {
+                                "image": "/xs/05/team-1.jpg",
+                                "name": "John Smith",
+                                "role": "Fashion Design"
+                              },
+                              {
+                                "image": "/xs/05/team-2.jpg",
+                                "name": "Christine Wise",
+                                "role": "C.E.O"
+                              },
+                              {
+                                "image": "/xs/05/team-3.jpg",
+                                "name": "Sean Robbins",
+                                "role": "Manager"
+                              },
+                              {
+                                "image": "/xs/05/team-4.jpg",
+                                "name": "Lucy Myers",
+                                "role": "Delivery"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs05-p2-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p2-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p2-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p2-s4-e1",
+                          "type": "xs_gallery",
+                          "props": {
+                            "look": "05",
+                            "heading": "",
+                            "images": [
+                              "/xs/05/client-1.png",
+                              "/xs/05/client-2.png",
+                              "/xs/05/client-3.png",
+                              "/xs/05/client-4.png",
+                              "/xs/05/client-5.png",
+                              "/xs/05/client-6.png"
+                            ],
+                            "variant": "logos"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "Contacts",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs05-p3-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p3-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p3-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p3-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "05",
+                            "heading": "Contacts",
+                            "image": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs05-p3-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs05-p3-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs05-p3-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs05-p3-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "05",
+                            "heading": "Contact Us",
+                            "info": [
+                              {
+                                "icon": "address",
+                                "title": "Our Store",
+                                "text": "Heliopolis, Cairo"
+                              },
+                              {
+                                "icon": "phone",
+                                "title": "Phone",
+                                "text": "Call us any day from 10 am to 10 pm"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "Email",
+                                "text": "Send us a message and we reply within a day"
+                              }
+                            ],
+                            "contactPlaceholder": "Email",
+                            "messagePlaceholder": "Message",
+                            "buttonLabel": "Send Message"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

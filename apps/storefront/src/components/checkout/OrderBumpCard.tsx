@@ -1,10 +1,14 @@
 "use client";
 
-import type { OrderBumpOffer } from "@/lib/mockCommerce";
+import type { OrderBumpOffer } from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
 import { GiftIcon } from "../Icons";
+import { StoreImage } from "../StoreImage";
 
-/** "Add to your order" checkbox card, shown right above the submit button. */
+/**
+ * "Add to your order" checkbox card, shown right above the submit button: the
+ * offer the merchant chose (store settings, or the funnel checkout step).
+ */
 export function OrderBumpCard({
   bump,
   checked,
@@ -23,7 +27,7 @@ export function OrderBumpCard({
     <label
       htmlFor={id}
       className={`flex cursor-pointer gap-3 rounded-2xl border-2 border-dashed p-4 transition-colors ${
-        checked ? "border-primary bg-primary-soft" : "border-line-strong bg-paper-raised hover:border-primary"
+        checked ? "border-primary bg-primary-soft" : "border-line bg-paper-raised hover:border-primary"
       }`}
     >
       <input
@@ -34,12 +38,12 @@ export function OrderBumpCard({
         className="mt-1 h-5 w-5 shrink-0 cursor-pointer accent-primary"
       />
       {bump.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <StoreImage
           src={bump.imageUrl}
           alt=""
           width={64}
           height={64}
+          sizes="64px"
           loading="lazy"
           className="h-16 w-16 shrink-0 rounded-xl border border-line object-cover"
         />
@@ -49,15 +53,16 @@ export function OrderBumpCard({
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="block text-xs font-semibold uppercase tracking-wide text-primary">{t.bump.title}</span>
+        <span className="block text-xs font-semibold uppercase tracking-wide text-primary">{bump.heading || t.bump.title}</span>
         <span className="mt-0.5 block text-sm font-semibold text-ink">{bump.name}</span>
+        {bump.detail && <span className="block text-xs font-medium text-ink-soft">{bump.detail}</span>}
         {bump.description && (
           <span className="mt-0.5 line-clamp-2 block text-xs text-ink-soft">{bump.description}</span>
         )}
         <span className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
           <span className="text-sm font-bold text-ink">{t.bump.only(money(bump.priceAmount))}</span>
           {bump.compareAtAmount && (
-            <span className="text-xs text-ink-muted line-through">{money(bump.compareAtAmount)}</span>
+            <span className="text-xs text-ink-soft line-through">{money(bump.compareAtAmount)}</span>
           )}
         </span>
       </span>

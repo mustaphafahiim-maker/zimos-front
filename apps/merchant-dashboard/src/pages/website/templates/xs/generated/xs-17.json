@@ -1,0 +1,494 @@
+{
+  "key": "xs-17",
+  "name": "XS 17",
+  "category": "food_beverage",
+  "kind": "store",
+  "tags": [
+    "xs"
+  ],
+  "rtl": false,
+  "primaryColor": "#FC5D35",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#FC5D35",
+      "themeSettings": {
+        "xsLook": "17",
+        "header": {
+          "menu": [
+            {
+              "label": "Home",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "Fruits",
+              "href": "/products",
+              "kind": "url"
+            },
+            {
+              "label": "Contact us",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "Fruits",
+              "links": [
+                {
+                  "label": "Fruits",
+                  "href": "/products",
+                  "kind": "url"
+                },
+                {
+                  "label": "Cart",
+                  "href": "/cart",
+                  "kind": "cart"
+                }
+              ]
+            },
+            {
+              "title": "Services",
+              "links": [
+                {
+                  "label": "Contact us",
+                  "href": "/contact",
+                  "kind": "page"
+                },
+                {
+                  "label": "Track Order",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            }
+          ],
+          "text": "Fresh, hand-picked fruit, from the farm to your door every day.",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "Home",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs17-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs17-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs17-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs17-p1-s1-e1",
+                          "type": "xs_hero",
+                          "props": {
+                            "look": "17",
+                            "heading": "Welcome to Our Fruits Shop",
+                            "text": "We pick our fruit from the best farms and sort it by hand, piece by piece, so it reaches you fresh, juicy and full of flavour, with fast delivery that keeps it at its best.",
+                            "image": "/xs/17/hero.png",
+                            "buttonLabel": "Shop Now",
+                            "buttonHref": "/products",
+                            "button2Label": "Contact Us",
+                            "button2Href": "/contact"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs17-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs17-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs17-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs17-p1-s2-e1",
+                          "type": "xs_features",
+                          "props": {
+                            "look": "17",
+                            "heading": "Our Services",
+                            "text": "Fresh, hand-picked fruit, from the farm to your door every day.",
+                            "image": "",
+                            "items": [
+                              {
+                                "icon": "bag",
+                                "image": "/xs/17/ico-1.png",
+                                "title": "Orange",
+                                "text": "Sweet, juicy oranges picked at the peak of their season, perfect for fresh juice."
+                              },
+                              {
+                                "icon": "truck",
+                                "image": "/xs/17/ico-2.png",
+                                "title": "Grapes",
+                                "text": "Crisp seedless grapes, washed and packed with care to stay fresh for days."
+                              },
+                              {
+                                "icon": "support",
+                                "image": "/xs/17/ico-3.png",
+                                "title": "Gauva",
+                                "text": "Fragrant guava from Egyptian orchards, rich in flavour and vitamin C."
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs17-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs17-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs17-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs17-p1-s3-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "17",
+                            "heading": "Fresh Fruits",
+                            "collection": "",
+                            "limit": 3,
+                            "showDiscount": true,
+                            "showTabs": false,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": false,
+                            "allLabel": "All Products",
+                            "searchLabel": "Search",
+                            "searchPlaceholder": "Search",
+                            "loadMoreLabel": "Load More",
+                            "openLabel": "Buy Now",
+                            "viewLabel": "Buy Now"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs17-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs17-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs17-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs17-p1-s4-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "17",
+                            "heading": "Very tasty fruits",
+                            "image": "/xs/17/tasty.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs17-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs17-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs17-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs17-p1-s5-e1",
+                          "type": "xs_quotes",
+                          "props": {
+                            "look": "17",
+                            "heading": "Testimonial",
+                            "items": [
+                              {
+                                "quote": "I have ordered my fruit from them every week for months, and every time it arrives as fresh as if it was just picked. Sweet oranges, crisp grapes and delivery always on time. They are my first stop for fruit now.",
+                                "name": "Johnhex",
+                                "image": "/xs/17/client.png"
+                              },
+                              {
+                                "quote": "I have ordered my fruit from them every week for months, and every time it arrives as fresh as if it was just picked. Sweet oranges, crisp grapes and delivery always on time. They are my first stop for fruit now.",
+                                "name": "Johnhex",
+                                "image": "/xs/17/client.png"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs17-p1-s6",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs17-p1-s6-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs17-p1-s6-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs17-p1-s6-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "17",
+                            "heading": "Contact Us",
+                            "info": [],
+                            "contactPlaceholder": "Email",
+                            "messagePlaceholder": "Message",
+                            "buttonLabel": "Send Now"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs17-p1-s7",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs17-p1-s7-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs17-p1-s7-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs17-p1-s7-e1",
+                          "type": "xs_newsletter",
+                          "props": {
+                            "look": "17",
+                            "heading": "Subscribe Now",
+                            "text": "",
+                            "buttonLabel": "Subscribe"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "Contact",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs17-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs17-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs17-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs17-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "17",
+                            "heading": "Contact Us",
+                            "image": "/xs/17/tasty.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs17-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs17-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs17-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs17-p2-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "17",
+                            "heading": "",
+                            "info": [],
+                            "formName": "Contact Us",
+                            "contactPlaceholder": "Email",
+                            "messagePlaceholder": "Message",
+                            "buttonLabel": "Send Now"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

@@ -1,0 +1,393 @@
+/*
+ * Look 06 · EShopper (HTML Codex, CC BY 4.0) — everything that is this one
+ * template's: its colours and type, how its header and footer differ from the
+ * shared layout in xs-shell.css, and how it draws the bands it shares with
+ * other looks. Deleting this file (and its import, its pictures under
+ * public/xs/06 and its entries in lib/xsShell.ts and the editor's
+ * xsBlocks.ts) removes the template.
+ *
+ * Its text is set in Poppins — the faces look 01 already carries
+ * ("XS01 Sans", xs-sections.css), so removing look 01's fonts leaves this
+ * look on the store's own sans face.
+ */
+
+[data-xs-look="06"],
+.brand-theme[data-xs-shell="06"] {
+  --xs-sans: "XS01 Sans", "XS Ar Tajawal", var(--font-sans), sans-serif;
+  --xs-display: "XS01 Sans", "XS Ar Tajawal", var(--font-sans), sans-serif;
+  --xs-ink: #1c1c1c;
+  --xs-ink-soft: #6f6f6f;
+  --xs-muted: #6f6f6f;
+  --xs-brand: #d19c97;
+  --xs-accent: #d19c97;
+  --xs-button: #d19c97;
+  --xs-highlight: #d19c97;
+  --xs-tint: #edf1ff;
+  --xs-dark: #1c1c1c;
+  --xs-line: #edf1ff;
+  --xs-ground: #fff;
+  --xs-footer-ink: #1c1c1c;
+  --xs-badge: #d19c97;
+  --xs-btn-radius: 0;
+  --xs-container: 1320px;
+  color: var(--xs-ink-soft);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* --- header: a pale strip, then a white bar with a framed wordmark --------- */
+
+.xs-header[data-xs-look="06"] .xs-header__strip {
+  background: var(--xs-tint);
+  color: var(--xs-ink);
+  font-size: 14px;
+}
+.xs-header[data-xs-look="06"] .xs-header__strip-links > * {
+  border: 0;
+  padding: 0 12px;
+}
+.xs-header[data-xs-look="06"] .xs-header__bar {
+  background: #fff;
+}
+.xs-header[data-xs-look="06"] .xs-header__logo-name {
+  padding: 2px 10px;
+  border: 1px solid var(--xs-brand);
+  color: var(--xs-ink);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.xs-header[data-xs-look="06"] .xs-header__logo-name::first-letter {
+  color: var(--xs-brand);
+}
+.xs-header[data-xs-look="06"] .xs-header__link {
+  margin-inline: 0;
+  padding: 20px 14px;
+  color: var(--xs-ink);
+  font-size: 16px;
+  font-weight: 500;
+}
+.xs-header[data-xs-look="06"] .xs-header__link:hover {
+  color: var(--xs-brand);
+}
+.xs-header[data-xs-look="06"] .zt-icon-btn {
+  border: 1px solid var(--xs-tint);
+  color: var(--xs-brand);
+}
+.xs-header[data-xs-look="06"] .zt-icon-btn > span {
+  border-radius: 50%;
+  background: var(--xs-dark);
+}
+
+/* --- footer: pale ground, dark words --------------------------------------- */
+
+.xs-footer[data-xs-look="06"] {
+  padding: 60px 30px 24px;
+  background: var(--xs-tint);
+  color: var(--xs-ink);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.xs-footer[data-xs-look="06"] .xs-footer__col:last-child {
+  order: -1;
+}
+.xs-footer[data-xs-look="06"] .xs-footer__title {
+  padding-bottom: 20px;
+  color: var(--xs-ink);
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: none;
+}
+.xs-footer[data-xs-look="06"] li {
+  padding-bottom: 8px;
+}
+.xs-footer[data-xs-look="06"] a {
+  color: var(--xs-ink);
+}
+.xs-footer[data-xs-look="06"] a:hover {
+  color: var(--xs-brand);
+}
+.xs-footer[data-xs-look="06"] .xs-footer__bottom {
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* --- xs_slider: a short banner, light words in the middle of a dimmed picture */
+
+.xs-slider[data-xs-look="06"] {
+  width: 100%;
+  height: 410px;
+  min-height: 0;
+  max-width: calc(var(--xs-container) - 30px);
+  margin-inline: auto;
+}
+.xs-slider[data-xs-look="06"] .xs-slider__slide::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+.xs-slider[data-xs-look="06"] .xs-slider__inner {
+  position: relative;
+  align-items: center;
+  padding: 0 15px;
+  color: #fff;
+  text-align: center;
+}
+.xs-slider[data-xs-look="06"] .xs-slider__eyebrow {
+  margin-bottom: 16px;
+  font-size: 20px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.xs-slider[data-xs-look="06"] .xs-slider__heading {
+  padding: 0 0 24px;
+  color: #fff;
+  font-family: var(--xs-sans);
+  font-size: 56px;
+  font-weight: 600;
+  text-transform: none;
+}
+.xs-slider[data-xs-look="06"] .xs-slider__button {
+  min-width: 0;
+  height: auto;
+  padding: 10px 24px;
+  border-radius: 0;
+  background: #fff;
+  color: var(--xs-ink);
+  font-size: 16px;
+  text-transform: none;
+}
+.xs-slider[data-xs-look="06"] .xs-slider__button:hover {
+  background: var(--xs-brand);
+}
+.xs-slider[data-xs-look="06"] .xs-slider__arrow {
+  width: 45px;
+  height: 45px;
+  background: var(--xs-dark);
+  color: #fff;
+  font-size: 30px;
+  opacity: 1;
+}
+@media (max-width: 767px) {
+  .xs-slider[data-xs-look="06"] .xs-slider__heading {
+    font-size: 32px;
+  }
+}
+
+/* --- xs_features: four framed boxes, icon beside a bold line --------------- */
+
+.xs-features[data-xs-look="06"] {
+  padding: calc(48px * var(--xs-space, 1)) 15px calc(24px * var(--xs-space, 1));
+}
+.xs-features[data-xs-look="06"] .xs-features__inner {
+  grid-template-columns: minmax(0, 1fr);
+}
+.xs-features[data-xs-look="06"] .xs-features__list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 30px;
+  margin: 0;
+}
+.xs-features[data-xs-look="06"] .xs-features__item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  padding: 24px;
+  border: 1px solid var(--xs-tint);
+}
+.xs-features[data-xs-look="06"] .xs-features__icon {
+  margin: 0;
+}
+.xs-features[data-xs-look="06"] .xs-features__icon::before {
+  display: none;
+}
+.xs-features[data-xs-look="06"] .xs-features__item h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+.xs-features[data-xs-look="06"] .xs-features__item p:empty {
+  display: none;
+}
+@media (max-width: 991px) {
+  .xs-features[data-xs-look="06"] .xs-features__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --- xs_banners: framed category cards, or two offer panels ---------------- */
+
+.xs-banners[data-xs-look="06"] {
+  padding: calc(24px * var(--xs-space, 1)) 15px;
+}
+.xs-banners[data-xs-look="06"] .xs-banners__item {
+  border: 1px solid var(--xs-tint);
+  overflow: hidden;
+}
+.xs-banners[data-xs-look="06"][data-variant="card"] .xs-banners__item {
+  display: flex;
+  flex-direction: column-reverse;
+  padding: 24px;
+}
+.xs-banners[data-xs-look="06"] .xs-banners__img {
+  transition: transform 0.5s;
+}
+.xs-banners[data-xs-look="06"] .xs-banners__item:hover .xs-banners__img {
+  transform: scale(1.1);
+}
+.xs-banners[data-xs-look="06"][data-variant="card"] .xs-banners__text,
+.xs-banners[data-xs-look="06"][data-variant="card"] .xs-banners__item:hover .xs-banners__text {
+  position: static;
+  flex-direction: column-reverse;
+  gap: 0;
+  padding: 16px 0 0;
+  background: none;
+}
+.xs-banners[data-xs-look="06"] .xs-banners__title,
+.xs-banners[data-xs-look="06"] .xs-banners__item:hover .xs-banners__title {
+  padding: 0;
+  color: var(--xs-ink);
+  font-size: 20px;
+  font-weight: 600;
+}
+.xs-banners[data-xs-look="06"] .xs-banners__info,
+.xs-banners[data-xs-look="06"] .xs-banners__item:hover .xs-banners__info {
+  color: var(--xs-ink-soft);
+}
+/* The offer panels: a pale ground, the words on the end side of the picture. */
+.xs-banners[data-xs-look="06"]:not([data-variant]) .xs-banners__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.xs-banners[data-xs-look="06"]:not([data-variant]) .xs-banners__item {
+  /* The cut-out stands on the left and the words on the right, whatever the language. */
+  direction: ltr;
+  border: 0;
+  background: var(--xs-tint);
+}
+.xs-banners[data-xs-look="06"]:not([data-variant]) .xs-banners__img {
+  width: 50%;
+  max-height: 300px;
+  object-fit: contain;
+}
+.xs-banners[data-xs-look="06"]:not([data-variant]) .xs-banners__text,
+.xs-banners[data-xs-look="06"]:not([data-variant]) .xs-banners__item:hover .xs-banners__text {
+  left: 50%;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 40px;
+  background: none;
+  text-align: end;
+}
+.xs-banners[data-xs-look="06"]:not([data-variant]) .xs-banners__top {
+  flex-direction: column-reverse;
+  align-items: flex-end;
+}
+.xs-banners[data-xs-look="06"]:not([data-variant]) .xs-banners__title,
+.xs-banners[data-xs-look="06"]:not([data-variant]) .xs-banners__item:hover .xs-banners__title {
+  font-size: 40px;
+  font-weight: 700;
+}
+.xs-banners[data-xs-look="06"]:not([data-variant]) .xs-banners__info,
+.xs-banners[data-xs-look="06"]:not([data-variant]) .xs-banners__item:hover .xs-banners__info {
+  color: var(--xs-brand);
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.xs-banners[data-xs-look="06"] .xs-banners__more {
+  padding: 8px 20px;
+  border: 1px solid var(--xs-brand);
+  overflow: visible;
+  transform: none;
+}
+.xs-banners[data-xs-look="06"] .xs-banners__link {
+  color: var(--xs-brand);
+  font-size: 16px;
+  text-transform: none;
+  transform: none;
+}
+@media (max-width: 767px) {
+  .xs-banners[data-xs-look="06"]:not([data-variant]) .xs-banners__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --- xs_products: a centred heading between two rules ---------------------- */
+
+.xs-products[data-xs-look="06"] {
+  padding: calc(48px * var(--xs-space, 1)) 15px;
+}
+.xs-products[data-xs-look="06"] .xs-products__head {
+  justify-content: center;
+}
+.xs-products[data-xs-look="06"] .xs-products__heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 24px;
+  color: var(--xs-ink);
+  font-size: 32px;
+  font-weight: 600;
+  text-transform: none;
+}
+.xs-products[data-xs-look="06"] .xs-products__heading::before,
+.xs-products[data-xs-look="06"] .xs-products__heading::after {
+  content: "";
+  width: 60px;
+  height: 1px;
+  background: var(--xs-ink);
+}
+.xs-products[data-xs-look="06"] .xs-products__grid {
+  margin-top: 0;
+  gap: 30px;
+}
+.xs-products[data-xs-look="06"] .xs-products__card {
+  border: 1px solid var(--xs-tint);
+}
+.xs-products[data-xs-look="06"] .xs-products__media {
+  aspect-ratio: 1;
+}
+.xs-products[data-xs-look="06"] .xs-products__meta {
+  align-items: center;
+  padding: 20px 12px;
+  text-align: center;
+}
+.xs-products[data-xs-look="06"] .xs-products__name {
+  color: var(--xs-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+.xs-products[data-xs-look="06"] .xs-products__price {
+  color: var(--xs-ink);
+  font-size: 18px;
+  font-weight: 500;
+}
+.xs-products[data-xs-look="06"] .xs-products__view,
+.xs-products[data-xs-look="06"] .xs-products__more-btn,
+.xs-products[data-xs-look="06"] .xs-products__badge {
+  border-radius: 0;
+}
+
+/* --- inner pages ----------------------------------------------------------- */
+
+.xs-title[data-xs-look="06"] {
+  padding: calc(100px * var(--xs-space, 1)) 15px;
+  background-color: var(--xs-tint);
+}
+.xs-title[data-xs-look="06"] .xs-title__heading {
+  color: var(--xs-ink);
+  font-size: 44px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.xs-contact[data-xs-look="06"] .xs-contact__submit {
+  border-radius: 0;
+  background: var(--xs-brand);
+  text-transform: none;
+}
+.xs-contact[data-xs-look="06"] .xs-contact__submit:hover:not(:disabled) {
+  background: var(--xs-dark);
+}

@@ -76,14 +76,14 @@ function Frame({ label, children }: { label: string; children: ReactNode }) {
     >
       <span
         aria-hidden
-        className="absolute -end-16 -bottom-10 -z-10 h-16 w-72 -rotate-[24deg] rounded-full bg-linear-to-r from-zimos-sky/0 to-zimos-sky/25"
+        className="absolute -end-16 -bottom-10 -z-10 h-16 w-72 -rotate-[24deg] rounded-full bg-linear-to-r from-accent/0 to-accent/25"
       />
       {children}
     </div>
   );
 }
 
-const cardClass = "rounded-2xl border border-line bg-paper-raised p-4 shadow-card";
+const cardClass = "rounded-2xl border border-line bg-paper-raised p-4";
 
 /* ------------------------------------------------------------------ */
 
@@ -96,12 +96,12 @@ function ConfirmVisual({ copy }: { copy: ConfirmCopy }) {
     { n: 1033, city: copy.cities[2], status: "waiting" },
   ];
   const pill: Record<QueueStatus, { className: string; label: string }> = {
-    calling: { className: "bg-primary-soft text-primary-dark", label: copy.statusCalling },
+    calling: { className: "bg-primary-soft text-primary-dark dark:text-primary", label: copy.statusCalling },
     confirmed: {
-      className: "bg-success-soft text-emerald-800 dark:text-success",
+      className: "bg-success-soft text-success",
       label: copy.statusConfirmed,
     },
-    waiting: { className: "bg-warning-soft text-warning", label: copy.statusWaiting },
+    waiting: { className: "bg-accent-soft text-accent-dark", label: copy.statusWaiting },
   };
 
   return (
@@ -133,7 +133,7 @@ function ConfirmVisual({ copy }: { copy: ConfirmCopy }) {
 
         <div className={`${cardClass} sm:mt-10`}>
           <div className="flex items-center gap-2 border-b border-line pb-2.5">
-            <span className="flex size-7 items-center justify-center rounded-full bg-zimos-blue text-white">
+            <span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
               <ChatIcon width="0.9rem" height="0.9rem" />
             </span>
             <p className="text-sm font-semibold text-ink">{copy.chatTitle}</p>
@@ -142,7 +142,7 @@ function ConfirmVisual({ copy }: { copy: ConfirmCopy }) {
             <p className="me-6 rounded-2xl rounded-ss-sm bg-primary-soft px-3 py-2 leading-relaxed text-ink">
               {copy.storeMessage}
             </p>
-            <p className="ms-auto w-fit rounded-2xl rounded-se-sm bg-zimos-blue px-4 py-2 font-semibold text-white">
+            <p className="ms-auto w-fit rounded-2xl rounded-se-sm bg-primary px-4 py-2 font-semibold text-primary-foreground">
               {copy.customerReply}
             </p>
             <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-xs font-medium text-ink-soft">
@@ -171,9 +171,9 @@ const WATERFALL: { start: number; size: number; tone: BarTone }[] = [
 ];
 
 const TONE: Record<BarTone, string> = {
-  total: "bg-zimos-navy dark:bg-zimos-ice",
-  cost: "bg-zimos-sky/70",
-  net: "bg-zimos-blue",
+  total: "bg-primary-dark dark:bg-primary-soft dark:bg-ink",
+  cost: "bg-accent/70",
+  net: "bg-primary",
 };
 
 function ProfitVisual({ copy }: { copy: ProfitCopy }) {
@@ -190,7 +190,7 @@ function ProfitVisual({ copy }: { copy: ProfitCopy }) {
         <div className="mt-5 grid grid-cols-6 gap-1.5 sm:gap-3">
           {WATERFALL.map((bar, i) => (
             <div key={copy.bars[i]} className="flex min-w-0 flex-col items-center gap-2">
-              <div className="relative h-40 w-full border-b border-line-strong sm:h-48">
+              <div className="relative h-40 w-full border-b border-line sm:h-48">
                 <span
                   className={`absolute inset-x-0.5 rounded-md sm:inset-x-1 ${TONE[bar.tone]}`}
                   style={{ insetBlockEnd: `${bar.start}%`, blockSize: `${bar.size}%` }}
@@ -229,20 +229,20 @@ function FlowNode({
 }) {
   const toneClass =
     tone === "primary"
-      ? "border-zimos-blue bg-zimos-blue text-white"
+      ? "border-primary bg-primary text-primary-foreground"
       : tone === "soft"
-        ? "border-zimos-blue/30 bg-primary-soft text-ink"
+        ? "border-primary/30 bg-primary-soft text-ink"
         : "border-line bg-paper-raised text-ink";
   return (
     <div
-      className={`mx-auto flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-center text-sm font-medium shadow-card ${toneClass} ${className}`}
+      className={`mx-auto flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-center text-sm font-medium ${toneClass} ${className}`}
     >
       {children}
     </div>
   );
 }
 
-const vLine = "mx-auto block w-0.5 bg-line-strong";
+const vLine = "mx-auto block w-0.5 bg-line";
 
 function FunnelVisual({ copy }: { copy: FunnelCopy }) {
   return (
@@ -256,7 +256,7 @@ function FunnelVisual({ copy }: { copy: FunnelCopy }) {
 
           <div className="relative mx-auto w-full max-w-[13rem]">
             <FlowNode>{copy.checkout}</FlowNode>
-            <span className="absolute -top-2.5 -end-3 rounded-full border border-zimos-sky/60 bg-paper-raised px-2 py-0.5 text-[10px] font-semibold text-primary">
+            <span className="absolute -top-2.5 -end-3 rounded-full border border-accent/60 bg-paper-raised px-2 py-0.5 text-[10px] font-semibold text-primary">
               + {copy.bump}
             </span>
           </div>
@@ -269,10 +269,10 @@ function FunnelVisual({ copy }: { copy: FunnelCopy }) {
 
           {/* Branch: accept → thank you, decline → downsell → thank you */}
           <div className="relative grid grid-cols-2">
-            <span className="absolute start-1/4 end-1/4 top-0 h-0.5 bg-line-strong" />
+            <span className="absolute start-1/4 end-1/4 top-0 h-0.5 bg-line" />
             <div className="flex flex-col items-center">
               <span className={`${vLine} h-4`} />
-              <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-primary-dark">
+              <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-primary-dark dark:text-primary">
                 {copy.accept}
               </span>
               <span className={`${vLine} min-h-4 flex-1`} />
@@ -289,7 +289,7 @@ function FunnelVisual({ copy }: { copy: FunnelCopy }) {
           </div>
 
           <div className="relative">
-            <span className="absolute start-1/4 end-1/4 top-0 h-0.5 bg-line-strong" />
+            <span className="absolute start-1/4 end-1/4 top-0 h-0.5 bg-line" />
             <span className={`${vLine} h-5`} />
           </div>
 

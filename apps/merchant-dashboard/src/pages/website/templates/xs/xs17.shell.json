@@ -1,0 +1,108 @@
+{
+  "xsLook": "17",
+  "header": {
+    "menu": [
+      {
+        "label": "Home",
+        "href": "/",
+        "kind": "home"
+      },
+      {
+        "label": "Fruits",
+        "href": "/products",
+        "kind": "url"
+      },
+      {
+        "label": "Contact us",
+        "href": "/contact",
+        "kind": "page"
+      }
+    ],
+    "show": {
+      "theme": false,
+      "trackOrder": false,
+      "language": false
+    },
+    "zones": {
+      "notice": [
+        {
+          "id": "notice",
+          "type": "notice"
+        }
+      ],
+      "links": [],
+      "brand": [
+        {
+          "id": "logo",
+          "type": "logo"
+        }
+      ],
+      "menu": [
+        {
+          "id": "menu",
+          "type": "menu"
+        }
+      ],
+      "icons": [
+        {
+          "id": "search",
+          "type": "search"
+        },
+        {
+          "id": "account",
+          "type": "account"
+        },
+        {
+          "id": "wishlist",
+          "type": "wishlist"
+        },
+        {
+          "id": "cart",
+          "type": "cart"
+        },
+        {
+          "id": "phone",
+          "type": "phone"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "groups": [
+      {
+        "title": "Fruits",
+        "links": [
+          {
+            "label": "Fruits",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Cart",
+            "href": "/cart",
+            "kind": "cart"
+          }
+        ]
+      },
+      {
+        "title": "Services",
+        "links": [
+          {
+            "label": "Contact us",
+            "href": "/contact",
+            "kind": "page"
+          },
+          {
+            "label": "Track Order",
+            "href": "/track",
+            "kind": "track"
+          }
+        ]
+      }
+    ],
+    "text": "Fresh, hand-picked fruit, from the farm to your door every day.",
+    "show": {
+      "help": false
+    }
+  }
+}

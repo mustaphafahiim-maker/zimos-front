@@ -1,320 +1,457 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { Button, Label, cn } from "@store-builder/ui";
-import { ArrowRight, BadgeCheck, Check, Clock, Info, MessageCircle, Star, X } from "lucide-react";
-import { reviewsList, reviewsModerate, type ReviewDTO, type ReviewStatus } from "@store-builder/api-client";
-import { apiClient } from "@/lib/apiClient";
-import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
-import { ApiError, getErrorMessage } from "@/lib/errors";
-import { PageHeader } from "@/components/PageHeader";
+import { useSearchParams } from "react-router-dom";
+import { Button } from "@store-builder/ui";
+import { catalogDeleteManualReview, type Review, type ReviewStatus } from "@store-builder/api-client";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import type { ContextMenuItem } from "@/components/ContextMenu";
 import { DataState } from "@/components/DataState";
-import { KpiCard } from "@/components/KpiCard";
-import { Toggle } from "@/components/Toggle";
-import { Select } from "@/components/Select";
+import { EmptyState } from "@/components/EmptyState";
+import { IconPlus, IconRefresh, IconReviews, IconSearch } from "@/components/icons";
+import { ChipRow, ListSkeleton, ListToolbar, type ChipItem } from "@/components/list";
+import { PageHeader } from "@/components/PageHeader";
 import { useToast } from "@/components/Toast";
-import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { apiClient } from "@/lib/apiClient";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { useCachedAsync } from "@/lib/useCachedAsync";
+import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { ItemMenu } from "@/pages/catalog/media/ItemMenu";
+import { ActiveFilters } from "@/pages/returns/rowkit/ActiveFilters";
+import { DeskList } from "@/pages/returns/rowkit/DeskList";
+import { useIsCompact, useIsPhone } from "@/pages/returns/rowkit/useScreen";
+import { AddReviewDialog } from "./AddReviewDialog";
+import {
+  NO_REVIEW_FILTERS,
+  ReviewFilterSheet,
+  countReviewFilters,
+  isReviewSource,
+  matchesReviewFilters,
+  useReviewFilterChips,
+  type ContentFilter,
+  type RatingBand,
+  type ReviewFilterState,
+} from "./ReviewFilters";
+import { ReviewQuickLook } from "./ReviewQuickLook";
+import { REVIEW_COLUMNS, ReviewRow } from "./ReviewRow";
+import { REVIEW_WORDS, actionTo, fold, reviewAuthor, statusAfter, type ModerateAction } from "./reviewModel";
 
 const STRINGS = {
   en: {
     title: "Reviews",
-    description: "Moderate what customers say — approved reviews show on the product page and in your ads' social proof.",
-    ratingAria: "{rating} out of 5",
-    kpiAverage: "Average rating",
-    kpiAverageHint: "Approved reviews only",
-    kpiApproved: "Approved",
-    kpiApprovedHint: "{n} total received",
-    kpiPending: "Pending moderation",
-    kpiPendingHint: "Waiting for your decision",
-    kpiFive: "5-star share",
-    kpiFiveHint: "Of approved reviews",
-    product: "Product",
-    allProducts: "All products",
-    rating: "Rating",
-    anyRating: "Any",
-    nStars: "{n} stars",
-    oneStar: "1 star",
-    empty: "No reviews match these filters.",
-    verifiedPurchase: "Verified purchase",
-    unknownProduct: "Product",
-    unknownCustomer: "Customer",
-    approve: "Approve",
-    reject: "Reject",
-    toastApproved: "Review published on the product page.",
-    toastRejected: "Review hidden.",
-    permission: "You don't have permission to moderate reviews.",
-    subscription: "This workspace needs an active subscription to make changes.",
-    requestsTitle: "Review requests",
-    requestsBody:
-      "Only customers with a delivered order can leave a review. Submissions land here as pending reviews.",
-    askToggle: "Ask for a review 2 days after delivery",
-    askToggleHint: "Only for delivered COD orders, once per order.",
-    notSavedHint: "This setting is not saved yet — automatic review requests are coming soon.",
-    editInAutomations: "Edit the message in Automations",
+    description: "A customer can review a product once it reaches them. Nothing shows in your store until you approve it.",
+    add: "Add review",
+    tools: "Tools",
+    refresh: "Refresh the list",
+    searchLabel: "Search the reviews",
+    searchPlaceholder: "Product, customer or a word they wrote",
+    chipsLabel: "Reviews by status",
+    tabPending: "Waiting for you",
+    tabApproved: "In the store",
+    tabRejected: "Hidden",
+    tabAll: "All",
+    colProduct: "Product",
+    colReview: "Review",
+    colStatus: "Status",
+    colAge: "Written",
+    colAction: "Next step",
+    firstTitle: "No reviews yet",
+    firstBody: "A review arrives when a customer who received a product writes one. You can also add one that reached you on WhatsApp yourself.",
+    emptyPending: "No reviews are waiting for you",
+    emptyPendingBody: "A new review lands here first, and shows in your store once you approve it.",
+    emptyApproved: "No review shows in your store yet",
+    emptyRejected: "No hidden reviews",
+    seeAll: "See all reviews",
+    emptyFiltered: "No review matches this search or these filters",
+    clearAll: "Clear the search and filters",
+    searchAll: "Look in all reviews",
+    toastApproved: "Approved — it shows in your store now.",
+    toastHidden: "Hidden — it won't show in your store.",
+    toastShown: "The review shows in your store again.",
+    toastHiddenAgain: "The review is off your store.",
+    hideIt: "Hide it",
+    showIt: "Show it",
+    deleteTitle: "Delete the review by {who}?",
+    deleteBody: "It leaves your store for good and can't be brought back.",
+    deleteConfirm: "Delete review",
+    deleting: "Deleting…",
+    deleted: "Review deleted.",
   },
   ar: {
     title: "التقييمات",
-    description: "راجع آراء العملاء — التقييمات المعتمدة تظهر في صفحة المنتج وكدليل اجتماعي في إعلاناتك.",
-    ratingAria: "{rating} من 5",
-    kpiAverage: "متوسط التقييم",
-    kpiAverageHint: "التقييمات المعتمدة فقط",
-    kpiApproved: "معتمدة",
-    kpiApprovedHint: "{n} تقييم مستلم إجمالًا",
-    kpiPending: "بانتظار المراجعة",
-    kpiPendingHint: "في انتظار قرارك",
-    kpiFive: "نسبة الخمس نجوم",
-    kpiFiveHint: "من التقييمات المعتمدة",
-    product: "المنتج",
-    allProducts: "كل المنتجات",
-    rating: "التقييم",
-    anyRating: "أي تقييم",
-    nStars: "{n} نجوم",
-    oneStar: "نجمة واحدة",
-    empty: "لا توجد تقييمات تطابق هذه الفلاتر.",
-    verifiedPurchase: "شراء مؤكَّد",
-    unknownProduct: "منتج",
-    unknownCustomer: "عميل",
-    approve: "اعتماد",
-    reject: "رفض",
-    toastApproved: "تم نشر التقييم في صفحة المنتج.",
-    toastRejected: "تم إخفاء التقييم.",
-    permission: "ليست لديك صلاحية لمراجعة التقييمات.",
-    subscription: "تحتاج مساحة العمل إلى اشتراك نشط لإجراء التغييرات.",
-    requestsTitle: "طلبات التقييم",
-    requestsBody: "يمكن فقط للعملاء الذين استلموا طلبهم ترك تقييم. تصل التقييمات هنا بانتظار المراجعة.",
-    askToggle: "اطلب تقييمًا بعد يومين من التسليم",
-    askToggleHint: "لطلبات الدفع عند الاستلام المُسلَّمة فقط، مرة واحدة لكل طلب.",
-    notSavedHint: "هذا الإعداد لا يُحفظ بعد — طلبات التقييم التلقائية قادمة قريبًا.",
-    editInAutomations: "عدّل الرسالة من الأتمتة",
+    description: "يقيّم العميل المنتج بعد استلامه، ولا يظهر أي تقييم في متجرك إلا بعد موافقتك عليه.",
+    add: "إضافة تقييم",
+    tools: "أدوات",
+    refresh: "تحديث القائمة",
+    searchLabel: "ابحث في التقييمات",
+    searchPlaceholder: "منتج، عميل أو كلمة من التقييم",
+    chipsLabel: "التقييمات حسب الحالة",
+    tabPending: "تنتظر موافقتك",
+    tabApproved: "ظاهرة في المتجر",
+    tabRejected: "مخفية",
+    tabAll: "الكل",
+    colProduct: "المنتج",
+    colReview: "التقييم",
+    colStatus: "الحالة",
+    colAge: "كُتب",
+    colAction: "الخطوة التالية",
+    firstTitle: "لا توجد تقييمات بعد",
+    firstBody: "يصل التقييم عندما يكتبه عميل استلم منتجًا. ويمكنك أيضًا إضافة تقييم وصلك عبر واتساب بنفسك.",
+    emptyPending: "لا توجد تقييمات تنتظر موافقتك",
+    emptyPendingBody: "أي تقييم جديد يصل هنا أولًا، ويظهر في متجرك بعد موافقتك عليه.",
+    emptyApproved: "لا يظهر أي تقييم في متجرك بعد",
+    emptyRejected: "لا توجد تقييمات مخفية",
+    seeAll: "عرض كل التقييمات",
+    emptyFiltered: "لا يوجد تقييم مطابق لهذا البحث أو هذه الفلاتر",
+    clearAll: "مسح البحث والفلاتر",
+    searchAll: "البحث في كل التقييمات",
+    toastApproved: "تمت الموافقة — يظهر الآن في متجرك.",
+    toastHidden: "تم الإخفاء — لن يظهر في متجرك.",
+    toastShown: "عاد التقييم إلى الظهور في متجرك.",
+    toastHiddenAgain: "أُزيل التقييم من متجرك.",
+    hideIt: "إخفاؤه",
+    showIt: "إظهاره",
+    deleteTitle: "حذف تقييم {who}؟",
+    deleteBody: "سيُحذف من متجرك نهائيًا ولا يمكن استرجاعه.",
+    deleteConfirm: "حذف التقييم",
+    deleting: "جارٍ الحذف…",
+    deleted: "تم حذف التقييم.",
   },
 } satisfies Messages;
 
-const STATUS_LABEL: Record<Locale, Record<ReviewStatus, string>> = {
-  en: { pending: "Pending", approved: "Approved", rejected: "Rejected" },
-  ar: { pending: "قيد المراجعة", approved: "معتمد", rejected: "مرفوض" },
-};
+/** "all" is the whole list; the others are the statuses a review can be in. */
+type StatusTab = "all" | ReviewStatus;
 
-const STATUS_CLASS: Record<ReviewStatus, string> = {
-  pending: "bg-warning-soft text-warning border-warning/30",
-  approved: "bg-primary-soft text-primary border-primary/25",
-  rejected: "bg-danger-soft text-danger border-danger/25",
-};
+/** Waiting first: this page is a moderation queue before it is an archive. */
+const DEFAULT_TAB: StatusTab = "pending";
 
-const STATUS_OPTIONS: ReviewStatus[] = ["pending", "approved", "rejected"];
-
-function Stars({ rating, size = "size-4" }: { rating: number; size?: string }) {
-  const t = useT(STRINGS);
-  return (
-    <span className="inline-flex items-center gap-0.5" role="img" aria-label={fmt(t.ratingAria, { rating: rating.toFixed(1) })}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Star key={i} className={cn(size, i <= Math.round(rating) ? "fill-warning text-warning" : "text-line")} />
-      ))}
-    </span>
-  );
+function tabOf(value: string | null): StatusTab {
+  return value === "all" || value === "approved" || value === "rejected" ? value : DEFAULT_TAB;
 }
 
+/**
+ * /reviews — the moderation list: what waits for a decision first, the rest a
+ * chip away. The list is read whole and filtered here, so the chips can say
+ * how many each status holds and a chip answers at once. A row opens Quick
+ * Look; its ONE button is the move its status allows, taken at once and
+ * undone from the toast.
+ *
+ * `?status=` keeps the chosen chip (absent = waiting) and `?source=` the
+ * source filter — both are what the product link import points at.
+ */
 export function ReviewsPage() {
-  const t = useT(STRINGS);
-  const c = useCommon();
-  const { locale, intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
+  const t = useT(STRINGS);
+  const words = useT(REVIEW_WORDS);
   const toast = useToast();
-  // Always load the full list: KPIs need every status. The status filter is applied client-side.
-  const list = useAsync(() => reviewsList(apiClient, workspaceId), [workspaceId]);
-  // Product names by id (reviews already include product.name; this covers the filter and any missing join).
-  const productsQ = useAsync(async () => {
-    const { products } = await apiClient.listProducts(workspaceId, { limit: 200 });
-    return new Map(products.map((p) => [p.id, p.name]));
-  }, [workspaceId]);
+  const errorMessage = useErrorMessage();
+  const compact = useIsCompact();
+  const phone = useIsPhone();
 
-  const [status, setStatus] = useState<"all" | ReviewStatus>("all");
-  const [product, setProduct] = useState("all");
-  const [rating, setRating] = useState("all");
-  const [askForReview, setAskForReview] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const tab = tabOf(params.get("status"));
+  const rawSource = params.get("source");
+  const source = isReviewSource(rawSource) ? rawSource : null;
 
-  const reviews = list.data ?? [];
+  function patchParams(change: (out: URLSearchParams) => void) {
+    setParams(
+      (prev) => {
+        const out = new URLSearchParams(prev);
+        change(out);
+        return out;
+      },
+      { replace: true }
+    );
+  }
+  function selectTab(next: StatusTab) {
+    patchParams((out) => {
+      if (next === DEFAULT_TAB) out.delete("status");
+      else out.set("status", next);
+    });
+  }
 
-  const productName = (r: ReviewDTO) => r.product?.name ?? productsQ.data?.get(r.productId) ?? t.unknownProduct;
+  const list = useCachedAsync<Review[]>(`reviews:${workspaceId}`, () => apiClient.listReviews(workspaceId), [workspaceId]);
+  const reviews = useMemo(() => list.data ?? [], [list.data]);
 
-  const products = useMemo(
-    () =>
-      Array.from(
-        new Map(reviews.map((r) => [r.productId, r.product?.name ?? productsQ.data?.get(r.productId) ?? r.productId])).entries()
-      ),
-    [reviews, productsQ.data]
+  const [search, setSearch] = useState("");
+  const [rating, setRating] = useState<RatingBand | null>(null);
+  const [content, setContent] = useState<ContentFilter | null>(null);
+  const filters: ReviewFilterState = useMemo(() => ({ source, rating, content }), [source, rating, content]);
+  function setFilters(next: ReviewFilterState) {
+    setRating(next.rating);
+    setContent(next.content);
+    if (next.source !== source) {
+      patchParams((out) => {
+        if (next.source) out.set("source", next.source);
+        else out.delete("source");
+      });
+    }
+  }
+
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  // The review being looked at stays here while its panel closes, so the panel does not empty on its way out.
+  const [peek, setPeek] = useState<{ id: string; open: boolean } | null>(null);
+  // The same for the review being deleted: its name stays in the question while the question closes.
+  const [removing, setRemoving] = useState<{ review: Review; open: boolean } | null>(null);
+  const [busy, setBusy] = useState<Record<string, ModerateAction>>({});
+
+  const filtered = useMemo(() => reviews.filter((review) => matchesReviewFilters(review, filters)), [reviews, filters]);
+  const counts = useMemo(() => {
+    const tally: Record<ReviewStatus, number> = { pending: 0, approved: 0, rejected: 0 };
+    for (const review of filtered) if (review.status in tally) tally[review.status] += 1;
+    return tally;
+  }, [filtered]);
+  const inTab = useMemo(() => (tab === "all" ? filtered : filtered.filter((review) => review.status === tab)), [filtered, tab]);
+
+  const query = fold(search.trim());
+  const visible = query
+    ? inTab.filter((review) => {
+        const haystack = [review.product?.name, reviewAuthor(review, ""), review.comment];
+        return haystack.some((part) => part && fold(part).includes(query));
+      })
+    : inTab;
+
+  const activeFilters = countReviewFilters(filters);
+  const narrowed = query !== "" || activeFilters > 0;
+  const filterChips = useReviewFilterChips(filters, setFilters);
+
+  function clearAll() {
+    setSearch("");
+    setFilters(NO_REVIEW_FILTERS);
+  }
+
+  function patchRow(id: string, patch: Partial<Review>) {
+    list.setData((prev) => (prev ?? []).map((row) => (row.id === id ? { ...row, ...patch } : row)));
+  }
+
+  /** The request alone: the row already shows where it is going, and goes back if the server says no. */
+  async function send(review: Review, action: ModerateAction) {
+    const before = review.status;
+    patchRow(review.id, { status: statusAfter(action) });
+    try {
+      // The answer is the bare row: the product and the customer the list joined in stay as they are.
+      const updated = await apiClient.moderateReview(workspaceId, review.id, action);
+      patchRow(review.id, { status: updated.status, updatedAt: updated.updatedAt });
+    } catch (err) {
+      patchRow(review.id, { status: before });
+      throw err;
+    }
+  }
+
+  /** Approve or hide, at once. The toast is the way back. */
+  function moderate(review: Review, action: ModerateAction) {
+    const before = review.status;
+    const after = statusAfter(action);
+    if (before === after || busy[review.id]) return;
+    setBusy((prev) => ({ ...prev, [review.id]: action }));
+    void send(review, action)
+      .then(() => {
+        const moved: Review = { ...review, status: after };
+        const back = actionTo(before);
+        if (back) {
+          // The opposite call puts it exactly where it was: a true Undo.
+          toast.undo(after === "approved" ? t.toastShown : t.toastHiddenAgain, () => send(moved, back));
+        } else {
+          // A waiting review cannot go back to waiting (the API has only the two moves): the toast offers the other one, by its name.
+          const other: ModerateAction = action === "approve" ? "reject" : "approve";
+          toast.notify("success", after === "approved" ? t.toastApproved : t.toastHidden, {
+            action: { label: other === "reject" ? t.hideIt : t.showIt, onClick: () => moderate(moved, other) },
+          });
+        }
+      })
+      .catch((err: unknown) => toast.error(errorMessage(err)))
+      .finally(() => {
+        setBusy((prev) => {
+          const next = { ...prev };
+          delete next[review.id];
+          return next;
+        });
+      });
+  }
+
+  const peeked = peek ? (reviews.find((review) => review.id === peek.id) ?? null) : null;
+
+  /** Delete asks first. Quick Look steps aside for the question: two sheets are never stacked. */
+  function askDelete(review: Review) {
+    setPeek((current) => (current ? { ...current, open: false } : current));
+    setRemoving({ review, open: true });
+  }
+
+  // While the list is on its way a chip holds its place with a dash (null) instead of a zero.
+  const figure = (count: number) => (list.loading ? null : count);
+  const chips: ChipItem<StatusTab>[] = [
+    { value: "pending", label: t.tabPending, count: figure(counts.pending), tone: "attention" },
+    { value: "approved", label: t.tabApproved, count: figure(counts.approved) },
+    { value: "rejected", label: t.tabRejected, count: figure(counts.rejected) },
+    { value: "all", label: t.tabAll, count: figure(filtered.length) },
+  ];
+
+  const tools: ContextMenuItem[] = [
+    { id: "refresh", label: t.refresh, icon: IconRefresh, onSelect: () => void list.refresh({ silent: true }) },
+  ];
+
+  const addButton = (
+    <Button className="min-h-11 rounded-full px-5" onClick={() => setAdding(true)}>
+      <IconPlus className="size-4" aria-hidden />
+      {t.add}
+    </Button>
   );
 
-  const kpis = useMemo(() => {
-    const approved = reviews.filter((r) => r.status === "approved");
-    const avg = approved.length ? approved.reduce((a, r) => a + r.rating, 0) / approved.length : 0;
-    const five = approved.length ? Math.round((approved.filter((r) => r.rating === 5).length / approved.length) * 100) : 0;
-    return { avg, approved: approved.length, pending: reviews.filter((r) => r.status === "pending").length, five, hasApproved: approved.length > 0 };
-  }, [reviews]);
+  const empty = narrowed ? (
+    <EmptyState
+      icon={<IconSearch aria-hidden />}
+      title={t.emptyFiltered}
+      action={
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button variant="outline" className="rounded-full px-5" onClick={clearAll}>
+            {t.clearAll}
+          </Button>
+          {tab !== "all" && (
+            <Button variant="outline" className="rounded-full px-5" onClick={() => selectTab("all")}>
+              {t.searchAll}
+            </Button>
+          )}
+        </div>
+      }
+    />
+  ) : reviews.length === 0 ? (
+    // A store nobody has reviewed yet: what the page is for, and the one thing to do about it.
+    <EmptyState
+      icon={<IconReviews aria-hidden />}
+      title={t.firstTitle}
+      description={t.firstBody}
+      action={
+        <Button className="rounded-full px-5" onClick={() => setAdding(true)}>
+          <IconPlus className="size-4" aria-hidden />
+          {t.add}
+        </Button>
+      }
+    />
+  ) : tab === "pending" ? (
+    <EmptyState
+      icon={<IconReviews aria-hidden />}
+      tone="success"
+      title={t.emptyPending}
+      description={t.emptyPendingBody}
+      action={
+        <Button variant="outline" className="rounded-full px-5" onClick={() => selectTab("all")}>
+          {t.seeAll}
+        </Button>
+      }
+    />
+  ) : (
+    <EmptyState
+      icon={<IconReviews aria-hidden />}
+      title={tab === "approved" ? t.emptyApproved : t.emptyRejected}
+      action={
+        <Button variant="outline" className="rounded-full px-5" onClick={() => selectTab("all")}>
+          {t.seeAll}
+        </Button>
+      }
+    />
+  );
 
-  const rows = reviews
-    .filter((r) => (status === "all" || r.status === status) && (product === "all" || r.productId === product) && (rating === "all" || r.rating === Number(rating)))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-
-  function formatReviewDate(iso: string): string {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleDateString(intlLocale, { year: "numeric", month: "short", day: "numeric" });
-  }
-
-  function actionError(err: unknown): string {
-    if (err instanceof ApiError) {
-      if (err.status === 403) return t.permission;
-      if (err.status === 402 || err.code === "SUBSCRIPTION_REQUIRED") return t.subscription;
-    }
-    return getErrorMessage(err);
-  }
-
-  async function moderate(r: ReviewDTO, action: "approve" | "reject") {
-    setBusy(r.id);
-    try {
-      const updated = await reviewsModerate(apiClient, workspaceId, r.id, action);
-      list.setData((prev) => (prev ?? []).map((x) => (x.id === r.id ? { ...x, status: updated.status } : x)));
-      toast.success(action === "approve" ? t.toastApproved : t.toastRejected);
-    } catch (err) {
-      toast.error(actionError(err));
-      void list.refresh({ silent: true });
-    } finally {
-      setBusy(null);
-    }
-  }
+  const rows = visible.map((review) => (
+    <ReviewRow
+      key={review.id}
+      review={review}
+      compact={compact}
+      busy={busy[review.id] ?? null}
+      current={peek?.open === true && peek.id === review.id}
+      onPeek={() => setPeek({ id: review.id, open: true })}
+      onModerate={(action) => moderate(review, action)}
+      onDelete={() => askDelete(review)}
+    />
+  ));
 
   return (
-    <div className="max-w-6xl">
-      <PageHeader title={t.title} description={t.description} />
+    <div className="max-w-5xl">
+      <PageHeader
+        title={t.title}
+        // A phone keeps the first screen for the list: the sentence is for wider screens.
+        description={phone ? undefined : t.description}
+        actions={<ItemMenu items={tools} label={t.tools} />}
+        primaryAction={addButton}
+      />
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard
-          label={t.kpiAverage}
-          value={
-            kpis.hasApproved ? (
-              <span className="flex flex-wrap items-center gap-2">
-                <bdi className="tabular-nums">{kpis.avg.toFixed(1)}</bdi> <Stars rating={kpis.avg} />
-              </span>
-            ) : (
-              "—"
-            )
-          }
-          hint={t.kpiAverageHint}
+      <div className="flex flex-col gap-3">
+        <ListToolbar
+          search={{ value: search, onChange: setSearch, placeholder: t.searchPlaceholder, label: t.searchLabel }}
+          filters={{ count: activeFilters, onOpen: () => setFiltersOpen(true) }}
         />
-        <KpiCard label={t.kpiApproved} value={kpis.approved} hint={fmt(t.kpiApprovedHint, { n: reviews.length })} icon={<BadgeCheck />} />
-        <KpiCard label={t.kpiPending} value={kpis.pending} hint={t.kpiPendingHint} icon={<Clock />} />
-        <KpiCard label={t.kpiFive} value={kpis.hasApproved ? <bdi dir="ltr">{kpis.five}%</bdi> : "—"} hint={t.kpiFiveHint} icon={<Star />} />
+        <ChipRow items={chips} value={tab} onChange={selectTab} label={t.chipsLabel} collapseEmpty={false} countsLoading={list.loading} />
+        <ActiveFilters filters={filterChips} onClearAll={() => setFilters(NO_REVIEW_FILTERS)} />
+
+        <DataState
+          loading={list.loading}
+          // A refresh that failed behind rows already on screen leaves them there.
+          error={reviews.length === 0 ? list.error : null}
+          onRetry={() => void list.refresh()}
+          skeleton={<ListSkeleton variant={compact ? "card" : "table"} rows={5} />}
+        >
+          {visible.length === 0 ? (
+            empty
+          ) : compact ? (
+            <ul aria-label={t.title} className="flex flex-col gap-2.5">
+              {rows}
+            </ul>
+          ) : (
+            <DeskList
+              columns={REVIEW_COLUMNS}
+              label={t.title}
+              head={[{ label: t.colProduct }, { label: t.colReview }, { label: t.colStatus }, { label: t.colAge }, { label: t.colAction, end: true }]}
+            >
+              {rows}
+            </DeskList>
+          )}
+        </DataState>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-ink-soft">{c.status}</Label>
-              <Select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className="h-8 w-36 py-1" aria-label={c.status}>
-                <option value="all">{c.all}</option>
-                {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {STATUS_LABEL[locale][s]}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-ink-soft">{t.product}</Label>
-              <Select value={product} onChange={(e) => setProduct(e.target.value)} className="h-8 w-48 py-1" dir="auto" aria-label={t.product}>
-                <option value="all">{t.allProducts}</option>
-                {products.map(([id, name]) => (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-ink-soft">{t.rating}</Label>
-              <Select value={rating} onChange={(e) => setRating(e.target.value)} className="h-8 w-32 py-1" aria-label={t.rating}>
-                <option value="all">{t.anyRating}</option>
-                {[5, 4, 3, 2, 1].map((n) => (
-                  <option key={n} value={n}>
-                    {n === 1 ? t.oneStar : fmt(t.nStars, { n })}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
+      <ReviewFilterSheet open={filtersOpen} onOpenChange={setFiltersOpen} value={filters} onChange={setFilters} matching={visible.length} />
 
-          <DataState loading={list.loading} error={list.error} empty={rows.length === 0} emptyMessage={t.empty} onRetry={() => list.refresh()}>
-            <div className="space-y-3">
-              {rows.map((r) => (
-                <article key={r.id} className={cn("rounded-2xl border border-line bg-paper-raised p-4", r.status === "pending" && "border-warning/40")}>
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Stars rating={r.rating} />
-                        <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium", STATUS_CLASS[r.status])}>
-                          {STATUS_LABEL[locale][r.status]}
-                        </span>
-                      </div>
-                      {r.comment && (
-                        <p className="mt-2 text-sm text-ink" dir="auto">
-                          {r.comment}
-                        </p>
-                      )}
-                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft">
-                        <span dir="auto">{r.customer?.fullName || t.unknownCustomer}</span>
-                        <span aria-hidden>·</span>
-                        <Link to={`/catalog/${r.productId}`} className="text-primary hover:underline" dir="auto">
-                          {productName(r)}
-                        </Link>
-                        {/* The backend only accepts reviews from customers with a delivered order. */}
-                        <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-medium text-success">
-                          <BadgeCheck className="size-3" /> {t.verifiedPurchase}
-                        </span>
-                        <span aria-hidden>·</span>
-                        <span>{formatReviewDate(r.createdAt)}</span>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-1">
-                      {r.status !== "approved" && (
-                        <Button size="sm" variant="ghost" className="text-success" disabled={busy === r.id} onClick={() => moderate(r, "approve")}>
-                          <Check /> {t.approve}
-                        </Button>
-                      )}
-                      {r.status !== "rejected" && (
-                        <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft" disabled={busy === r.id} onClick={() => moderate(r, "reject")}>
-                          <X /> {t.reject}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </DataState>
-        </div>
+      <ReviewQuickLook
+        review={peeked}
+        open={Boolean(peek?.open)}
+        onOpenChange={(open) => setPeek((current) => (current ? { ...current, open } : current))}
+        busy={peeked ? (busy[peeked.id] ?? null) : null}
+        onModerate={(action) => {
+          if (peeked) moderate(peeked, action);
+        }}
+        onDelete={() => {
+          if (peeked) askDelete(peeked);
+        }}
+      />
 
-        <aside className="h-fit rounded-2xl border border-line bg-paper-raised p-4">
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-[#25D366]/15 text-[#128C7E]">
-              <MessageCircle className="size-4" />
-            </span>
-            <p className="text-sm font-semibold text-ink">{t.requestsTitle}</p>
-          </div>
-          <p className="mt-2 text-xs text-ink-soft">{t.requestsBody}</p>
-          <div className="mt-4">
-            <Toggle label={t.askToggle} description={t.askToggleHint} checked={askForReview} onChange={setAskForReview} />
-          </div>
-          <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-warning-soft px-2 py-1.5 text-[11px] text-warning">
-            <Info className="mt-0.5 size-3 shrink-0" aria-hidden /> {t.notSavedHint}
-          </p>
-          <Link to="/automations" className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-            {t.editInAutomations}
-            <ArrowRight className="size-3 rtl:rotate-180" />
-          </Link>
-        </aside>
-      </div>
+      <AddReviewDialog
+        open={adding}
+        onClose={() => setAdding(false)}
+        onAdded={() => {
+          setAdding(false);
+          void list.refresh({ silent: true });
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(removing?.open)}
+        title={fmt(t.deleteTitle, { who: removing ? reviewAuthor(removing.review, words.unknownCustomer) : "" })}
+        description={t.deleteBody}
+        confirmLabel={t.deleteConfirm}
+        busyLabel={t.deleting}
+        destructive
+        onCancel={() => setRemoving((current) => (current ? { ...current, open: false } : current))}
+        onConfirm={async () => {
+          if (!removing) return;
+          try {
+            await catalogDeleteManualReview(apiClient, workspaceId, removing.review.id);
+          } catch (err) {
+            throw new Error(errorMessage(err));
+          }
+          const id = removing.review.id;
+          toast.success(t.deleted);
+          list.setData((prev) => (prev ?? []).filter((row) => row.id !== id));
+          setRemoving((current) => (current ? { ...current, open: false } : current));
+        }}
+      />
     </div>
   );
 }

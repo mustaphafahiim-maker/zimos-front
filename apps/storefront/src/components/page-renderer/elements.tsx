@@ -1,8 +1,11 @@
-import Link from "next/link";
-import type { Dictionary } from "@/lib/i18n";
 import { ChevronIcon } from "@/components/Icons";
+import { StoreLink } from "@/components/StoreRoute";
 import { btnPrimary, input } from "@/components/ui";
+import type { Dictionary } from "@/lib/i18n";
 import { Countdown } from "./Countdown";
+import { GallerySlideshow } from "./lazy";
+import { PageForm } from "./lazy";
+import { pictureFocus, pictureRatio } from "./pictureFrame";
 import {
   COLUMN_CLASS,
   type LinkItem,
@@ -42,7 +45,7 @@ export function HeadingElement({ props }: { props: Props }) {
   if (!text.trim()) return null;
   const level = num(props, "level", 2, 1, 6);
   const Tag = `h${level}` as "h1";
-  return <Tag className={`text-ink ${HEADING_CLASS[level]}`}>{text}</Tag>;
+  return <Tag className={`zt-heading text-ink ${HEADING_CLASS[level]}`}>{text}</Tag>;
 }
 
 /** `text` and `rich_text` are both plain strings — the editor has no formatting
@@ -57,11 +60,42 @@ export function TextElement({ props, large }: { props: Props; large?: boolean })
   );
 }
 
-export function ImageElement({ props, workspaceId }: { props: Props; workspaceId: string }) {
+/**
+ * How wide each named image size is allowed to get. A picture that never chose
+ * one — every image on every page written before this existed — falls through
+ * to `full`, which is the plain full-width image this always rendered.
+ *
+ * The names come from the editor (IMAGE_SIZES in its blocks.ts); an unknown
+ * value is treated as "full" rather than dropping the picture.
+ */
+const IMAGE_MAX_WIDTH: Record<string, string> = {
+  large: "44rem",
+  medium: "26rem",
+  small: "15rem",
+  icon: "5.5rem",
+};
+
+/**
+ * `eager`: the picture sits in the page's opening section, so it is fetched
+ * straight away and first (often the page's largest paint) rather than lazily.
+ *
+ * A picture that names a shape (`ratio`, pictureFrame.ts) is a box of that
+ * shape, as wide as its column, whatever file is put in it; the file fills the
+ * box, cropped around `focusX` / `focusY`. Without one the picture keeps its
+ * own shape and its markup is exactly what it always was.
+ */
+export function ImageElement({ props, eager = false, rtl = false }: { props: Props; eager?: boolean; rtl?: boolean }) {
   const src = safeUrl(str(props, "src"));
   if (!src) return null;
   const alt = str(props, "alt");
-  const href = resolveHref(str(props, "href"), workspaceId);
+  const href = resolveHref(str(props, "href"));
+  // A width in percent of the column — what dragging the picture's corner in
+  // the editor sets — wins over a named size; a picture with neither renders
+  // as it always did.
+  const widthPct = props.width === undefined ? 0 : num(props, "width", 0, 10, 100);
+  const maxWidth = widthPct > 0 ? `${widthPct}%` : IMAGE_MAX_WIDTH[str(props, "size", "full")];
+  const ratio = pictureRatio(props.ratio);
+  const focus = ratio ? pictureFocus(props, rtl) : null;
 
   const img = (
     // Merchant images are arbitrary remote URLs (the media host is configurable
@@ -72,25 +106,50 @@ export function ImageElement({ props, workspaceId }: { props: Props; workspaceId
       alt={alt}
       width={1200}
       height={800}
-      loading="lazy"
+      loading={eager ? "eager" : "lazy"}
+      fetchPriority={eager ? "high" : undefined}
       decoding="async"
-      className="h-auto w-full rounded-2xl object-cover"
+      className="zt-img h-auto w-full rounded-2xl object-cover"
+      // The shape set on the picture itself: its box no longer follows the file's own size.
+      style={ratio ? { aspectRatio: ratio, ...(focus ? { objectPosition: focus } : {}) } : undefined}
     />
   );
 
-  if (!href) return img;
-  return (
-    <Link href={href} className="block rounded-2xl transition-opacity hover:opacity-90">
+  const linked = href ? (
+    <StoreLink href={href} className="block rounded-2xl transition-opacity hover:opacity-90">
       {img}
-    </Link>
+    </StoreLink>
+  ) : (
+    img
+  );
+
+  // A capped picture is centred in its column rather than pinned to one side,
+  // so a row of icons or logos reads as a row. Uncapped, nothing wraps it and
+  // the markup is exactly what it always was.
+  if (!maxWidth) return linked;
+  return (
+    <div className="mx-auto w-full" style={{ maxWidth }}>
+      {linked}
+    </div>
   );
 }
 
 export function GalleryElement({ props }: { props: Props }) {
   const images = strList(props, "images").map(safeUrl).filter((u): u is string => u !== null);
   if (images.length === 0) return null;
-  const columns = num(props, "columns", 3, 1, 6);
   const title = str(props, "title");
+
+  // "slideshow" is the one other layout; anything else (including the
+  // default-less props an old page-tree carries) is the grid this always was.
+  if (str(props, "layout", "grid") === "slideshow") {
+    return <GallerySlideshow images={images} title={title} />;
+  }
+
+  const columns = num(props, "columns", 3, 1, 6);
+  // "whole" shows each picture complete inside its square instead of cropping
+  // it to fill — what a strip of logos or icons needs. Anything else, including
+  // the galleries written before this existed, crops as it always did.
+  const whole = str(props, "fit", "crop") === "whole";
 
   return (
     <div>
@@ -106,7 +165,9 @@ export function GalleryElement({ props }: { props: Props }) {
             height={600}
             loading="lazy"
             decoding="async"
-            className="aspect-square w-full rounded-2xl border border-line object-cover"
+            className={`zt-img aspect-square w-full rounded-2xl border border-line ${
+              whole ? "bg-paper object-contain p-4" : "object-cover"
+            }`}
           />
         ))}
       </div>
@@ -114,18 +175,18 @@ export function GalleryElement({ props }: { props: Props }) {
   );
 }
 
-const BUTTON_CLASS: Record<string, string> = {
+export const BUTTON_CLASS: Record<string, string> = {
   primary: btnPrimary,
   secondary:
-    "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-soft px-5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/15",
+    "zt-btn zt-btn-soft inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-soft px-5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/15",
   outline:
-    "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line-strong bg-transparent px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary",
+    "zt-btn zt-btn-outline inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line bg-transparent px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary",
 };
 
-export function ButtonElement({ props, workspaceId }: { props: Props; workspaceId: string }) {
+export function ButtonElement({ props }: { props: Props }) {
   const label = str(props, "label");
   if (!label.trim()) return null;
-  const href = resolveHref(str(props, "href"), workspaceId);
+  const href = resolveHref(str(props, "href"));
   const variant = str(props, "variant", "primary");
   // `self-start` because a column is a stretching flex container — without it a
   // button would run the full width of the column instead of hugging its label.
@@ -135,9 +196,9 @@ export function ButtonElement({ props, workspaceId }: { props: Props; workspaceI
   // anchor would just frustrate the shopper.
   if (!href) return <span className={className}>{label}</span>;
   return (
-    <Link href={href} className={className}>
+    <StoreLink href={href} className={className}>
       {label}
-    </Link>
+    </StoreLink>
   );
 }
 
@@ -292,12 +353,12 @@ function Disclosures({ title, items, t }: { title: string; items: QaItem[]; t: D
   return (
     <div>
       {title.trim() && <h3 className="mb-4 text-xl font-semibold text-ink">{title}</h3>}
-      <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-paper-raised">
+      <div className="zt-card divide-y divide-line overflow-hidden rounded-2xl border border-line bg-paper-raised">
         {items.map((item, i) => (
           <details key={i} className="group">
             <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
               {item.q || t.renderer.item(i + 1)}
-              <ChevronIcon size={18} className="shrink-0 text-ink-muted transition-transform group-open:rotate-180" />
+              <ChevronIcon size={18} className="shrink-0 text-ink-soft transition-transform group-open:rotate-180" />
             </summary>
             {item.a.trim() && (
               <p className="whitespace-pre-line px-5 pb-4 text-sm leading-relaxed text-ink-soft">{item.a}</p>
@@ -324,7 +385,7 @@ export function TestimonialElement({ props, t }: { props: Props; t: Dictionary }
   const rating = num(props, "rating", 0, 0, 5);
 
   return (
-    <figure className="rounded-2xl border border-line bg-paper-raised p-6 shadow-card">
+    <figure className="zt-card rounded-2xl border border-line bg-paper-raised p-6">
       {rating > 0 && (
         <p className="mb-3 text-primary" aria-label={t.renderer.rating(rating)}>
           <span aria-hidden>{"★".repeat(rating) + "☆".repeat(5 - rating)}</span>
@@ -339,51 +400,60 @@ export function TestimonialElement({ props, t }: { props: Props; t: Dictionary }
 }
 
 export function CountdownElement({ props }: { props: Props }) {
-  return <Countdown label={str(props, "label")} endsInHours={num(props, "endsInHours", 24, 1, 8760)} />;
+  return (
+    <Countdown label={str(props, "label")} endsAt={str(props, "endsAt") || null} endsInHours={num(props, "endsInHours", 24, 1, 8760)} />
+  );
 }
 
 /**
- * The `form` element is presentational only, and says so on the page.
- *
- * Two reasons it cannot submit: the element carries no field definitions at all
- * (its props are just `{ title, submitLabel }`), and the backend exposes no
- * endpoint for generic form submissions — there is nothing to POST to. Showing
- * a working-looking form would quietly drop every enquiry a shopper sends, so
- * the submit button stays disabled and the notice below is deliberate, not
- * placeholder text to tidy away later.
+ * The `form` element: name, phone, email and message, sent to the store's
+ * form submissions (and the sender becomes a contact). Props: `title`,
+ * `submitLabel`, `successMessage`, `askConsent`, and `tags` — read by the
+ * server from the published page, never sent by the browser.
  */
-export function FormElement({ props, t }: { props: Props; t: Dictionary }) {
-  const title = str(props, "title");
-  const submitLabel = str(props, "submitLabel", t.renderer.formSend);
-
+export function FormElement({
+  props,
+  t,
+  workspaceId,
+  elementId,
+  disabled,
+}: {
+  props: Props;
+  t: Dictionary;
+  workspaceId: string;
+  elementId: string;
+  disabled?: boolean;
+}) {
   return (
-    <div className="rounded-2xl border border-line bg-paper-raised p-6 shadow-card">
-      {title.trim() && <h3 className="mb-4 text-xl font-semibold text-ink">{title}</h3>}
-      <div className="space-y-4">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-ink" htmlFor="page-form-name">
-            {t.renderer.formName}
-          </label>
-          <input id="page-form-name" type="text" disabled className={`${input} disabled:opacity-70`} />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-ink" htmlFor="page-form-email">
-            {t.renderer.formEmail}
-          </label>
-          <input id="page-form-email" type="email" dir="ltr" disabled className={`${input} disabled:opacity-70`} />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-ink" htmlFor="page-form-message">
-            {t.renderer.formMessage}
-          </label>
-          <textarea id="page-form-message" rows={3} disabled className={`${input} disabled:opacity-70`} />
-        </div>
-        <button type="button" disabled title={t.renderer.formUnavailable} className={`${btnPrimary} w-full`}>
-          {submitLabel}
-        </button>
-        <p className="text-xs text-ink-muted">{t.renderer.formPreview}</p>
-      </div>
-    </div>
+    <PageForm
+      workspaceId={workspaceId}
+      elementId={elementId}
+      disabled={disabled}
+      title={str(props, "title")}
+      submitLabel={str(props, "submitLabel", t.renderer.formSend)}
+      successMessage={str(props, "successMessage")}
+      askConsent={props.askConsent !== false}
+      extra={{
+        fields: strList(props, "extraFields").slice(0, 8),
+        choiceLabel: str(props, "choiceLabel"),
+        choices: strList(props, "choices").slice(0, 20),
+        checkboxLabel: str(props, "checkboxLabel"),
+      }}
+      inputs={{ fileLabel: str(props, "fileLabel").trim(), fileRequired: props.fileRequired === true, ratingLabel: str(props, "ratingLabel").trim() }}
+      labels={{
+        name: t.renderer.formName,
+        phone: t.renderer.formPhone,
+        email: t.renderer.formEmail,
+        message: t.renderer.formMessage,
+        send: t.renderer.formSend,
+        sending: t.renderer.formSending,
+        sent: t.renderer.formSent,
+        error: t.renderer.formError,
+        invalidPhone: t.renderer.formInvalidPhone,
+        needContact: t.renderer.formNeedContact,
+        consent: t.renderer.formConsent,
+      }}
+    />
   );
 }
 
@@ -398,7 +468,7 @@ export function MapElement({ props, t }: { props: Props; t: Dictionary }) {
   const query = encodeURIComponent(address);
 
   return (
-    <div className="rounded-2xl border border-line bg-paper-raised p-6">
+    <div className="zt-card rounded-2xl border border-line bg-paper-raised p-6">
       <p className="text-sm leading-relaxed text-ink">{address}</p>
       <a
         href={`https://www.google.com/maps/search/?api=1&query=${query}`}
@@ -436,7 +506,7 @@ export function SocialIconsElement({ props, t }: { props: Props; t: Dictionary }
               href={href}
               target="_blank"
               rel="noreferrer noopener"
-              className="inline-flex min-h-11 items-center rounded-full border border-line px-4 text-sm font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary"
+              className="zt-chip inline-flex min-h-11 items-center rounded-full border border-line px-4 text-sm font-medium text-ink-soft transition-colors hover:border-primary hover:text-primary"
             >
               {label}
             </a>

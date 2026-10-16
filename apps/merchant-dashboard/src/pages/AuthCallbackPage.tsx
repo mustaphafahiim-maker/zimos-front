@@ -1,23 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Spinner } from "@store-builder/ui";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { useT } from "@/i18n/LocaleContext";
-import { AuthBackLink, AuthShell } from "@/components/AuthShell";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+import { TwoFactorStep } from "@/components/TwoFactorStep";
+import { TWO_FACTOR_ENABLED } from "@/lib/features";
+import { AuthBusy, AuthHeading, AuthShell } from "./AuthShell";
+import { GoogleCallbackError } from "./auth/GoogleCallbackError";
+import { googleCallbackChallenge } from "./auth/googleCallbackChallenge";
 
 const STRINGS = {
   en: {
-    failedTitle: "Google sign-in didn't work",
-    failedBody: "Something went wrong while signing in with Google. Please try again.",
-    signingIn: "Signing you in…",
+    title: "Signing you in",
+    signingIn: "One moment…",
   },
   ar: {
-    failedTitle: "تعذّر تسجيل الدخول باستخدام Google",
-    failedBody: "حدث خطأ أثناء تسجيل الدخول بحساب Google. يُرجى المحاولة مرة أخرى.",
-    signingIn: "جارٍ تسجيل الدخول…",
+    title: "جارٍ تسجيل دخولك",
+    signingIn: "لحظة واحدة…",
   },
-};
+} satisfies Messages;
 
 /**
  * Landing page for the Google OAuth flow. After Google approves, the backend
@@ -33,7 +34,12 @@ export function AuthCallbackPage() {
 
   const accessToken = searchParams.get("accessToken");
   const refreshToken = searchParams.get("refreshToken");
+  // No tokens means the backend sent `?error=...` (or the page was opened
+  // directly) — either way the sign-in didn't go through.
   const hasTokens = Boolean(accessToken && refreshToken);
+
+  // An account with two-step sign-in is not signed in yet: it finishes with its code.
+  const [challenge] = useState(() => (TWO_FACTOR_ENABLED ? googleCallbackChallenge(searchParams) : null));
 
   const [refreshFailed, setRefreshFailed] = useState(false);
   const handled = useRef(false);
@@ -50,22 +56,31 @@ export function AuthCallbackPage() {
 
   const failed = !hasTokens || refreshFailed;
 
+  if (challenge && !hasTokens) {
+    return (
+      <AuthShell>
+        <TwoFactorStep
+          challenge={challenge}
+          onBack={() => navigate("/login", { replace: true })}
+          onVerified={async () => {
+            await refreshUser();
+            navigate("/workspaces", { replace: true });
+          }}
+        />
+      </AuthShell>
+    );
+  }
+
   return (
     <AuthShell>
-      <div className="text-center">
-        {failed ? (
-          <>
-            <h2 className="text-2xl font-semibold tracking-tight text-ink">{t.failedTitle}</h2>
-            <p className="mt-3 text-sm text-ink-soft">{t.failedBody}</p>
-            <AuthBackLink />
-          </>
-        ) : (
-          <div className="flex items-center justify-center gap-3 text-sm text-ink-soft" role="status">
-            <Spinner className="size-5 text-primary" />
-            <span>{t.signingIn}</span>
-          </div>
-        )}
-      </div>
+      {failed ? (
+        <GoogleCallbackError code={searchParams.get("error")} />
+      ) : (
+        <>
+          <AuthHeading title={t.title} center />
+          <AuthBusy className="mt-4">{t.signingIn}</AuthBusy>
+        </>
+      )}
     </AuthShell>
   );
 }

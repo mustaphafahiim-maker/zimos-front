@@ -1,71 +1,68 @@
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Send, StickyNote } from "lucide-react";
-import { Button, Textarea, buttonVariants, cn } from "@store-builder/ui";
+import { Send } from "lucide-react";
+import { Alert, Button, cn } from "@store-builder/ui";
+import type {
+  AdminSupportTicketThread as Thread,
+  SupportTicketPriority,
+  SupportTicketStatus,
+} from "@store-builder/api-client";
 import { PageHeader } from "@/components/PageHeader";
-import { DataState, EmptyBlock } from "@/components/DataState";
-import { DetailRow } from "@/components/Drawer";
-import { SelectField } from "@/components/forms";
+import { DataState } from "@/components/DataState";
+import { SelectField, TextAreaField } from "@/components/forms";
 import { Panel } from "@/components/Panel";
 import { Status } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
-import { adminApi } from "@/mock/adminApi";
-import type { AdminUser, Ticket, TicketPriority, TicketStatus } from "@/mock/types";
-import { formatDateTime, formatRelative, initials } from "@/lib/format";
+import * as adminApi from "@/lib/adminApi";
+import { formatDateTime, formatRelative } from "@/lib/format";
+import { PRIORITY_LABEL, STATUS_LABEL } from "@/lib/tickets";
+
+type ReplyStatus = Exclude<SupportTicketStatus, "closed">;
 
 export function TicketDetailPage() {
   const { id = "" } = useParams();
   const toast = useToast();
-  const { data, loading, error, refresh, setData } = useAsync(
-    () => Promise.all([adminApi.getTicket(id), adminApi.listAdminUsers()]),
-    [id]
-  );
-  const [body, setBody] = useState("");
-  const [internal, setInternal] = useState(false);
+  const { data, loading, error, refresh, setData } = useAsync(() => adminApi.getTicket(id), [id]);
+  const [reply, setReply] = useState("");
+  const [after, setAfter] = useState<ReplyStatus>("pending");
   const [sending, setSending] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const setTicket = (t: Ticket) => setData((prev) => [t, prev?.[1] ?? []]);
+  const ticket = data?.ticket;
 
-  if (loading || error) {
-    return (
-      <div>
-        <PageHeader title="Ticket" back={{ to: "/tickets", label: "Tickets" }} />
-        <DataState loading={loading} error={error} onRetry={() => void refresh()}>
-          {null}
-        </DataState>
-      </div>
-    );
+  async function send(e: FormEvent) {
+    e.preventDefault();
+    if (!reply.trim()) return;
+    setSending(true);
+    setReplyError(null);
+    try {
+      const res = await adminApi.replyTicket(id, { body: reply.trim(), status: after });
+      setData((prev: Thread | null) => {
+        if (!prev) throw new Error("Ticket not loaded.");
+        return { ticket: res.ticket, messages: [...prev.messages, res.message] };
+      });
+      setReply("");
+      setAfter("pending");
+      toast.success("Reply sent.");
+    } catch (err) {
+      setReplyError(getErrorMessage(err));
+    } finally {
+      setSending(false);
+    }
   }
 
-  const ticket = data?.[0] ?? null;
-  const admins: AdminUser[] = data?.[1] ?? [];
-
-  if (!ticket) {
-    return (
-      <div>
-        <PageHeader title="Ticket not found" back={{ to: "/tickets", label: "Tickets" }} />
-        <EmptyBlock
-          message="This ticket doesn't exist or was removed."
-          action={
-            <Link to="/tickets" className={buttonVariants({ variant: "outline", size: "sm" })}>
-              Back to tickets
-            </Link>
-          }
-        />
-      </div>
-    );
-  }
-
-  const t = ticket;
-
-  async function patch(p: Partial<{ status: TicketStatus; priority: TicketPriority; assigneeId: string | null }>, message: string) {
+  async function update(patch: { status?: SupportTicketStatus; priority?: SupportTicketPriority }) {
     setSaving(true);
     try {
-      setTicket(await adminApi.updateTicket(t.id, p));
-      toast.success(message);
+      const updated = await adminApi.updateTicket(id, patch);
+      setData((prev: Thread | null) => {
+        if (!prev) throw new Error("Ticket not loaded.");
+        return { ...prev, ticket: updated };
+      });
+      toast.success("Ticket updated.");
     } catch (err) {
       toast.error(getErrorMessage(err));
     } finally {
@@ -73,151 +70,125 @@ export function TicketDetailPage() {
     }
   }
 
-  async function send(e: FormEvent) {
-    e.preventDefault();
-    setSending(true);
-    try {
-      setTicket(await adminApi.replyTicket(t.id, body, internal));
-      setBody("");
-      toast.success(internal ? "Internal note added." : "Reply sent to the merchant.");
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    } finally {
-      setSending(false);
-    }
-  }
-
   return (
     <div>
       <PageHeader
-        title={`#${t.number} ${t.subject}`}
-        titleBadge={<Status value={t.status} />}
-        description={`${t.workspaceName} · opened ${formatRelative(t.createdAt)}`}
-        back={{ to: "/tickets", label: "Tickets" }}
+        title={ticket?.subject ?? "Ticket"}
+        titleBadge={ticket ? <Status value={ticket.status} label={STATUS_LABEL[ticket.status]} /> : undefined}
+        description={
+          ticket
+            ? `${ticket.workspaceName ?? "Deleted workspace"} · ${ticket.category} · opened ${formatRelative(ticket.createdAt)} by ${ticket.createdBy ?? "a deleted user"}`
+            : undefined
+        }
+        back={{ to: "/tickets", label: "Support tickets" }}
       />
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_20rem]">
-        <div className="space-y-4">
-          <Panel title="Conversation" description={`${t.messages.length} message${t.messages.length === 1 ? "" : "s"}`}>
-            <ol className="space-y-4">
-              {t.messages.map((m) => {
-                const mine = m.authorType === "admin";
-                return (
-                  <li key={m.id} className={cn("flex gap-3", mine && "flex-row-reverse")}>
-                    <span
-                      className={cn(
-                        "flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                        mine ? "bg-zimos-navy text-white" : "bg-primary-soft text-primary"
-                      )}
-                      aria-hidden
-                    >
-                      {initials(m.authorName)}
-                    </span>
-                    <div className={cn("max-w-[85%] min-w-0", mine && "text-end")}>
-                      <p className="text-xs text-ink-soft">
-                        <span className="font-medium text-ink">{m.authorName}</span> · {m.authorType === "admin" ? "ZIMOS team" : "Merchant"} ·{" "}
+      <DataState loading={loading && !data} error={error} onRetry={() => void refresh()}>
+        {data && ticket && (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <div className="space-y-4">
+              <Panel title="Conversation" flush>
+                <ol className="divide-y divide-line">
+                  {data.messages.map((m) => (
+                    <li key={m.id} className={cn("px-5 py-4", m.authorType === "admin" && "bg-primary-soft/40")}>
+                      <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2 text-xs text-ink-soft">
+                        <span>
+                          <span className="font-semibold text-ink">{m.authorName ?? "Deleted user"}</span>{" "}
+                          {m.authorType === "admin" ? "· platform team" : "· merchant"}
+                          {m.authorEmail ? ` · ${m.authorEmail}` : ""}
+                        </span>
                         <span title={formatDateTime(m.createdAt)}>{formatRelative(m.createdAt)}</span>
-                      </p>
-                      <div
-                        className={cn(
-                          "mt-1 rounded-[12px] border px-3.5 py-2.5 text-start text-sm whitespace-pre-wrap text-ink",
-                          m.internal ? "border-warning/30 bg-warning-soft" : mine ? "border-primary/20 bg-primary-soft" : "border-line bg-paper"
-                        )}
-                      >
-                        {m.internal && (
-                          <span className="mb-1 flex items-center gap-1 text-xs font-semibold text-warning">
-                            <StickyNote className="size-3" aria-hidden /> Internal note — not visible to the merchant
-                          </span>
-                        )}
-                        {m.body}
                       </div>
+                      <p className="whitespace-pre-wrap wrap-break-word text-sm text-ink">{m.body}</p>
+                    </li>
+                  ))}
+                </ol>
+              </Panel>
+
+              {ticket.status === "closed" ? (
+                <Alert>This ticket is closed. Re-open it from the panel on the right to reply.</Alert>
+              ) : (
+                <Panel title="Reply" description="The merchant sees replies signed “Zimos support”.">
+                  <form onSubmit={send} className="space-y-3">
+                    {replyError && <Alert variant="danger">{replyError}</Alert>}
+                    <TextAreaField
+                      label="Message"
+                      required
+                      rows={5}
+                      maxLength={5000}
+                      value={reply}
+                      onChange={(e) => setReply(e.target.value)}
+                    />
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <SelectField
+                        label="Then set the ticket to"
+                        className="w-60"
+                        value={after}
+                        onChange={(e) => setAfter(e.target.value as ReplyStatus)}
+                      >
+                        <option value="pending">{STATUS_LABEL.pending}</option>
+                        <option value="resolved">{STATUS_LABEL.resolved}</option>
+                        <option value="open">{STATUS_LABEL.open}</option>
+                      </SelectField>
+                      <Button type="submit" disabled={sending || !reply.trim()}>
+                        <Send /> {sending ? "Sending…" : "Send reply"}
+                      </Button>
                     </div>
-                  </li>
-                );
-              })}
-            </ol>
-          </Panel>
+                  </form>
+                </Panel>
+              )}
+            </div>
 
-          <Panel title={internal ? "Add internal note" : "Reply"}>
-            <form onSubmit={send} className="space-y-3">
-              <Textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder={internal ? "Visible to the ZIMOS team only…" : `Reply to ${t.requesterName}…`}
-                aria-label="Message"
-                className={cn("min-h-28", internal && "border-warning/40 bg-warning-soft/50")}
-              />
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
-                  <input type="checkbox" className="size-4 accent-[var(--color-primary)]" checked={internal} onChange={(e) => setInternal(e.target.checked)} />
-                  Internal note
-                </label>
-                <Button type="submit" disabled={sending || !body.trim()}>
-                  <Send className="rtl:-scale-x-100" /> {sending ? "Sending…" : internal ? "Add note" : "Send reply"}
-                </Button>
-              </div>
-              {!internal && t.status === "open" && <p className="text-xs text-ink-soft">Sending a reply moves the ticket to Pending.</p>}
-            </form>
-          </Panel>
-        </div>
-
-        <div className="space-y-4">
-          <Panel title="Properties">
-            <div className="space-y-3">
-              <SelectField
-                label="Status"
-                value={t.status}
-                disabled={saving}
-                onChange={(e) => void patch({ status: e.target.value as TicketStatus }, "Status updated.")}
-              >
-                <option value="open">Open</option>
-                <option value="pending">Pending (waiting on merchant)</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
-              </SelectField>
-              <SelectField
-                label="Priority"
-                value={t.priority}
-                disabled={saving}
-                onChange={(e) => void patch({ priority: e.target.value as TicketPriority }, "Priority updated.")}
-              >
-                <option value="urgent">Urgent</option>
-                <option value="high">High</option>
-                <option value="normal">Normal</option>
-                <option value="low">Low</option>
-              </SelectField>
-              <SelectField
-                label="Assignee"
-                value={t.assigneeId ?? ""}
-                disabled={saving}
-                onChange={(e) => void patch({ assigneeId: e.target.value || null }, "Assignee updated.")}
-              >
-                <option value="">Unassigned</option>
-                {admins
-                  .filter((a) => a.status === "active" || a.id === t.assigneeId)
-                  .map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
+            <Panel title="Ticket" className="h-fit">
+              <div className="space-y-4">
+                <SelectField
+                  label="Status"
+                  value={ticket.status}
+                  disabled={saving}
+                  onChange={(e) => void update({ status: e.target.value as SupportTicketStatus })}
+                >
+                  {(Object.keys(STATUS_LABEL) as SupportTicketStatus[]).map((s) => (
+                    <option key={s} value={s}>
+                      {STATUS_LABEL[s]}
                     </option>
                   ))}
-              </SelectField>
-            </div>
-          </Panel>
-          <Panel title="Requester">
-            <dl>
-              <DetailRow label="Name">{t.requesterName}</DetailRow>
-              <DetailRow label="Email">{t.requesterEmail}</DetailRow>
-              <DetailRow label="Workspace">
-                <Link to={`/workspaces/${t.workspaceId}`} className="text-primary hover:underline">
-                  {t.workspaceName}
-                </Link>
-              </DetailRow>
-              <DetailRow label="Created">{formatDateTime(t.createdAt)}</DetailRow>
-              <DetailRow label="Updated">{formatDateTime(t.updatedAt)}</DetailRow>
-            </dl>
-          </Panel>
-        </div>
-      </div>
+                </SelectField>
+                <SelectField
+                  label="Priority"
+                  value={ticket.priority}
+                  disabled={saving}
+                  onChange={(e) => void update({ priority: e.target.value as SupportTicketPriority })}
+                >
+                  {(Object.keys(PRIORITY_LABEL) as SupportTicketPriority[]).map((p) => (
+                    <option key={p} value={p}>
+                      {PRIORITY_LABEL[p]}
+                    </option>
+                  ))}
+                </SelectField>
+                <dl className="space-y-2 border-t border-line pt-3 text-sm">
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-ink-soft">Workspace</dt>
+                    <dd>
+                      <Link to={`/workspaces/${ticket.workspaceId}`} className="hover:text-primary">
+                        {ticket.workspaceName ?? "Deleted"}
+                      </Link>
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-ink-soft">Opened by</dt>
+                    <dd className="truncate" title={ticket.createdByEmail}>
+                      {ticket.createdBy ?? "Deleted user"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-ink-soft">Last message</dt>
+                    <dd>{formatRelative(ticket.lastMessageAt)}</dd>
+                  </div>
+                </dl>
+              </div>
+            </Panel>
+          </div>
+        )}
+      </DataState>
     </div>
   );
 }

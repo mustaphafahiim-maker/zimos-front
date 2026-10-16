@@ -1,43 +1,74 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import Link from "next/link";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CheckIcon, CopyIcon, ShareIcon, WhatsAppIcon } from "@/components/Icons";
+import { ConfirmationHeading, OrderSnapshotSummary } from "@/components/OrderConfirmation";
 import { StatusTimeline } from "@/components/StatusTimeline";
+import { ThankYouMessage, ThankYouProducts } from "@/components/ThankYouExtras";
+import { formOptionsOf } from "@/lib/orderForm";
+import { StoreLink, useStoreBasePath } from "@/components/StoreRoute";
 import { btnPrimary, btnSecondary, card, container } from "@/components/ui";
 import { whatsappNumber } from "@/lib/egypt";
 import {
-  getAcceptedUpsell,
   getOrderSnapshot,
-  type AcceptedUpsell,
   type OrderSnapshot,
-} from "@/lib/mockCommerce";
+} from "@/lib/commerce";
 import { useStore } from "@/lib/StoreContext";
+import { storeHref } from "@/lib/storeHref";
+import { ThankYouUpsell, CrossSellStrip } from "@/components/offers/StoreOffers";
+import { ThankYouDownloads } from "@/components/ThankYouDownloads";
+import { ManualPaymentStatus } from "@/components/checkout/ManualPayment";
+import { GiftCardPaidNote } from "@/components/giftCards/GiftCardPaidNote";
+import { GIFT_CARDS_ENABLED } from "@/lib/features";
+import { trackPurchaseOnce } from "@/lib/track";
+import { useIsClient } from "@/lib/useIsClient";
 
 function Confirmation() {
   const { workspaceId, orderId } = useParams<{ workspaceId: string; orderId: string }>();
   const search = useSearchParams();
+  const basePath = useStoreBasePath();
   const { t, money, store } = useStore();
 
-  // Read on this device after mount (localStorage), so SSR and hydration agree.
-  const [snapshot, setSnapshot] = useState<OrderSnapshot | null>(null);
-  const [upsell, setUpsell] = useState<AcceptedUpsell | null>(null);
-  const [storeUrl, setStoreUrl] = useState("");
   const [copied, setCopied] = useState(false);
-  const [canShare, setCanShare] = useState(false);
 
+  // Read on this device only once hydrated (localStorage), so SSR and
+  // hydration agree.
+  const isClient = useIsClient();
+  const snapshot = useMemo<OrderSnapshot | null>(
+    () => (isClient ? getOrderSnapshot(workspaceId, orderId) : null),
+    [isClient, workspaceId, orderId]
+  );
+  // The store’s shareable address: its own origin on a subdomain, the
+  // /store/<workspaceId> path on the shared host.
+  const storeUrl = isClient ? `${window.location.origin}${storeHref(basePath, "/")}` : "";
+  const canShare = isClient && typeof navigator.share === "function";
+
+  // Purchase, once per order on this device (trackPurchaseOnce remembers it),
+  // as soon as the saved order is readable. A device with no snapshot has
+  // nothing to value the order with, so it sends nothing rather than a zero.
+  // The ref keeps this to one call even when storage is blocked.
+  const purchaseTracked = useRef<string | null>(null);
   useEffect(() => {
-    setSnapshot(getOrderSnapshot(workspaceId, orderId));
-    setUpsell(getAcceptedUpsell(workspaceId, orderId));
-    setStoreUrl(`${window.location.origin}/store/${workspaceId}`);
-    setCanShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
-  }, [workspaceId, orderId]);
+    if (!snapshot || purchaseTracked.current === snapshot.id) return;
+    purchaseTracked.current = snapshot.id;
+    trackPurchaseOnce(snapshot.id, {
+      valueMinor: snapshot.totalAmount,
+      currency: snapshot.currency,
+      contentIds: snapshot.contentIds ?? snapshot.productIds,
+      numItems: snapshot.items.reduce((sum, item) => sum + item.quantity, 0),
+    });
+  }, [snapshot]);
 
   const orderNumber = snapshot?.orderNumber ?? search.get("number");
   const currency = snapshot?.currency ?? store?.currency;
   const wa = store?.phone ? whatsappNumber(store.phone) : null;
   const storeName = store?.name ?? "";
+  // The merchant's thank-you settings: their message, the back-home button
+  // and a few products from a collection of their choosing.
+  const thanks = store?.thankYou;
+  const shortMessage = formOptionsOf(store?.checkout).thank_you_message;
+  const showBackHome = !thanks?.enabled || thanks.show_back_home_button;
 
   async function copyLink() {
     try {
@@ -60,41 +91,26 @@ function Confirmation() {
   return (
     <main className={`${container} flex-1 py-10 sm:py-14`}>
       <div className="mx-auto max-w-2xl">
-        <div className="flex flex-col items-center text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-success-soft text-success">
-            <CheckIcon size={32} />
-          </span>
-          <h1 className="mt-5 text-2xl font-bold text-ink sm:text-3xl">{t.thankYou.title}</h1>
-          {orderNumber && (
-            <p className="mt-3 text-sm text-ink-soft">
-              {t.thankYou.orderNumber}:{" "}
-              <span dir="ltr" className="font-bold text-ink">
-                #{orderNumber}
-              </span>
-            </p>
-          )}
-          <p className="mt-3 max-w-md text-sm leading-relaxed text-ink-soft">
-            {t.thankYou.callNotice}
-            {snapshot?.phone && (
-              <>
-                {" "}
-                {t.thankYou.onPhone}{" "}
-                <span dir="ltr" className="font-semibold text-ink">
-                  {snapshot.phone}
-                </span>
-              </>
-            )}
-          </p>
-        </div>
-
-        {upsell && (
-          <div className="mt-6 rounded-2xl border border-primary/30 bg-primary-soft px-5 py-4 text-sm" role="status">
-            <p className="font-semibold text-primary">
-              {t.upsell.accepted(upsell.name)} — {money(upsell.offerAmount, currency)}
-            </p>
-            <p className="mt-0.5 text-ink-soft">{t.upsell.acceptedHint}</p>
-          </div>
+        <ConfirmationHeading orderNumber={orderNumber} phone={snapshot?.phone} />
+        {snapshot?.etaMinutes ? <p className="mt-3 text-center text-sm text-ink-soft">{t.checkout.eta(snapshot.etaMinutes)}</p> : null}
+        {shortMessage && <p className="mt-4 text-center text-sm font-medium text-ink">{shortMessage}</p>}
+        {thanks && (
+          <ThankYouMessage page={thanks} orderNumber={orderNumber} customerName={snapshot?.customerName ?? null} />
         )}
+
+        {/* The store's post-purchase offer (Offers → Post-purchase upsell): one tap adds it to this order. */}
+        <ThankYouUpsell workspaceId={workspaceId} orderId={orderId} orderNumber={orderNumber} />
+
+        {/* Paid by InstaPay / a wallet: where to pay, the proof's status, and the form while one may be sent. */}
+        <ManualPaymentStatus workspaceId={workspaceId} orderId={orderId} />
+
+        {/* A paid online order's digital products, as soon as the payment is captured. */}
+        <ThankYouDownloads workspaceId={workspaceId} orderId={orderId} />
+
+        {/* Notifications about this order on this phone, when the store app is on. */}
+
+        {/* What goes with what they just bought (Offers → Cross-sell, on the thank-you page). */}
+        {snapshot && snapshot.productIds.length > 0 && <CrossSellStrip workspaceId={workspaceId} placement="thank_you" productIds={snapshot.productIds} />}
 
         <section className={`${card} mt-8 p-5 sm:p-6`} aria-labelledby="next-title">
           <h2 id="next-title" className="mb-5 text-lg font-semibold text-ink">
@@ -104,61 +120,12 @@ function Confirmation() {
         </section>
 
         {snapshot && (
-          <section className={`${card} mt-6 p-5 sm:p-6`} aria-labelledby="summary-title">
-            <div className="flex items-center justify-between gap-3">
-              <h2 id="summary-title" className="text-lg font-semibold text-ink">
-                {t.thankYou.summary}
-              </h2>
-              <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-primary">
-                {t.thankYou.payOnDelivery}
-              </span>
-            </div>
-            <ul className="mt-4 space-y-3">
-              {snapshot.items.map((item, i) => (
-                <li key={i} className="flex justify-between gap-3 text-sm">
-                  <span className="min-w-0 text-ink">
-                    {item.name}
-                    {item.options && <span className="block text-xs text-ink-soft">{item.options}</span>}
-                    <span className="text-xs text-ink-soft"> × {item.quantity}</span>
-                  </span>
-                  <span className="shrink-0 text-ink">{money(item.lineTotal, currency)}</span>
-                </li>
-              ))}
-            </ul>
-            <dl className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-ink-soft">{t.thankYou.subtotal}</dt>
-                <dd className="text-ink">{money(snapshot.subtotalAmount, currency)}</dd>
-              </div>
-              {snapshot.discountAmount > 0 && (
-                <div className="flex justify-between text-success">
-                  <dt>{t.thankYou.discount}</dt>
-                  <dd>−{money(snapshot.discountAmount, currency)}</dd>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <dt className="text-ink-soft">{t.thankYou.shipping}</dt>
-                <dd className="text-ink">{money(snapshot.shippingAmount, currency)}</dd>
-              </div>
-              <div className="flex justify-between border-t border-line pt-3 text-base font-bold text-ink">
-                <dt>{t.thankYou.total}</dt>
-                <dd>{money(snapshot.totalAmount, currency)}</dd>
-              </div>
-              {snapshot.extras.map((extra, i) => (
-                <div key={i} className="flex justify-between text-ink-soft">
-                  <dt>{extra.label}</dt>
-                  <dd>
-                    {extra.amount < 0 ? "−" : "+"}
-                    {money(Math.abs(extra.amount), currency)}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            {(snapshot.extras.length > 0 || upsell) && (
-              <p className="mt-3 text-xs text-ink-muted">{t.checkout.finalNote}</p>
-            )}
-          </section>
+          <div className="mt-6">
+            <OrderSnapshotSummary snapshot={snapshot} currency={currency} />
+          </div>
         )}
+        {/* What a gift card paid on this order and what is left on delivery; only while gift cards are on (lib/features). */}
+        {GIFT_CARDS_ENABLED && <GiftCardPaidNote workspaceId={workspaceId} orderId={orderId} />}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {wa && (
@@ -174,13 +141,19 @@ function Confirmation() {
               {t.thankYou.whatsapp}
             </a>
           )}
-          <Link href={`/store/${workspaceId}/track`} className={btnSecondary}>
+          <StoreLink href="/track" className={btnSecondary}>
             {t.thankYou.track}
-          </Link>
-          <Link href={`/store/${workspaceId}`} className={btnSecondary}>
-            {t.thankYou.backToStore}
-          </Link>
+          </StoreLink>
+          {showBackHome && (
+            <StoreLink href="/" className={btnSecondary}>
+              {t.thankYou.backToStore}
+            </StoreLink>
+          )}
         </div>
+
+        {thanks?.enabled && thanks.show_products_from_collection_id && (
+          <ThankYouProducts workspaceId={workspaceId} collectionId={thanks.show_products_from_collection_id} />
+        )}
 
         {storeUrl && (
           <section className="mt-8 text-center" aria-labelledby="share-title">

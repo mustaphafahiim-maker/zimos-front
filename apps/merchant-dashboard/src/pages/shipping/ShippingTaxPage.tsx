@@ -1,12 +1,10 @@
-import { useState, type FormEvent, type ReactNode } from "react";
-import { MapPinned, Percent } from "lucide-react";
-import { Alert, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger, cn } from "@store-builder/ui";
+import { useState, type FormEvent } from "react";
+import { Alert, Button, Input, cn } from "@store-builder/ui";
 import type {
   ShippingRate,
   ShippingRateType,
   ShippingZone,
   TaxRate,
-  Workspace,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
@@ -21,8 +19,6 @@ import {
   minorToMajorInput,
   percentToBasisPoints,
 } from "@/lib/format";
-import { fmt, useCommon, useLocale, useT } from "@/i18n/LocaleContext";
-import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Modal } from "@/components/Modal";
@@ -30,14 +26,263 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField, Field } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Select } from "@/components/Select";
-import { EmptyState } from "@/components/EmptyState";
+import { SettingsLayout, SettingsPane, useSettingsSection } from "@/components/settings";
 import { useToast } from "@/components/Toast";
-import { CarriersSection } from "./CarriersSection";
-import { RATE_TYPE_LABEL, SHIPPING_TAX_STRINGS, type ShippingTaxStrings } from "./ShippingTaxPage.strings";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { CarrierConnectionsSection } from "./CarrierConnectionsSection";
+import { ShippingSettingsSection } from "./ShippingSettingsSection";
+import { CouriersSection } from "./CouriersSection";
+import { DeliveryZonesSection } from "./DeliveryZonesSection";
+import { StoreHoursSection } from "./StoreHoursSection";
+import { ShippingProfilesSection } from "./ShippingProfilesSection";
+import { ShippingOptionsSection } from "./ShippingOptionsSection";
+import { shippingTabOf, useShippingSections } from "./ShippingTabs";
+import { WeightTiersSection } from "./WeightTiersSection";
+import { TRACKING_PROVIDERS_ENABLED } from "@/lib/features";
+import { ManualTrackingCard } from "./ManualTrackingCard";
 
-/** Unicode isolates so LTR runs like "2–5" keep their order inside Arabic text. */
-const LRI = "\u2066";
-const PDI = "\u2069";
+// Read as `tr` (not `t`) in this file: the tax-rate and tier loops below
+// already use `t` for their item.
+const STRINGS = {
+  en: {
+    title: "Shipping & Tax",
+    description: "Shipping zones and their rates, plus the tax rates applied at checkout.",
+    // shared
+    name: "Name",
+    amount: "Amount",
+    country: "Country",
+    optional: "Optional.",
+    edit: "Edit",
+    delete: "Delete",
+    cancel: "Cancel",
+    saving: "Saving…",
+    working: "Working…",
+    activate: "Activate",
+    deactivate: "Deactivate",
+    activated: '"{name}" activated.',
+    deactivated: '"{name}" deactivated.',
+    added: '"{name}" added.',
+    deleted: '"{name}" deleted.',
+    deleteTitle: 'Delete "{name}"?',
+    // zones
+    zonesHeading: "Shipping zones",
+    zonesEmpty: "No shipping zones yet. Add your first one.",
+    addZone: "Add zone",
+    editZone: "Edit zone",
+    saveZone: "Save zone",
+    zoneSaved: "Zone saved.",
+    zoneActive: "Active",
+    zoneInactive: "Inactive",
+    zoneNamePlaceholder: "Domestic",
+    countries: "Countries",
+    countriesHint: "Two-letter codes separated by commas, e.g. EG, SA.",
+    noCountries: "No countries",
+    deleteZoneBody:
+      "Removing a zone deletes its rates too. Orders already placed keep the shipping amount they were charged.",
+    deleteZoneConfirm: "Delete zone",
+    // rates
+    ratesEmpty: "No rates in this zone yet.",
+    addRate: "Add rate",
+    editRate: "Edit rate",
+    saveRate: "Save rate",
+    rateSaved: "Rate saved.",
+    rateDeleted: "Rate deleted.",
+    rateActive: "Active",
+    rateInactive: "Inactive",
+    colRate: "Rate",
+    colType: "Type",
+    colDetail: "Detail",
+    colDelivery: "Delivery",
+    colCarrier: "Carrier",
+    colStatus: "Status",
+    deleteRateBody: "This shipping rate is removed immediately. Past orders are unaffected.",
+    deleteRateConfirm: "Delete rate",
+    rateTypeFlat: "Flat",
+    rateTypeWeight: "Weight based",
+    rateTypeQuantity: "Quantity based",
+    rateTypeOrderValue: "Order value based",
+    rateTypeFree: "Free",
+    noCharge: "No charge",
+    tierCountOne: "{count} tier",
+    tierCountMany: "{count} tiers",
+    dayOne: "{n} day",
+    dayMany: "{n} days",
+    dayRange: "{min}–{max} days",
+    daysFrom: "from {days}",
+    daysUpTo: "up to {days}",
+    // rate form
+    rateNamePlaceholder: "Standard",
+    rateType: "Rate type",
+    freeRateNote: "A free rate has no extra settings.",
+    tiers: "Tiers",
+    addTier: "+ Add tier",
+    removeTier: "Remove tier",
+    upToGrams: "Up to (grams)",
+    upToQuantity: "Up to (quantity)",
+    minSubtotal: "Minimum subtotal",
+    overflowAmount: "Overflow amount",
+    overflowHint: "Charged when the order is heavier / larger than every tier.",
+    carrierCode: "Carrier code",
+    estMinDays: "Est. delivery — min days",
+    estMinDaysHint: "Optional. Shown to shoppers at checkout.",
+    estMaxDays: "Est. delivery — max days",
+    errAmount: "Enter a valid amount.",
+    errNoTiers: "Add at least one tier.",
+    errTierAmount: "Every tier needs a valid amount.",
+    errTierSubtotal: "Every tier needs a valid minimum subtotal.",
+    errTierWeight: "Every tier needs a valid weight in grams.",
+    errTierQuantity: "Every tier needs a valid quantity.",
+    errDays: "Whole number of days, 0–3650.",
+    errDaysOrder: "Max days can't be less than min days.",
+    // tax rates
+    taxHeading: "Tax rates",
+    taxOffNote:
+      "Tax is turned off for this store — these rates aren’t applied at checkout. Turn it on above to use them.",
+    taxEmpty: "No tax rates yet. Add your first one.",
+    addTax: "Add tax rate",
+    editTax: "Edit tax rate",
+    saveTax: "Save tax rate",
+    taxSaved: "Tax rate saved.",
+    taxRate: "Rate",
+    appliesToShipping: "Applies to shipping",
+    colPricesIncludeTax: "Prices include tax",
+    pricesAlreadyIncludeTax: "Prices already include tax",
+    taxNamePlaceholder: "VAT",
+    countryHint: "Optional, two-letter code.",
+    region: "Region",
+    taxRateHint: "Percentage, e.g. 14 for 14%.",
+    errPercent: "Enter a percentage of 0 or more.",
+    errCountry: "Use a two-letter country code.",
+    deleteTaxBody: "This tax rate is removed immediately. Past orders keep the tax they were charged.",
+    deleteTaxConfirm: "Delete tax rate",
+    // storewide tax switch
+    taxSettingTitle: "Tax at checkout",
+    taxSettingDescription: "Whether the tax rates below are added to orders.",
+    chargeTax: "Charge tax at checkout",
+    saveTaxSetting: "Save tax setting",
+    taxSettingSaved: "Tax setting saved.",
+  },
+  ar: {
+    title: "الشحن والضرائب",
+    description: "مناطق الشحن وأسعارها، ونسب الضريبة التي تُطبَّق في صفحة الدفع.",
+    name: "الاسم",
+    amount: "المبلغ",
+    country: "الدولة",
+    optional: "اختياري.",
+    edit: "تعديل",
+    delete: "حذف",
+    cancel: "إلغاء",
+    saving: "جارٍ الحفظ…",
+    working: "جارٍ التنفيذ…",
+    activate: "تفعيل",
+    deactivate: "إيقاف",
+    activated: "تم تفعيل «{name}».",
+    deactivated: "تم إيقاف «{name}».",
+    added: "تمت إضافة «{name}».",
+    deleted: "تم حذف «{name}».",
+    deleteTitle: "حذف «{name}»؟",
+    zonesHeading: "مناطق الشحن",
+    zonesEmpty: "لا توجد مناطق شحن بعد. أضف أول منطقة.",
+    addZone: "إضافة منطقة",
+    editZone: "تعديل المنطقة",
+    saveZone: "حفظ المنطقة",
+    zoneSaved: "تم حفظ المنطقة.",
+    zoneActive: "نشطة",
+    zoneInactive: "غير نشطة",
+    zoneNamePlaceholder: "داخل مصر",
+    countries: "الدول",
+    countriesHint: "أكواد من حرفين مفصولة بفواصل، مثل EG, SA.",
+    noCountries: "بدون دول",
+    deleteZoneBody: "حذف المنطقة يحذف أسعارها أيضًا. الطلبات المسجّلة من قبل تحتفظ بمبلغ الشحن الذي حُسب عليها.",
+    deleteZoneConfirm: "حذف المنطقة",
+    ratesEmpty: "لا توجد أسعار في هذه المنطقة بعد.",
+    addRate: "إضافة سعر",
+    editRate: "تعديل السعر",
+    saveRate: "حفظ السعر",
+    rateSaved: "تم حفظ السعر.",
+    rateDeleted: "تم حذف السعر.",
+    rateActive: "نشط",
+    rateInactive: "غير نشط",
+    colRate: "سعر الشحن",
+    colType: "النوع",
+    colDetail: "التفاصيل",
+    colDelivery: "مدة التوصيل",
+    colCarrier: "شركة الشحن",
+    colStatus: "الحالة",
+    deleteRateBody: "يُحذف سعر الشحن هذا فورًا. الطلبات السابقة لا تتأثر.",
+    deleteRateConfirm: "حذف السعر",
+    rateTypeFlat: "سعر ثابت",
+    rateTypeWeight: "حسب الوزن",
+    rateTypeQuantity: "حسب الكمية",
+    rateTypeOrderValue: "حسب قيمة الطلب",
+    rateTypeFree: "مجاني",
+    noCharge: "بدون رسوم",
+    tierCountOne: "شريحة واحدة",
+    tierCountMany: "{count} شرائح",
+    dayOne: "يوم واحد",
+    dayMany: "{n} أيام",
+    dayRange: "من {min} إلى {max} أيام",
+    daysFrom: "ابتداءً من {days}",
+    daysUpTo: "حتى {days}",
+    rateNamePlaceholder: "شحن عادي",
+    rateType: "نوع السعر",
+    freeRateNote: "السعر المجاني ليس له إعدادات إضافية.",
+    tiers: "الشرائح",
+    addTier: "+ إضافة شريحة",
+    removeTier: "حذف الشريحة",
+    upToGrams: "حتى (جرام)",
+    upToQuantity: "حتى (كمية)",
+    minSubtotal: "الحد الأدنى للمجموع الفرعي",
+    overflowAmount: "المبلغ عند تجاوز الشرائح",
+    overflowHint: "يُحتسب عندما يكون الطلب أثقل / أكبر من كل الشرائح.",
+    carrierCode: "كود شركة الشحن",
+    estMinDays: "مدة التوصيل المتوقعة — أقل عدد أيام",
+    estMinDaysHint: "اختياري. يظهر للعملاء في صفحة الدفع.",
+    estMaxDays: "مدة التوصيل المتوقعة — أقصى عدد أيام",
+    errAmount: "أدخل مبلغًا صحيحًا.",
+    errNoTiers: "أضف شريحة واحدة على الأقل.",
+    errTierAmount: "كل شريحة تحتاج مبلغًا صحيحًا.",
+    errTierSubtotal: "كل شريحة تحتاج حدًا أدنى صحيحًا للمجموع الفرعي.",
+    errTierWeight: "كل شريحة تحتاج وزنًا صحيحًا بالجرام.",
+    errTierQuantity: "كل شريحة تحتاج كمية صحيحة.",
+    errDays: "عدد صحيح من الأيام، من 0 إلى 3650.",
+    errDaysOrder: "لا يمكن أن يكون أقصى عدد أيام أقل من أقل عدد أيام.",
+    taxHeading: "نسب الضريبة",
+    taxOffNote: "الضريبة متوقفة في هذا المتجر — هذه النسب لا تُطبَّق في صفحة الدفع. فعّل الضريبة من الأعلى لاستخدامها.",
+    taxEmpty: "لا توجد نسب ضريبة بعد. أضف أول نسبة.",
+    addTax: "إضافة نسبة ضريبة",
+    editTax: "تعديل نسبة الضريبة",
+    saveTax: "حفظ نسبة الضريبة",
+    taxSaved: "تم حفظ نسبة الضريبة.",
+    taxRate: "النسبة",
+    appliesToShipping: "تُطبَّق على الشحن",
+    colPricesIncludeTax: "الأسعار شاملة الضريبة",
+    pricesAlreadyIncludeTax: "الأسعار شاملة الضريبة بالفعل",
+    taxNamePlaceholder: "ضريبة القيمة المضافة",
+    countryHint: "اختياري، كود من حرفين.",
+    region: "المحافظة",
+    taxRateHint: "نسبة مئوية، مثل 14 لـ 14%.",
+    errPercent: "أدخل نسبة مئوية تساوي 0 أو أكثر.",
+    errCountry: "استخدم كود دولة من حرفين.",
+    deleteTaxBody: "تُحذف نسبة الضريبة هذه فورًا. الطلبات السابقة تحتفظ بالضريبة التي حُسبت عليها.",
+    deleteTaxConfirm: "حذف نسبة الضريبة",
+    taxSettingTitle: "الضريبة في صفحة الدفع",
+    taxSettingDescription: "حدّد هل تُضاف نسب الضريبة أدناه إلى الطلبات.",
+    chargeTax: "احتساب الضريبة في صفحة الدفع",
+    saveTaxSetting: "حفظ إعداد الضريبة",
+    taxSettingSaved: "تم حفظ إعداد الضريبة.",
+  },
+} satisfies Messages;
+
+type Strings = (typeof STRINGS)["en"];
+
+const RATE_TYPE_LABEL: Record<ShippingRateType, keyof Strings> = {
+  flat: "rateTypeFlat",
+  weight_based: "rateTypeWeight",
+  quantity_based: "rateTypeQuantity",
+  order_value_based: "rateTypeOrderValue",
+  free: "rateTypeFree",
+};
 
 /** Reads a JSONB config number that may arrive as a number or a BIGINT string. */
 function numOrUndef(v: unknown): number | undefined {
@@ -46,30 +291,28 @@ function numOrUndef(v: unknown): number | undefined {
   return undefined;
 }
 
-function rateSummary(r: ShippingRate, t: ShippingTaxStrings): ReactNode {
+function rateSummary(r: ShippingRate, tr: Strings): string {
   const cfg = r.config ?? {};
   switch (r.rateType) {
     case "flat":
-      return <bdi>{formatMoney(numOrUndef(cfg.amount))}</bdi>;
+      return formatMoney(numOrUndef(cfg.amount));
     case "free":
-      return t.noCharge;
+      return tr.noCharge;
     default: {
       const tiers = Array.isArray(cfg.tiers) ? cfg.tiers : [];
-      return tiers.length === 1 ? t.tierOne : fmt(t.tierMany, { n: tiers.length });
+      return fmt(tiers.length === 1 ? tr.tierCountOne : tr.tierCountMany, { count: tiers.length });
     }
   }
 }
 
 /** "2–5 days" / "3 days" / "from 2 days" / "up to 5 days" / "—". */
-function rateDeliveryLabel(r: ShippingRate, t: ShippingTaxStrings): string {
+function rateDeliveryLabel(r: ShippingRate, tr: Strings): string {
   const min = r.estimatedDeliveryMinDays;
   const max = r.estimatedDeliveryMaxDays;
-  const unit = (n: number) => (n === 1 ? t.dayOne : fmt(t.dayMany, { n }));
-  if (min != null && max != null) {
-    return min === max ? unit(min) : fmt(t.daysRange, { range: `${LRI}${min}–${max}${PDI}` });
-  }
-  if (min != null) return fmt(t.fromDays, { days: unit(min) });
-  if (max != null) return fmt(t.upToDays, { days: unit(max) });
+  const unit = (n: number) => fmt(n === 1 ? tr.dayOne : tr.dayMany, { n });
+  if (min != null && max != null) return min === max ? unit(min) : fmt(tr.dayRange, { min, max });
+  if (min != null) return fmt(tr.daysFrom, { days: unit(min) });
+  if (max != null) return fmt(tr.daysUpTo, { days: unit(max) });
   return "—";
 }
 
@@ -95,11 +338,10 @@ export function ShippingTaxPage() {
 }
 
 function ShippingTaxBody() {
-  const t = useT(SHIPPING_TAX_STRINGS);
-  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const { currentWorkspace, refresh: refreshWorkspace } = useWorkspace();
   const toast = useToast();
+  const tr = useT(STRINGS);
   const zones = useAsync(() => apiClient.listShippingZones(workspaceId), [workspaceId]);
   const taxRates = useAsync(() => apiClient.listTaxRates(workspaceId), [workspaceId]);
 
@@ -123,7 +365,7 @@ function ShippingTaxBody() {
   async function toggleZoneActive(zone: ShippingZone) {
     try {
       await apiClient.updateShippingZone(workspaceId, zone.id, { isActive: !zone.isActive });
-      toast.success(fmt(zone.isActive ? t.toastDeactivated : t.toastActivated, { name: zone.name }));
+      toast.success(fmt(zone.isActive ? tr.deactivated : tr.activated, { name: zone.name }));
       reloadZones();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -133,7 +375,7 @@ function ShippingTaxBody() {
   async function toggleRateActive(rate: ShippingRate) {
     try {
       await apiClient.updateShippingRate(workspaceId, rate.id, { isActive: !rate.isActive });
-      toast.success(fmt(rate.isActive ? t.toastDeactivated : t.toastActivated, { name: rate.name }));
+      toast.success(fmt(rate.isActive ? tr.deactivated : tr.activated, { name: rate.name }));
       reloadZones();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -143,7 +385,7 @@ function ShippingTaxBody() {
   async function confirmDeleteZone() {
     if (!deletingZone) return;
     await apiClient.deleteShippingZone(workspaceId, deletingZone.id);
-    toast.success(fmt(t.toastDeleted, { name: deletingZone.name }));
+    toast.success(fmt(tr.deleted, { name: deletingZone.name }));
     setDeletingZone(null);
     reloadZones();
   }
@@ -151,7 +393,7 @@ function ShippingTaxBody() {
   async function confirmDeleteRate() {
     if (!deletingRate) return;
     await apiClient.deleteShippingRate(workspaceId, deletingRate.id);
-    toast.success(t.toastRateDeleted);
+    toast.success(tr.rateDeleted);
     setDeletingRate(null);
     reloadZones();
   }
@@ -159,148 +401,157 @@ function ShippingTaxBody() {
   async function confirmDeleteTax() {
     if (!deletingTax) return;
     await apiClient.deleteTaxRate(workspaceId, deletingTax.id);
-    toast.success(fmt(t.toastDeleted, { name: deletingTax.name }));
+    toast.success(fmt(tr.deleted, { name: deletingTax.name }));
     setDeletingTax(null);
     reloadTax();
   }
 
-  return (
-    <div className="max-w-5xl space-y-8">
-      <PageHeader title={t.pageTitle} description={t.pageDescription} />
+  const { sections, searchPlaceholder } = useShippingSections();
+  const { current, select } = useSettingsSection(sections);
+  // What the pane holds: the section in the address, or the first.
+  const tab = shippingTabOf(current);
+  const shown = sections.find((section) => section.id === tab) ?? sections[0];
 
-      <Tabs defaultValue="carriers">
-        <div className="-mx-1 overflow-x-auto px-1">
-          <TabsList>
-            <TabsTrigger value="carriers">{t.tabCarriers}</TabsTrigger>
-            <TabsTrigger value="zones">{t.tabZones}</TabsTrigger>
-            <TabsTrigger value="tax">{t.tabTax}</TabsTrigger>
-          </TabsList>
+  return (
+    <SettingsLayout title={tr.title} sections={sections} current={current} onSelect={select} searchPlaceholder={searchPlaceholder}>
+      <SettingsPane title={shown.label} description={shown.description} icon={shown.icon} tone={shown.tone}>
+        <div className="space-y-12">
+
+      {tab === "rates" && <ShippingSettingsSection onSaved={refreshWorkspace} />}
+
+      {tab === "rates" && <DeliveryZonesSection currency={currentWorkspace?.defaultCurrency ?? "EGP"} />}
+
+      {tab === "rates" && <CouriersSection />}
+
+      {tab === "rates" && <StoreHoursSection />}
+
+      {tab === "rates" && <ShippingProfilesSection />}
+
+      {tab === "options" && <ShippingOptionsSection />}
+
+      {tab === "carriers" && <CarrierConnectionsSection />}
+
+      {/* Tracking for shipments sent by hand: one card under the couriers (lib/features). */}
+      {tab === "carriers" && TRACKING_PROVIDERS_ENABLED && <ManualTrackingCard />}
+
+      {tab === "taxes" && (
+        <StoreShippingTaxSettings
+          taxEnabled={taxEnabled}
+          onTaxEnabledChange={setTaxEnabled}
+          onSaved={refreshWorkspace}
+        />
+      )}
+
+      {tab === "rates" && (
+        <WeightTiersSection
+          zones={zoneList}
+          workspace={currentWorkspace}
+          currency="EGP"
+          onWorkspaceChanged={refreshWorkspace}
+        />
+      )}
+
+      {tab === "rates" && (
+      <section>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-medium text-ink">{tr.zonesHeading}</h2>
+          <Button onClick={() => setZoneForm("new")}>{tr.addZone}</Button>
         </div>
 
-        <TabsContent value="carriers" className="pt-4">
-          <CarriersSection />
-        </TabsContent>
+        <DataState
+          loading={zones.loading}
+          error={zones.error}
+          empty={zoneList.length === 0}
+          emptyMessage={tr.zonesEmpty}
+          onRetry={() => zones.refresh()}
+        >
+          <div className="space-y-4">
+            {zoneList.map((zone) => (
+              <ZoneCard
+                key={zone.id}
+                zone={zone}
+                onEditZone={() => setZoneForm(zone)}
+                onDeleteZone={() => setDeletingZone(zone)}
+                onToggleZone={() => toggleZoneActive(zone)}
+                onAddRate={() => setRateForm({ zoneId: zone.id })}
+                onEditRate={(rate) => setRateForm({ zoneId: zone.id, rate })}
+                onDeleteRate={(rate) => setDeletingRate(rate)}
+                onToggleRate={(rate) => toggleRateActive(rate)}
+              />
+            ))}
+          </div>
+        </DataState>
+      </section>
 
-        <TabsContent value="zones" className="space-y-12 pt-4">
-          <StoreShippingTaxSettings
-            workspace={currentWorkspace}
-            taxEnabled={taxEnabled}
-            onTaxEnabledChange={setTaxEnabled}
-            onSaved={refreshWorkspace}
-          />
+      )}
 
-          <section>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-display text-lg font-semibold text-ink">{t.zonesTitle}</h2>
-              <Button onClick={() => setZoneForm("new")}>{t.addZone}</Button>
-            </div>
+      {tab === "taxes" && (
+      <section className={cn("transition-opacity", !taxEnabled && "opacity-60")}>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg font-medium text-ink">{tr.taxHeading}</h2>
+            {!taxEnabled && (
+              <p className="mt-1 text-xs text-ink-soft">
+                {tr.taxOffNote}
+              </p>
+            )}
+          </div>
+          <Button onClick={() => setTaxForm("new")}>{tr.addTax}</Button>
+        </div>
 
-            <DataState loading={zones.loading} error={zones.error} onRetry={() => zones.refresh()}>
-              {zoneList.length === 0 ? (
-                <EmptyState
-                  icon={<MapPinned />}
-                  title={t.zonesEmptyTitle}
-                  description={t.zonesEmptyDesc}
-                  action={<Button onClick={() => setZoneForm("new")}>{t.addZone}</Button>}
-                />
-              ) : (
-                <div className="space-y-4">
-                  {zoneList.map((zone) => (
-                    <ZoneCard
-                      key={zone.id}
-                      zone={zone}
-                      onEditZone={() => setZoneForm(zone)}
-                      onDeleteZone={() => setDeletingZone(zone)}
-                      onToggleZone={() => toggleZoneActive(zone)}
-                      onAddRate={() => setRateForm({ zoneId: zone.id })}
-                      onEditRate={(rate) => setRateForm({ zoneId: zone.id, rate })}
-                      onDeleteRate={(rate) => setDeletingRate(rate)}
-                      onToggleRate={(rate) => toggleRateActive(rate)}
-                    />
-                  ))}
-                </div>
-              )}
-            </DataState>
-          </section>
-        </TabsContent>
-
-        <TabsContent value="tax" className="pt-4">
-          <section className={cn("transition-opacity", !taxEnabled && "opacity-60")}>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-ink">{t.taxTitle}</h2>
-                {!taxEnabled && <p className="mt-1 text-xs text-ink-soft">{t.taxOffNote}</p>}
-              </div>
-              <Button onClick={() => setTaxForm("new")}>{t.addTaxRate}</Button>
-            </div>
-
-            <DataState loading={taxRates.loading} error={taxRates.error} onRetry={() => taxRates.refresh()}>
-              {taxList.length === 0 ? (
-                <EmptyState
-                  icon={<Percent />}
-                  title={t.taxEmptyTitle}
-                  description={t.taxEmptyDesc}
-                  action={<Button onClick={() => setTaxForm("new")}>{t.addTaxRate}</Button>}
-                />
-              ) : (
-                <div className="overflow-x-auto rounded-2xl border border-line bg-paper-raised">
-                  <table className="w-full min-w-[640px] text-sm">
-                    <thead>
-                      <tr className="border-b border-line bg-paper text-start text-xs uppercase tracking-wide text-ink-soft">
-                        <th className="px-4 py-3 text-start font-medium">{t.colName}</th>
-                        <th className="px-4 py-3 text-start font-medium">{t.colCountry}</th>
-                        <th className="px-4 py-3 text-start font-medium">{t.colRate}</th>
-                        <th className="px-4 py-3 text-start font-medium">{t.colAppliesToShipping}</th>
-                        <th className="px-4 py-3 text-start font-medium">{t.colPricesIncludeTax}</th>
-                        <th className="px-4 py-3 font-medium">
-                          <span className="sr-only">{c.actions}</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {taxList.map((tax) => (
-                        <tr key={tax.id} className="border-b border-line last:border-0 hover:bg-paper">
-                          <td className="px-4 py-3 font-medium text-ink">{tax.name}</td>
-                          <td className="px-4 py-3 text-ink-soft">
-                            <bdi>{tax.country || "—"}</bdi>
-                          </td>
-                          <td className="px-4 py-3 text-ink-soft">
-                            <span dir="ltr">{formatPercent(tax.rateBasisPoints)}</span>
-                          </td>
-                          <td className="px-4 py-3 text-ink-soft">
-                            <YesNo value={tax.appliesToShipping} />
-                          </td>
-                          <td className="px-4 py-3 text-ink-soft">
-                            <YesNo value={tax.pricesIncludeTax} />
-                          </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-end">
-                            <Button size="sm" variant="ghost" onClick={() => setTaxForm(tax)}>
-                              {c.edit}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-danger hover:bg-danger-soft"
-                              onClick={() => setDeletingTax(tax)}
-                            >
-                              {c.delete}
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </DataState>
-          </section>
-        </TabsContent>
-      </Tabs>
+        <DataState
+          loading={taxRates.loading}
+          error={taxRates.error}
+          empty={taxList.length === 0}
+          emptyMessage={tr.taxEmpty}
+          onRetry={() => taxRates.refresh()}
+        >
+          <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead>
+                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+                  <th className="px-4 py-3 font-medium">{tr.name}</th>
+                  <th className="px-4 py-3 font-medium">{tr.country}</th>
+                  <th className="px-4 py-3 font-medium">{tr.taxRate}</th>
+                  <th className="px-4 py-3 font-medium">{tr.appliesToShipping}</th>
+                  <th className="px-4 py-3 font-medium">{tr.colPricesIncludeTax}</th>
+                  <th className="px-4 py-3 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {taxList.map((t) => (
+                  <tr key={t.id} className="border-b border-line last:border-0 hover:bg-paper-raised">
+                    <td className="px-4 py-3 font-medium text-ink">{t.name}</td>
+                    <td className="px-4 py-3 text-ink-soft">{t.country || "—"}</td>
+                    <td className="px-4 py-3 text-ink-soft">{formatPercent(t.rateBasisPoints)}</td>
+                    <td className="px-4 py-3 text-ink-soft">{t.appliesToShipping ? "✓" : "—"}</td>
+                    <td className="px-4 py-3 text-ink-soft">{t.pricesIncludeTax ? "✓" : "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-end">
+                      <Button size="sm" variant="ghost" onClick={() => setTaxForm(t)}>
+                        {tr.edit}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-danger hover:bg-danger-soft"
+                        onClick={() => setDeletingTax(t)}
+                      >
+                        {tr.delete}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </DataState>
+      </section>
+      )}
 
       <Modal
         open={zoneForm !== null}
         onClose={() => setZoneForm(null)}
-        title={zoneForm === "new" ? t.addZone : t.editZone}
+        title={zoneForm === "new" ? tr.addZone : tr.editZone}
       >
         {zoneForm !== null && (
           <ZoneForm
@@ -315,7 +566,11 @@ function ShippingTaxBody() {
         )}
       </Modal>
 
-      <Modal open={rateForm !== null} onClose={() => setRateForm(null)} title={rateForm?.rate ? t.editRate : t.addRate}>
+      <Modal
+        open={rateForm !== null}
+        onClose={() => setRateForm(null)}
+        title={rateForm?.rate ? tr.editRate : tr.addRate}
+      >
         {rateForm !== null && (
           <RateForm
             key={rateForm.rate ? rateForm.rate.id : `new-${rateForm.zoneId}`}
@@ -333,7 +588,7 @@ function ShippingTaxBody() {
       <Modal
         open={taxForm !== null}
         onClose={() => setTaxForm(null)}
-        title={taxForm === "new" ? t.addTaxRate : t.editTaxRate}
+        title={taxForm === "new" ? tr.addTax : tr.editTax}
       >
         {taxForm !== null && (
           <TaxRateForm
@@ -350,9 +605,11 @@ function ShippingTaxBody() {
 
       <ConfirmDialog
         open={deletingZone !== null}
-        title={fmt(t.confirmDeleteTitle, { name: deletingZone?.name ?? "" })}
-        description={t.confirmZoneDesc}
-        confirmLabel={t.confirmZoneLabel}
+        title={fmt(tr.deleteTitle, { name: deletingZone?.name ?? "" })}
+        description={tr.deleteZoneBody}
+        confirmLabel={tr.deleteZoneConfirm}
+        cancelLabel={tr.cancel}
+        busyLabel={tr.working}
         destructive
         onCancel={() => setDeletingZone(null)}
         onConfirm={confirmDeleteZone}
@@ -360,9 +617,11 @@ function ShippingTaxBody() {
 
       <ConfirmDialog
         open={deletingRate !== null}
-        title={fmt(t.confirmDeleteTitle, { name: deletingRate?.name ?? "" })}
-        description={t.confirmRateDesc}
-        confirmLabel={t.confirmRateLabel}
+        title={fmt(tr.deleteTitle, { name: deletingRate?.name ?? "" })}
+        description={tr.deleteRateBody}
+        confirmLabel={tr.deleteRateConfirm}
+        cancelLabel={tr.cancel}
+        busyLabel={tr.working}
         destructive
         onCancel={() => setDeletingRate(null)}
         onConfirm={confirmDeleteRate}
@@ -370,27 +629,18 @@ function ShippingTaxBody() {
 
       <ConfirmDialog
         open={deletingTax !== null}
-        title={fmt(t.confirmDeleteTitle, { name: deletingTax?.name ?? "" })}
-        description={t.confirmTaxDesc}
-        confirmLabel={t.confirmTaxLabel}
+        title={fmt(tr.deleteTitle, { name: deletingTax?.name ?? "" })}
+        description={tr.deleteTaxBody}
+        confirmLabel={tr.deleteTaxConfirm}
+        cancelLabel={tr.cancel}
+        busyLabel={tr.working}
         destructive
         onCancel={() => setDeletingTax(null)}
         onConfirm={confirmDeleteTax}
       />
-    </div>
-  );
-}
-
-function YesNo({ value }: { value: boolean }) {
-  const c = useCommon();
-  return value ? (
-    <span className="text-success" aria-label={c.yes} title={c.yes}>
-      ✓
-    </span>
-  ) : (
-    <span aria-label={c.no} title={c.no}>
-      —
-    </span>
+        </div>
+      </SettingsPane>
+    </SettingsLayout>
   );
 }
 
@@ -413,74 +663,89 @@ function ZoneCard({
   onDeleteRate: (rate: ShippingRate) => void;
   onToggleRate: (rate: ShippingRate) => void;
 }) {
-  const t = useT(SHIPPING_TAX_STRINGS);
-  const c = useCommon();
-  const { locale } = useLocale();
-  const rateTypeLabel = RATE_TYPE_LABEL[locale];
+  const tr = useT(STRINGS);
   const rates = zone.rates ?? [];
   return (
-    <div className={cn("rounded-2xl border border-line bg-paper-raised p-4", !zone.isActive && "opacity-60")}>
+    <div
+      className={cn(
+        "rounded-[var(--radius-card)] border border-line p-4",
+        !zone.isActive && "opacity-60"
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold text-ink">{zone.name}</p>
-            <StatusBadge value={zone.isActive ? "active" : "inactive"} />
+            <p className="font-medium text-ink">{zone.name}</p>
+            <StatusBadge
+              value={zone.isActive ? "active" : "inactive"}
+              text={zone.isActive ? tr.zoneActive : tr.zoneInactive}
+            />
           </div>
           <p className="text-xs text-ink-soft">
-            {zone.countries.length ? <bdi>{zone.countries.join(", ")}</bdi> : t.noCountries}
+            {zone.countries.length ? zone.countries.join(", ") : tr.noCountries}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex items-center gap-1">
           <Button size="sm" variant="ghost" onClick={onToggleZone}>
-            {zone.isActive ? t.deactivate : t.activate}
+            {zone.isActive ? tr.deactivate : tr.activate}
           </Button>
           <Button size="sm" variant="ghost" onClick={onEditZone}>
-            {c.edit}
+            {tr.edit}
           </Button>
-          <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft" onClick={onDeleteZone}>
-            {c.delete}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-danger hover:bg-danger-soft"
+            onClick={onDeleteZone}
+          >
+            {tr.delete}
           </Button>
         </div>
       </div>
 
       <div className="mt-3">
         {rates.length === 0 ? (
-          <p className="text-sm text-ink-soft">{t.noRatesInZone}</p>
+          <p className="text-sm text-ink-soft">{tr.ratesEmpty}</p>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-line bg-paper-raised">
+          <div className="overflow-x-auto rounded-[0.5rem] border border-line">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="border-b border-line bg-paper text-xs uppercase tracking-wide text-ink-soft">
-                  <th className="px-3 py-2 text-start font-medium">{t.colRate}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t.colType}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t.colDetail}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t.colDelivery}</th>
-                  <th className="px-3 py-2 text-start font-medium">{t.colCarrier}</th>
-                  <th className="px-3 py-2 text-start font-medium">{c.status}</th>
-                  <th className="px-3 py-2 font-medium">
-                    <span className="sr-only">{c.actions}</span>
-                  </th>
+                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+                  <th className="px-3 py-2 font-medium">{tr.colRate}</th>
+                  <th className="px-3 py-2 font-medium">{tr.colType}</th>
+                  <th className="px-3 py-2 font-medium">{tr.colDetail}</th>
+                  <th className="px-3 py-2 font-medium">{tr.colDelivery}</th>
+                  <th className="px-3 py-2 font-medium">{tr.colCarrier}</th>
+                  <th className="px-3 py-2 font-medium">{tr.colStatus}</th>
+                  <th className="px-3 py-2 font-medium" />
                 </tr>
               </thead>
               <tbody>
                 {rates.map((rate) => (
-                  <tr key={rate.id} className={cn("border-b border-line last:border-0", !rate.isActive && "opacity-60")}>
+                  <tr
+                    key={rate.id}
+                    className={cn(
+                      "border-b border-line last:border-0",
+                      !rate.isActive && "opacity-60"
+                    )}
+                  >
                     <td className="px-3 py-2 text-ink">{rate.name}</td>
-                    <td className="px-3 py-2 text-ink-soft">{rateTypeLabel[rate.rateType]}</td>
-                    <td className="px-3 py-2 text-ink-soft">{rateSummary(rate, t)}</td>
-                    <td className="px-3 py-2 text-ink-soft">{rateDeliveryLabel(rate, t)}</td>
-                    <td className="px-3 py-2 text-ink-soft">
-                      <bdi>{rate.carrierCode || "—"}</bdi>
-                    </td>
+                    <td className="px-3 py-2 text-ink-soft">{tr[RATE_TYPE_LABEL[rate.rateType]]}</td>
+                    <td className="px-3 py-2 text-ink-soft">{rateSummary(rate, tr)}</td>
+                    <td className="px-3 py-2 text-ink-soft">{rateDeliveryLabel(rate, tr)}</td>
+                    <td className="px-3 py-2 text-ink-soft">{rate.carrierCode || "—"}</td>
                     <td className="px-3 py-2">
-                      <StatusBadge value={rate.isActive ? "active" : "inactive"} />
+                      <StatusBadge
+                        value={rate.isActive ? "active" : "inactive"}
+                        text={rate.isActive ? tr.rateActive : tr.rateInactive}
+                      />
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-end">
                       <Button size="sm" variant="ghost" onClick={() => onToggleRate(rate)}>
-                        {rate.isActive ? t.deactivate : t.activate}
+                        {rate.isActive ? tr.deactivate : tr.activate}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => onEditRate(rate)}>
-                        {c.edit}
+                        {tr.edit}
                       </Button>
                       <Button
                         size="sm"
@@ -488,7 +753,7 @@ function ZoneCard({
                         className="text-danger hover:bg-danger-soft"
                         onClick={() => onDeleteRate(rate)}
                       >
-                        {c.delete}
+                        {tr.delete}
                       </Button>
                     </td>
                   </tr>
@@ -499,7 +764,7 @@ function ZoneCard({
         )}
         <div className="mt-2">
           <Button size="sm" variant="outline" onClick={onAddRate}>
-            {t.addRate}
+            {tr.addRate}
           </Button>
         </div>
       </div>
@@ -516,10 +781,9 @@ function ZoneForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const t = useT(SHIPPING_TAX_STRINGS);
-  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const tr = useT(STRINGS);
   const [name, setName] = useState(zone?.name ?? "");
   const [countries, setCountries] = useState((zone?.countries ?? []).join(", "));
   const [saving, setSaving] = useState(false);
@@ -532,7 +796,7 @@ function ZoneForm({
     setFieldErrors({});
     const countryList = countries
       .split(",")
-      .map((code) => code.trim().toUpperCase())
+      .map((c) => c.trim().toUpperCase())
       .filter(Boolean);
 
     setSaving(true);
@@ -540,10 +804,10 @@ function ZoneForm({
       const payload = { name: name.trim(), countries: countryList };
       if (zone) {
         await apiClient.updateShippingZone(workspaceId, zone.id, payload);
-        toast.success(t.toastZoneSaved);
+        toast.success(tr.zoneSaved);
       } else {
         await apiClient.createShippingZone(workspaceId, payload);
-        toast.success(fmt(t.toastAdded, { name: payload.name }));
+        toast.success(fmt(tr.added, { name: payload.name }));
       }
       onDone();
     } catch (err) {
@@ -559,28 +823,27 @@ function ZoneForm({
     <form onSubmit={submit} className="space-y-4">
       {formError && <Alert variant="danger">{formError}</Alert>}
       <TextField
-        label={t.nameLabel}
+        label={tr.name}
         required
         value={name}
         onChange={(e) => setName(e.target.value)}
         error={fieldErrors.name}
-        placeholder={t.zoneNamePlaceholder}
+        placeholder={tr.zoneNamePlaceholder}
       />
       <TextField
-        label={t.countriesLabel}
+        label={tr.countries}
         value={countries}
         onChange={(e) => setCountries(e.target.value)}
         error={fieldErrors.countries}
-        hint={t.countriesHint}
+        hint={tr.countriesHint}
         placeholder="EG, SA"
-        dir="ltr"
       />
       <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          {c.cancel}
+          {tr.cancel}
         </Button>
         <Button type="submit" disabled={saving || name.trim() === ""}>
-          {saving ? c.saving : zone ? t.saveZone : t.addZone}
+          {saving ? tr.saving : zone ? tr.saveZone : tr.addZone}
         </Button>
       </div>
     </form>
@@ -603,12 +866,9 @@ function RateForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const t = useT(SHIPPING_TAX_STRINGS);
-  const c = useCommon();
-  const { locale } = useLocale();
-  const rateTypeLabel = RATE_TYPE_LABEL[locale];
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const tr = useT(STRINGS);
   const cfg = (rate?.config ?? {}) as Record<string, unknown>;
 
   const [name, setName] = useState(rate?.name ?? "");
@@ -621,12 +881,12 @@ function RateForm({
   const [tiers, setTiers] = useState<TierDraft[]>(() => {
     const raw = Array.isArray(cfg.tiers) ? (cfg.tiers as Array<Record<string, unknown>>) : [];
     if (raw.length === 0) return [{ threshold: "", amount: "" }];
-    return raw.map((tier) => ({
+    return raw.map((t) => ({
       threshold:
         rate?.rateType === "order_value_based"
-          ? minorToMajorInput(numOrUndef(tier.minSubtotal))
-          : String(numOrUndef(rate?.rateType === "weight_based" ? tier.upToGrams : tier.upToQuantity) ?? ""),
-      amount: minorToMajorInput(numOrUndef(tier.amount)),
+          ? minorToMajorInput(numOrUndef(t.minSubtotal))
+          : String(numOrUndef(rate?.rateType === "weight_based" ? t.upToGrams : t.upToQuantity) ?? ""),
+      amount: minorToMajorInput(numOrUndef(t.amount)),
     }));
   });
   const [estMinDays, setEstMinDays] = useState(
@@ -645,10 +905,14 @@ function RateForm({
   const showOverflow = rateType === "weight_based" || rateType === "quantity_based";
   const thresholdIsMoney = rateType === "order_value_based";
   const thresholdLabel =
-    rateType === "weight_based" ? t.upToGrams : rateType === "quantity_based" ? t.upToQuantity : t.minSubtotal;
+    rateType === "weight_based"
+      ? tr.upToGrams
+      : rateType === "quantity_based"
+        ? tr.upToQuantity
+        : tr.minSubtotal;
 
   function setTier(index: number, patch: Partial<TierDraft>) {
-    setTiers((prev) => prev.map((tier, i) => (i === index ? { ...tier, ...patch } : tier)));
+    setTiers((prev) => prev.map((t, i) => (i === index ? { ...t, ...patch } : t)));
   }
 
   function buildConfig():
@@ -659,32 +923,35 @@ function RateForm({
     if (rateType === "flat") {
       const amount = majorToMinor(flatAmount);
       if (!Number.isFinite(amount) || amount < 0) {
-        return { errors: { amount: t.errAmount } };
+        return { errors: { amount: tr.errAmount } };
       }
       return { config: { amount } };
     }
 
-    const cleaned = tiers.filter((tier) => tier.threshold.trim() !== "" || tier.amount.trim() !== "");
-    if (cleaned.length === 0) return { errors: { tiers: t.errAtLeastOneTier } };
+    const cleaned = tiers.filter((t) => t.threshold.trim() !== "" || t.amount.trim() !== "");
+    if (cleaned.length === 0) return { errors: { tiers: tr.errNoTiers } };
 
     const built: Array<Record<string, number>> = [];
-    for (const tier of cleaned) {
-      const amount = majorToMinor(tier.amount);
+    for (const t of cleaned) {
+      const amount = majorToMinor(t.amount);
       if (!Number.isFinite(amount) || amount < 0) {
-        return { errors: { tiers: t.errTierAmount } };
+        return { errors: { tiers: tr.errTierAmount } };
       }
       if (rateType === "order_value_based") {
-        const minSubtotal = majorToMinor(tier.threshold);
+        const minSubtotal = majorToMinor(t.threshold);
         if (!Number.isFinite(minSubtotal) || minSubtotal < 0) {
-          return { errors: { tiers: t.errTierMinSubtotal } };
+          return { errors: { tiers: tr.errTierSubtotal } };
         }
         built.push({ minSubtotal, amount });
       } else {
-        const threshold = Math.floor(Number(tier.threshold));
+        const threshold = Math.floor(Number(t.threshold));
         if (!Number.isFinite(threshold) || threshold < 0) {
           return {
             errors: {
-              tiers: rateType === "weight_based" ? t.errTierWeight : t.errTierQuantity,
+              tiers:
+                rateType === "weight_based"
+                  ? tr.errTierWeight
+                  : tr.errTierQuantity,
             },
           };
         }
@@ -700,7 +967,7 @@ function RateForm({
 
     const overflow = overflowAmount.trim() === "" ? 0 : majorToMinor(overflowAmount);
     if (!Number.isFinite(overflow) || overflow < 0) {
-      return { errors: { overflowAmount: t.errAmount } };
+      return { errors: { overflowAmount: tr.errAmount } };
     }
     return { config: { tiers: built, overflowAmount: overflow } };
   }
@@ -719,10 +986,10 @@ function RateForm({
     const minDays = parseDays(estMinDays);
     const maxDays = parseDays(estMaxDays);
     const dayErrors: Record<string, string> = {};
-    if (minDays === "invalid") dayErrors.estimatedDeliveryMinDays = t.errDays;
-    if (maxDays === "invalid") dayErrors.estimatedDeliveryMaxDays = t.errDays;
+    if (minDays === "invalid") dayErrors.estimatedDeliveryMinDays = tr.errDays;
+    if (maxDays === "invalid") dayErrors.estimatedDeliveryMaxDays = tr.errDays;
     if (typeof minDays === "number" && typeof maxDays === "number" && minDays > maxDays) {
-      dayErrors.estimatedDeliveryMaxDays = t.errMaxLessMin;
+      dayErrors.estimatedDeliveryMaxDays = tr.errDaysOrder;
     }
     if (Object.keys(dayErrors).length > 0) {
       setFieldErrors(dayErrors);
@@ -741,10 +1008,10 @@ function RateForm({
       };
       if (rate) {
         await apiClient.updateShippingRate(workspaceId, rate.id, payload);
-        toast.success(t.toastRateSaved);
+        toast.success(tr.rateSaved);
       } else {
         await apiClient.createShippingRate(workspaceId, zoneId, payload);
-        toast.success(fmt(t.toastAdded, { name: payload.name }));
+        toast.success(fmt(tr.added, { name: payload.name }));
       }
       onDone();
     } catch (err) {
@@ -761,20 +1028,24 @@ function RateForm({
       {formError && <Alert variant="danger">{formError}</Alert>}
 
       <TextField
-        label={t.nameLabel}
+        label={tr.name}
         required
         value={name}
         onChange={(e) => setName(e.target.value)}
         error={fieldErrors.name}
-        placeholder={t.rateNamePlaceholder}
+        placeholder={tr.rateNamePlaceholder}
       />
 
-      <Field label={t.rateTypeLabel} error={fieldErrors.rateType}>
+      <Field label={tr.rateType} error={fieldErrors.rateType}>
         {({ id }) => (
-          <Select id={id} value={rateType} onChange={(e) => setRateType(e.target.value as ShippingRateType)}>
-            {(Object.keys(rateTypeLabel) as ShippingRateType[]).map((type) => (
-              <option key={type} value={type}>
-                {rateTypeLabel[type]}
+          <Select
+            id={id}
+            value={rateType}
+            onChange={(e) => setRateType(e.target.value as ShippingRateType)}
+          >
+            {(Object.keys(RATE_TYPE_LABEL) as ShippingRateType[]).map((t) => (
+              <option key={t} value={t}>
+                {tr[RATE_TYPE_LABEL[t]]}
               </option>
             ))}
           </Select>
@@ -783,7 +1054,7 @@ function RateForm({
 
       {rateType === "flat" && (
         <MoneyInput
-          label={t.amountLabel}
+          label={tr.amount}
           required
           value={flatAmount}
           onChange={setFlatAmount}
@@ -791,24 +1062,28 @@ function RateForm({
         />
       )}
 
-      {rateType === "free" && <p className="text-sm text-ink-soft">{t.freeNoSettings}</p>}
+      {rateType === "free" && (
+        <p className="text-sm text-ink-soft">{tr.freeRateNote}</p>
+      )}
 
       {showTiers && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-ink-soft">{t.tiersLabel}</span>
+            <span className="text-sm font-medium text-ink-soft">{tr.tiers}</span>
             <Button
               type="button"
               size="sm"
               variant="ghost"
               onClick={() => setTiers((prev) => [...prev, { threshold: "", amount: "" }])}
             >
-              {t.addTier}
+              {tr.addTier}
             </Button>
           </div>
-          {fieldErrors.tiers && <p className="text-xs font-medium text-danger">{fieldErrors.tiers}</p>}
+          {fieldErrors.tiers && (
+            <p className="text-xs font-medium text-danger">{fieldErrors.tiers}</p>
+          )}
           {tiers.map((tier, i) => (
-            <div key={i} className="rounded-xl border border-line bg-paper p-3">
+            <div key={i} className="rounded-[0.5rem] border border-line p-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 {thresholdIsMoney ? (
                   <MoneyInput
@@ -824,14 +1099,17 @@ function RateForm({
                         {...aria}
                         type="number"
                         min={0}
-                        dir="ltr"
                         value={tier.threshold}
                         onChange={(e) => setTier(i, { threshold: e.target.value })}
                       />
                     )}
                   </Field>
                 )}
-                <MoneyInput label={t.amountLabel} value={tier.amount} onChange={(v) => setTier(i, { amount: v })} />
+                <MoneyInput
+                  label={tr.amount}
+                  value={tier.amount}
+                  onChange={(v) => setTier(i, { amount: v })}
+                />
               </div>
               {tiers.length > 1 && (
                 <div className="mt-2 text-end">
@@ -842,7 +1120,7 @@ function RateForm({
                     className="text-danger hover:bg-danger-soft"
                     onClick={() => setTiers((prev) => prev.filter((_, idx) => idx !== i))}
                   >
-                    {t.removeTier}
+                    {tr.removeTier}
                   </Button>
                 </div>
               )}
@@ -853,25 +1131,28 @@ function RateForm({
 
       {showOverflow && (
         <MoneyInput
-          label={t.overflowAmount}
+          label={tr.overflowAmount}
           value={overflowAmount}
           onChange={setOverflowAmount}
           error={fieldErrors.overflowAmount}
-          hint={t.overflowHint}
+          hint={tr.overflowHint}
         />
       )}
 
       <TextField
-        label={t.carrierCode}
+        label={tr.carrierCode}
         value={carrierCode}
         onChange={(e) => setCarrierCode(e.target.value)}
         error={fieldErrors.carrierCode}
-        hint={t.optional}
-        dir="ltr"
+        hint={tr.optional}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t.estMin} error={fieldErrors.estimatedDeliveryMinDays} hint={t.estMinHint}>
+        <Field
+          label={tr.estMinDays}
+          error={fieldErrors.estimatedDeliveryMinDays}
+          hint={tr.estMinDaysHint}
+        >
           {({ id, ...aria }) => (
             <Input
               id={id}
@@ -879,13 +1160,16 @@ function RateForm({
               type="number"
               min={0}
               max={3650}
-              dir="ltr"
               value={estMinDays}
               onChange={(e) => setEstMinDays(e.target.value)}
             />
           )}
         </Field>
-        <Field label={t.estMax} error={fieldErrors.estimatedDeliveryMaxDays} hint={t.optional}>
+        <Field
+          label={tr.estMaxDays}
+          error={fieldErrors.estimatedDeliveryMaxDays}
+          hint={tr.optional}
+        >
           {({ id, ...aria }) => (
             <Input
               id={id}
@@ -893,7 +1177,6 @@ function RateForm({
               type="number"
               min={0}
               max={3650}
-              dir="ltr"
               value={estMaxDays}
               onChange={(e) => setEstMaxDays(e.target.value)}
             />
@@ -903,10 +1186,10 @@ function RateForm({
 
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          {c.cancel}
+          {tr.cancel}
         </Button>
         <Button type="submit" disabled={saving || name.trim() === ""}>
-          {saving ? c.saving : rate ? t.saveRate : t.addRate}
+          {saving ? tr.saving : rate ? tr.saveRate : tr.addRate}
         </Button>
       </div>
     </form>
@@ -922,14 +1205,15 @@ function TaxRateForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const t = useT(SHIPPING_TAX_STRINGS);
-  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
+  const tr = useT(STRINGS);
   const [name, setName] = useState(taxRate?.name ?? "");
   const [country, setCountry] = useState(taxRate?.country ?? "");
   const [region, setRegion] = useState(taxRate?.region ?? "");
-  const [rate, setRate] = useState(taxRate ? basisPointsToPercentInput(taxRate.rateBasisPoints) : "");
+  const [rate, setRate] = useState(
+    taxRate ? basisPointsToPercentInput(taxRate.rateBasisPoints) : ""
+  );
   const [appliesToShipping, setAppliesToShipping] = useState(taxRate?.appliesToShipping ?? false);
   const [pricesIncludeTax, setPricesIncludeTax] = useState(taxRate?.pricesIncludeTax ?? false);
   const [saving, setSaving] = useState(false);
@@ -943,12 +1227,12 @@ function TaxRateForm({
 
     const bp = percentToBasisPoints(rate);
     if (!Number.isFinite(bp) || bp < 0) {
-      setFieldErrors({ rateBasisPoints: t.errPercent });
+      setFieldErrors({ rateBasisPoints: tr.errPercent });
       return;
     }
     const countryValue = country.trim().toUpperCase();
     if (countryValue && countryValue.length !== 2) {
-      setFieldErrors({ country: t.errCountryCode });
+      setFieldErrors({ country: tr.errCountry });
       return;
     }
 
@@ -964,10 +1248,10 @@ function TaxRateForm({
       };
       if (taxRate) {
         await apiClient.updateTaxRate(workspaceId, taxRate.id, payload);
-        toast.success(t.toastTaxSaved);
+        toast.success(tr.taxSaved);
       } else {
         await apiClient.createTaxRate(workspaceId, payload);
-        toast.success(fmt(t.toastAdded, { name: payload.name }));
+        toast.success(fmt(tr.added, { name: payload.name }));
       }
       onDone();
     } catch (err) {
@@ -984,36 +1268,40 @@ function TaxRateForm({
       {formError && <Alert variant="danger">{formError}</Alert>}
 
       <TextField
-        label={t.nameLabel}
+        label={tr.name}
         required
         value={name}
         onChange={(e) => setName(e.target.value)}
         error={fieldErrors.name}
-        placeholder={t.taxNamePlaceholder}
+        placeholder={tr.taxNamePlaceholder}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField
-          label={t.countryLabel}
+          label={tr.country}
           value={country}
           onChange={(e) => setCountry(e.target.value)}
           error={fieldErrors.country}
-          hint={t.countryHint}
+          hint={tr.countryHint}
           placeholder="EG"
-          dir="ltr"
         />
         <TextField
-          label={t.regionLabel}
+          label={tr.region}
           value={region}
           onChange={(e) => setRegion(e.target.value)}
           error={fieldErrors.region}
-          hint={t.optional}
+          hint={tr.optional}
         />
       </div>
 
-      <Field label={t.rateLabel} required error={fieldErrors.rateBasisPoints} hint={t.rateHint}>
+      <Field
+        label={tr.taxRate}
+        required
+        error={fieldErrors.rateBasisPoints}
+        hint={tr.taxRateHint}
+      >
         {({ id, ...aria }) => (
-          <div className="relative" dir="ltr">
+          <div className="relative">
             <Input
               id={id}
               {...aria}
@@ -1032,20 +1320,28 @@ function TaxRateForm({
       </Field>
 
       <label className="flex items-center gap-2 text-sm text-ink">
-        <input type="checkbox" checked={appliesToShipping} onChange={(e) => setAppliesToShipping(e.target.checked)} />
-        {t.appliesToShipping}
+        <input
+          type="checkbox"
+          checked={appliesToShipping}
+          onChange={(e) => setAppliesToShipping(e.target.checked)}
+        />
+        {tr.appliesToShipping}
       </label>
       <label className="flex items-center gap-2 text-sm text-ink">
-        <input type="checkbox" checked={pricesIncludeTax} onChange={(e) => setPricesIncludeTax(e.target.checked)} />
-        {t.pricesAlreadyInclude}
+        <input
+          type="checkbox"
+          checked={pricesIncludeTax}
+          onChange={(e) => setPricesIncludeTax(e.target.checked)}
+        />
+        {tr.pricesAlreadyIncludeTax}
       </label>
 
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          {c.cancel}
+          {tr.cancel}
         </Button>
         <Button type="submit" disabled={saving || name.trim() === ""}>
-          {saving ? c.saving : taxRate ? t.saveTaxRate : t.addTaxRate}
+          {saving ? tr.saving : taxRate ? tr.saveTax : tr.addTax}
         </Button>
       </div>
     </form>
@@ -1053,116 +1349,65 @@ function TaxRateForm({
 }
 
 /**
- * Storewide shipping/tax knobs kept in `workspace.settings` and saved through
- * the same `PATCH /workspaces/:id` used elsewhere. A blank money field is sent
- * as `null` (clear the key), never 0 — matching the backend's merge, where a
- * missing key is left untouched and `null` resets it to "not configured".
- * `taxEnabled` is owned by the page so the tax section below can react to it
- * before a save lands.
+ * The storewide tax switch, kept in `workspace.settings` and saved through the
+ * same `PATCH /workspaces/:id` used elsewhere. The free-shipping threshold and
+ * the default shipping rate used to live here too; they moved to
+ * ShippingSettingsSection with the governorate prices, so two forms never
+ * write the same keys. `taxEnabled` is owned by the page so the tax section
+ * below can react to it before a save lands.
  */
 function StoreShippingTaxSettings({
-  workspace,
   taxEnabled,
   onTaxEnabledChange,
   onSaved,
 }: {
-  workspace: Workspace | null;
   taxEnabled: boolean;
   onTaxEnabledChange: (value: boolean) => void;
   onSaved: () => Promise<void> | void;
 }) {
-  const t = useT(SHIPPING_TAX_STRINGS);
-  const c = useCommon();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
-  const settings = workspace?.settings;
-
-  const [freeShippingThreshold, setFreeShippingThreshold] = useState(
-    minorToMajorInput(settings?.free_shipping_threshold_amount)
-  );
-  const [defaultShippingRate, setDefaultShippingRate] = useState(
-    minorToMajorInput(settings?.default_shipping_rate_amount)
-  );
+  const tr = useT(STRINGS);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  /** "" → null (clear the key); a valid ≥ 0 amount → minor units; else "invalid". */
-  function parseAmount(input: string): number | null | "invalid" {
-    if (input.trim() === "") return null;
-    const minor = majorToMinor(input);
-    if (!Number.isFinite(minor) || minor < 0) return "invalid";
-    return minor;
-  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setFieldErrors({});
-
-    const threshold = parseAmount(freeShippingThreshold);
-    const fallback = parseAmount(defaultShippingRate);
-    const errs: Record<string, string> = {};
-    if (threshold === "invalid") errs.free_shipping_threshold_amount = t.errAmount;
-    if (fallback === "invalid") errs.default_shipping_rate_amount = t.errAmount;
-    if (Object.keys(errs).length > 0) {
-      setFieldErrors(errs);
-      return;
-    }
-
     setSaving(true);
     try {
-      await apiClient.updateWorkspace(workspaceId, {
-        settings: {
-          free_shipping_threshold_amount: threshold === "invalid" ? null : threshold,
-          default_shipping_rate_amount: fallback === "invalid" ? null : fallback,
-          tax_enabled: taxEnabled,
-        },
-      });
-      toast.success(t.toastSettingsSaved);
+      await apiClient.updateWorkspace(workspaceId, { settings: { tax_enabled: taxEnabled } });
+      toast.success(tr.taxSettingSaved);
       await onSaved();
     } catch (err) {
-      const fields = getFieldErrors(err);
-      setFieldErrors(fields);
-      if (Object.keys(fields).length === 0) setFormError(getErrorMessage(err));
+      setFormError(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <section className="rounded-2xl border border-line bg-paper-raised p-5">
-      <h2 className="font-display text-lg font-semibold text-ink">{t.settingsTitle}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.settingsDesc}</p>
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <h2 className="font-display text-lg font-medium text-ink">{tr.taxSettingTitle}</h2>
+      <p className="mt-1 text-sm text-ink-soft">
+        {tr.taxSettingDescription}
+      </p>
 
       <form onSubmit={submit} className="mt-4 space-y-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <MoneyInput
-            label={t.freeThreshold}
-            value={freeShippingThreshold}
-            onChange={setFreeShippingThreshold}
-            error={fieldErrors.free_shipping_threshold_amount}
-            hint={t.freeThresholdHint}
-          />
-          <MoneyInput
-            label={t.defaultRate}
-            value={defaultShippingRate}
-            onChange={setDefaultShippingRate}
-            error={fieldErrors.default_shipping_rate_amount}
-            hint={t.defaultRateHint}
-          />
-        </div>
-
         <label className="flex items-center gap-2 text-sm text-ink">
-          <input type="checkbox" checked={taxEnabled} onChange={(e) => onTaxEnabledChange(e.target.checked)} />
-          {t.chargeTax}
+          <input
+            type="checkbox"
+            checked={taxEnabled}
+            onChange={(e) => onTaxEnabledChange(e.target.checked)}
+          />
+          {tr.chargeTax}
         </label>
 
         <div className="flex justify-end">
           <Button type="submit" disabled={saving}>
-            {saving ? c.saving : t.saveSettings}
+            {saving ? tr.saving : tr.saveTaxSetting}
           </Button>
         </div>
       </form>

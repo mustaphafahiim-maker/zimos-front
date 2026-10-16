@@ -1,658 +1,1014 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Button, Input, cn } from "@store-builder/ui";
-import { ArrowLeft, Bot, Check, CheckCheck, FileText, MessageCircle, Package, Phone, Search, Send, Settings2, ShieldCheck, X } from "lucide-react";
-import type { WaConversation, WaMessage } from "@/mock/types2";
-import { mockApi } from "@/mock/api";
-import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Check,
+  CheckCheck,
+  Clock,
+  MessageCircle,
+  Plus,
+  Search,
+  Trash2,
+  UserRound,
+} from "lucide-react";
+import { Alert, Button, Input, Spinner, cn } from "@store-builder/ui";
+import type {
+  WhatsappConversation,
+  WhatsappConversationStatus,
+  WhatsappMessage,
+  WhatsappTemplatePayload,
+} from "@store-builder/api-client";
+import { inboxListConversations, type InboxConversation, type InboxCounts } from "@store-builder/api-client";
+import { apiClient } from "@/lib/apiClient";
 import { useAsync } from "@/lib/useAsync";
-import { getErrorMessage } from "@/lib/errors";
-import { formatDate, formatMoney } from "@/lib/format";
-import { useT, useCommon, useLocale, fmt, type Messages } from "@/i18n/LocaleContext";
+import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { ApiError, getErrorMessage } from "@/lib/errors";
+import { formatRelativeTime } from "@/lib/relativeTime";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
 import { EmptyState } from "@/components/EmptyState";
-import { Select } from "@/components/Select";
+import { LoadMore } from "@/components/LoadMore";
+import { useInboxLive } from "./useInboxLive";
+import { AssigneeSelect, CustomerPanel, CustomerPanelButton, InboxScopeTabs, QuickRepliesMenu, type InboxScope } from "./InboxExtras";
+import { Modal } from "@/components/Modal";
+import { TextField } from "@/components/Field";
 import { Textarea } from "@/components/Textarea";
+import { AI_ENABLED } from "@/lib/features";
+import { SuggestReplyButton } from "./SuggestReply";
+import { BotBadge, BotSettingsLink, BotToggle } from "./WaBot";
+import { waBotSentOf } from "@store-builder/api-client";
 import { useToast } from "@/components/Toast";
+import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { TemplatePicker } from "@/components/WhatsappTemplates";
+
+/** There is no realtime channel, so the inbox polls while the tab is visible. */
+const POLL_MS = 10_000;
+const LIST_LIMIT = 30;
+const MESSAGE_LIMIT = 50;
 
 const STRINGS = {
   en: {
-    title: "Inbox",
-    description: "Shared WhatsApp inbox — every customer chat, with the order right next to it.",
-    botSettings: "WhatsApp bot",
-    filterOpen: "Open",
-    filterBot: "Bot handling",
-    filterResolved: "Resolved",
-    filterUnassigned: "Unassigned",
-    searchPlaceholder: "Search name, phone, order…",
-    searchAria: "Search conversations",
-    noMatch: "No conversations match.",
-    pickTitle: "Pick a conversation",
-    pickDescription: "Select a chat from the list to read and reply. Unread chats show a count badge.",
-    contextEmpty: "Customer and order details appear here.",
-    yesterday: "Yesterday",
-    statusAria: "Conversation status",
-    assignAria: "Assign to",
-    backToList: "Back to conversations",
-    bot: "Bot",
-    templates: "Templates",
-    composerPlaceholder: "Type a message… (Enter to send, Shift+Enter for newline)",
+    title: "WhatsApp inbox",
+    description: "Reply to your customers on WhatsApp.",
+    notConnectedTitle: "WhatsApp isn't connected yet",
+    notConnectedHint:
+      "Connect your WhatsApp Business number in Settings to start chatting with customers here.",
+    goConnect: "Connect WhatsApp",
+    newMessage: "New message",
+    search: "Search name or phone",
+    open: "Open",
+    closed: "Closed",
+    noConversations: "No conversations here",
+    noConversationsHint: "New customer messages will show up here automatically.",
+    noResults: "No conversations match your search.",
+    selectConversation: "Pick a conversation to read it.",
+    unread: "{count} unread",
+    back: "Back to conversations",
+    viewCustomer: "Customer profile",
+    closeConversation: "Close",
+    reopenConversation: "Reopen",
+    closedToast: "Conversation closed.",
+    reopenedToast: "Conversation reopened.",
+    loadOlder: "Load older messages",
+    noMessages: "No messages yet.",
+    template: "Template: {name}",
+    status_sent: "Sent",
+    status_delivered: "Delivered",
+    status_read: "Read",
+    status_failed: "Failed",
+    status_received: "Received",
+    failedWithError: "Failed: {error}",
+    typeMessage: "Type a message…",
     send: "Send",
-    qrConfirm: "Confirm order ✅",
-    qrTracking: "Send tracking 🚚",
-    qrAddress: "Ask address 📍",
-    qrThanks: "Thank you 🙏",
-    tickFailed: "Failed",
-    tickSent: "Sent",
-    tickRead: "Read",
-    tickDelivered: "Delivered",
-    customer: "Customer",
-    orders: "Orders",
-    reliability: "Reliability",
-    order: "Order",
-    shipping: "Shipping",
-    totalCod: "Total (COD)",
-    actions: "Actions",
-    confirmOrder: "Confirm order",
-    cancelOrder: "Cancel order",
-    createReturn: "Create return",
-    orderFallback: "Order",
-    toastConfirmed: "{order} confirmed — moved to fulfilment.",
-    toastCancelled: "{order} cancelled.",
-    toastReturn: "Return request created for {order}.",
+    sending: "Sending…",
+    windowClosed:
+      "The 24-hour window is closed. WhatsApp only lets you message this customer with an approved template until they reply.",
+    windowClosedToast: "The 24-hour window closed — send a template instead.",
+    notConnectedToast: "WhatsApp is disconnected. Reconnect it from Settings.",
+    sendTemplate: "Send template",
+    templateName: "Template name",
+    templateNameHint: "Exactly as approved in Meta, e.g. order_confirmation",
+    invalidTemplateName: "Use lowercase letters, numbers and underscores only.",
+    language: "Language code",
+    languageHint: "e.g. ar, en_US",
+    params: "Variables",
+    paramsHint: "Fill the template's placeholders in order.",
+    param: "Variable {n}",
+    addParam: "Add variable",
+    removeParam: "Remove variable {n}",
+    sent: "Message sent.",
+    phone: "Customer phone",
+    phoneHint: "With country code, e.g. 201012345678",
+    invalidPhone: "Enter a valid phone number with country code.",
+    newMessageHint: "WhatsApp needs an approved template to start a new conversation.",
+    cancel: "Cancel",
+    retry: "Try again",
   },
   ar: {
-    title: "صندوق الوارد",
-    description: "صندوق WhatsApp مشترك — كل محادثات العملاء، والطلب ظاهر بجانب كل محادثة.",
-    botSettings: "بوت WhatsApp",
-    filterOpen: "مفتوحة",
-    filterBot: "يتولاها البوت",
-    filterResolved: "تم حلها",
-    filterUnassigned: "غير مُسندة",
-    searchPlaceholder: "ابحث بالاسم أو الهاتف أو رقم الطلب…",
-    searchAria: "البحث في المحادثات",
-    noMatch: "لا توجد محادثات مطابقة.",
-    pickTitle: "اختر محادثة",
-    pickDescription: "اختر محادثة من القائمة لقراءتها والرد عليها. المحادثات غير المقروءة يظهر عليها عدد الرسائل.",
-    contextEmpty: "تظهر هنا بيانات العميل والطلب.",
-    yesterday: "أمس",
-    statusAria: "حالة المحادثة",
-    assignAria: "إسناد إلى",
-    backToList: "العودة إلى المحادثات",
-    bot: "البوت",
-    templates: "القوالب",
-    composerPlaceholder: "اكتب رسالة… (Enter للإرسال، Shift+Enter لسطر جديد)",
-    send: "إرسال",
-    qrConfirm: "تأكيد الطلب ✅",
-    qrTracking: "إرسال رقم التتبع 🚚",
-    qrAddress: "طلب العنوان 📍",
-    qrThanks: "شكر 🙏",
-    tickFailed: "فشل الإرسال",
-    tickSent: "تم الإرسال",
-    tickRead: "تمت القراءة",
-    tickDelivered: "تم التسليم",
-    customer: "العميل",
-    orders: "الطلبات",
-    reliability: "الموثوقية",
-    order: "الطلب",
-    shipping: "الشحن",
-    totalCod: "الإجمالي (الدفع عند الاستلام)",
-    actions: "إجراءات",
-    confirmOrder: "تأكيد الطلب",
-    cancelOrder: "إلغاء الطلب",
-    createReturn: "إنشاء مرتجع",
-    orderFallback: "الطلب",
-    toastConfirmed: "تم تأكيد {order} ونقله إلى التجهيز.",
-    toastCancelled: "تم إلغاء {order}.",
-    toastReturn: "تم إنشاء طلب مرتجع لـ {order}.",
+    title: "صندوق واتساب",
+    description: "رد على عملاءك على واتساب.",
+    notConnectedTitle: "واتساب لسه مش مربوط",
+    notConnectedHint: "اربط رقم واتساب بيزنس بتاعك من الإعدادات، وابدأ تكلّم عملاءك من هنا.",
+    goConnect: "اربط واتساب",
+    newMessage: "رسالة جديدة",
+    search: "دوّر بالاسم أو الرقم",
+    open: "مفتوحة",
+    closed: "مقفولة",
+    noConversations: "مفيش محادثات هنا",
+    noConversationsHint: "رسايل العملاء الجديدة هتظهر هنا لوحدها.",
+    noResults: "مفيش محادثات بالبحث ده.",
+    selectConversation: "اختار محادثة عشان تقراها.",
+    unread: "{count} مش مقروءة",
+    back: "رجوع للمحادثات",
+    viewCustomer: "صفحة العميل",
+    closeConversation: "اقفل",
+    reopenConversation: "افتح تاني",
+    closedToast: "المحادثة اتقفلت.",
+    reopenedToast: "المحادثة اتفتحت تاني.",
+    loadOlder: "اعرض رسايل أقدم",
+    noMessages: "مفيش رسايل لسه.",
+    template: "قالب: {name}",
+    status_sent: "اتبعتت",
+    status_delivered: "وصلت",
+    status_read: "اتقرت",
+    status_failed: "فشلت",
+    status_received: "مستلمة",
+    failedWithError: "فشلت: {error}",
+    typeMessage: "اكتب رسالة…",
+    send: "ابعت",
+    sending: "بنبعت…",
+    windowClosed:
+      "فترة الـ ٢٤ ساعة خلصت. واتساب مش هيسمحلك تبعت للعميل ده غير بقالب متوافق عليه لحد ما يرد.",
+    windowClosedToast: "فترة الـ ٢٤ ساعة خلصت — ابعت قالب بدلها.",
+    notConnectedToast: "واتساب مفصول. اربطه تاني من الإعدادات.",
+    sendTemplate: "ابعت قالب",
+    templateName: "اسم القالب",
+    templateNameHint: "زي ما هو متوافق عليه في Meta، مثلًا order_confirmation",
+    invalidTemplateName: "استخدم حروف إنجليزي صغيرة وأرقام و _ بس.",
+    language: "كود اللغة",
+    languageHint: "مثلًا ar أو en_US",
+    params: "المتغيرات",
+    paramsHint: "املى خانات القالب بالترتيب.",
+    param: "متغير {n}",
+    addParam: "ضيف متغير",
+    removeParam: "شيل متغير {n}",
+    sent: "الرسالة اتبعتت.",
+    phone: "رقم العميل",
+    phoneHint: "بكود الدولة، مثلًا 201012345678",
+    invalidPhone: "اكتب رقم صحيح بكود الدولة.",
+    newMessageHint: "واتساب محتاج قالب متوافق عليه عشان تبدأ محادثة جديدة.",
+    cancel: "إلغاء",
+    retry: "حاول تاني",
   },
 } satisfies Messages;
 
 type Strings = (typeof STRINGS)["en"];
 
-type Filter = "all" | "open" | "bot" | "resolved" | "unassigned";
+/** Runs `tick` every POLL_MS while the tab is visible, and again on return. */
+function usePolling(tick: () => void, enabled = true) {
+  const ref = useRef(tick);
+  useEffect(() => {
+    ref.current = tick;
+  });
+  useEffect(() => {
+    if (!enabled) return;
+    const run = () => {
+      if (document.visibilityState === "visible") ref.current();
+    };
+    const id = window.setInterval(run, POLL_MS);
+    document.addEventListener("visibilitychange", run);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", run);
+    };
+  }, [enabled]);
+}
 
-const FILTER_KEYS: Filter[] = ["all", "open", "bot", "resolved", "unassigned"];
-
-const AGENTS = ["أميرة سعيد", "محمود عادل"];
-
-// Message texts stay in Egyptian Arabic (they are sent to customers); only the chip labels are localised.
-const QUICK_REPLIES: Array<{ labelKey: keyof Strings; text: string }> = [
-  { labelKey: "qrConfirm", text: "تمام ✅ طلبك اتأكد وهيتشحن خلال 24 ساعة." },
-  { labelKey: "qrTracking", text: "طلبك اتشحن مع Bosta 🚚 رقم التتبع: zg8F2K1 — متوقع يوصل خلال يومين." },
-  { labelKey: "qrAddress", text: "ممكن تبعتلنا العنوان بالتفصيل (المحافظة – الشارع – رقم العمارة والدور) 📍" },
-  { labelKey: "qrThanks", text: "شكراً لتعاملك معانا 🙏 لو احتجت أي حاجة ابعتلنا في أي وقت." },
-];
-
-const TEMPLATES: Array<{ name: string; text: string }> = [
-  { name: "order_confirm", text: "أهلاً 👋 وصلنا طلبك. رد بـ 1 لتأكيد الطلب أو 2 للإلغاء." },
-  { name: "shipped", text: "طلبك اتشحن النهاردة 🚚 هيوصلك خلال 2-3 أيام." },
-  { name: "delivery_reminder", text: "المندوب هيوصلك النهاردة، من فضلك جهّز مبلغ الطلب كاش 💵" },
-  { name: "review_request", text: "وصلك طلبك؟ يهمنا رأيك ⭐ رد بتقييم من 1 لـ 5." },
-];
-
-function filterLabel(f: Filter, t: Strings, all: string): string {
-  switch (f) {
-    case "all":
-      return all;
-    case "open":
-      return t.filterOpen;
-    case "bot":
-      return t.filterBot;
-    case "resolved":
-      return t.filterResolved;
-    case "unassigned":
-      return t.filterUnassigned;
+function sendErrorText(err: unknown, t: Strings): string {
+  if (err instanceof ApiError) {
+    if (err.code === "WHATSAPP_WINDOW_CLOSED") return t.windowClosedToast;
+    if (err.code === "WHATSAPP_NOT_CONNECTED") return t.notConnectedToast;
   }
-}
-
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("");
-}
-
-function timeLabel(iso: string, intlLocale: string): string {
-  const d = new Date(iso);
-  const now = new Date();
-  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(intlLocale, { hour: "2-digit", minute: "2-digit" });
-  return d.toLocaleDateString(intlLocale, { month: "short", day: "numeric" });
-}
-
-function dayKey(iso: string): string {
-  return new Date(iso).toDateString();
-}
-
-function dayLabel(iso: string, today: string, yesterday: string): string {
-  const d = new Date(iso);
-  const now = new Date();
-  if (d.toDateString() === now.toDateString()) return today;
-  const y = new Date(now);
-  y.setDate(y.getDate() - 1);
-  if (d.toDateString() === y.toDateString()) return yesterday;
-  return formatDate(iso);
-}
-
-/** Deterministic fake numbers derived from the order number so the panel is stable. */
-function fabricateOrder(orderNumber: string) {
-  const n = Number(orderNumber.replace(/\D/g, "")) || 0;
-  const prices = [129900, 89900, 249900, 59900, 34900, 19900];
-  const items = ["سماعة Pro", "Fit Band 5", "طقم أواني", "عطر العود", "حامل السيارة", "لمبة LED"];
-  const idx = n % prices.length;
-  return { item: items[idx], price: prices[idx], shipping: 5500, total: prices[idx] + 5500, ordersCount: 1 + (n % 5), reliability: 55 + (n % 45) };
-}
-
-/** Conversation tags are stored as stable keys; show them in the UI language. */
-const TAG_LABELS: Record<"en" | "ar", Record<string, string>> = {
-  en: {
-    confirmed: "Confirmed",
-    cancelled: "Cancelled",
-    delivered: "Delivered",
-    tracking: "Tracking",
-    address_change: "Address change",
-    question: "Question",
-    negotiation: "Price request",
-  },
-  ar: {
-    confirmed: "مؤكَّد",
-    cancelled: "ملغى",
-    delivered: "تم التسليم",
-    tracking: "تتبّع",
-    address_change: "تغيير العنوان",
-    question: "استفسار",
-    negotiation: "طلب خصم",
-  },
-};
-
-function tagLabel(tag: string, intlLocale: string): string {
-  const table = intlLocale.startsWith("ar") ? TAG_LABELS.ar : TAG_LABELS.en;
-  return table[tag] ?? tag.replace(/_/g, " ");
+  return getErrorMessage(err);
 }
 
 export function InboxPage() {
-  const t = useT(STRINGS);
-  const c = useCommon();
-  const { intlLocale } = useLocale();
   const workspaceId = useWorkspaceId();
-  const toast = useToast();
-  const list = useAsync(() => mockApi.listWaConversations(workspaceId), [workspaceId]);
-
-  const [filter, setFilter] = useState<Filter>("all");
-  const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
-
-  const conversations = list.data ?? [];
-
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return conversations
-      .filter((c) => {
-        if (filter === "unassigned") return !(assignments[c.id] ?? c.assignedAgentName ?? "");
-        if (filter === "all") return true;
-        return c.status === filter;
-      })
-      .filter((c) => !q || c.customerName.toLowerCase().includes(q) || c.phone.includes(q) || (c.orderNumber ?? "").toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q))
-      .sort((a, b) => b.lastAt.localeCompare(a.lastAt));
-  }, [conversations, filter, search, assignments]);
-
-  const selected = conversations.find((c) => c.id === selectedId) ?? null;
-
-  function patch(id: string, fn: (c: WaConversation) => WaConversation) {
-    list.setData((prev) => (prev ?? []).map((c) => (c.id === id ? fn(c) : c)));
-  }
-
-  async function changeStatus(c: WaConversation, status: WaConversation["status"]) {
-    patch(c.id, (x) => ({ ...x, status, unread: 0 }));
-    try {
-      await mockApi.setWaStatus(workspaceId, c.id, status);
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-      list.refresh({ silent: true });
-    }
-  }
-
-  async function send(c: WaConversation, body: string) {
-    const optimistic: WaMessage = { id: `tmp-${Date.now()}`, direction: "out", body, at: new Date().toISOString(), status: "sent", byBot: false };
-    patch(c.id, (x) => ({ ...x, messages: [...x.messages, optimistic], lastMessage: body, lastAt: optimistic.at, unread: 0, status: "open" }));
-    try {
-      const saved = await mockApi.sendWaMessage(workspaceId, c.id, body);
-      patch(c.id, (x) => ({ ...x, messages: x.messages.map((m) => (m.id === optimistic.id ? saved : m)) }));
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-      patch(c.id, (x) => ({ ...x, messages: x.messages.filter((m) => m.id !== optimistic.id) }));
-    }
-  }
-
-  function selectConversation(c: WaConversation) {
-    setSelectedId(c.id);
-    if (c.unread > 0) patch(c.id, (x) => ({ ...x, unread: 0 }));
-  }
+  const t = useT(STRINGS);
+  const navigate = useNavigate();
+  const integration = useAsync(() => apiClient.getWhatsappIntegration(workspaceId), [workspaceId]);
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-[560px] flex-col">
-      <PageHeader
-        title={t.title}
-        description={t.description}
-        actions={
-          <Button variant="outline" size="sm" render={<Link to="/inbox/bot" />}>
-            <Settings2 /> {t.botSettings}
-          </Button>
-        }
-      />
-
-      <DataState loading={list.loading} error={list.error} onRetry={() => list.refresh()}>
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-2xl border border-line bg-paper-raised md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)_300px]">
-          {/* START: conversation list */}
-          <aside className={cn("min-h-0 min-w-0 flex-col border-line md:flex md:border-e", selected ? "hidden" : "flex")}>
-            <div className="space-y-2 border-b border-line p-3">
-              <div className="relative">
-                <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-ink-soft" />
-                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.searchPlaceholder} aria-label={t.searchAria} className="h-9 ps-8" />
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {FILTER_KEYS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setFilter(key)}
-                    aria-pressed={filter === key}
-                    className={cn(
-                      "rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors",
-                      filter === key ? "border-primary bg-primary-soft text-primary-dark" : "border-line text-ink-soft hover:border-primary/40",
-                    )}
-                  >
-                    {filterLabel(key, t, c.all)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <ul className="min-h-0 flex-1 overflow-y-auto">
-              {rows.length === 0 && <li className="p-6 text-center text-sm text-ink-soft">{t.noMatch}</li>}
-              {rows.map((conv) => (
-                <li key={conv.id}>
-                  <button
-                    type="button"
-                    onClick={() => selectConversation(conv)}
-                    className={cn("flex w-full gap-3 border-b border-line px-3 py-3 text-start transition-colors hover:bg-paper", selectedId === conv.id && "bg-primary-soft/40")}
-                  >
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary-dark" dir="auto">
-                      {initials(conv.customerName)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="flex min-w-0 items-center gap-1">
-                          <span className="truncate text-sm font-medium text-ink" dir="auto">
-                            {conv.customerName}
-                          </span>
-                          {conv.status === "bot" && <Bot className="size-3.5 shrink-0 text-primary" aria-label={t.filterBot} />}
-                        </span>
-                        <span className="shrink-0 text-[11px] text-ink-soft">{timeLabel(conv.lastAt, intlLocale)}</span>
-                      </span>
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-xs text-ink-soft" dir="auto">
-                          {conv.orderNumber && (
-                            <bdi className="me-1 font-mono text-ink" dir="ltr">
-                              {conv.orderNumber}
-                            </bdi>
-                          )}
-                          {conv.lastMessage}
-                        </span>
-                        {conv.unread > 0 && <span className="shrink-0 rounded-full bg-primary px-1.5 text-[10px] font-semibold tabular-nums text-white">{conv.unread}</span>}
-                      </span>
-                      {conv.tags.length > 0 && (
-                        <span className="mt-1 flex flex-wrap gap-1">
-                          {conv.tags.map((tag) => (
-                            <span key={tag} className="rounded-full bg-paper px-1.5 py-px text-[10px] text-ink-soft ring-1 ring-line" dir="auto">
-                              {tagLabel(tag, intlLocale)}
-                            </span>
-                          ))}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </aside>
-
-          {/* CENTER: thread */}
-          <section className={cn("min-h-0 min-w-0 flex-col md:flex", selected ? "flex" : "hidden")}>
-            {selected ? (
-              <Thread
-                key={selected.id}
-                conversation={selected}
-                assigned={assignments[selected.id] ?? selected.assignedAgentName ?? ""}
-                onAssign={(name) => setAssignments((prev) => ({ ...prev, [selected.id]: name }))}
-                onStatus={(s) => changeStatus(selected, s)}
-                onSend={(body) => send(selected, body)}
-                onBack={() => setSelectedId(null)}
-              />
-            ) : (
-              <div className="flex flex-1 items-center justify-center p-8">
-                <EmptyState icon={<MessageCircle />} title={t.pickTitle} description={t.pickDescription} className="border-0" />
-              </div>
-            )}
-          </section>
-
-          {/* END: context panel */}
-          <aside className="hidden min-h-0 flex-col overflow-y-auto border-s border-line bg-paper lg:flex">
-            {selected ? <ContextPanel conversation={selected} /> : <div className="p-6 text-center text-xs text-ink-soft">{t.contextEmpty}</div>}
-          </aside>
-        </div>
+    <div className="min-w-0">
+      <PageHeader title={t.title} description={t.description} actions={AI_ENABLED ? <BotSettingsLink /> : undefined} />
+      <DataState
+        loading={integration.loading}
+        error={integration.error}
+        onRetry={() => integration.refresh()}
+      >
+        {integration.data && !integration.data.connected ? (
+          <EmptyState
+            icon={<MessageCircle />}
+            title={t.notConnectedTitle}
+            description={t.notConnectedHint}
+            action={<Button onClick={() => navigate("/settings#whatsapp")}>{t.goConnect}</Button>}
+          />
+        ) : integration.data ? (
+          <InboxView key={workspaceId} />
+        ) : null}
       </DataState>
     </div>
   );
 }
 
-// ---------------------------------------------------------------- Thread --
-
-function Thread({
-  conversation: c,
-  assigned,
-  onAssign,
-  onStatus,
-  onSend,
-  onBack,
-}: {
-  conversation: WaConversation;
-  assigned: string;
-  onAssign: (name: string) => void;
-  onStatus: (s: WaConversation["status"]) => void;
-  onSend: (body: string) => Promise<void>;
-  onBack: () => void;
-}) {
+function InboxView() {
+  const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
-  const common = useCommon();
-  const { intlLocale } = useLocale();
-  const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
-  const [templatesOpen, setTemplatesOpen] = useState(false);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [status, setStatus] = useState<WhatsappConversationStatus>("open");
+  // All / assigned to me / unread — and how many open conversations wait in each.
+  const [scope, setScope] = useState<InboxScope>("all");
+  const [counts, setCounts] = useState<InboxCounts | null>(null);
+  const scopeParams = { assigned: scope === "mine" ? ("me" as const) : undefined, unread: scope === "unread" };
+  // Bumped on any activity so the customer panel re-reads the orders.
+  const [activity, setActivity] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [conversations, setConversations] = useState<WhatsappConversation[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [composing, setComposing] = useState(false);
+  const reqId = useRef(0);
+  const loadedBeyondFirstPage = useRef(false);
 
   useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [c.messages.length]);
+    const id = window.setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => window.clearTimeout(id);
+  }, [searchInput]);
 
-  function insert(text: string) {
-    setDraft((d) => (d.trim() ? `${d}\n${text}` : text));
-    setTemplatesOpen(false);
-    requestAnimationFrame(() => textareaRef.current?.focus());
+  // Hand-rolled rather than useAsync: the poll must refresh the first page
+  // without clearing the older pages the merchant already scrolled into.
+  const loadFirstPage = useCallback(
+    async (silent: boolean) => {
+      const id = ++reqId.current;
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const res = await inboxListConversations(apiClient, workspaceId, {
+          ...scopeParams,
+          status,
+          search: search || undefined,
+          limit: LIST_LIMIT,
+        });
+        if (id !== reqId.current) return;
+        setCounts(res.counts);
+        if (silent) {
+          setConversations((prev) => {
+            const fresh = new Set(res.conversations.map((c) => c.id));
+            const older = prev.slice(LIST_LIMIT).filter((c) => !fresh.has(c.id));
+            return [...res.conversations, ...older];
+          });
+          setNextCursor((prev) => (loadedBeyondFirstPage.current ? prev : res.nextCursor));
+        } else {
+          loadedBeyondFirstPage.current = false;
+          setConversations(res.conversations);
+          setNextCursor(res.nextCursor);
+        }
+        setError(null);
+      } catch (err) {
+        if (id === reqId.current && !silent) setError(err);
+      } finally {
+        if (id === reqId.current && !silent) setLoading(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [workspaceId, status, search, scope]
+  );
+
+  useEffect(() => {
+    void loadFirstPage(false);
+  }, [loadFirstPage]);
+
+  usePolling(() => void loadFirstPage(true));
+  // The live stream makes a new message show at once; the poll above stays as the safety net.
+  useInboxLive(workspaceId, () => {
+    void loadFirstPage(true);
+    setActivity((n) => n + 1);
+  });
+
+  async function loadMore() {
+    if (!nextCursor) return;
+    setLoadingMore(true);
+    try {
+      const res = await inboxListConversations(apiClient, workspaceId, {
+          ...scopeParams,
+        status,
+        search: search || undefined,
+        limit: LIST_LIMIT,
+        before: nextCursor,
+      });
+      loadedBeyondFirstPage.current = true;
+      setConversations((prev) => {
+        const seen = new Set(prev.map((c) => c.id));
+        return [...prev, ...res.conversations.filter((c) => !seen.has(c.id))];
+      });
+      setNextCursor(res.nextCursor);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
-  async function submit() {
-    const body = draft.trim();
-    if (!body || sending) return;
-    setSending(true);
-    setDraft("");
+  const selected = conversations.find((c) => c.id === selectedId) ?? null;
+  // Remember the last known version so closing a conversation (which drops it
+  // out of the "open" filter) does not yank the thread out from under the user.
+  const lastSelected = useRef<WhatsappConversation | null>(null);
+  if (selected) lastSelected.current = selected;
+  const threadConversation = selectedId
+    ? (selected ?? (lastSelected.current?.id === selectedId ? lastSelected.current : null))
+    : null;
+
+  function patchConversation(id: string, patch: Partial<WhatsappConversation>) {
+    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+    if (lastSelected.current?.id === id) lastSelected.current = { ...lastSelected.current, ...patch };
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button onClick={() => setComposing(true)}>
+          <Plus className="size-4" /> {t.newMessage}
+        </Button>
+      </div>
+
+      <div
+        className={cn(
+          "grid h-[calc(100dvh-14rem)] min-h-[480px] overflow-hidden rounded-xl bg-paper-raised shadow-xs ring-1 ring-foreground/10 md:grid-cols-[320px_1fr]",
+          threadConversation && "xl:grid-cols-[320px_1fr_300px]"
+        )}
+      >
+        {/* Conversation list */}
+        <aside
+          className={cn("flex min-h-0 flex-col border-line md:border-e", threadConversation && "hidden md:flex")}
+        >
+          <div className="space-y-2 border-b border-line p-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={t.search}
+                aria-label={t.search}
+                className="ps-9"
+              />
+            </div>
+            <div
+              role="radiogroup"
+              aria-label={t.title}
+              className="inline-flex rounded-lg bg-paper p-1 ring-1 ring-foreground/10"
+            >
+              {(["open", "closed"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  role="radio"
+                  aria-checked={status === s}
+                  onClick={() => setStatus(s)}
+                  className={cn(
+                    "cursor-pointer rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                    status === s ? "bg-primary text-primary-foreground" : "text-ink-soft hover:text-ink"
+                  )}
+                >
+                  {s === "open" ? t.open : t.closed}
+                </button>
+              ))}
+            </div>
+            <InboxScopeTabs value={scope} onChange={setScope} counts={counts} />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="flex justify-center p-6">
+                <Spinner className="size-5" />
+              </div>
+            ) : error ? (
+              <div className="space-y-3 p-4">
+                <Alert variant="danger">{getErrorMessage(error)}</Alert>
+                <Button size="sm" variant="outline" onClick={() => loadFirstPage(false)}>
+                  {t.retry}
+                </Button>
+              </div>
+            ) : conversations.length === 0 ? (
+              <div className="p-6 text-center">
+                <p className="text-sm font-medium text-ink">{search ? t.noResults : t.noConversations}</p>
+                {!search && <p className="mt-1 text-xs text-ink-soft">{t.noConversationsHint}</p>}
+              </div>
+            ) : (
+              <ul>
+                {conversations.map((c) => (
+                  <li key={c.id}>
+                    <ConversationRow
+                      conversation={c}
+                      active={c.id === selectedId}
+                      onClick={() => setSelectedId(c.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!loading && !error && (
+              <div className="pb-4">
+                <LoadMore hasMore={Boolean(nextCursor)} loading={loadingMore} onClick={loadMore} />
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* Thread */}
+        <section className={cn("flex min-h-0 flex-col", !threadConversation && "hidden md:flex")}>
+          {threadConversation ? (
+            <Thread
+              key={threadConversation.id}
+              conversation={threadConversation}
+              onBack={() => setSelectedId(null)}
+              onPatch={(patch) => patchConversation(threadConversation.id, patch)}
+              onActivity={() => void loadFirstPage(true)}
+            />
+          ) : (
+            <div className="flex flex-1 items-center justify-center p-6 text-sm text-ink-soft">
+              {t.selectConversation}
+            </div>
+          )}
+        </section>
+
+        {/* Customer panel: its own column on wide screens; a dialog from the thread header otherwise. */}
+        {threadConversation && (
+          <CustomerPanel
+            key={`panel-${threadConversation.id}`}
+            className="hidden border-line xl:flex xl:border-s"
+            conversation={threadConversation}
+            refreshKey={activity}
+          />
+        )}
+      </div>
+
+      <Modal
+        open={composing}
+        onClose={() => setComposing(false)}
+        title={t.newMessage}
+        description={t.newMessageHint}
+      >
+        {composing && (
+          <TemplateForm
+            onCancel={() => setComposing(false)}
+            onSent={(conversationId) => {
+              setComposing(false);
+              setStatus("open");
+              setSelectedId(conversationId);
+              void loadFirstPage(true);
+            }}
+          />
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+function ConversationRow({
+  conversation: c,
+  active,
+  onClick,
+}: {
+  conversation: WhatsappConversation;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const t = useT(STRINGS);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active ? "true" : undefined}
+      className={cn(
+        "flex w-full cursor-pointer items-start gap-3 border-b border-line px-3 py-3 text-start transition-colors hover:bg-paper",
+        active && "bg-primary-soft hover:bg-primary-soft"
+      )}
+    >
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-paper text-ink-soft">
+        <UserRound className="size-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className={cn("truncate text-sm text-ink", c.unreadCount > 0 ? "font-semibold" : "font-medium")}>
+            <bdi>{c.customerName || c.phone}</bdi>
+          </span>
+          <span className="shrink-0 text-xs text-ink-soft">{formatRelativeTime(c.lastMessageAt)}</span>
+        </div>
+        {c.customerName && (
+          <div className="truncate text-xs text-ink-soft">
+            <bdi dir="ltr">{c.phone}</bdi>
+          </div>
+        )}
+        <div className="mt-0.5 flex items-center justify-between gap-2">
+          <span className="truncate text-xs text-ink-soft">
+            <bdi>{c.lastMessagePreview ?? ""}</bdi>
+          </span>
+          {c.unreadCount > 0 && (
+            <span
+              className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground"
+              aria-label={fmt(t.unread, { count: c.unreadCount })}
+            >
+              {c.unreadCount}
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function Thread({
+  conversation,
+  onBack,
+  onPatch,
+  onActivity,
+}: {
+  conversation: WhatsappConversation;
+  onBack: () => void;
+  onPatch: (patch: Partial<WhatsappConversation>) => void;
+  onActivity: () => void;
+}) {
+  const workspaceId = useWorkspaceId();
+  const t = useT(STRINGS);
+  const toast = useToast();
+  const [messages, setMessages] = useState<WhatsappMessage[]>([]);
+  const [olderCursor, setOlderCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [statusBusy, setStatusBusy] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
+  const olderLoaded = useRef(false);
+
+  const loadLatest = useCallback(
+    async (silent: boolean) => {
+      if (!silent) setLoading(true);
+      try {
+        const res = await apiClient.listWhatsappMessages(workspaceId, conversation.id, {
+          limit: MESSAGE_LIMIT,
+        });
+        setMessages((prev) => {
+          if (!silent) return res.messages;
+          // Merge on id: a poll re-sends the tail, and a status change (sent →
+          // delivered → read) arrives as an update to a message already here.
+          const byId = new Map(prev.map((m) => [m.id, m]));
+          for (const m of res.messages) byId.set(m.id, m);
+          return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        });
+        if (!silent || !olderLoaded.current) setOlderCursor(res.nextCursor);
+        setError(null);
+        // The GET marks the conversation read server-side.
+        onPatch({ unreadCount: 0 });
+      } catch (err) {
+        if (!silent) setError(err);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    // onPatch is recreated every render; depending on it would re-fetch forever.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [workspaceId, conversation.id]
+  );
+
+  useEffect(() => {
+    void loadLatest(false);
+  }, [loadLatest]);
+
+  usePolling(() => void loadLatest(true));
+  useInboxLive(workspaceId, (event) => {
+    if (!event.conversationId || event.conversationId === conversation.id) void loadLatest(true);
+  });
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  // Keep the view pinned to the newest message unless the user scrolled up.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+
+  async function loadOlder() {
+    if (!olderCursor) return;
+    const el = scrollRef.current;
+    const prevHeight = el?.scrollHeight ?? 0;
+    setLoadingOlder(true);
+    stickToBottom.current = false;
     try {
-      await onSend(body);
+      const res = await apiClient.listWhatsappMessages(workspaceId, conversation.id, {
+        limit: MESSAGE_LIMIT,
+        before: olderCursor,
+      });
+      olderLoaded.current = true;
+      setMessages((prev) => {
+        const seen = new Set(prev.map((m) => m.id));
+        return [...res.messages.filter((m) => !seen.has(m.id)), ...prev];
+      });
+      setOlderCursor(res.nextCursor);
+      // Hold the reading position steady as content is prepended.
+      requestAnimationFrame(() => {
+        if (el) el.scrollTop = el.scrollHeight - prevHeight;
+      });
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setLoadingOlder(false);
+    }
+  }
+
+  async function toggleStatus() {
+    const next: WhatsappConversationStatus = conversation.status === "open" ? "closed" : "open";
+    setStatusBusy(true);
+    try {
+      const res = await apiClient.setWhatsappConversationStatus(workspaceId, conversation.id, next);
+      onPatch({ status: res.status });
+      toast.success(res.status === "closed" ? t.closedToast : t.reopenedToast);
+      onActivity();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setStatusBusy(false);
+    }
+  }
+
+  async function afterSend() {
+    stickToBottom.current = true;
+    await loadLatest(true);
+    onActivity();
+  }
+
+  return (
+    <>
+      <header className="flex items-center gap-2 border-b border-line px-3 py-2">
+        <Button size="icon-sm" variant="ghost" className="md:hidden" onClick={onBack} aria-label={t.back}>
+          <ArrowLeft className="rtl:rotate-180" />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-sm font-semibold text-ink">
+            <bdi>{conversation.customerName || conversation.phone}</bdi>
+          </h2>
+          <p className="truncate text-xs text-ink-soft">
+            <bdi dir="ltr">{conversation.phone}</bdi>
+          </p>
+        </div>
+        {conversation.customerId && (
+          <Link
+            to={`/customers/${conversation.customerId}`}
+            className="hidden text-xs font-medium text-primary hover:underline sm:inline"
+          >
+            {t.viewCustomer}
+          </Link>
+        )}
+        <CustomerPanelButton className="xl:hidden" onClick={() => setPanelOpen(true)} />
+        {AI_ENABLED && <BotToggle conversation={conversation} onChange={(botPaused) => onPatch({ botPaused } as Partial<WhatsappConversation>)} />}
+        <AssigneeSelect
+          conversation={conversation as InboxConversation}
+          onAssigned={(assignedTo) => {
+            onPatch({ assignedTo } as Partial<WhatsappConversation>);
+            onActivity();
+          }}
+        />
+        <Button size="sm" variant="outline" onClick={toggleStatus} disabled={statusBusy}>
+          {conversation.status === "open" ? t.closeConversation : t.reopenConversation}
+        </Button>
+      </header>
+
+      <div
+        ref={scrollRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+        }}
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-paper px-3 py-4"
+      >
+        {loading ? (
+          <div className="flex justify-center p-6">
+            <Spinner className="size-5" />
+          </div>
+        ) : error ? (
+          <div className="space-y-3">
+            <Alert variant="danger">{getErrorMessage(error)}</Alert>
+            <Button size="sm" variant="outline" onClick={() => loadLatest(false)}>
+              {t.retry}
+            </Button>
+          </div>
+        ) : (
+          <>
+            {olderCursor && (
+              <div className="flex justify-center">
+                <Button size="sm" variant="ghost" onClick={loadOlder} disabled={loadingOlder}>
+                  {loadingOlder ? <Spinner className="size-4" /> : t.loadOlder}
+                </Button>
+              </div>
+            )}
+            {messages.length === 0 ? (
+              <p className="p-6 text-center text-sm text-ink-soft">{t.noMessages}</p>
+            ) : (
+              messages.map((m) => <Bubble key={m.id} message={m} />)
+            )}
+          </>
+        )}
+      </div>
+
+      <Composer conversation={conversation} onSent={afterSend} />
+
+      {panelOpen && (
+        <div className="fixed inset-0 z-50 bg-primary-dark/40 xl:hidden dark:bg-black/60" onMouseDown={() => setPanelOpen(false)}>
+          <div
+            onMouseDown={(e) => e.stopPropagation()}
+            className="absolute inset-y-0 end-0 flex w-full max-w-sm flex-col border-s border-line bg-paper-raised shadow-xl"
+          >
+            <CustomerPanel className="flex-1" conversation={conversation} onClose={() => setPanelOpen(false)} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function Bubble({ message: m }: { message: WhatsappMessage }) {
+  const t = useT(STRINGS);
+  const out = m.direction === "out";
+  return (
+    <div className={cn("flex", out ? "justify-end" : "justify-start")}>
+      <div
+        className={cn(
+          "max-w-[80%] rounded-xl px-3 py-2 text-sm shadow-xs",
+          out ? "rounded-ee-sm bg-primary-soft text-ink" : "rounded-es-sm bg-paper-raised text-ink ring-1 ring-foreground/10",
+          m.status === "failed" && "ring-1 ring-danger/40"
+        )}
+      >
+        {AI_ENABLED && waBotSentOf(m) && <BotBadge />}
+        {m.templateName && (
+          <p className="mb-0.5 text-[11px] font-medium text-ink-soft">
+            {fmt(t.template, { name: m.templateName })}
+          </p>
+        )}
+        <p className="whitespace-pre-wrap break-words" dir="auto">
+          {m.body ?? (m.type !== "text" ? `[${m.type}]` : "")}
+        </p>
+        <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-ink-soft">
+          <time dateTime={m.createdAt} title={new Date(m.createdAt).toLocaleString()}>
+            {formatRelativeTime(m.createdAt)}
+          </time>
+          {out && <StatusTick status={m.status} error={m.error} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusTick({ status, error }: { status: WhatsappMessage["status"]; error: string | null }) {
+  const t = useT(STRINGS);
+  const label =
+    status === "failed"
+      ? error
+        ? fmt(t.failedWithError, { error })
+        : t.status_failed
+      : t[`status_${status}` as const];
+  const icon =
+    status === "failed" ? (
+      <AlertCircle className="size-3.5 text-danger" />
+    ) : status === "read" ? (
+      <CheckCheck className="size-3.5 text-primary" />
+    ) : status === "delivered" ? (
+      <CheckCheck className="size-3.5" />
+    ) : status === "sent" ? (
+      <Check className="size-3.5" />
+    ) : (
+      <Clock className="size-3.5" />
+    );
+  return (
+    <span role="img" aria-label={label} title={label} className="inline-flex">
+      {icon}
+    </span>
+  );
+}
+
+function Composer({
+  conversation,
+  onSent,
+}: {
+  conversation: WhatsappConversation;
+  onSent: () => Promise<void>;
+}) {
+  const workspaceId = useWorkspaceId();
+  const t = useT(STRINGS);
+  const toast = useToast();
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+
+  async function sendText(e: FormEvent) {
+    e.preventDefault();
+    const body = text.trim();
+    if (!body) return;
+    setSending(true);
+    try {
+      await apiClient.sendWhatsappMessage(workspaceId, { to: conversation.phone, text: body });
+      setText("");
+      await onSent();
+    } catch (err) {
+      toast.error(sendErrorText(err, t));
+      // The window may have closed since the list was fetched; refresh so the
+      // composer swaps itself for the template form.
+      if (err instanceof ApiError && err.code === "WHATSAPP_WINDOW_CLOSED") await onSent();
     } finally {
       setSending(false);
     }
   }
 
-  let lastDay = "";
+  if (!conversation.canReply) {
+    return (
+      <div className="space-y-3 border-t border-line p-3">
+        <Alert
+          variant="default"
+          className="border-accent/40 bg-accent-soft text-accent-dark dark:text-accent"
+        >
+          {t.windowClosed}
+        </Alert>
+        <details className="rounded-lg bg-paper p-3 ring-1 ring-foreground/10">
+          <summary className="cursor-pointer text-sm font-medium text-ink">{t.sendTemplate}</summary>
+          <div className="mt-3">
+            <TemplateForm to={conversation.phone} onSent={() => void onSent()} />
+          </div>
+        </details>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
-        <div className="flex min-w-0 items-center gap-3">
-          <Button type="button" size="icon-sm" variant="ghost" className="md:hidden" aria-label={t.backToList} onClick={onBack}>
-            <ArrowLeft className="rtl:rotate-180" />
-          </Button>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary-dark" dir="auto">
-            {initials(c.customerName)}
-          </span>
-          <div className="min-w-0 leading-tight">
-            <p className="truncate text-sm font-medium text-ink" dir="auto">
-              {c.customerName}
-            </p>
-            <p className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
-              <span className="inline-flex items-center gap-1 font-mono">
-                <Phone className="size-3" /> <bdi dir="ltr">{c.phone}</bdi>
-              </span>
-              {c.orderNumber && (
-                <Link to={`/orders/${c.orderNumber.replace("#", "")}`} className="inline-flex items-center gap-1 font-mono text-primary hover:underline">
-                  <Package className="size-3" /> <bdi dir="ltr">{c.orderNumber}</bdi>
-                </Link>
-              )}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={c.status} onChange={(e) => onStatus(e.target.value as WaConversation["status"])} className="h-8 w-32 py-1 text-xs" aria-label={t.statusAria}>
-            <option value="open">{t.filterOpen}</option>
-            <option value="bot">{t.filterBot}</option>
-            <option value="resolved">{t.filterResolved}</option>
-          </Select>
-          <Select value={assigned} onChange={(e) => onAssign(e.target.value)} className="h-8 w-36 py-1 text-xs" aria-label={t.assignAria} dir="auto">
-            <option value="">{t.filterUnassigned}</option>
-            {AGENTS.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </header>
-
-      <div ref={scrollRef} className="min-h-0 flex-1 space-y-1.5 overflow-y-auto bg-zimos-ice/40 px-4 py-3 dark:bg-paper">
-        {c.messages.map((m) => {
-          const day = dayKey(m.at);
-          const showSep = day !== lastDay;
-          lastDay = day;
-          const out = m.direction === "out";
-          return (
-            <div key={m.id}>
-              {showSep && (
-                <p className="my-2 text-center">
-                  <span className="rounded-full bg-paper-raised px-2 py-0.5 text-[10px] text-ink-soft shadow-sm">{dayLabel(m.at, common.today, t.yesterday)}</span>
-                </p>
-              )}
-              <div className={cn("flex", out ? "justify-end" : "justify-start")}>
-                <div
-                  className={cn(
-                    "max-w-[75%] rounded-2xl px-3 py-1.5 text-[13px] leading-snug shadow-sm",
-                    out ? "rounded-ee-sm bg-primary text-white" : "rounded-ss-sm border border-line bg-paper-raised text-ink",
-                  )}
-                >
-                  {m.byBot && (
-                    <span className={cn("mb-0.5 inline-flex items-center gap-1 rounded px-1 text-[9px] font-medium uppercase tracking-wide", out ? "bg-white/15 text-white/80" : "bg-primary-soft text-primary-dark")}>
-                      <Bot className="size-2.5" /> {t.bot}
-                    </span>
-                  )}
-                  <p className="whitespace-pre-wrap break-words" dir="auto">
-                    {m.body}
-                  </p>
-                  <p className={cn("mt-0.5 flex items-center justify-end gap-1 text-[9px]", out ? "text-white/70" : "text-ink-muted")}>
-                    <bdi dir="ltr">{new Date(m.at).toLocaleTimeString(intlLocale, { hour: "2-digit", minute: "2-digit" })}</bdi>
-                    {out && <Ticks status={m.status} />}
-                  </p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <footer className="border-t border-line p-3">
-        <div className="mb-2 flex flex-wrap items-center gap-1">
-          {QUICK_REPLIES.map((q) => (
-            <button key={q.labelKey} type="button" onClick={() => insert(q.text)} className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink-soft transition-colors hover:border-primary/40 hover:text-primary">
-              {t[q.labelKey]}
-            </button>
-          ))}
-          <div className="relative ms-auto">
-            <Button type="button" size="xs" variant="outline" onClick={() => setTemplatesOpen((o) => !o)} aria-expanded={templatesOpen}>
-              <FileText /> {t.templates}
-            </Button>
-            {templatesOpen && (
-              <div className="absolute bottom-full end-0 z-10 mb-1 w-72 max-w-[80vw] rounded-2xl border border-line bg-paper-raised p-1 shadow-lg">
-                {TEMPLATES.map((tpl) => (
-                  <button key={tpl.name} type="button" onClick={() => insert(tpl.text)} className="block w-full rounded-lg px-2 py-1.5 text-start hover:bg-paper">
-                    <span className="font-mono text-[11px] text-primary" dir="ltr">
-                      {tpl.name}
-                    </span>
-                    <span className="block truncate text-xs text-ink-soft" dir="auto">
-                      {tpl.text}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex items-end gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void submit();
-              }
-            }}
-            rows={2}
-            dir="auto"
-            placeholder={t.composerPlaceholder}
-            className="min-h-[44px] min-w-0 flex-1"
-          />
-          <Button type="button" onClick={submit} disabled={sending || !draft.trim()}>
-            <Send className="rtl:-scale-x-100" /> {t.send}
-          </Button>
-        </div>
-      </footer>
-    </>
+    <form onSubmit={sendText} className="flex items-end gap-2 border-t border-line p-3">
+      <QuickRepliesMenu onPick={setText} draft={text} />
+      {AI_ENABLED && <SuggestReplyButton conversationId={conversation.id} onSuggest={setText} />}
+      <Textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            e.currentTarget.form?.requestSubmit();
+          }
+        }}
+        placeholder={t.typeMessage}
+        aria-label={t.typeMessage}
+        rows={1}
+        dir="auto"
+        className="min-h-10 flex-1 resize-none"
+        maxLength={4096}
+      />
+      <Button type="submit" disabled={sending || !text.trim()}>
+        {sending ? t.sending : t.send}
+      </Button>
+    </form>
   );
 }
 
-function Ticks({ status }: { status: WaMessage["status"] }) {
-  const t = useT(STRINGS);
-  if (status === "failed") return <X className="size-3 text-danger-soft" aria-label={t.tickFailed} />;
-  if (status === "sent") return <Check className="size-3" aria-label={t.tickSent} />;
-  return <CheckCheck className={cn("size-3", status === "read" && "text-zimos-ice")} aria-label={status === "read" ? t.tickRead : t.tickDelivered} />;
-}
-
-// --------------------------------------------------------- Context panel --
-
-function ContextPanel({ conversation: c }: { conversation: WaConversation }) {
+/** Template sender, used by the closed-window composer and the New message dialog. */
+function TemplateForm({
+  to,
+  onSent,
+  onCancel,
+}: {
+  /** Fixed recipient; when omitted the form asks for a phone number. */
+  to?: string;
+  onSent: (conversationId: string) => void;
+  onCancel?: () => void;
+}) {
+  const workspaceId = useWorkspaceId();
   const t = useT(STRINGS);
   const toast = useToast();
-  const order = c.orderNumber ? fabricateOrder(c.orderNumber) : null;
-  const reliability = order?.reliability ?? 70;
-  const orderRef = c.orderNumber ?? t.orderFallback;
+  const [phone, setPhone] = useState("");
+  const [name, setName] = useState("");
+  const [language, setLanguage] = useState("ar");
+  const [params, setParams] = useState<string[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    const next: Record<string, string> = {};
+    const recipient = to ?? phone.replace(/[\s+()-]/g, "");
+    if (!to && !/^\d{8,15}$/.test(recipient)) next.phone = t.invalidPhone;
+    if (!/^[a-z0-9_]+$/.test(name.trim())) next.name = t.invalidTemplateName;
+    setErrors(next);
+    setFormError(null);
+    if (Object.keys(next).length) return;
+    const template: WhatsappTemplatePayload = {
+      name: name.trim(),
+      language: language.trim() || "ar",
+      params: params.map((p) => p.trim()),
+    };
+    setSending(true);
+    try {
+      const message = await apiClient.sendWhatsappMessage(workspaceId, { to: recipient, template });
+      toast.success(t.sent);
+      setName("");
+      setParams([]);
+      onSent(message.conversationId);
+    } catch (err) {
+      setFormError(sendErrorText(err, t));
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
-    <div className="space-y-3 p-3">
-      <div className="rounded-2xl border border-line bg-paper-raised p-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">{t.customer}</p>
-        <p className="mt-1 text-sm font-medium text-ink" dir="auto">
-          {c.customerName}
-        </p>
-        <p className="font-mono text-xs text-ink-soft">
-          <bdi dir="ltr">{c.phone}</bdi>
-        </p>
-        <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
-          <div>
-            <dt className="text-ink-soft">{t.orders}</dt>
-            <dd className="font-medium tabular-nums text-ink">{order?.ordersCount ?? 1}</dd>
-          </div>
-          <div>
-            <dt className="text-ink-soft">{t.reliability}</dt>
-            <dd className={cn("inline-flex items-center gap-1 font-medium", reliability >= 70 ? "text-success" : reliability >= 50 ? "text-warning" : "text-danger")}>
-              <ShieldCheck className="size-3" /> <bdi dir="ltr">{reliability}%</bdi>
-            </dd>
-          </div>
-        </dl>
-      </div>
-
-      {order && c.orderNumber && (
-        <div className="rounded-2xl border border-line bg-paper-raised p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">{t.order}</p>
-            <Link to={`/orders/${c.orderNumber.replace("#", "")}`} className="font-mono text-xs text-primary hover:underline" dir="ltr">
-              {c.orderNumber}
-            </Link>
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-2 text-sm">
-            <span className="min-w-0 text-ink" dir="auto">
-              {order.item} × 1
-            </span>
-            <span className="shrink-0 tabular-nums text-ink">{formatMoney(order.price)}</span>
-          </div>
-          <div className="mt-1 flex items-center justify-between text-xs text-ink-soft">
-            <span>{t.shipping}</span>
-            <span className="tabular-nums">{formatMoney(order.shipping)}</span>
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-2 border-t border-line pt-2 text-sm font-medium text-ink">
-            <span>{t.totalCod}</span>
-            <span className="shrink-0 tabular-nums">{formatMoney(order.total)}</span>
-          </div>
-        </div>
+    <form onSubmit={submit} className="space-y-3" noValidate>
+      {formError && <Alert variant="danger">{formError}</Alert>}
+      {!to && (
+        <TextField
+          label={t.phone}
+          required
+          dir="ltr"
+          inputMode="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          error={errors.phone}
+          hint={t.phoneHint}
+        />
       )}
-
-      <div className="rounded-2xl border border-line bg-paper-raised p-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">{t.actions}</p>
-        <div className="mt-2 grid gap-1.5">
-          <Button size="sm" variant="outline" className="justify-start text-success" onClick={() => toast.success(fmt(t.toastConfirmed, { order: orderRef }))}>
-            <Check /> {t.confirmOrder}
-          </Button>
-          <Button size="sm" variant="outline" className="justify-start text-danger" onClick={() => toast.success(fmt(t.toastCancelled, { order: orderRef }))}>
-            <X /> {t.cancelOrder}
-          </Button>
-          <Button size="sm" variant="outline" className="justify-start" onClick={() => toast.success(fmt(t.toastReturn, { order: orderRef }))}>
-            <Package /> {t.createReturn}
-          </Button>
-        </div>
+      {/* A template synced from Meta fills the name, language and variable count. */}
+      <TemplatePicker
+        name={name}
+        language={language}
+        onPick={(tpl) => {
+          setName(tpl.name);
+          setLanguage(tpl.language);
+          setParams((prev) => Array.from({ length: tpl.paramsCount }, (_, i) => prev[i] ?? ""));
+        }}
+      />
+      <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
+        <TextField
+          label={t.templateName}
+          required
+          dir="ltr"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          error={errors.name}
+          hint={t.templateNameHint}
+        />
+        <TextField
+          label={t.language}
+          required
+          dir="ltr"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          hint={t.languageHint}
+        />
       </div>
-    </div>
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-medium text-ink">{t.params}</p>
+          <p className="text-xs text-ink-soft">{t.paramsHint}</p>
+        </div>
+        {params.map((p, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input
+              value={p}
+              dir="auto"
+              aria-label={fmt(t.param, { n: i + 1 })}
+              onChange={(e) => setParams((prev) => prev.map((v, j) => (j === i ? e.target.value : v)))}
+            />
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              aria-label={fmt(t.removeParam, { n: i + 1 })}
+              onClick={() => setParams((prev) => prev.filter((_, j) => j !== i))}
+            >
+              <Trash2 />
+            </Button>
+          </div>
+        ))}
+        <Button type="button" size="sm" variant="outline" onClick={() => setParams((prev) => [...prev, ""])}>
+          <Plus className="size-4" /> {t.addParam}
+        </Button>
+      </div>
+      <div className="flex justify-end gap-2">
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel} disabled={sending}>
+            {t.cancel}
+          </Button>
+        )}
+        <Button type="submit" disabled={sending || !name.trim() || (!to && !phone.trim())}>
+          {sending ? t.sending : t.sendTemplate}
+        </Button>
+      </div>
+    </form>
   );
 }

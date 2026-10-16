@@ -1,443 +1,385 @@
-import { useMemo, useRef, useState } from "react";
-import { Alert, Button, Label, cn } from "@store-builder/ui";
-import { AlertTriangle, Banknote, CalendarClock, Check, FileUp, Info, Scale, Wallet } from "lucide-react";
-import type { Settlement, SettlementOrder } from "@/mock/types2";
-import { mockApi } from "@/mock/api";
-import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
-import { getErrorMessage } from "@/lib/errors";
-import { formatDate, formatMoney } from "@/lib/format";
-import { useCommon, useLocale, useT, fmt, type Locale, type Messages } from "@/i18n/LocaleContext";
-import { PageHeader } from "@/components/PageHeader";
+import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Button } from "@store-builder/ui";
+import { statementGetHeld, type SettlementLinePayload, type SettlementListItem, type SettlementStatus } from "@store-builder/api-client";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataState } from "@/components/DataState";
+import { EmptyState } from "@/components/EmptyState";
+import { IconCash, IconCourier, IconDocument, IconPlus, IconReceipt, IconRefresh, IconUpload, IconWallet } from "@/components/icons";
 import { KpiCard } from "@/components/KpiCard";
-import { StatusBadge } from "@/components/StatusBadge";
-import { Modal } from "@/components/Modal";
-import { Select } from "@/components/Select";
+import { ChipRow, ListSkeleton, type ChipItem } from "@/components/list";
+import { LoadMore } from "@/components/LoadMore";
+import { PageHeader } from "@/components/PageHeader";
+import { ReportKpiStrip } from "@/components/report";
+import { Segmented } from "@/components/Segmented";
 import { useToast } from "@/components/Toast";
+import { ViewLink } from "@/components/ViewLink";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { fmt, useT } from "@/i18n/LocaleContext";
+import { formatCount } from "@/lib/analytics";
+import { apiClient } from "@/lib/apiClient";
+import { formatMoney } from "@/lib/format";
+import { countOf } from "@/lib/plural";
+import { useAsync } from "@/lib/useAsync";
+import { useCachedAsync } from "@/lib/useCachedAsync";
+import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { useAddressValue } from "@/pages/analytics/storeReports/storeReportParts";
+import { HeaderMenu } from "@/pages/profit/HeaderMenu";
+import { useIsCompact, useIsPhone } from "@/pages/returns/rowkit/useScreen";
+import { HeldList, heldRows } from "./HeldList";
+import { ReconcileSheet } from "./ReconcileSheet";
+import { SettlementList } from "./SettlementList";
+import { SettlementSheet } from "./SettlementSheet";
+import { SETTLEMENT_STRINGS, settlementErrorText } from "./settlementStrings";
+import { StatementImportSheet } from "./StatementTools";
 
-const STRINGS = {
-  en: {
-    title: "COD settlements",
-    description: "The cash carriers collected for you — what's due, what arrived, and what doesn't add up.",
-    kpiExpected: "Expected",
-    kpiExpectedHint: "Net payouts not yet received",
-    kpiReceived: "Received this month",
-    kpiReceivedHint: "Net after carrier & COD fees",
-    kpiDisc: "Discrepancies",
-    kpiDiscShort: "{amount} short",
-    kpiDiscNone: "All payouts match",
-    kpiDelay: "Avg. payout delay",
-    kpiDelayValue: "{n} days",
-    kpiDelayHint: "From delivery to cash in your account",
-    info: "Carriers collect cash from customers and pay you weekly minus fees. ZIMOS matches each payout against your delivered orders so nothing goes missing.",
-    carrier: "Carrier",
-    allCarriers: "All carriers",
-    empty: "No settlements match these filters.",
-    colReference: "Reference",
-    colPeriod: "Period",
-    colOrders: "Orders",
-    colCollected: "Collected",
-    colCarrierFees: "Carrier fees",
-    colCodFees: "COD fees",
-    colNet: "Net",
-    colReceived: "Received",
-    markReceived: "Mark received",
-    reconcile: "Reconcile",
-    upload: "Upload carrier statement",
-    receivedToast: "{ref} marked as received.",
-    reconciledToast: "{ref} reconciled.",
-    uploadedToast: "“{file}” uploaded for {ref} — matching against delivered orders.",
-    reconcileTitle: "Reconcile {ref}",
-    reconcileDesc: "Order-by-order comparison between what you shipped and what the carrier reported.",
-    disputeToast: "Dispute raised with {carrier} for {ref}.",
-    colOrder: "Order",
-    colCustomer: "Customer",
-    colOurCod: "Our COD",
-    colCarrierStatus: "Carrier status",
-    colCarrierReported: "Carrier reported",
-    colDiff: "Diff",
-    colMatch: "Match",
-    matchedOf: "{matched} of {total}",
-    matchedTotalDiff: "matched · total diff",
-    matched: "Matched",
-    notMatched: "Not matched",
-    raiseDispute: "Raise dispute",
-    accept: "Accept & mark reconciled",
-  },
-  ar: {
-    title: "تسويات الدفع عند الاستلام",
-    description: "النقدية التي حصّلتها شركات الشحن لصالحك — ما هو مستحق، وما وصل، وما لا يتطابق.",
-    kpiExpected: "متوقعة",
-    kpiExpectedHint: "صافي مدفوعات لم تُستلم بعد",
-    kpiReceived: "المستلم هذا الشهر",
-    kpiReceivedHint: "الصافي بعد رسوم الشحن والتحصيل",
-    kpiDisc: "فروقات",
-    kpiDiscShort: "عجز {amount}",
-    kpiDiscNone: "كل المدفوعات متطابقة",
-    kpiDelay: "متوسط مدة التحويل",
-    kpiDelayValue: "{n} أيام",
-    kpiDelayHint: "من التسليم حتى وصول النقدية إلى حسابك",
-    info: "تحصّل شركات الشحن النقدية من العملاء وتحوّلها لك أسبوعيًا بعد خصم الرسوم. يطابق ZIMOS كل دفعة مع طلباتك المسلَّمة حتى لا يضيع شيء.",
-    carrier: "شركة الشحن",
-    allCarriers: "كل شركات الشحن",
-    empty: "لا توجد تسويات تطابق هذه الفلاتر.",
-    colReference: "المرجع",
-    colPeriod: "الفترة",
-    colOrders: "الطلبات",
-    colCollected: "المُحصَّل",
-    colCarrierFees: "رسوم الشحن",
-    colCodFees: "رسوم التحصيل",
-    colNet: "الصافي",
-    colReceived: "تاريخ الاستلام",
-    markReceived: "تحديد كمستلمة",
-    reconcile: "مطابقة",
-    upload: "رفع كشف حساب شركة الشحن",
-    receivedToast: "تم تحديد {ref} كمستلمة.",
-    reconciledToast: "تمت مطابقة {ref}.",
-    uploadedToast: "تم رفع «{file}» للتسوية {ref} — جارٍ المطابقة مع الطلبات المسلَّمة.",
-    reconcileTitle: "مطابقة {ref}",
-    reconcileDesc: "مقارنة طلبًا بطلب بين ما شحنته وما أبلغت عنه شركة الشحن.",
-    disputeToast: "تم فتح اعتراض مع {carrier} على {ref}.",
-    colOrder: "الطلب",
-    colCustomer: "العميل",
-    colOurCod: "مبلغ التحصيل لدينا",
-    colCarrierStatus: "حالة الشحنة",
-    colCarrierReported: "المبلغ المُبلَّغ عنه",
-    colDiff: "الفرق",
-    colMatch: "التطابق",
-    matchedOf: "{matched} من {total}",
-    matchedTotalDiff: "متطابقة · إجمالي الفرق",
-    matched: "متطابق",
-    notMatched: "غير متطابق",
-    raiseDispute: "فتح اعتراض",
-    accept: "قبول وتحديد كمُطابقة",
-  },
-} satisfies Messages;
+type View = "held" | "settlements";
+type StatusChip = "all" | SettlementStatus;
+const PAGE_SIZE = 50;
 
-const STATUS_LABEL: Record<Locale, Record<Settlement["status"], string>> = {
-  en: { expected: "Expected", received: "Received", discrepancy: "Discrepancy", reconciled: "Reconciled" },
-  ar: { expected: "متوقعة", received: "مستلمة", discrepancy: "بها فروقات", reconciled: "تمت المطابقة" },
-};
-
-const CARRIER_STATUS_LABEL: Record<Locale, Record<SettlementOrder["carrierStatus"], string>> = {
-  en: { delivered: "Delivered", returned: "Returned", lost: "Lost" },
-  ar: { delivered: "تم التسليم", returned: "مرتجع", lost: "مفقود" },
-};
-
-const STATUS_TONE: Record<Settlement["status"], "info" | "success" | "danger" | "neutral"> = {
-  expected: "info",
-  received: "success",
-  discrepancy: "danger",
-  reconciled: "neutral",
-};
-
-const CARRIER_TONE: Record<string, string> = {
-  bosta: "bg-danger-soft text-danger",
-  jnt: "bg-danger-soft text-danger",
-};
-
-const AVG_PAYOUT_DELAY_DAYS = 6;
-
-const th = "px-4 py-3 font-medium text-start";
-const thNum = "px-4 py-3 font-medium text-end";
-
-function CarrierChip({ carrierKey, name }: { carrierKey: string; name: string }) {
-  return <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", CARRIER_TONE[carrierKey] ?? "bg-primary-soft text-primary-dark")}>{name}</span>;
-}
-
+/**
+ * Courier settlements (/settlements): what the couriers hold and what reached
+ * the merchant.
+ *
+ * Four figures, then ONE of two lists (`?tab=`): the money held, courier by
+ * courier with its age — the row's step is «سجّل تحويل», a sheet that ticks
+ * the orders the courier paid for and saves a draft — and the settlements,
+ * by status (`?status=`), each opening in a panel over the list where a draft
+ * is confirmed or deleted. The courier's own statement file is imported from
+ * the header's menu. Every call is the page's old one.
+ */
 export function SettlementsPage() {
-  const t = useT(STRINGS);
-  const c = useCommon();
-  const { locale } = useLocale();
+  const t = useT(SETTLEMENT_STRINGS);
   const workspaceId = useWorkspaceId();
+  const { currentWorkspace } = useWorkspace();
   const toast = useToast();
-  const list = useAsync(() => mockApi.listSettlements(workspaceId), [workspaceId]);
+  const phone = useIsPhone();
+  const compact = useIsCompact();
+  const [params, setParams] = useSearchParams();
 
-  const [carrier, setCarrier] = useState<string>("all");
-  const [status, setStatus] = useState<"all" | Settlement["status"]>("all");
-  const [reconciling, setReconciling] = useState<Settlement | null>(null);
-  const [uploadTarget, setUploadTarget] = useState<Settlement | null>(null);
-  const fileRef = useRef<HTMLInputElement | null>(null);
+  function write(key: string, value: string, fallback: string) {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === fallback) next.delete(key);
+        else next.set(key, value);
+        return next;
+      },
+      { replace: true }
+    );
+  }
+  const statusParam = params.get("status");
+  const [view, setView] = useAddressValue<View>(params.get("tab") === "settlements" ? "settlements" : "held", (next) =>
+    write("tab", next, "held")
+  );
+  const [status, setStatus] = useAddressValue<StatusChip>(
+    statusParam === "draft" || statusParam === "confirmed" ? statusParam : "all",
+    (next) => write("status", next, "all")
+  );
 
-  const settlements = list.data ?? [];
-  const carriers = useMemo(() => Array.from(new Map(settlements.map((s) => [s.carrierKey, s.carrierName])).entries()), [settlements]);
+  const summary = useCachedAsync(workspaceId ? `settlements:summary:${workspaceId}` : null, () => apiClient.getSettlementSummary(workspaceId), [
+    workspaceId,
+  ]);
+  const unsettled = useCachedAsync(
+    workspaceId ? `settlements:unsettled:${workspaceId}` : null,
+    () => apiClient.listUnsettledOrders(workspaceId),
+    [workspaceId]
+  );
+  // The aging report needs its own right: without it the list still shows what can be settled.
+  const held = useCachedAsync(workspaceId ? `settlements:held:${workspaceId}` : null, () => statementGetHeld(apiClient, workspaceId), [workspaceId]);
+  const listKey = `${workspaceId}:${status}`;
+  const settlements = useCachedAsync(
+    workspaceId ? `settlements:list:${listKey}` : null,
+    () => apiClient.listSettlements(workspaceId, { limit: PAGE_SIZE, status: status === "all" ? undefined : status }),
+    [workspaceId, status]
+  );
+  // Pages after the first, for the list they belong to.
+  const [more, setMore] = useState<{ key: string; rows: SettlementListItem[]; cursor: string | null } | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const kpis = useMemo(() => {
-    const now = new Date();
-    const expected = settlements.filter((s) => s.status === "expected").reduce((a, s) => a + s.netAmount, 0);
-    const receivedMonth = settlements
-      .filter((s) => s.receivedAt && new Date(s.receivedAt).getMonth() === now.getMonth() && new Date(s.receivedAt).getFullYear() === now.getFullYear())
-      .reduce((a, s) => a + s.netAmount, 0);
-    const disc = settlements.filter((s) => s.status === "discrepancy");
-    return { expected, receivedMonth, discCount: disc.length, discAmount: disc.reduce((a, s) => a + Math.abs(s.discrepancyAmount), 0) };
-  }, [settlements]);
+  // The settlement in the panel. It stays here while the panel closes, so the panel does not empty on its way out.
+  const [sheet, setSheet] = useState<{ id: string; open: boolean } | null>(null);
+  const [pending, setPending] = useState<{ kind: "confirm" | "delete"; id: string } | null>(null);
+  const [reconcile, setReconcile] = useState<{ carrier: string | null; open: boolean }>({ carrier: null, open: false });
+  const [importing, setImporting] = useState(false);
 
-  const rows = settlements.filter((s) => (carrier === "all" || s.carrierKey === carrier) && (status === "all" || s.status === status));
+  const sheetId = sheet?.id ?? null;
+  const detail = useAsync(() => (sheetId ? apiClient.getSettlement(workspaceId, sheetId) : Promise.resolve(null)), [workspaceId, sheetId]);
+  // While another settlement loads, the one before it is not shown under its name.
+  const shownDetail = detail.data && detail.data.id === sheetId ? detail.data : null;
 
-  async function setSt(s: Settlement, next: Settlement["status"]) {
-    list.setData((prev) => (prev ?? []).map((x) => (x.id === s.id ? { ...x, status: next, receivedAt: x.receivedAt ?? new Date().toISOString() } : x)));
+  const orders = unsettled.data?.orders ?? [];
+  const carriers = unsettled.data?.carriers ?? [];
+  const currency = held.data?.currency ?? orders[0]?.currency ?? currentWorkspace?.defaultCurrency ?? "EGP";
+  const money = (minor: number) => formatMoney(minor, currency);
+
+  const extra = more && more.key === listKey ? more : null;
+  // A row of the list before stays only if it belongs under this chip: nothing is shown under the wrong status.
+  const firstPage = (settlements.data?.settlements ?? []).filter((row) => status === "all" || row.status === status);
+  const list = extra ? [...firstPage, ...extra.rows] : firstPage;
+  const cursor = extra ? extra.cursor : (settlements.data?.nextCursor ?? null);
+
+  function refreshAll() {
+    setMore(null);
+    void summary.refresh({ silent: true });
+    void unsettled.refresh({ silent: true });
+    void held.refresh({ silent: true });
+    void settlements.refresh({ silent: true });
+  }
+
+  async function loadMore() {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
     try {
-      await mockApi.setSettlementStatus(workspaceId, s.id, next);
-      toast.success(next === "received" ? fmt(t.receivedToast, { ref: s.reference }) : fmt(t.reconciledToast, { ref: s.reference }));
+      const page = await apiClient.listSettlements(workspaceId, {
+        limit: PAGE_SIZE,
+        status: status === "all" ? undefined : status,
+        before: cursor,
+      });
+      setMore({ key: listKey, rows: [...(extra?.rows ?? []), ...page.settlements], cursor: page.nextCursor });
     } catch (err) {
-      toast.error(getErrorMessage(err));
-      list.refresh({ silent: true });
+      toast.error(settlementErrorText(err, t));
+    } finally {
+      setLoadingMore(false);
     }
   }
 
-  function pickFile(s: Settlement) {
-    setUploadTarget(s);
-    requestAnimationFrame(() => fileRef.current?.click());
+  const openSettlement = (id: string) => setSheet({ id, open: true });
+  const closeSheet = () => setSheet((current) => (current ? { ...current, open: false } : current));
+
+  async function createDraft(carrierCode: string, lines: SettlementLinePayload[]) {
+    // A group of the store's own courier settles under their id too.
+    const courierId = carriers.find((c) => c.carrierCode === carrierCode)?.courierId ?? null;
+    const created = await apiClient.createSettlement(workspaceId, { carrierCode, ...(courierId ? { courierId } : {}), lines });
+    toast.success(t.draftCreated);
+    setReconcile((current) => ({ ...current, open: false }));
+    refreshAll();
+    openSettlement(created.id);
   }
 
-  function onFile(files: FileList | null) {
-    const f = files?.[0];
-    if (f && uploadTarget) toast.success(fmt(t.uploadedToast, { file: f.name, ref: uploadTarget.reference }));
-    if (fileRef.current) fileRef.current.value = "";
-    setUploadTarget(null);
-  }
+  const s = summary.data;
+  const rows = heldRows(carriers, held.data);
+  const summaryRow = sheetId ? (list.find((row) => row.id === sheetId) ?? null) : null;
+
+  const chips: ChipItem<StatusChip>[] = [
+    { value: "all", label: t.chipAll },
+    { value: "draft", label: t.chipDraft, count: s ? s.draftSettlements : null, tone: "attention" },
+    { value: "confirmed", label: t.chipConfirmed },
+  ];
+
+  const recordButton = (
+    <Button type="button" className="h-11 gap-2 rounded-full px-5" onClick={() => setReconcile({ carrier: null, open: true })}>
+      <IconPlus className="size-4" aria-hidden />
+      {t.record}
+    </Button>
+  );
 
   return (
     <div className="min-w-0 max-w-6xl">
-      <PageHeader title={t.title} description={t.description} />
-
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard label={t.kpiExpected} value={<bdi>{formatMoney(kpis.expected)}</bdi>} hint={t.kpiExpectedHint} icon={<Wallet />} />
-        <KpiCard label={t.kpiReceived} value={<bdi>{formatMoney(kpis.receivedMonth)}</bdi>} hint={t.kpiReceivedHint} icon={<Banknote />} />
-        <KpiCard
-          label={t.kpiDisc}
-          value={<bdi>{kpis.discCount}</bdi>}
-          hint={kpis.discCount ? fmt(t.kpiDiscShort, { amount: formatMoney(kpis.discAmount) }) : t.kpiDiscNone}
-          icon={<AlertTriangle />}
-        />
-        <KpiCard label={t.kpiDelay} value={fmt(t.kpiDelayValue, { n: AVG_PAYOUT_DELAY_DAYS })} hint={t.kpiDelayHint} icon={<CalendarClock />} />
-      </div>
-
-      <Alert variant="info" className="mb-6 border-primary/30 bg-primary-soft/40">
-        <Info />
-        <p className="text-sm text-ink-soft">{t.info}</p>
-      </Alert>
-
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-ink-soft">{t.carrier}</Label>
-          <Select value={carrier} onChange={(e) => setCarrier(e.target.value)} className="h-8 w-40 py-1">
-            <option value="all">{t.allCarriers}</option>
-            {carriers.map(([k, n]) => (
-              <option key={k} value={k}>
-                {n}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-ink-soft">{c.status}</Label>
-          <Select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className="h-8 w-40 py-1">
-            <option value="all">{c.all}</option>
-            <option value="expected">{STATUS_LABEL[locale].expected}</option>
-            <option value="received">{STATUS_LABEL[locale].received}</option>
-            <option value="discrepancy">{STATUS_LABEL[locale].discrepancy}</option>
-            <option value="reconciled">{STATUS_LABEL[locale].reconciled}</option>
-          </Select>
-        </div>
-      </div>
-
-      <input ref={fileRef} type="file" accept=".csv,.xlsx,.pdf" className="hidden" onChange={(e) => onFile(e.target.files)} />
-
-      <DataState loading={list.loading} error={list.error} empty={rows.length === 0} emptyMessage={t.empty} onRetry={() => list.refresh()}>
-        <div className="max-h-[70vh] overflow-auto rounded-2xl border border-line bg-paper-raised">
-          <table className="w-full min-w-[1100px] text-sm">
-            <thead className="sticky top-0 z-10 bg-paper-raised">
-              <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-                <th className={th}>{t.carrier}</th>
-                <th className={th}>{t.colReference}</th>
-                <th className={th}>{t.colPeriod}</th>
-                <th className={thNum}>{t.colOrders}</th>
-                <th className={thNum}>{t.colCollected}</th>
-                <th className={thNum}>{t.colCarrierFees}</th>
-                <th className={thNum}>{t.colCodFees}</th>
-                <th className={thNum}>{t.colNet}</th>
-                <th className={th}>{c.status}</th>
-                <th className={th}>{t.colReceived}</th>
-                <th className={th}>
-                  <span className="sr-only">{c.actions}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((s) => (
-                <tr key={s.id} className="border-b border-line bg-paper last:border-0 hover:bg-paper-raised">
-                  <td className="px-4 py-3 text-start">
-                    <CarrierChip carrierKey={s.carrierKey} name={s.carrierName} />
-                  </td>
-                  <td className="px-4 py-3 text-start font-mono text-xs text-ink">
-                    <span dir="ltr">{s.reference}</span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-start text-xs text-ink-soft">
-                    <bdi>{formatDate(s.periodFrom)}</bdi> <span className="inline-block rtl:rotate-180">→</span> <bdi>{formatDate(s.periodTo)}</bdi>
-                  </td>
-                  <td className="px-4 py-3 text-end tabular-nums text-ink">{s.ordersCount}</td>
-                  <td className="px-4 py-3 text-end tabular-nums text-ink">
-                    <bdi>{formatMoney(s.collectedAmount)}</bdi>
-                  </td>
-                  <td className="px-4 py-3 text-end tabular-nums text-danger">
-                    <bdi>−{formatMoney(s.carrierFeesAmount)}</bdi>
-                  </td>
-                  <td className="px-4 py-3 text-end tabular-nums text-danger">
-                    <bdi>−{formatMoney(s.codFeesAmount)}</bdi>
-                  </td>
-                  <td className="px-4 py-3 text-end font-medium tabular-nums text-ink">
-                    <bdi>{formatMoney(s.netAmount)}</bdi>
-                    {s.discrepancyAmount !== 0 && (
-                      <span className="block text-[11px] font-normal text-danger">
-                        <bdi>{formatMoney(s.discrepancyAmount)}</bdi>
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-start">
-                    <StatusBadge value={s.status} tone={STATUS_TONE[s.status]} label={STATUS_LABEL[locale][s.status]} />
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-start text-xs text-ink-soft">{s.receivedAt ? <bdi>{formatDate(s.receivedAt)}</bdi> : "—"}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-end">
-                    {s.status === "expected" && (
-                      <Button size="sm" variant="ghost" className="text-success" onClick={() => setSt(s, "received")}>
-                        <Check /> {t.markReceived}
-                      </Button>
-                    )}
-                    {(s.status === "received" || s.status === "discrepancy") && (
-                      <Button size="sm" variant="ghost" onClick={() => setReconciling(s)}>
-                        <Scale /> {t.reconcile}
-                      </Button>
-                    )}
-                    <Button size="icon-sm" variant="ghost" aria-label={t.upload} title={t.upload} onClick={() => pickFile(s)}>
-                      <FileUp />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </DataState>
-
-      <Modal
-        open={reconciling !== null}
-        onClose={() => setReconciling(null)}
-        title={reconciling ? fmt(t.reconcileTitle, { ref: reconciling.reference }) : t.reconcile}
-        description={t.reconcileDesc}
-        className="max-w-3xl"
-      >
-        {reconciling && (
-          <ReconcilePanel
-            key={reconciling.id}
-            settlement={reconciling}
-            onAccept={async () => {
-              await setSt(reconciling, "reconciled");
-              setReconciling(null);
-            }}
-            onDispute={() => {
-              toast.success(fmt(t.disputeToast, { carrier: reconciling.carrierName, ref: reconciling.reference }));
-              setReconciling(null);
-            }}
+      <PageHeader
+        title={t.title}
+        description={
+          phone
+            ? undefined
+            : s
+              ? s.dueFromCouriers > 0
+                ? fmt(t.answerDue, { amount: money(s.dueFromCouriers), orders: countOf("order", s.unsettledOrders) })
+                : t.answerClear
+              : t.description
+        }
+        actions={
+          <HeaderMenu
+            label={t.tools}
+            items={[
+              { id: "import", label: t.importStatement, hint: t.importHint, icon: IconUpload, onSelect: () => setImporting(true) },
+              { id: "refresh", label: t.refresh, hint: t.refreshHint, icon: IconRefresh, onSelect: refreshAll, separatorBefore: true },
+            ]}
           />
-        )}
-      </Modal>
-    </div>
-  );
-}
+        }
+        primaryAction={recordButton}
+      />
 
-function ReconcilePanel({ settlement, onAccept, onDispute }: { settlement: Settlement; onAccept: () => Promise<void>; onDispute: () => void }) {
-  const t = useT(STRINGS);
-  const c = useCommon();
-  const { locale } = useLocale();
-  const workspaceId = useWorkspaceId();
-  const orders = useAsync(() => mockApi.getSettlementOrders(workspaceId, settlement.id), [workspaceId, settlement.id]);
-  const [busy, setBusy] = useState(false);
-  const rows: SettlementOrder[] = orders.data ?? [];
-  const matched = rows.filter((r) => r.matched).length;
-  const totalDiff = rows.reduce((a, r) => a + ((r.carrierReportedAmount ?? 0) - (r.carrierStatus === "delivered" ? r.codAmount : 0)), 0);
+      <div className="flex min-w-0 flex-col gap-[var(--bento-gap)]">
+        {summary.loading && !s ? (
+          <ReportKpiStrip loading count={4} sparkline={false} />
+        ) : s ? (
+          <ReportKpiStrip sparkline={false}>
+            <KpiCard
+              label={t.kpiDue}
+              value={money(s.dueFromCouriers)}
+              hint={s.unsettledOrders > 0 ? fmt(t.kpiDueHint, { orders: countOf("order", s.unsettledOrders) }) : t.kpiDueNone}
+              icon={<IconWallet />}
+            />
+            <KpiCard label={t.kpiReceived} value={money(s.received)} hint={t.kpiReceivedHint} icon={<IconCash />} />
+            <KpiCard label={t.kpiFees} value={money(s.courierFees)} hint={t.kpiFeesHint} icon={<IconReceipt />} />
+            <KpiCard
+              label={t.kpiDrafts}
+              value={formatCount(s.draftSettlements)}
+              hint={s.draftSettlements > 0 ? t.kpiDraftsHint : t.kpiDraftsNone}
+              icon={<IconDocument />}
+              to={s.draftSettlements > 0 ? "/settlements?tab=settlements&status=draft" : undefined}
+            />
+          </ReportKpiStrip>
+        ) : null}
 
-  return (
-    <DataState loading={orders.loading} error={orders.error} onRetry={() => orders.refresh()}>
-      <div className="max-h-[50vh] overflow-auto rounded-2xl border border-line bg-paper-raised">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead className="sticky top-0 z-10 bg-paper-raised">
-            <tr className="border-b border-line text-xs uppercase tracking-wide text-ink-soft">
-              <th className="px-3 py-2 text-start font-medium">{t.colOrder}</th>
-              <th className="px-3 py-2 text-start font-medium">{t.colCustomer}</th>
-              <th className="px-3 py-2 text-end font-medium">{t.colOurCod}</th>
-              <th className="px-3 py-2 text-start font-medium">{t.colCarrierStatus}</th>
-              <th className="px-3 py-2 text-end font-medium">{t.colCarrierReported}</th>
-              <th className="px-3 py-2 text-end font-medium">{t.colDiff}</th>
-              <th className="px-3 py-2 text-center font-medium">{t.colMatch}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const expected = r.carrierStatus === "delivered" ? r.codAmount : 0;
-              const diff = (r.carrierReportedAmount ?? 0) - expected;
-              return (
-                <tr key={r.orderNumber} className={cn("border-b border-line last:border-0", r.matched ? "bg-paper" : "bg-danger-soft/40")}>
-                  <td className="px-3 py-2 text-start font-mono text-xs text-ink">
-                    <span dir="ltr">{r.orderNumber}</span>
-                  </td>
-                  <td className="px-3 py-2 text-start text-ink" dir="auto">
-                    {r.customerName}
-                  </td>
-                  <td className="px-3 py-2 text-end tabular-nums text-ink">
-                    <bdi>{formatMoney(r.codAmount)}</bdi>
-                  </td>
-                  <td className="px-3 py-2 text-start">
-                    <StatusBadge
-                      value={r.carrierStatus}
-                      tone={r.carrierStatus === "delivered" ? "success" : r.carrierStatus === "returned" ? "warning" : "danger"}
-                      label={CARRIER_STATUS_LABEL[locale][r.carrierStatus]}
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-end tabular-nums text-ink">{r.carrierReportedAmount === null ? "—" : <bdi>{formatMoney(r.carrierReportedAmount)}</bdi>}</td>
-                  <td className={cn("px-3 py-2 text-end tabular-nums", diff === 0 ? "text-ink-soft" : diff < 0 ? "text-danger" : "text-success")}>
-                    {diff === 0 ? "0" : <bdi>{formatMoney(diff)}</bdi>}
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    {r.matched ? (
-                      <Check className="mx-auto size-4 text-success" aria-label={t.matched} />
-                    ) : (
-                      <AlertTriangle className="mx-auto size-4 text-danger" aria-label={t.notMatched} />
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="min-w-0 text-sm text-ink-soft">
-          <span className="font-medium tabular-nums text-ink">{fmt(t.matchedOf, { matched, total: rows.length })}</span> {t.matchedTotalDiff}{" "}
-          <span className={cn("font-medium tabular-nums", totalDiff === 0 ? "text-success" : "text-danger")}>
-            <bdi>{formatMoney(totalDiff)}</bdi>
-          </span>
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" className="text-danger" onClick={onDispute} disabled={busy}>
-            {t.raiseDispute}
-          </Button>
-          <Button
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                await onAccept();
-              } finally {
-                setBusy(false);
-              }
-            }}
+        <Segmented
+          value={view}
+          onChange={setView}
+          label={t.viewLabel}
+          className="w-full sm:w-auto sm:self-start"
+          options={[
+            { value: "held", label: t.viewHeld, count: s && s.unsettledOrders > 0 ? s.unsettledOrders : undefined },
+            { value: "settlements", label: t.viewSettlements, count: s && s.draftSettlements > 0 ? s.draftSettlements : undefined },
+          ]}
+        />
+
+        {view === "held" ? (
+          <DataState
+            loading={unsettled.loading && !unsettled.data}
+            error={unsettled.data ? null : unsettled.error}
+            onRetry={() => void unsettled.refresh()}
+            skeleton={<ListSkeleton variant={compact ? "card" : "table"} rows={3} />}
           >
-            {busy ? c.saving : t.accept}
-          </Button>
-        </div>
+            {rows.length === 0 ? (
+              <EmptyState
+                icon={<IconCourier aria-hidden />}
+                tone="success"
+                title={t.noUnsettled}
+                description={t.noUnsettledDesc}
+                action={
+                  <Button asChild variant="outline" className="min-h-11 rounded-full px-5">
+                    <ViewLink to="/orders">{t.seeOrders}</ViewLink>
+                  </Button>
+                }
+              />
+            ) : (
+              <HeldList rows={rows} currency={currency} compact={compact} onRecord={(carrier) => setReconcile({ carrier, open: true })} />
+            )}
+          </DataState>
+        ) : (
+          <div className="flex min-w-0 flex-col gap-3">
+            <ChipRow items={chips} value={status} onChange={setStatus} label={t.chipsLabel} collapseEmpty={false} />
+            <DataState
+              loading={settlements.loading && list.length === 0}
+              error={list.length === 0 ? settlements.error : null}
+              onRetry={() => void settlements.refresh()}
+              skeleton={<ListSkeleton variant={compact ? "card" : "table"} rows={5} />}
+            >
+              {list.length === 0 ? (
+                <EmptyState
+                  icon={<IconDocument aria-hidden />}
+                  title={status === "draft" ? t.noDrafts : status === "confirmed" ? t.noConfirmed : t.noSettlements}
+                  description={t.noSettlementsDesc}
+                  action={
+                    status === "all" ? (
+                      carriers.length > 0 ? (
+                        recordButton
+                      ) : undefined
+                    ) : (
+                      <Button type="button" variant="outline" className="min-h-11 rounded-full px-5" onClick={() => setStatus("all")}>
+                        {t.showAll}
+                      </Button>
+                    )
+                  }
+                />
+              ) : (
+                <>
+                  <SettlementList
+                    rows={list}
+                    currency={currency}
+                    compact={compact}
+                    openId={sheet?.open && !pending ? sheet.id : null}
+                    onOpen={openSettlement}
+                    onConfirm={(id) => setPending({ kind: "confirm", id })}
+                    onDelete={(id) => setPending({ kind: "delete", id })}
+                  />
+                  <LoadMore hasMore={Boolean(cursor)} loading={loadingMore} onClick={() => void loadMore()} />
+                </>
+              )}
+            </DataState>
+          </div>
+        )}
       </div>
-    </DataState>
+
+      {/* The panel steps aside for a question: two sheets are never stacked. */}
+      <SettlementSheet
+        open={Boolean(sheet?.open) && pending === null}
+        onClose={closeSheet}
+        summary={summaryRow}
+        detail={shownDetail}
+        loading={detail.loading}
+        error={detail.error}
+        onRetry={() => void detail.refresh()}
+        currency={currency}
+        onConfirm={() => {
+          if (sheetId) setPending({ kind: "confirm", id: sheetId });
+        }}
+        onDelete={() => {
+          if (sheetId) setPending({ kind: "delete", id: sheetId });
+        }}
+      />
+
+      <ReconcileSheet
+        open={reconcile.open}
+        onClose={() => setReconcile((current) => ({ ...current, open: false }))}
+        carriers={carriers}
+        orders={orders}
+        initialCarrier={reconcile.carrier}
+        onCreate={createDraft}
+      />
+
+      <StatementImportSheet
+        open={importing}
+        onClose={() => setImporting(false)}
+        workspaceId={workspaceId}
+        carriers={carriers.map((carrier) => carrier.carrierCode)}
+        onCreated={(id) => {
+          setImporting(false);
+          refreshAll();
+          openSettlement(id);
+        }}
+      />
+
+      <ConfirmDialog
+        open={pending?.kind === "confirm"}
+        title={t.confirmTitle}
+        description={t.confirmDesc}
+        confirmLabel={t.confirm}
+        onCancel={() => setPending(null)}
+        onConfirm={async () => {
+          if (!pending) return;
+          try {
+            await apiClient.confirmSettlement(workspaceId, pending.id);
+          } catch (err) {
+            // Thrown so ConfirmDialog shows it inline and stays open.
+            throw new Error(settlementErrorText(err, t));
+          }
+          toast.success(t.confirmed);
+          setPending(null);
+          void detail.refresh({ silent: true });
+          refreshAll();
+        }}
+      />
+      <ConfirmDialog
+        open={pending?.kind === "delete"}
+        title={t.deleteTitle}
+        description={t.deleteDesc}
+        confirmLabel={t.delete}
+        destructive
+        onCancel={() => setPending(null)}
+        onConfirm={async () => {
+          if (!pending) return;
+          try {
+            await apiClient.deleteSettlement(workspaceId, pending.id);
+          } catch (err) {
+            throw new Error(settlementErrorText(err, t));
+          }
+          toast.success(t.deleted);
+          if (sheet?.id === pending.id) closeSheet();
+          setPending(null);
+          refreshAll();
+        }}
+      />
+    </div>
   );
 }

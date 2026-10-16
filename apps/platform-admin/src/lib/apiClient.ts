@@ -17,6 +17,5 @@ export const apiClient = new ApiClient({
  * endpoints live at the root, e.g. `/health` and `/health/ready`.
  */
 export function backendRootUrl(): string {
-  const stripped = API_BASE_URL.replace(/\/+$/, "").replace(/\/api(\/v\d+)?$/, "");
-  return stripped;
+  return API_BASE_URL.replace(/\/+$/, "").replace(/\/api(\/v\d+)?$/, "");
 }

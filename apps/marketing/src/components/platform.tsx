@@ -41,11 +41,11 @@ export function Platform({ copy }: { copy: Dictionary["platform"] }) {
             return (
               <li
                 key={item.id}
-                className="group relative overflow-hidden rounded-2xl border border-line bg-paper p-6 transition-[border-color,box-shadow,translate] duration-200 hover:border-line-strong hover:shadow-card motion-safe:hover:-translate-y-0.5"
+                className="group relative overflow-hidden rounded-2xl border border-line bg-paper p-6 transition-[border-color,box-shadow,translate] duration-200 hover:border-ink-soft hover:shadow-xs motion-safe:hover:-translate-y-0.5"
               >
                 <span
                   aria-hidden
-                  className="absolute -end-8 -top-6 h-5 w-28 -rotate-[24deg] rounded-full bg-linear-to-r from-zimos-blue/0 to-zimos-sky/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                  className="absolute -end-8 -top-6 h-5 w-28 -rotate-[24deg] rounded-full bg-linear-to-r from-primary/0 to-accent/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                 />
                 <span className="flex size-11 items-center justify-center rounded-xl bg-primary-soft text-primary">
                   <Icon width="1.35rem" height="1.35rem" />

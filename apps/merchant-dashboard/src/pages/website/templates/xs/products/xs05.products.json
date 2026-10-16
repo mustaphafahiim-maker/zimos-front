@@ -1,0 +1,161 @@
+{
+  "look": "05",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "New Arrivals",
+      "nameAr": "وصل حديثًا",
+      "slug": "new-arrivals"
+    },
+    {
+      "name": "Hot Sales",
+      "nameAr": "عروض نارية",
+      "slug": "hot-sales"
+    }
+  ],
+  "products": [
+    {
+      "name": "Retro Suede Runner Sneakers",
+      "nameAr": "كوتشي ريترو سويد",
+      "description": "Retro runners in navy and blue with tan suede panels and a gum sole. Light, cushioned, everyday ready.",
+      "descriptionAr": "كوتشي ريترو كحلي وأزرق بقطع سويد جملي ونعل كاوتش، خفيف ومريح لكل يوم.",
+      "price": 2450,
+      "compareAt": 3200,
+      "image": "/xs/05/products/p01.jpg",
+      "images": [
+        "/xs/05/products/p01.jpg",
+        "/xs/05/products/p01b.jpg",
+        "/xs/05/products/p01c.jpg"
+      ],
+      "collections": [
+        "new-arrivals",
+        "hot-sales"
+      ]
+    },
+    {
+      "name": "Navy Low-Top Sneakers",
+      "nameAr": "كوتشي كحلي كاجوال",
+      "description": "Minimal navy low-top sneakers with a clean white sole. Goes with jeans, chinos and everything else.",
+      "descriptionAr": "كوتشي كحلي بسيط بنعل أبيض، يتنسق مع الجينز والتشينو وكل دولابك.",
+      "price": 1850,
+      "image": "/xs/05/products/p02.jpg",
+      "images": [
+        "/xs/05/products/p02.jpg",
+        "/xs/05/products/p02b.jpg"
+      ],
+      "collections": [
+        "new-arrivals"
+      ]
+    },
+    {
+      "name": "Suede-Effect Hooded Overshirt",
+      "nameAr": "أوفر شيرت سويد بكابيشون",
+      "description": "A brown suede-effect overshirt with a hood, snap front and chest pocket. An easy layer for cool evenings.",
+      "descriptionAr": "أوفر شيرت بني بملمس السويد وكابيشون وزراير كبس وجيب على الصدر، طبقة مثالية لليالي الباردة.",
+      "price": 2200,
+      "image": "/xs/05/products/p03.jpg",
+      "images": [
+        "/xs/05/products/p03.jpg",
+        "/xs/05/products/p03b.jpg"
+      ],
+      "collections": [
+        "hot-sales"
+      ]
+    },
+    {
+      "name": "Graphic Print Oversized Tee",
+      "nameAr": "تيشيرت أوفر سايز مطبوع",
+      "description": "A black oversized tee in heavy cotton with an abstract white graphic print. Street style done right.",
+      "descriptionAr": "تيشيرت أسود أوفر سايز من القطن التقيل بطبعة تجريدية بيضاء، ستريت ستايل بجد.",
+      "price": 650,
+      "image": "/xs/05/products/p04.jpg",
+      "collections": [
+        "new-arrivals"
+      ]
+    },
+    {
+      "name": "Fringed Wool-Blend Scarf",
+      "nameAr": "كوفية صوف رمادي بشراشيب",
+      "description": "A soft grey scarf in a warm wool blend with fringed edges. Wrap up in comfort all winter.",
+      "descriptionAr": "كوفية رمادي ناعمة من خليط الصوف الدافئ بأطراف شراشيب، دفء وراحة طول الشتاء.",
+      "price": 550,
+      "image": "/xs/05/products/p05.jpg",
+      "images": [
+        "/xs/05/products/p05.jpg",
+        "/xs/05/products/p05b.jpg"
+      ],
+      "collections": [
+        "hot-sales"
+      ]
+    },
+    {
+      "name": "Brown Leather Backpack",
+      "nameAr": "شنطة ضهر جلد بني",
+      "description": "A structured brown leather backpack with a front zip pocket and padded straps. Built for daily commutes.",
+      "descriptionAr": "شنطة ضهر من الجلد البني بتصميم متماسك وجيب أمامي بسوستة وحمالات مبطّنة، لمشاويرك اليومية.",
+      "price": 1950,
+      "image": "/xs/05/products/p06.jpg",
+      "images": [
+        "/xs/05/products/p06.jpg",
+        "/xs/05/products/p06b.jpg"
+      ],
+      "collections": [
+        "new-arrivals"
+      ]
+    },
+    {
+      "name": "Tipped Henley Polo Shirt",
+      "nameAr": "بولو هنلي كحلي",
+      "description": "A navy henley polo in cotton piqué with striped tipping on the collar and cuffs. Smart yet relaxed.",
+      "descriptionAr": "بولو كحلي برقبة هنلي من قطن البيكيه وخطوط على الياقة والأكمام، شيك ومريح في نفس الوقت.",
+      "price": 850,
+      "image": "/xs/05/products/p07.jpg",
+      "images": [
+        "/xs/05/products/p07.jpg",
+        "/xs/05/products/p07b.jpg"
+      ],
+      "collections": [
+        "hot-sales"
+      ]
+    },
+    {
+      "name": "Canvas Drawstring Bucket Bag",
+      "nameAr": "شنطة باكت كانفاس برباط",
+      "description": "A rust canvas bucket bag with a drawstring top and padded cream handles. Roomy, light and easy to carry.",
+      "descriptionAr": "شنطة باكت من الكانفاس بلون الطوبي برباط علوي ويد كريمي مبطّنة، واسعة وخفيفة وسهلة الحمل.",
+      "price": 1250,
+      "compareAt": 1650,
+      "image": "/xs/05/products/p08.png",
+      "collections": [
+        "hot-sales"
+      ]
+    },
+    {
+      "name": "Camel Cotton Crewneck Sweatshirt",
+      "nameAr": "سويت شيرت قطن جملي",
+      "description": "A camel crewneck sweatshirt in brushed cotton fleece with a relaxed fit. Soft, warm and easy to layer.",
+      "descriptionAr": "سويت شيرت جملي برقبة مدورة من القطن المبطّن الناعم وقصّة مريحة، دافي وسهل التنسيق.",
+      "price": 1100,
+      "image": "/xs/05/products/p09.png",
+      "images": [
+        "/xs/05/products/p09.png",
+        "/xs/05/products/p09b.png",
+        "/xs/05/products/p09c.png",
+        "/xs/05/products/p09d.png"
+      ],
+      "collections": [
+        "new-arrivals"
+      ]
+    }
+  ],
+  "wording": {
+    "allLabel": "Best Sellers",
+    "searchPlaceholder": "Search...",
+    "openLabel": "+ Add To Cart"
+  },
+  "wordingAr": {
+    "allLabel": "الأكثر مبيعًا",
+    "searchPlaceholder": "ابحث...",
+    "openLabel": "+ أضف للسلة"
+  }
+}

@@ -1,5 +1,7 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { LOCALE_COOKIE, parseLocale } from "./i18n";
 import { ApiClient, createMemoryTokenStorage } from "@store-builder/api-client";
+import { STORE_PREVIEW_HEADER, isTokenShaped } from "./storePreview";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1";
 
@@ -33,5 +35,13 @@ export async function createServerStorefrontApiClient() {
     const shopperIp = requestHeaders.get("x-real-ip")?.trim();
     if (shopperIp && IP_LIKE.test(shopperIp)) defaultHeaders["X-Storefront-Client-IP"] = shopperIp;
   }
+  // Staff previewing a store the public can't see yet (lib/storePreview): the
+  // proxy passes their token on, and the API checks it.
+  const preview = requestHeaders.get(STORE_PREVIEW_HEADER);
+  if (isTokenShaped(preview)) defaultHeaders["X-Store-Preview"] = preview;
+  // The language the shopper chose: the API answers products and collections
+  // in it where the store has them translated (the originals otherwise).
+  const locale = parseLocale((await cookies()).get(LOCALE_COOKIE)?.value);
+  if (locale) defaultHeaders["X-Store-Locale"] = locale;
   return new ApiClient({ baseUrl, tokenStorage: createMemoryTokenStorage(), defaultHeaders });
 }

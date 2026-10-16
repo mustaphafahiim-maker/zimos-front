@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@store-builder/ui";
 
@@ -25,15 +26,18 @@ export function Drawer({ open, onClose, title, description, children, footer, cl
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-zimos-navy/40 backdrop-blur-[2px]" onMouseDown={onClose}>
+// Drawn in <body>, like SignOutDialog: a backdrop-blur or an entrance
+// transform on any ancestor (the sticky header, a Drawer around a Modal) would
+// otherwise make position: fixed follow that box instead of the window.
+  return createPortal(
+    <div className="fixed inset-0 z-50 bg-primary-dark/40 dark:bg-black/60 backdrop-blur-[2px]" onMouseDown={onClose}>
       <aside
         role="dialog"
         aria-modal="true"
         aria-label={title}
         onMouseDown={(e) => e.stopPropagation()}
         className={cn(
-          "animate-zimos-slide-in-end absolute inset-y-0 end-0 flex w-full max-w-xl flex-col border-s border-line bg-paper-raised shadow-[var(--shadow-pop)]",
+          "animate-slide-in-end absolute inset-y-0 end-0 flex w-full max-w-xl flex-col border-s border-line bg-paper-raised shadow-lg",
           className
         )}
       >
@@ -54,7 +58,8 @@ export function Drawer({ open, onClose, title, description, children, footer, cl
         <div className="scroll-thin flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && <div className="flex flex-wrap items-center justify-end gap-3 border-t border-line px-5 py-4">{footer}</div>}
       </aside>
-    </div>
+    </div>,
+    document.body
   );
 }
 

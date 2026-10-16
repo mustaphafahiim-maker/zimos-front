@@ -2,213 +2,249 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 import { Button, Table, TableBody, TableFooter, TableHeader, TableRow, cn } from "@store-builder/ui";
+import type { SubscriptionStatus } from "@store-builder/api-client";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FilterChips, SearchInput } from "@/components/forms";
-import { Panel, SortHead, SourceNotice, Td, Th, compareValues, type SortState } from "@/components/Panel";
-import { Status } from "@/components/StatusBadge";
-import { useToast } from "@/components/Toast";
-import { ExtendTrialModal } from "@/components/SubscriptionDialogs";
+import { Panel, SortHead, Td, Th, compareValues, type SortState } from "@/components/Panel";
+import { PricingBadge, Status } from "@/components/StatusBadge";
 import { useAsync } from "@/lib/useAsync";
-import { getErrorMessage } from "@/lib/errors";
-import { adminApi } from "@/mock/adminApi";
-import type { AdminWorkspace, SubscriptionStatus, WorkspaceListResult } from "@/mock/types";
-import { formatDate, formatMoney, formatRelative } from "@/lib/format";
+import * as adminApi from "@/lib/adminApi";
+import type { AdminSubscriptionRow } from "@/lib/adminApi";
+import { formatDate, formatMinorMoney, formatRelative } from "@/lib/format";
+import { useT } from "@/i18n/LocaleContext";
+
+const STRINGS = {
+  en: {
+    title: "Subscriptions",
+    description: "Billing state for every workspace.",
+    refresh: "Refresh",
+    all: "All",
+    trialing: "Trialing",
+    active: "Active",
+    pastDue: "Past due",
+    canceled: "Canceled",
+    paidOnly: "Paid only",
+    search: "Search workspace name or address",
+    noneYet: "No workspace has a subscription yet.",
+    noMatch: "No subscriptions match these filters.",
+    workspace: "Workspace",
+    plan: "Plan",
+    status: "Status",
+    mrr: "MRR",
+    next: "Next billing / trial end",
+    billing: "Billing",
+    unnamed: "Unnamed workspace",
+    cancels: "Cancels at period end",
+    trialEnds: "Trial ends ",
+    total: "Total",
+    paidTotal: "Paid total",
+    free: "Free",
+    discounted: "Discounted",
+    readOnly: "Read-only here. A store's plan, period and pricing are set from its workspace page (Activate or change the plan).",
+  },
+  ar: {
+    title: "الاشتراكات",
+    description: "حالة الفوترة لكل متجر.",
+    refresh: "تحديث",
+    all: "الكل",
+    trialing: "تجريبي",
+    active: "نشط",
+    pastDue: "متأخر السداد",
+    canceled: "ملغى",
+    paidOnly: "المدفوعة فقط",
+    search: "ابحث باسم المتجر أو عنوانه",
+    noneYet: "لا يوجد متجر لديه اشتراك بعد.",
+    noMatch: "لا توجد اشتراكات تطابق هذه التصفية.",
+    workspace: "المتجر",
+    plan: "الخطة",
+    status: "الحالة",
+    mrr: "الإيراد الشهري المتكرر",
+    next: "الفوترة التالية / نهاية التجربة",
+    billing: "الفوترة",
+    unnamed: "متجر بلا اسم",
+    cancels: "يُلغى في نهاية الفترة",
+    trialEnds: "تنتهي التجربة ",
+    total: "الإجمالي",
+    paidTotal: "إجمالي المدفوع",
+    free: "مجاني",
+    discounted: "مخفّض",
+    readOnly: "للعرض فقط هنا. تُضبط خطة المتجر وفترته وتسعيره من صفحة المتجر (تفعيل الخطة أو تغييرها).",
+  },
+};
 
 type Filter = "all" | SubscriptionStatus;
 type SortKey = "name" | "mrr" | "next";
 
-function nextDate(ws: AdminWorkspace): string {
-  return ws.meta.subscriptionStatus === "trialing" ? ws.meta.trialEndsAt ?? "" : ws.meta.nextBillingAt ?? "";
+const FILTERS: Array<[Filter, "all" | "trialing" | "active" | "pastDue" | "canceled"]> = [
+  ["all", "all"],
+  ["trialing", "trialing"],
+  ["active", "active"],
+  ["past_due", "pastDue"],
+  ["canceled", "canceled"],
+];
+
+/** Trials count down to their end date; everything else to the period end. */
+function nextDate(s: AdminSubscriptionRow): string {
+  return (s.status === "trialing" ? s.trialEndsAt : s.currentPeriodEnd) ?? "";
 }
 
 export function SubscriptionsPage() {
-  const toast = useToast();
-  const { data, loading, error, refresh, setData } = useAsync(() => adminApi.listWorkspaces(), []);
+  const t = useT(STRINGS);
+  const { data, loading, error, refresh } = useAsync(() => adminApi.listSubscriptions(), []);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortState<SortKey>>({ key: "mrr", dir: "desc" });
-  const [trialFor, setTrialFor] = useState<AdminWorkspace | null>(null);
-  const [cancelFor, setCancelFor] = useState<AdminWorkspace | null>(null);
-  const [retrying, setRetrying] = useState<string | null>(null);
+  // Only the subscriptions at the plan price: no free (gift) or discounted ones.
+  const [paidOnly, setPaidOnly] = useState(false);
 
-  const rows = useMemo(() => data?.rows ?? [], [data]);
-
-  const replace = (ws: AdminWorkspace) =>
-    setData((prev) => {
-      const base: WorkspaceListResult = prev ?? { rows: [], source: "api", apiError: null };
-      return { ...base, rows: base.rows.map((r) => (r.id === ws.id ? ws : r)) };
-    });
+  const rows = useMemo(() => data ?? [], [data]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows
-      .filter((w) => filter === "all" || w.meta.subscriptionStatus === filter)
-      .filter((w) => !q || w.name.toLowerCase().includes(q) || w.meta.ownerEmail.toLowerCase().includes(q))
+      .filter((s) => filter === "all" || s.status === filter)
+      .filter((s) => !paidOnly || (s.pricingKind ?? "paid") === "paid")
+      .filter(
+        (s) =>
+          !q ||
+          (s.workspaceName ?? "").toLowerCase().includes(q) ||
+          (s.workspaceSlug ?? "").toLowerCase().includes(q)
+      )
       .sort((a, b) => {
-        if (sort.key === "name") return compareValues(a.name, b.name, sort.dir);
-        if (sort.key === "next") return compareValues(nextDate(a) || "9999", nextDate(b) || "9999", sort.dir);
+        if (sort.key === "name")
+          return compareValues(a.workspaceName ?? "", b.workspaceName ?? "", sort.dir);
+        // Undated rows sort last in ascending order.
+        if (sort.key === "next")
+          return compareValues(nextDate(a) || "9999", nextDate(b) || "9999", sort.dir);
         return compareValues(a.mrr, b.mrr, sort.dir);
       });
-  }, [rows, filter, query, sort]);
+  }, [rows, filter, query, sort, paidOnly]);
 
-  const options = (
-    [
-      ["all", "All"],
-      ["trialing", "Trialing"],
-      ["active", "Active"],
-      ["past_due", "Past due"],
-      ["canceled", "Canceled"],
-    ] as Array<[Filter, string]>
-  ).map(([value, label]) => ({
+  const options = FILTERS.map(([value, key]) => ({
     value,
-    label,
-    count: value === "all" ? rows.length : rows.filter((w) => w.meta.subscriptionStatus === value).length,
+    label: t[key],
+    count: value === "all" ? rows.length : rows.filter((s) => s.status === value).length,
   }));
 
-  const totalMrr = filtered.reduce((s, w) => s + w.mrr, 0);
-
-  async function retry(ws: AdminWorkspace) {
-    setRetrying(ws.id);
-    try {
-      const { ok, workspace } = await adminApi.retryPayment(ws.id);
-      replace(workspace);
-      if (ok) toast.success(`Payment for ${ws.name} succeeded.`);
-      else toast.error(`Payment for ${ws.name} failed again.`);
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    } finally {
-      setRetrying(null);
-    }
-  }
+  const totalMrr = filtered.reduce((sum, s) => sum + s.mrr, 0);
+  // Plans can be priced in different currencies; a single total is only
+  // meaningful when every row shares one.
+  const currencies = new Set(filtered.map((s) => s.currency));
+  const totalCurrency = currencies.size === 1 ? [...currencies][0] : null;
 
   return (
     <div>
       <PageHeader
-        title="Subscriptions"
-        description="Billing state for every workspace."
+        title={t.title}
+        description={t.description}
         actions={
           <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading}>
-            <RefreshCw /> Refresh
+            <RefreshCw /> {t.refresh}
           </Button>
         }
       />
       <DataState loading={loading} error={error} onRetry={() => void refresh()}>
-        {data && (
-          <>
-            <SourceNotice result={data} />
-            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <FilterChips options={options} value={filter} onChange={setFilter} />
-              <SearchInput value={query} onChange={setQuery} placeholder="Search workspace or owner email" />
-            </div>
-            {filtered.length === 0 ? (
-              <EmptyBlock message={rows.length === 0 ? "No subscriptions yet." : "No subscriptions match these filters."} />
-            ) : (
-              <Panel flush>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <SortHead label="Workspace" sortKey="name" sort={sort} onSort={setSort} />
-                      <Th>Plan</Th>
-                      <Th>Status</Th>
-                      <SortHead label="MRR" sortKey="mrr" sort={sort} onSort={setSort} className="text-end" />
-                      <SortHead label="Next billing / trial end" sortKey="next" sort={sort} onSort={setSort} />
-                      <Th>Last failure</Th>
-                      <Th className="text-end">Actions</Th>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map((ws) => {
-                      const s = ws.meta.subscriptionStatus;
-                      const next = nextDate(ws);
-                      return (
-                        <TableRow key={ws.id}>
-                          <Td>
-                            <Link to={`/workspaces/${ws.id}?tab=subscription`} className="block font-medium text-ink hover:text-primary">
-                              {ws.name}
-                            </Link>
-                            <span className="text-xs text-ink-soft">{ws.meta.ownerEmail}</span>
-                          </Td>
-                          <Td>
-                            {ws.plan?.name ?? "—"}
-                            <span className="block text-xs text-ink-soft capitalize">{ws.meta.billingCycle}</span>
-                          </Td>
-                          <Td>
-                            <Status value={s} />
-                          </Td>
-                          <Td className="tabular text-end">{formatMoney(ws.mrr)}</Td>
-                          <Td>
-                            {next ? (
-                              <>
-                                {formatDate(next)}
-                                <span className={cn("block text-xs", new Date(next).getTime() < Date.now() ? "text-danger" : "text-ink-soft")}>
-                                  {s === "trialing" ? "Trial ends " : ""}
-                                  {formatRelative(next)}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-ink-soft">—</span>
-                            )}
-                          </Td>
-                          <Td className="text-ink-soft">
-                            {ws.meta.lastPaymentFailedAt ? <span className="text-danger">{formatRelative(ws.meta.lastPaymentFailedAt)}</span> : "—"}
-                          </Td>
-                          <Td>
-                            <div className="flex justify-end gap-1.5">
-                              {s === "past_due" && (
-                                <Button size="sm" variant="outline" onClick={() => retry(ws)} disabled={retrying === ws.id}>
-                                  <RefreshCw className={cn(retrying === ws.id && "animate-spin")} /> Retry
-                                </Button>
-                              )}
-                              {(s === "trialing" || s === "canceled") && (
-                                <Button size="sm" variant="outline" onClick={() => setTrialFor(ws)}>
-                                  Extend trial
-                                </Button>
-                              )}
-                              {s !== "canceled" && (
-                                <Button size="sm" variant="ghost" className="text-danger" onClick={() => setCancelFor(ws)}>
-                                  Cancel
-                                </Button>
-                              )}
-                            </div>
-                          </Td>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                  <TableFooter>
-                    <TableRow className="hover:bg-transparent">
-                      <Td className="font-medium" colSpan={3}>
-                        Total ({filtered.length})
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <FilterChips options={options} value={filter} onChange={setFilter} />
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-ink">
+              <input type="checkbox" className="size-4" checked={paidOnly} onChange={(e) => setPaidOnly(e.target.checked)} />
+              {t.paidOnly}
+            </label>
+          </div>
+          <SearchInput value={query} onChange={setQuery} placeholder={t.search} />
+        </div>
+        {filtered.length === 0 ? (
+          <EmptyBlock
+            message={
+              rows.length === 0
+                ? t.noneYet
+                : t.noMatch
+            }
+          />
+        ) : (
+          <Panel flush>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <SortHead label={t.workspace} sortKey="name" sort={sort} onSort={setSort} />
+                  <Th>{t.plan}</Th>
+                  <Th>{t.status}</Th>
+                  <SortHead label={t.mrr} sortKey="mrr" sort={sort} onSort={setSort} className="text-end" />
+                  <SortHead label={t.next} sortKey="next" sort={sort} onSort={setSort} />
+                  <Th>{t.billing}</Th>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((s) => {
+                  const next = nextDate(s);
+                  return (
+                    <TableRow key={s.id}>
+                      <Td>
+                        <Link
+                          to={`/workspaces/${s.workspaceId}`}
+                          className="block font-medium text-ink hover:text-primary"
+                        >
+                          {s.workspaceName ?? t.unnamed}
+                        </Link>
+                        {s.workspaceSlug && (
+                          <span className="text-xs text-ink-soft">{s.workspaceSlug}</span>
+                        )}
                       </Td>
-                      <Td className="tabular text-end font-semibold">{formatMoney(totalMrr)}</Td>
-                      <Td colSpan={3} />
+                      <Td>
+                        {s.planName ?? "—"}
+                        <span className="block text-xs text-ink-soft capitalize">{s.billingCycle}</span>
+                      </Td>
+                      <Td>
+                        <Status value={s.status} />
+                        <PricingBadge kind={s.pricingKind} label={s.pricingKind === "free" ? t.free : t.discounted} />
+                        {s.cancelAtPeriodEnd && (
+                          <span className="mt-1 block text-xs text-ink-soft">{t.cancels}</span>
+                        )}
+                      </Td>
+                      <Td className="tabular text-end">{formatMinorMoney(s.mrr, s.currency)}</Td>
+                      <Td>
+                        {next ? (
+                          <>
+                            {formatDate(next)}
+                            <span
+                              className={cn(
+                                "block text-xs",
+                                new Date(next).getTime() < Date.now() ? "text-danger" : "text-ink-soft"
+                              )}
+                            >
+                              {s.status === "trialing" ? t.trialEnds : ""}
+                              {formatRelative(next)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-ink-soft">—</span>
+                        )}
+                      </Td>
+                      <Td className="text-ink-soft capitalize">{s.externalProvider ?? "—"}</Td>
                     </TableRow>
-                  </TableFooter>
-                </Table>
-              </Panel>
-            )}
-          </>
+                  );
+                })}
+              </TableBody>
+              <TableFooter>
+                <TableRow className="hover:bg-transparent">
+                  <Td className="font-medium" colSpan={3}>
+                    {paidOnly ? t.paidTotal : t.total} ({filtered.length})
+                  </Td>
+                  <Td className="tabular text-end font-semibold">
+                    {totalCurrency ? formatMinorMoney(totalMrr, totalCurrency) : "—"}
+                  </Td>
+                  <Td colSpan={2} />
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </Panel>
         )}
       </DataState>
-
-      <ExtendTrialModal ws={trialFor} open={!!trialFor} onClose={() => setTrialFor(null)} onDone={replace} />
-      <ConfirmDialog
-        open={!!cancelFor}
-        title={`Cancel ${cancelFor?.name ?? ""} subscription?`}
-        description="Paid features stop at the end of the current period."
-        confirmLabel="Cancel subscription"
-        destructive
-        onCancel={() => setCancelFor(null)}
-        onConfirm={async () => {
-          if (!cancelFor) return;
-          const next = await adminApi.cancelSubscription(cancelFor.id);
-          replace(next);
-          toast.success("Subscription canceled.");
-          setCancelFor(null);
-        }}
-      />
+      <p className="mt-4 text-xs text-ink-soft">
+        {t.readOnly}
+      </p>
     </div>
   );
 }

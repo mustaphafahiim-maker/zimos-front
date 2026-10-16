@@ -21,7 +21,7 @@ export function SectionHeading({
       <p className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
         <span
           aria-hidden
-          className="h-1.5 w-4 -skew-x-[24deg] rounded-[2px] bg-linear-to-r from-zimos-blue to-zimos-sky"
+          className="h-1.5 w-4 -skew-x-[24deg] rounded-[2px] bg-linear-to-r from-primary to-accent"
         />
         {kicker}
       </p>

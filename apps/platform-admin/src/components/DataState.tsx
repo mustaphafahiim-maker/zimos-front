@@ -61,8 +61,8 @@ export function DataState({
 
 export function EmptyBlock({ message, action }: { message: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-[var(--radius-card)] border border-dashed border-line-strong bg-paper-raised/60 px-6 py-12 text-center text-sm text-ink-soft">
-      <Inbox className="size-6 text-ink-muted" aria-hidden />
+    <div className="flex flex-col items-center gap-3 rounded-[var(--radius-card)] border border-dashed border-line bg-paper-raised/60 px-6 py-12 text-center text-sm text-ink-soft">
+      <Inbox className="size-6 text-ink-soft" aria-hidden />
       <p>{message}</p>
       {action}
     </div>

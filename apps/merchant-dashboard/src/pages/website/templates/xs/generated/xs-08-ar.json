@@ -1,0 +1,457 @@
+{
+  "key": "xs-08-ar",
+  "name": "XS 08 عربي",
+  "category": "fashion",
+  "kind": "store",
+  "tags": [
+    "xs",
+    "ar"
+  ],
+  "rtl": true,
+  "primaryColor": "#FFBA00",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#FFBA00",
+      "themeSettings": {
+        "xsLook": "08",
+        "header": {
+          "menu": [
+            {
+              "label": "الرئيسية",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "المتجر",
+              "href": "/products",
+              "kind": "url"
+            },
+            {
+              "label": "تواصل معنا",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "المتجر",
+              "links": [
+                {
+                  "label": "المنتجات",
+                  "href": "/products",
+                  "kind": "url"
+                },
+                {
+                  "label": "السلة",
+                  "href": "/cart",
+                  "kind": "cart"
+                }
+              ]
+            },
+            {
+              "title": "المساعدة",
+              "links": [
+                {
+                  "label": "تواصل معنا",
+                  "href": "/contact",
+                  "kind": "page"
+                },
+                {
+                  "label": "تتبّع طلبك",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            }
+          ],
+          "text": "وجهتك الأولى لأحدث الأحذية الرياضية والأزياء العصرية، بجودة مضمونة وتوصيل سريع إلى كل محافظات مصر.",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "الرئيسية",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs08-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs08-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs08-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs08-p1-s1-e1",
+                          "type": "xs_hero",
+                          "props": {
+                            "look": "08",
+                            "heading": "تشكيلة Nike الجديدة!",
+                            "text": "اكتشف أحدث موديلات الأحذية الرياضية بتصميمات تجمع الراحة والأداء والأناقة. خطوتك القادمة تبدأ من هنا.",
+                            "image": "/xs/08/banner-img.png",
+                            "buttonLabel": "تسوّق الآن",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs08-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs08-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs08-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs08-p1-s2-e1",
+                          "type": "xs_features",
+                          "props": {
+                            "look": "08",
+                            "heading": "",
+                            "text": "",
+                            "image": "",
+                            "items": [
+                              {
+                                "icon": "truck",
+                                "image": "/xs/08/ico-1.png",
+                                "title": "توصيل مجاني",
+                                "text": "شحن مجاني لكل الطلبات"
+                              },
+                              {
+                                "icon": "return",
+                                "image": "/xs/08/ico-2.png",
+                                "title": "استرجاع مرن",
+                                "text": "إرجاع أي منتج خلال 14 يومًا"
+                              },
+                              {
+                                "icon": "support",
+                                "image": "/xs/08/ico-3.png",
+                                "title": "دعم على مدار الساعة",
+                                "text": "نرد عليك في أي وقت، ليلًا ونهارًا"
+                              },
+                              {
+                                "icon": "bag",
+                                "image": "/xs/08/ico-4.png",
+                                "title": "دفع آمن",
+                                "text": "الدفع عند الاستلام أو ببطاقة آمنة"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs08-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs08-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs08-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs08-p1-s3-e1",
+                          "type": "xs_banners",
+                          "props": {
+                            "look": "08",
+                            "items": [
+                              {
+                                "image": "/xs/08/c1.jpg",
+                                "title": "أحذية رياضية للتمرين",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/xs/08/c2.jpg",
+                                "title": "أحذية رياضية للتمرين",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/xs/08/c3.jpg",
+                                "title": "إطلالات متناسقة للثنائي",
+                                "href": "/products"
+                              }
+                            ],
+                            "variant": "tile"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs08-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs08-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs08-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs08-p1-s4-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "08",
+                            "heading": "أحدث المنتجات",
+                            "collection": "",
+                            "limit": 8,
+                            "showDiscount": true,
+                            "showTabs": false,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "allLabel": "كل المنتجات",
+                            "searchLabel": "بحث",
+                            "loadMoreLabel": "عرض المزيد",
+                            "searchPlaceholder": "ابحث هنا",
+                            "viewLabel": "عرض التفاصيل",
+                            "openLabel": "أضف للسلة"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs08-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs08-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs08-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs08-p1-s5-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "08",
+                            "heading": "عرض حصري ينتهي قريبًا!",
+                            "text": "لعشّاق الأناقة التي تحترم البيئة وخاماتها.",
+                            "images": [
+                              "/xs/08/e-p1.png"
+                            ],
+                            "points": [],
+                            "buttonLabel": "تسوّق الآن",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "تواصل معنا",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs08-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs08-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs08-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs08-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "08",
+                            "heading": "تواصل معنا",
+                            "image": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs08-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs08-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs08-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs08-p2-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "08",
+                            "heading": "أرسل رسالتك",
+                            "info": [
+                              {
+                                "icon": "address",
+                                "title": "القاهرة، مصر",
+                                "text": "وسط القاهرة"
+                              },
+                              {
+                                "icon": "phone",
+                                "title": "اتصل بنا",
+                                "text": "من السبت إلى الخميس، 9 صباحًا – 6 مساءً"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "راسلنا",
+                                "text": "راسلنا باستفسارك في أي وقت!"
+                              }
+                            ],
+                            "contactPlaceholder": "اكتب بريدك الإلكتروني",
+                            "messagePlaceholder": "اكتب رسالتك",
+                            "buttonLabel": "أرسل رسالتك"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

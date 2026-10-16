@@ -1,6 +1,6 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
-import { Languages } from "lucide-react";
-import { Alert, Button, Label, Tabs, TabsContent, TabsList, TabsTrigger, cn } from "@store-builder/ui";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Alert, Button, Label, cn } from "@store-builder/ui";
 import type {
   InviteMemberPayload,
   WorkspaceInvite,
@@ -12,7 +12,9 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useAuth } from "@/context/AuthContext";
 import { useAsync } from "@/lib/useAsync";
+import { useSaveThemeSettings } from "@/lib/themeSettingsSave";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
+import { useErrorMessage } from "@/lib/errorMessages";
 import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
 import { ColorField } from "@/components/ColorField";
 import {
@@ -21,247 +23,426 @@ import {
   normalizeHex,
   readThemeColor,
 } from "@/lib/brandColors";
-import { PageHeader } from "@/components/PageHeader";
+import { SettingsLayout, SettingsPane, type SettingsSectionDef, type SettingsTone } from "@/components/settings";
+import {
+  IconAccount,
+  IconBell,
+  IconCard,
+  IconClock,
+  IconEmail,
+  IconFilter,
+  IconGift,
+  IconHoliday,
+  IconKey,
+  IconMessage,
+  IconShield,
+  IconStore,
+  IconTeam,
+  IconTheme,
+  IconWhatsApp,
+  type IconComponent,
+} from "@/components/icons";
+import { UnsavedGuardProvider, useUnsavedGuard } from "@/lib/useUnsavedGuard";
+import { storeHost } from "@/lib/storeAddress";
 import { DataState } from "@/components/DataState";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TextField, Field } from "@/components/Field";
 import { Select } from "@/components/Select";
+import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
-import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
-import { CheckoutSettingsTab } from "./CheckoutSettingsTab";
-import { DomainsTab } from "./DomainsTab";
-import { CamouflageTab } from "./CamouflageTab";
-import { PlanTab } from "./PlanTab";
+import { WhatsappSection } from "./WhatsappSection";
+import { AppearanceSection } from "./AppearanceSection";
+import { AccountSettingsSection } from "./AccountSettingsSection";
+import { DevelopersSection } from "./DevelopersSection";
+import { NotificationPreferencesSection } from "./NotificationPreferencesSection";
+import { OrderEmailsSection } from "./OrderEmailsSection";
+import { BILLING_ROLES } from "@/pages/subscription/billingText";
+import { SUBSCRIPTION_STRINGS } from "@/pages/subscription/subscriptionStrings";
+import { useT, type Messages } from "@/i18n/LocaleContext";
+import { WhatsAppMessageSection } from "./WhatsAppMessageSection";
+import { CatalogSettingsSection } from "./CatalogSettingsSection";
+import { OrderBumpSettingsSection } from "./OrderBumpSettingsSection";
+import { AccountSection } from "./AccountSection";
+import { SecuritySection } from "./SecuritySection";
+import { HOLIDAY_MODE_ENABLED, STORE_REPORTS_ENABLED, TWO_FACTOR_ENABLED } from "@/lib/features";
+import { SummaryReportsSection } from "./SummaryReportsSection";
+import { HolidayModeSection } from "./HolidayModeSection";
 
 const STRINGS = {
   en: {
-    title: "Settings",
-    description: "Store profile, team, checkout, domains, ad review shield and your plan.",
-    tabGeneral: "General",
-    tabTeam: "Team",
-    tabCheckout: "Checkout",
-    tabDomains: "Domains",
-    tabCamouflage: "Ad review shield",
-    tabPlan: "Plan & billing",
-
-    languageTitle: "Language",
-    languageHint: "The language and direction of your dashboard. Saved on this device.",
-
-    profileTitle: "Store profile",
-    profileHint: "The name, logo, and tagline shown across your dashboard and storefront.",
-    profileSaved: "Store profile saved.",
-    name: "Name",
-    logo: "Logo",
-    logoAlt: "Store logo",
-    none: "None",
-    resizing: "Resizing…",
-    uploading: "Uploading…",
-    uploadLogo: "Upload logo",
-    remove: "Remove",
-    logoHint: "PNG, JPEG, GIF or WEBP, up to 5MB.",
-    tagline: "Tagline",
-    taglineHint: "Optional — a short line shown under your store name.",
-    colorsTitle: "Store colours",
-    colorsHint: "Used for your storefront header, buttons and links.",
-    primary: "Primary",
-    primaryHint: "Buttons, links and highlights.",
-    secondary: "Secondary",
-    secondaryHint: "Accents and badges.",
-    preview: "Preview",
-    previewAddToCart: "Add to cart",
-    previewSale: "Sale",
-    previewDetails: "View details",
-
-    teamTitle: "Team members",
-    teamHint: "People who can sign in to this store, and the role that sets what they can do.",
-    inviteMember: "Invite member",
-    roleUpdated: "Role updated.",
-    inviteResent: "Invite re-sent to {email}.",
-    memberRemoved: "Member removed.",
-    colMember: "Member",
-    colRole: "Role",
-    colEmail: "Email",
-    you: "(you)",
-    roleFor: "Role for {email}",
-    memberFallback: "member",
-    cantRemoveSelf: "You can't remove yourself",
-    pendingInvites: "Pending invites",
-    invited: "Invited",
-    resend: "Resend",
-    inviteDescription: "They'll get an email with a link to join this store.",
-    removeNamed: "Remove {name}?",
-    removeThis: "Remove this member?",
-    removeDescription: "They lose access to this store immediately. You can invite them again later.",
-    removeMember: "Remove member",
-    inviteSent: "Invite sent to {email}.",
-    email: "Email",
-    role: "Role",
-    sending: "Sending…",
-    sendInvite: "Send invite",
+    pageTitle: "Settings",
+    searchPlaceholder: "Search settings…",
+    // The headings of the list.
+    g_store: "The store",
+    g_orders: "Orders",
+    g_messages: "Messages",
+    g_team: "Team",
+    g_billing: "Plan",
+    g_account: "My account",
+    g_developers: "For developers",
+    // Each section: its name in the list, and one line of what it is for.
+    s_identity: "Store identity",
+    d_identity: "Name, logo, tagline and colours",
+    s_account_settings: "Time zone and invoices",
+    d_account_settings: "The store's clock, the contact email and the business on invoices",
+    s_catalog: "Product listing",
+    d_catalog: "Filters and sorting on the store's product pages",
+    s_order_bump: "Offer with the order",
+    d_order_bump: "One add-on offer shown above the order button",
+    s_holiday: "Holiday mode",
+    d_holiday: "Pause orders, or take them and ship later",
+    s_whatsapp_message: "WhatsApp message",
+    d_whatsapp_message: "What the confirmation message says",
+    s_whatsapp: "WhatsApp connection",
+    d_whatsapp: "Your WhatsApp Business number, for the inbox and automations",
+    s_order_emails: "Order emails",
+    d_order_emails: "The emails customers get, and who they are from",
+    s_members: "Members and invites",
+    d_members: "Who can sign in to this store, and inviting more",
+    s_billing: "Plan and billing",
+    d_billing: "Your plan, what is due and this month's usage",
+    s_profile: "Profile",
+    d_profile: "Your name, username, email and phone",
+    s_appearance: "Language and look",
+    d_appearance: "Arabic or English, light or dark, glass",
+    s_notifications: "Notifications",
+    d_notifications: "What you are told about, and where",
+    s_security: "Security",
+    d_security: "Two-step sign-in and password",
+    s_developers: "API keys and webhooks",
+    d_developers: "Connect other systems to this store",
+    storeCardRole: "You are signed in to this store",
   },
   ar: {
-    title: "الإعدادات",
-    description: "ملف المتجر، الفريق، صفحة الدفع، النطاقات، حماية مراجعة الإعلانات والخطة.",
-    tabGeneral: "عام",
-    tabTeam: "الفريق",
-    tabCheckout: "صفحة الدفع",
-    tabDomains: "النطاقات (الدومين)",
-    tabCamouflage: "حماية مراجعة الإعلانات",
-    tabPlan: "الخطة والفوترة",
-
-    languageTitle: "اللغة",
-    languageHint: "لغة لوحة التحكم واتجاهها. يُحفظ الاختيار على هذا الجهاز.",
-
-    profileTitle: "ملف المتجر",
-    profileHint: "الاسم والشعار والوصف المختصر الظاهر في لوحة التحكم وواجهة المتجر.",
-    profileSaved: "تم حفظ ملف المتجر.",
-    name: "الاسم",
-    logo: "الشعار",
-    logoAlt: "شعار المتجر",
-    none: "لا يوجد",
-    resizing: "جارٍ تصغير الصورة…",
-    uploading: "جارٍ الرفع…",
-    uploadLogo: "رفع الشعار",
-    remove: "إزالة",
-    logoHint: "PNG أو JPEG أو GIF أو WEBP، بحد أقصى 5 ميجابايت.",
-    tagline: "الوصف المختصر",
-    taglineHint: "اختياري — سطر قصير يظهر أسفل اسم متجرك.",
-    colorsTitle: "ألوان المتجر",
-    colorsHint: "تُستخدم في رأس واجهة المتجر والأزرار والروابط.",
-    primary: "اللون الأساسي",
-    primaryHint: "الأزرار والروابط والعناصر البارزة.",
-    secondary: "اللون الثانوي",
-    secondaryHint: "اللمسات الإضافية والشارات.",
-    preview: "معاينة",
-    previewAddToCart: "أضف إلى السلة",
-    previewSale: "تخفيض",
-    previewDetails: "عرض التفاصيل",
-
-    teamTitle: "أعضاء الفريق",
-    teamHint: "الأشخاص الذين يمكنهم الدخول إلى هذا المتجر، والدور الذي يحدد صلاحياتهم.",
-    inviteMember: "دعوة عضو",
-    roleUpdated: "تم تحديث الدور.",
-    inviteResent: "تمت إعادة إرسال الدعوة إلى {email}.",
-    memberRemoved: "تمت إزالة العضو.",
-    colMember: "العضو",
-    colRole: "الدور",
-    colEmail: "البريد الإلكتروني",
-    you: "(أنت)",
-    roleFor: "دور {email}",
-    memberFallback: "العضو",
-    cantRemoveSelf: "لا يمكنك إزالة نفسك",
-    pendingInvites: "دعوات قيد الانتظار",
-    invited: "تمت الدعوة",
-    resend: "إعادة الإرسال",
-    inviteDescription: "سيصله بريد إلكتروني برابط للانضمام إلى هذا المتجر.",
-    removeNamed: "إزالة {name}؟",
-    removeThis: "إزالة هذا العضو؟",
-    removeDescription: "سيفقد الوصول إلى هذا المتجر فورًا. يمكنك دعوته مرة أخرى لاحقًا.",
-    removeMember: "إزالة العضو",
-    inviteSent: "تم إرسال الدعوة إلى {email}.",
-    email: "البريد الإلكتروني",
-    role: "الدور",
-    sending: "جارٍ الإرسال…",
-    sendInvite: "إرسال الدعوة",
+    pageTitle: "الإعدادات",
+    searchPlaceholder: "ابحث في الإعدادات…",
+    g_store: "المتجر",
+    g_orders: "الطلبات",
+    g_messages: "الرسائل",
+    g_team: "الفريق",
+    g_billing: "الخطة",
+    g_account: "حسابي",
+    g_developers: "للمطوّرين",
+    s_identity: "هوية المتجر",
+    d_identity: "الاسم والشعار وجملة التعريف والألوان",
+    s_account_settings: "التوقيت والفواتير",
+    d_account_settings: "توقيت المتجر وبريد التواصل وبيانات النشاط على الفواتير",
+    s_catalog: "عرض المنتجات",
+    d_catalog: "الفلاتر والترتيب في صفحات المنتجات بالمتجر",
+    s_order_bump: "عرض مع الطلب",
+    d_order_bump: "عرض إضافي واحد يظهر فوق زر الطلب",
+    s_holiday: "وضع الإجازة",
+    d_holiday: "أوقف الطلبات، أو اقبلها واشحنها لاحقًا",
+    s_whatsapp_message: "رسالة واتساب",
+    d_whatsapp_message: "نص رسالة تأكيد الطلب",
+    s_whatsapp: "ربط واتساب",
+    d_whatsapp: "رقم واتساب للأعمال الخاص بك، للرسائل والأتمتة",
+    s_order_emails: "بريد الطلبات",
+    d_order_emails: "الرسائل التي تصل العميل، وباسم مَن تُرسل",
+    s_members: "الأعضاء والدعوات",
+    d_members: "مَن يستطيع دخول هذا المتجر، ودعوة آخرين",
+    s_billing: "الخطة والفوترة",
+    d_billing: "خطتك، والمبلغ المستحق، واستهلاك الشهر",
+    s_profile: "الملف الشخصي",
+    d_profile: "اسمك واسم المستخدم والبريد الإلكتروني والهاتف",
+    s_appearance: "اللغة والشكل",
+    d_appearance: "عربي أو إنجليزي، فاتح أو داكن، الزجاج",
+    s_notifications: "الإشعارات",
+    d_notifications: "ما الذي يصلك، وأين",
+    s_security: "الأمان",
+    d_security: "الدخول بخطوتين وكلمة المرور",
+    s_developers: "مفاتيح API والـ webhooks",
+    d_developers: "اربط أنظمة أخرى بهذا المتجر",
+    storeCardRole: "أنت داخل على هذا المتجر",
   },
 } satisfies Messages;
 
-const SECTION_CARD = "rounded-2xl border border-line bg-paper-raised p-5 shadow-card";
-const TABLE_WRAP = "overflow-x-auto rounded-2xl border border-line bg-paper-raised";
-const TH_ROW = "border-b border-line bg-paper text-start text-xs uppercase tracking-wide text-ink-soft";
+type T = Record<keyof (typeof STRINGS)["en"], string>;
+
+/**
+ * Every section of the page, in the order of the list. The id is what `?tab=`
+ * carries. `key` is the id as it is spelled in the string keys (s_<key>,
+ * d_<key>), `group` the heading it sits under. The sections are the ones this
+ * page always had; the list only says where each one is.
+ */
+const SECTIONS = [
+  { id: "identity", key: "identity", group: "store", icon: IconStore, tone: "blue", words: ["store identity", "store profile", "name", "logo", "tagline", "colours", "colors", "brand", "هوية", "الاسم", "الشعار", "اللوجو", "ألوان"] },
+  { id: "account-settings", key: "account_settings", group: "store", icon: IconClock, tone: "gray", words: ["account settings", "time zone", "timezone", "invoice", "legal", "contact email", "country", "التوقيت", "فاتورة", "الفواتير", "البلد", "العملة"] },
+  { id: "catalog", key: "catalog", group: "store", icon: IconFilter, tone: "purple", words: ["catalog", "listing", "filters", "sort", "products", "الكتالوج", "فلاتر", "ترتيب", "المنتجات"] },
+  { id: "order-bump", key: "order_bump", group: "store", icon: IconGift, tone: "pink", words: ["order bump", "add-on", "upsell", "offer", "checkout", "عرض", "إضافي", "الدفع"] },
+  { id: "holiday", key: "holiday", group: "orders", icon: IconHoliday, tone: "orange", words: ["holiday", "vacation", "pause", "away", "إجازة", "أجازة", "إيقاف"] },
+  { id: "whatsapp-message", key: "whatsapp_message", group: "messages", icon: IconMessage, tone: "green", words: ["whatsapp message", "template", "confirmation", "رسالة", "واتساب", "تأكيد", "قالب"] },
+  { id: "whatsapp", key: "whatsapp", group: "messages", icon: IconWhatsApp, tone: "green", words: ["whatsapp", "cloud api", "meta", "connect", "واتساب", "ربط", "ميتا"] },
+  { id: "order-emails", key: "order_emails", group: "messages", icon: IconEmail, tone: "blue", words: ["emails", "sender", "reply-to", "إيميل", "إيميلات", "بريد", "المرسل"] },
+  { id: "members", key: "members", group: "team", icon: IconTeam, tone: "blue", words: ["team", "members", "invite", "roles", "الفريق", "أعضاء", "دعوة", "دور", "صلاحيات"] },
+  { id: "billing", key: "billing", group: "billing", icon: IconCard, tone: "green", words: ["plan", "billing", "subscription", "pay", "usage", "referral code", "الخطة", "الفوترة", "الفواتير", "اشتراك", "دفع", "استهلاك"] },
+  { id: "profile", key: "profile", group: "account", icon: IconAccount, tone: "blue", words: ["profile", "account", "name", "username", "email", "phone", "اسمي", "اسم المستخدم", "البريد", "الهاتف", "حسابي"] },
+  { id: "appearance", key: "appearance", group: "account", icon: IconTheme, tone: "purple", words: ["language", "theme", "dark", "light", "black", "oled", "tone", "glass", "glow", "appearance", "look", "اللغة", "عربي", "إنجليزي", "داكن", "غامق", "فاتح", "أسود", "درجة", "زجاج", "توهج", "المظهر", "الشكل"] },
+  { id: "notifications", key: "notifications", group: "account", icon: IconBell, tone: "red", words: ["notifications", "sound", "summary reports", "email", "إشعارات", "تنبيهات", "صوت", "تقارير"] },
+  { id: "security", key: "security", group: "account", icon: IconShield, tone: "green", words: ["security", "two-step", "2fa", "two factor", "password", "backup codes", "الأمان", "خطوتين", "كلمة المرور", "رموز احتياطية"] },
+  { id: "developers", key: "developers", group: "developers", icon: IconKey, tone: "gray", words: ["api", "api keys", "webhooks", "developers", "مفاتيح", "ويب هوك", "المطورين"] },
+] as const satisfies ReadonlyArray<{ id: string; key: string; group: string; icon: IconComponent; tone: SettingsTone; words: readonly string[] }>;
+
+type SectionId = (typeof SECTIONS)[number]["id"];
+
+const SECTION_IDS: ReadonlySet<string> = new Set(SECTIONS.map((section) => section.id));
+
+function isSectionId(value: string | null): value is SectionId {
+  return value !== null && SECTION_IDS.has(value);
+}
+
+/** Links written before the page had a list (#whatsapp, #notifications…) still land on the right section. */
+const HASH_SECTION: Record<string, SectionId> = {
+  whatsapp: "whatsapp",
+  notifications: "notifications",
+  "summary-reports": "notifications",
+  "order-emails": "order-emails",
+};
+
+/** A block inside a section that a link may point at: brought into view once the section is drawn. */
+const SCROLL_ANCHORS: ReadonlySet<string> = new Set(["summary-reports"]);
+
+/** Tailwind's `lg`, where SettingsLayout puts the list and the pane side by side. */
+const DESKTOP = "(min-width: 64rem)";
+
+/**
+ * The section in the URL, and the way to change it.
+ *
+ * `?tab=<section id>`; an old `#anchor` is read as the section it means and
+ * the URL is rewritten to say so. `null` = none chosen: a phone shows the
+ * list, a desktop the first section.
+ *
+ * On a phone, going from the list into a section adds a history entry, so the
+ * browser's Back returns to the list; the back row of the pane goes back to
+ * that same entry. Everywhere else the URL is replaced — switching sections
+ * does not pile up history.
+ */
+function useSettingsUrl(): { current: SectionId | null; select: (id: string | null) => void } {
+  const [params] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const raw = params.get("tab");
+  const hash = location.hash.replace("#", "");
+  const current: SectionId | null = isSectionId(raw) ? raw : (HASH_SECTION[hash] ?? null);
+
+  // The block a link pointed at inside its section, kept past the rewrite of the URL below.
+  const anchor = useRef<string | null>(null);
+
+  // An old link: say the section in the URL the way the page writes it now (the other params stay).
+  useEffect(() => {
+    if (current === null || raw === current) return;
+    if (SCROLL_ANCHORS.has(hash)) anchor.current = hash;
+    const next = new URLSearchParams(location.search);
+    next.set("tab", current);
+    navigate({ search: `?${next.toString()}`, hash: "" }, { replace: true, state: location.state });
+  }, [current, raw, hash, location.search, location.state, navigate]);
+
+  useEffect(() => {
+    if (anchor.current === null && SCROLL_ANCHORS.has(hash)) anchor.current = hash;
+    const id = anchor.current;
+    if (!id) return;
+    // Once the section is drawn (the layout scrolls to the top on a switch first).
+    const timer = window.setTimeout(() => {
+      anchor.current = null;
+      document.getElementById(id)?.scrollIntoView({ block: "start" });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [current, hash]);
+
+  const fromList = (location.state as { settingsFromList?: boolean } | null)?.settingsFromList === true;
+
+  const select = useCallback(
+    (id: string | null) => {
+      const phone = !window.matchMedia(DESKTOP).matches;
+      const next = new URLSearchParams(window.location.search);
+      if (id === null) {
+        // Back to the list: the entry it was opened from, when there is one.
+        if (phone && fromList) {
+          navigate(-1);
+          return;
+        }
+        next.delete("tab");
+        const search = next.toString();
+        navigate({ search: search ? `?${search}` : "", hash: "" }, { replace: true });
+        return;
+      }
+      next.set("tab", id);
+      const push = phone && current === null;
+      navigate(
+        { search: `?${next.toString()}`, hash: "" },
+        push ? { state: { settingsFromList: true } } : { replace: true, state: fromList ? { settingsFromList: true } : null }
+      );
+    },
+    [current, fromList, navigate]
+  );
+
+  return { current, select };
+}
 
 export function SettingsPage() {
-  const workspaceId = useWorkspaceId();
-  const t = useT(STRINGS);
+  const [params] = useSearchParams();
+  // Fawaterak's return links (?payment=…&workspace=…&result=…) were made
+  // for this page; the payment is now shown in Subscription, with the same query.
+  if (params.get("payment")) return <Navigate to={`/subscription?${params.toString()}`} replace />;
 
   return (
-    <div className="max-w-5xl">
-      <PageHeader title={t.title} description={t.description} />
-      <Tabs defaultValue="general">
-        <div className="-mx-1 overflow-x-auto px-1 pb-1">
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="general">{t.tabGeneral}</TabsTrigger>
-            <TabsTrigger value="team">{t.tabTeam}</TabsTrigger>
-            <TabsTrigger value="checkout">{t.tabCheckout}</TabsTrigger>
-            <TabsTrigger value="domains">{t.tabDomains}</TabsTrigger>
-            <TabsTrigger value="camouflage">{t.tabCamouflage}</TabsTrigger>
-            <TabsTrigger value="plan">{t.tabPlan}</TabsTrigger>
-          </TabsList>
-        </div>
-        <TabsContent value="general" className="max-w-3xl space-y-6 pt-4">
-          <LanguageSection />
-          <WorkspaceProfileSection key={`profile-${workspaceId}`} />
-        </TabsContent>
-        <TabsContent value="team" className="max-w-3xl pt-4">
-          <TeamSection key={`team-${workspaceId}`} />
-        </TabsContent>
-        <TabsContent value="checkout" className="pt-4">
-          <CheckoutSettingsTab key={`checkout-${workspaceId}`} />
-        </TabsContent>
-        <TabsContent value="domains" className="max-w-3xl pt-4">
-          <DomainsTab key={`domains-${workspaceId}`} />
-        </TabsContent>
-        <TabsContent value="camouflage" className="max-w-3xl pt-4">
-          <CamouflageTab key={`camo-${workspaceId}`} />
-        </TabsContent>
-        <TabsContent value="plan" className="pt-4">
-          <PlanTab key={`plan-${workspaceId}`} />
-        </TabsContent>
-      </Tabs>
+    <UnsavedGuardProvider>
+      <SettingsScreen />
+    </UnsavedGuardProvider>
+  );
+}
+
+function SettingsScreen() {
+  const t = useT(STRINGS);
+  const workspaceId = useWorkspaceId();
+  const { currentWorkspace } = useWorkspace();
+  const { confirmLeave } = useUnsavedGuard();
+  const { current, select } = useSettingsUrl();
+
+  const role = currentWorkspace?.role;
+  // A section whose switch is off, or that this role has nothing in, is not listed (and not drawn).
+  const hidden = useMemo(() => {
+    const out = new Set<SectionId>();
+    if (!HOLIDAY_MODE_ENABLED) out.add("holiday");
+    if (!TWO_FACTOR_ENABLED) out.add("security");
+    if (!BILLING_ROLES.has(role ?? "")) out.add("billing");
+    return out;
+  }, [role]);
+
+  const sections = useMemo<SettingsSectionDef[]>(
+    () =>
+      SECTIONS.filter((section) => !hidden.has(section.id)).map((section) => ({
+        id: section.id,
+        label: t[`s_${section.key}`],
+        description: t[`d_${section.key}`],
+        icon: section.icon,
+        tone: section.tone,
+        group: t[`g_${section.group}`],
+        keywords: [...section.words],
+      })),
+    [hidden, t]
+  );
+
+  // A desktop with nothing chosen shows the first section (the layout asks for it in the URL too).
+  // A link to a section that is not listed for this build or this role lands on the first one as well.
+  const shownId: SectionId = current !== null && !hidden.has(current) ? current : "identity";
+  const shown = SECTIONS.find((section) => section.id === shownId) ?? SECTIONS[0];
+
+  return (
+    <SettingsLayout
+      title={t.pageTitle}
+      sections={sections}
+      current={current !== null && hidden.has(current) ? "identity" : current}
+      onSelect={select}
+      canLeave={confirmLeave}
+      searchPlaceholder={t.searchPlaceholder}
+      listHeader={<StoreCard t={t} />}
+    >
+      {/* A store switch, like a section switch, starts the section afresh. */}
+      <SectionFrame key={`${shownId}-${workspaceId}`} id={shownId} title={t[`s_${shown.key}`]} description={t[`d_${shown.key}`]} icon={shown.icon} tone={shown.tone} />
+    </SettingsLayout>
+  );
+}
+
+/** Which store these settings belong to: its logo, its name, its address. Over the list. */
+function StoreCard({ t }: { t: T }) {
+  const { currentWorkspace } = useWorkspace();
+  if (!currentWorkspace) return null;
+  return (
+    <div className="flex items-center gap-3 rounded-[1.25rem] bg-card px-4 py-3 shadow-[var(--shadow-card)] ring-1 ring-line lg:rounded-2xl lg:bg-paper-sunken lg:px-3 lg:py-2.5 lg:shadow-none">
+      {currentWorkspace.logoUrl ? (
+        <img src={currentWorkspace.logoUrl} alt="" className="size-11 shrink-0 rounded-xl bg-paper object-contain ring-1 ring-line lg:size-9" />
+      ) : (
+        <span aria-hidden className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-lg font-semibold text-primary lg:size-9 lg:text-base">
+          {(currentWorkspace.name || "?").charAt(0).toUpperCase()}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] leading-5 font-semibold text-ink lg:text-sm">
+          <span className="sr-only">{t.storeCardRole}: </span>
+          <bdi>{currentWorkspace.name}</bdi>
+        </p>
+        {currentWorkspace.slug && (
+          <p className="truncate text-[13px] leading-5 text-ink-soft lg:text-xs">
+            <bdi dir="ltr">{storeHost(currentWorkspace.slug)}</bdi>
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------
-// Language
-// ---------------------------------------------------------------------
-
-const LANGUAGE_OPTIONS: Array<{ value: Locale; label: string; lang: string; dir: "rtl" | "ltr" }> = [
-  { value: "ar", label: "العربية", lang: "ar", dir: "rtl" },
-  { value: "en", label: "English", lang: "en", dir: "ltr" },
-];
-
-function LanguageSection() {
-  const t = useT(STRINGS);
-  const { locale, setLocale } = useLocale();
-
+/**
+ * One section in the pane, under the header the list names it by (its icon
+ * tile, its name, one line). Security draws that header itself.
+ */
+function SectionFrame({ id, title, description, icon, tone }: { id: SectionId; title: string; description: string; icon: IconComponent; tone: SettingsTone }) {
+  if (id === "security") return <SecuritySection />;
   return (
-    <section className={SECTION_CARD}>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-ink">
-            <Languages className="size-4 text-primary" /> {t.languageTitle}
-          </h2>
-          <p className="mt-1 text-sm text-ink-soft">{t.languageHint}</p>
-        </div>
-        <div
-          role="radiogroup"
-          aria-label={t.languageTitle}
-          className="inline-flex rounded-xl border border-line bg-paper p-1"
-        >
-          {LANGUAGE_OPTIONS.map((opt) => {
-            const selected = locale === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                lang={opt.lang}
-                dir={opt.dir}
-                onClick={() => setLocale(opt.value)}
-                className={cn(
-                  "min-w-24 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
-                  selected ? "bg-primary text-primary-foreground shadow-sm" : "text-ink-soft hover:text-ink"
-                )}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <SettingsPane title={title} description={description} icon={icon} tone={tone}>
+      <SectionBody id={id} />
+    </SettingsPane>
+  );
+}
+
+/** The content of one section. Each loads and saves itself. */
+function SectionBody({ id }: { id: Exclude<SectionId, "security"> }): ReactNode {
+  switch (id) {
+    case "identity":
+      return <WorkspaceProfileSection />;
+    case "account-settings":
+      return <AccountSettingsSection />;
+    case "catalog":
+      return <CatalogSettingsSection />;
+    case "order-bump":
+      return <OrderBumpSettingsSection />;
+    // Pausing orders, or taking them and shipping later (lib/features).
+    case "holiday":
+      return <HolidayModeSection />;
+    case "whatsapp-message":
+      return <WhatsAppMessageSection />;
+    // The WhatsApp Cloud API connection behind the inbox and automations.
+    case "whatsapp":
+      return <WhatsappSection />;
+    // The emails customers get about their orders.
+    case "order-emails":
+      return <OrderEmailsSection />;
+    case "members":
+      return <TeamSection />;
+    // The plan itself is in My Plan; this is the way there.
+    case "billing":
+      return <SubscriptionLinkSection />;
+    case "profile":
+      return <AccountSection />;
+    case "appearance":
+      return <AppearanceSection />;
+    case "notifications":
+      return (
+        <>
+          <NotificationPreferencesSection />
+          {/* A daily or weekly email of the store's numbers to chosen team members (lib/features). */}
+          {STORE_REPORTS_ENABLED && <SummaryReportsSection />}
+        </>
+      );
+    case "developers":
+      return <DevelopersSection />;
+  }
+}
+
+/** The plan, payments and referral code moved to the Subscription section. */
+function SubscriptionLinkSection() {
+  const t = useT(SUBSCRIPTION_STRINGS);
+  const { currentWorkspace } = useWorkspace();
+  if (!BILLING_ROLES.has(currentWorkspace?.role ?? "")) return null;
+  return (
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <h2 className="font-display text-lg font-medium text-ink">{t.settingsTitle}</h2>
+      <p className="mt-1 text-sm text-ink-soft">{t.settingsBody}</p>
+      <Button asChild variant="outline" className="mt-4 min-h-11">
+        <Link to="/subscription">{t.settingsOpen}</Link>
+      </Button>
     </section>
   );
 }
@@ -270,24 +451,33 @@ function LanguageSection() {
 // Workspace profile
 // ---------------------------------------------------------------------
 
+/** The note under the store logo: it is the storefront's browser tab icon too. */
+const LOGO_STRINGS = {
+  en: { tabIcon: "Your logo is also your store's browser tab icon. Use a square image of at least 192×192." },
+  ar: { tabIcon: "شعارك هو أيضًا أيقونة متجرك في تبويب المتصفح. استخدم صورة مربعة لا تقل عن 192×192." },
+} satisfies Messages;
+
 function WorkspaceProfileSection() {
+  const logoText = useT(LOGO_STRINGS);
   const workspaceId = useWorkspaceId();
-  const { currentWorkspace, refresh } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
+  const saveThemeSettings = useSaveThemeSettings();
   const toast = useToast();
-  const t = useT(STRINGS);
-  const c = useCommon();
 
   const [name, setName] = useState(currentWorkspace?.name ?? "");
   const [tagline, setTagline] = useState(currentWorkspace?.tagline ?? "");
   const [logoUrl, setLogoUrl] = useState<string | null>(currentWorkspace?.logoUrl ?? null);
   const [logoStage, setLogoStage] = useState<"preparing" | "uploading" | null>(null);
   const uploading = logoStage !== null;
-  const [primaryColor, setPrimaryColor] = useState(() =>
-    readThemeColor(currentWorkspace?.themeSettings, "primaryColor", DEFAULT_PRIMARY)
-  );
-  const [secondaryColor, setSecondaryColor] = useState(() =>
-    readThemeColor(currentWorkspace?.themeSettings, "secondaryColor", DEFAULT_SECONDARY)
-  );
+  // What the colour fields opened with: a colour is only written once the
+  // merchant changes it here, so saving the name or logo never pins the
+  // platform default over a store theme's own accent.
+  const [initialColors] = useState(() => ({
+    primary: readThemeColor(currentWorkspace?.themeSettings, "primaryColor", DEFAULT_PRIMARY),
+    secondary: readThemeColor(currentWorkspace?.themeSettings, "secondaryColor", DEFAULT_SECONDARY),
+  }));
+  const [primaryColor, setPrimaryColor] = useState(initialColors.primary);
+  const [secondaryColor, setSecondaryColor] = useState(initialColors.secondary);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -324,21 +514,21 @@ function WorkspaceProfileSection() {
     setFieldErrors({});
     setSaving(true);
     try {
-      await apiClient.updateWorkspace(workspaceId, {
-        name: name.trim(),
-        tagline: tagline.trim() || null,
-        logoUrl,
+      const primary = normalizeHex(primaryColor) ?? DEFAULT_PRIMARY;
+      const secondary = normalizeHex(secondaryColor) ?? DEFAULT_SECONDARY;
+      await saveThemeSettings((current) => {
         // Merge, never replace: themeSettings is a shared blob and may already
         // carry keys owned by other parts of the product.
-        themeSettings: {
-          ...(currentWorkspace?.themeSettings ?? {}),
-          primaryColor: normalizeHex(primaryColor) ?? DEFAULT_PRIMARY,
-          secondaryColor: normalizeHex(secondaryColor) ?? DEFAULT_SECONDARY,
-        },
+        const themeSettings: Record<string, unknown> = { ...current };
+        if (primary !== initialColors.primary) {
+          themeSettings.primaryColor = primary;
+          // The merchant's own colour now, no longer one a template carried over.
+          delete themeSettings.primaryColorSource;
+        }
+        if (secondary !== initialColors.secondary) themeSettings.secondaryColor = secondary;
+        return { name: name.trim(), tagline: tagline.trim() || null, logoUrl, themeSettings };
       });
-      toast.success(t.profileSaved);
-      // Refresh the workspace list so the new name shows in the header switcher.
-      await refresh();
+      toast.success("Store profile saved.");
     } catch (err) {
       const fields = getFieldErrors(err);
       setFieldErrors(fields);
@@ -348,47 +538,45 @@ function WorkspaceProfileSection() {
     }
   }
 
-  const primaryHex = normalizeHex(primaryColor) ?? DEFAULT_PRIMARY;
-  const secondaryHex = normalizeHex(secondaryColor) ?? DEFAULT_SECONDARY;
-
   return (
-    <section className={SECTION_CARD}>
-      <h2 className="font-display text-lg font-semibold text-ink">{t.profileTitle}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{t.profileHint}</p>
+    <section className="rounded-[var(--radius-card)] border border-line p-5">
+      <h2 className="font-display text-lg font-medium text-ink">Store profile</h2>
+      <p className="mt-1 text-sm text-ink-soft">
+        The name, logo, and tagline shown across your dashboard and storefront.
+      </p>
 
       <form onSubmit={submit} className="mt-4 space-y-4">
         {formError && <Alert variant="danger">{formError}</Alert>}
 
         <TextField
-          label={t.name}
+          label="Name"
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
           error={fieldErrors.name}
-          dir="auto"
         />
 
         <div className="space-y-1.5">
-          <Label>{t.logo}</Label>
+          <Label>Logo</Label>
           <div className="flex flex-wrap items-center gap-4">
             {logoUrl ? (
               <img
                 src={logoUrl}
-                alt={t.logoAlt}
-                className="size-16 rounded-xl border border-line bg-paper object-contain"
+                alt="Store logo"
+                className="size-16 rounded-[0.5rem] border border-line bg-paper object-contain"
               />
             ) : (
-              <div className="flex size-16 items-center justify-center rounded-xl border border-dashed border-line text-xs text-ink-soft">
-                {t.none}
+              <div className="flex size-16 items-center justify-center rounded-[0.5rem] border border-dashed border-line text-xs text-ink-soft">
+                None
               </div>
             )}
             <label
               className={cn(
-                "inline-flex cursor-pointer items-center rounded-[var(--radius-button)] border border-line bg-paper-raised px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-paper",
+                "inline-flex cursor-pointer items-center rounded-[0.5rem] border border-line bg-paper-raised px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-paper",
                 uploading && "pointer-events-none opacity-50"
               )}
             >
-              {logoStage === "preparing" ? t.resizing : logoStage === "uploading" ? t.uploading : t.uploadLogo}
+              {logoStage === "preparing" ? "Resizing…" : logoStage === "uploading" ? "Uploading…" : "Upload logo"}
               <input
                 type="file"
                 accept={ACCEPTED_IMAGE_ACCEPT}
@@ -399,63 +587,68 @@ function WorkspaceProfileSection() {
             </label>
             {logoUrl && (
               <Button type="button" variant="ghost" size="sm" onClick={() => setLogoUrl(null)}>
-                {t.remove}
+                Remove
               </Button>
             )}
           </div>
-          <p className="text-xs text-ink-soft">{t.logoHint}</p>
+          <p className="text-xs text-ink-soft">PNG, JPEG, GIF or WEBP, up to 5MB.</p>
+          <p className="text-xs text-ink-soft">{logoText.tabIcon}</p>
         </div>
 
         <TextField
-          label={t.tagline}
+          label="Tagline"
           value={tagline}
           onChange={(e) => setTagline(e.target.value)}
           error={fieldErrors.tagline}
-          hint={t.taglineHint}
-          dir="auto"
+          hint="Optional — a short line shown under your store name."
         />
 
-        <div className="space-y-4 rounded-xl border border-line bg-paper p-4">
+        <div className="space-y-4 rounded-[0.5rem] border border-line p-4">
           <div>
-            <h3 className="text-sm font-semibold text-ink">{t.colorsTitle}</h3>
-            <p className="mt-0.5 text-xs text-ink-soft">{t.colorsHint}</p>
+            <h3 className="text-sm font-medium text-ink">Store colours</h3>
+            <p className="mt-0.5 text-xs text-ink-soft">
+              Used for your storefront header, buttons and links.
+            </p>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
             <ColorField
-              label={t.primary}
-              hint={t.primaryHint}
+              label="Primary"
+              hint="Buttons, links and highlights."
               value={primaryColor}
               onChange={setPrimaryColor}
             />
             <ColorField
-              label={t.secondary}
-              hint={t.secondaryHint}
+              label="Secondary"
+              hint="Accents and badges."
               value={secondaryColor}
               onChange={setSecondaryColor}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label>{t.preview}</Label>
+            <Label>Preview</Label>
             <div
-              className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-3"
-              style={{ backgroundColor: `${primaryHex}14` }}
+              className="flex flex-wrap items-center gap-3 rounded-[0.5rem] border border-line p-3"
+              style={{ backgroundColor: `${normalizeHex(primaryColor) ?? DEFAULT_PRIMARY}14` }}
             >
               <span
-                className="rounded-[var(--radius-button)] px-3 py-1.5 text-sm font-medium text-white"
-                style={{ backgroundColor: primaryHex }}
+                className="rounded-[0.5rem] px-3 py-1.5 text-sm font-medium text-white"
+                style={{ backgroundColor: normalizeHex(primaryColor) ?? DEFAULT_PRIMARY }}
               >
-                {t.previewAddToCart}
+                Add to cart
               </span>
               <span
                 className="rounded-full px-2.5 py-1 text-xs font-medium text-white"
-                style={{ backgroundColor: secondaryHex }}
+                style={{ backgroundColor: normalizeHex(secondaryColor) ?? DEFAULT_SECONDARY }}
               >
-                {t.previewSale}
+                Sale
               </span>
-              <span className="text-sm font-medium" style={{ color: primaryHex }}>
-                {t.previewDetails}
+              <span
+                className="text-sm font-medium"
+                style={{ color: normalizeHex(primaryColor) ?? DEFAULT_PRIMARY }}
+              >
+                View details
               </span>
             </div>
           </div>
@@ -463,7 +656,7 @@ function WorkspaceProfileSection() {
 
         <div className="flex justify-end">
           <Button type="submit" disabled={saving || uploading || !name.trim() || !colorsValid}>
-            {saving ? c.saving : c.save}
+            {saving ? "Saving…" : "Save"}
           </Button>
         </div>
       </form>
@@ -479,7 +672,6 @@ function TeamSection() {
   const workspaceId = useWorkspaceId();
   const { user } = useAuth();
   const toast = useToast();
-  const t = useT(STRINGS);
 
   const data = useAsync(
     () =>
@@ -502,7 +694,7 @@ function TeamSection() {
   async function changeRole(member: WorkspaceMember, roleId: string) {
     try {
       await apiClient.updateMemberRole(workspaceId, member.id, roleId);
-      toast.success(t.roleUpdated);
+      toast.success("Role updated.");
       reload();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -512,7 +704,7 @@ function TeamSection() {
   async function resend(invite: WorkspaceInvite) {
     try {
       await apiClient.resendInvite(workspaceId, invite.id);
-      toast.success(fmt(t.inviteResent, { email: invite.invitedEmail ?? "" }));
+      toast.success(`Invite re-sent to ${invite.invitedEmail}.`);
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -521,7 +713,7 @@ function TeamSection() {
   async function confirmRemove() {
     if (!removing) return;
     await apiClient.removeMember(workspaceId, removing.id);
-    toast.success(t.memberRemoved);
+    toast.success("Member removed.");
     setRemoving(null);
     reload();
   }
@@ -530,22 +722,24 @@ function TeamSection() {
     <section>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-semibold text-ink">{t.teamTitle}</h2>
-          <p className="mt-1 text-sm text-ink-soft">{t.teamHint}</p>
+          <h2 className="font-display text-lg font-medium text-ink">Team members</h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            People who can sign in to this store, and the role that sets what they can do.
+          </p>
         </div>
         <Button onClick={() => setInviting(true)} disabled={roles.length === 0}>
-          {t.inviteMember}
+          Invite member
         </Button>
       </div>
 
       <DataState loading={data.loading} error={data.error} onRetry={() => data.refresh()}>
         <div className="mt-4 space-y-8">
-          <div className={TABLE_WRAP}>
+          <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
-                <tr className={TH_ROW}>
-                  <th className="px-4 py-3 text-start font-medium">{t.colMember}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t.colRole}</th>
+                <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+                  <th className="px-4 py-3 font-medium">Member</th>
+                  <th className="px-4 py-3 font-medium">Role</th>
                   <th className="px-4 py-3 font-medium" />
                 </tr>
               </thead>
@@ -556,15 +750,13 @@ function TeamSection() {
                     <tr key={member.id} className="border-b border-line last:border-0">
                       <td className="px-4 py-3">
                         <div className="font-medium text-ink">
-                          <bdi>{member.user?.fullName || member.user?.email || "—"}</bdi>
+                          {member.user?.fullName || member.user?.email || "—"}
                           {isSelf && (
-                            <span className="ms-1.5 text-xs font-normal text-ink-soft">{t.you}</span>
+                            <span className="ms-1.5 text-xs font-normal text-ink-soft">(you)</span>
                           )}
                         </div>
                         {member.user?.email && (
-                          <div className="text-xs text-ink-soft">
-                            <bdi dir="ltr">{member.user.email}</bdi>
-                          </div>
+                          <div className="text-xs text-ink-soft">{member.user.email}</div>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -572,7 +764,7 @@ function TeamSection() {
                           <span className="text-ink-soft">{member.role.name}</span>
                         ) : (
                           <Select
-                            aria-label={fmt(t.roleFor, { email: member.user?.email ?? t.memberFallback })}
+                            aria-label={`Role for ${member.user?.email ?? "member"}`}
                             value={member.role.id}
                             onChange={(e) => changeRole(member, e.target.value)}
                             className="max-w-[220px]"
@@ -587,7 +779,10 @@ function TeamSection() {
                       </td>
                       <td className="px-4 py-3 text-end">
                         {isSelf ? (
-                          <span className="text-xs text-ink-soft" title={t.cantRemoveSelf}>
+                          <span
+                            className="text-xs text-ink-soft"
+                            title="You can't remove yourself"
+                          >
                             —
                           </span>
                         ) : (
@@ -597,7 +792,7 @@ function TeamSection() {
                             className="text-danger hover:bg-danger-soft"
                             onClick={() => setRemoving(member)}
                           >
-                            {t.remove}
+                            Remove
                           </Button>
                         )}
                       </td>
@@ -610,13 +805,13 @@ function TeamSection() {
 
           {invites.length > 0 && (
             <div>
-              <h3 className="mb-2 text-sm font-semibold text-ink">{t.pendingInvites}</h3>
-              <div className={TABLE_WRAP}>
+              <h3 className="mb-2 text-sm font-medium text-ink">Pending invites</h3>
+              <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
                 <table className="w-full min-w-[560px] text-sm">
                   <thead>
-                    <tr className={TH_ROW}>
-                      <th className="px-4 py-3 text-start font-medium">{t.colEmail}</th>
-                      <th className="px-4 py-3 text-start font-medium">{t.colRole}</th>
+                    <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+                      <th className="px-4 py-3 font-medium">Email</th>
+                      <th className="px-4 py-3 font-medium">Role</th>
                       <th className="px-4 py-3 font-medium" />
                     </tr>
                   </thead>
@@ -625,18 +820,14 @@ function TeamSection() {
                       <tr key={invite.id} className="border-b border-line last:border-0">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <bdi dir="ltr" className="text-ink">
-                              {invite.invitedEmail}
-                            </bdi>
-                            <span className="inline-flex items-center rounded-full border border-warning/30 bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
-                              {t.invited}
-                            </span>
+                            <span className="text-ink">{invite.invitedEmail}</span>
+                            <StatusBadge value="invited" tone="warning" />
                           </div>
                         </td>
                         <td className="px-4 py-3 text-ink-soft">{invite.role.name}</td>
                         <td className="px-4 py-3 text-end">
                           <Button size="sm" variant="ghost" onClick={() => resend(invite)}>
-                            {t.resend}
+                            Resend
                           </Button>
                         </td>
                       </tr>
@@ -652,8 +843,8 @@ function TeamSection() {
       <Modal
         open={inviting}
         onClose={() => setInviting(false)}
-        title={t.inviteMember}
-        description={t.inviteDescription}
+        title="Invite member"
+        description="They'll get an email with a link to join this store."
       >
         <InviteMemberForm
           roles={roles}
@@ -669,11 +860,11 @@ function TeamSection() {
         open={removing !== null}
         title={
           removing?.user
-            ? fmt(t.removeNamed, { name: removing.user.fullName || removing.user.email || "" })
-            : t.removeThis
+            ? `Remove ${removing.user.fullName || removing.user.email}?`
+            : "Remove this member?"
         }
-        description={t.removeDescription}
-        confirmLabel={t.removeMember}
+        description="They lose access to this store immediately. You can invite them again later."
+        confirmLabel="Remove member"
         destructive
         onCancel={() => setRemoving(null)}
         onConfirm={confirmRemove}
@@ -693,8 +884,9 @@ function InviteMemberForm({
 }) {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
-  const t = useT(STRINGS);
-  const c = useCommon();
+  // Translated by code: an account that hasn't confirmed its email yet can't
+  // be invited (INVITEE_NOT_CONFIRMED), which the inviter must understand.
+  const describeError = useErrorMessage();
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
@@ -709,12 +901,12 @@ function InviteMemberForm({
     try {
       const payload: InviteMemberPayload = { email: email.trim(), roleId };
       await apiClient.inviteMember(workspaceId, payload);
-      toast.success(fmt(t.inviteSent, { email: payload.email }));
+      toast.success(`Invite sent to ${payload.email}.`);
       onDone();
     } catch (err) {
       const fields = getFieldErrors(err);
       setFieldErrors(fields);
-      if (Object.keys(fields).length === 0) setFormError(getErrorMessage(err));
+      if (Object.keys(fields).length === 0) setFormError(describeError(err));
     } finally {
       setSaving(false);
     }
@@ -725,17 +917,16 @@ function InviteMemberForm({
       {formError && <Alert variant="danger">{formError}</Alert>}
 
       <TextField
-        label={t.email}
+        label="Email"
         type="email"
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         error={fieldErrors.email}
         placeholder="teammate@example.com"
-        dir="ltr"
       />
 
-      <Field label={t.role} required error={fieldErrors.roleId}>
+      <Field label="Role" required error={fieldErrors.roleId}>
         {({ id }) => (
           <Select id={id} value={roleId} onChange={(e) => setRoleId(e.target.value)}>
             {roles.map((role) => (
@@ -749,10 +940,10 @@ function InviteMemberForm({
 
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          {c.cancel}
+          Cancel
         </Button>
         <Button type="submit" disabled={saving || !email.trim() || !roleId}>
-          {saving ? t.sending : t.sendInvite}
+          {saving ? "Sending…" : "Send invite"}
         </Button>
       </div>
     </form>

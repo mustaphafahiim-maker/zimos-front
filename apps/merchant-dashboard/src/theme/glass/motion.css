@@ -1,0 +1,6 @@
+/* Page-to-page motion: view transitions and list settle-in — lib/viewTransition.ts.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables. */
+:root:not([data-glass="off"]) {
+}

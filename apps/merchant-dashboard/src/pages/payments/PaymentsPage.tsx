@@ -1,596 +1,816 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Banknote, Landmark } from "lucide-react";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Tabs, TabsContent, TabsList, TabsTrigger, cn } from "@store-builder/ui";
-import { mockApi } from "@/mock/api";
-import type { CheckoutSettings, CurrencySetting, PaymentGateway } from "@/mock/types";
+import { useId, useMemo, useState, type FormEvent } from "react";
+import { ArrowDown, ArrowUp, ExternalLink } from "lucide-react";
+import { Alert, Button, Input, Label, cn } from "@store-builder/ui";
+import {
+  ApiError,
+  type PaymentGatewayInfo,
+  type PaymentMethodEntry,
+} from "@store-builder/api-client";
+import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
-import { formatMoney, majorToMinor, minorToMajorInput } from "@/lib/format";
-import { useCommon, useLocale, useT, fmt, type Locale, type Messages } from "@/i18n/LocaleContext";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { useReportDirty } from "@/lib/useUnsavedGuard";
+import { formatDateTime } from "@/lib/format";
+import { STOREFRONT_URL } from "@/lib/storefrontUrl";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { fmt, useCommon, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { IconCard, IconSliders, IconWallet } from "@/components/icons";
 import { PageHeader } from "@/components/PageHeader";
+import { SettingsLayout, SettingsPane, useSettingsSection, type SettingsSectionDef } from "@/components/settings";
 import { DataState } from "@/components/DataState";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Modal } from "@/components/Modal";
-import { TextField, Field } from "@/components/Field";
-import { Select } from "@/components/Select";
-import { Toggle } from "@/components/Toggle";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CopyButton } from "@/components/CopyButton";
+import { ProviderLogo } from "@/components/ProviderLogo";
 import { useToast } from "@/components/Toast";
+import { ManualMethodsSection } from "./ManualMethodsSection";
+
+/**
+ * Role keys that manage payments: the backend gates every /payments call on
+ * workspace.manage, which only the owner ("*") and the workspace manager hold
+ * among the system roles. A custom role reads as view-only here, and a 403
+ * flips the page to view-only.
+ */
+const PAYMENT_ROLES: ReadonlySet<string> = new Set(["owner", "workspace_manager"]);
 
 const STRINGS = {
   en: {
     title: "Payments",
-    description: "Payment gateways, the currencies you sell in, and how COD cash reaches your bank.",
-    tabGateways: "Gateways",
-    tabCurrencies: "Currencies",
-    tabPayouts: "Payouts",
-    // Gateways
-    enabledToast: "{name} enabled.",
-    disabledToast: "{name} disabled.",
-    configuredToast: "{name} configured.",
-    configured: "Configured",
-    notConfigured: "Not configured",
-    fee: "Fee",
-    perTransaction: "per transaction",
-    configureFirst: "Configure first",
-    configure: "Configure",
-    reconfigure: "Reconfigure",
-    configureTitle: "Configure {name}",
-    // COD options
-    codFeeInvalid: "Enter a valid COD fee.",
-    codSaved: "COD options saved.",
-    otpOn: "Phone OTP required for COD.",
-    otpOff: "Phone OTP no longer required.",
-    codFee: "COD fee",
-    codFeeHint: "Added to the order total for cash-on-delivery orders. Leave blank for none.",
-    otpLabel: "Require phone OTP for COD",
-    otpDesc: "Customer confirms an SMS code before a COD order is placed.",
-    // Config form
-    codNoCredentials: "Cash on delivery needs no credentials. Confirm to mark it configured.",
-    apiKey: "API key",
-    apiSecret: "API secret",
-    merchantId: "Merchant ID",
-    optional: "Optional.",
-    // Currencies
-    currenciesSaved: "Currencies saved.",
-    colCurrency: "Currency",
-    colEnabled: "Enabled",
-    colDefault: "Default",
-    colRate: "Rate to default",
-    colRounding: "Rounding",
-    makeDefault: "Make {code} default",
-    remove: "Remove",
-    addCurrency: "Add currency",
-    selectPlaceholder: "Select…",
-    saveCurrencies: "Save currencies",
-    // Payouts
-    howTitle: "How COD payouts work",
-    howDesc:
-      "Your carrier collects cash from the customer at the door, deducts its shipping and COD fees, and settles the balance to your bank account every week. Card and wallet payments are paid out by the gateway on its own schedule.",
-    step1: "1. Delivered",
-    step1Desc: "Courier collects the order total in cash.",
-    step2: "2. Reconciled",
-    step2Desc: "Carrier matches cash to delivered shipments.",
-    step3: "3. Settled weekly",
-    step3Desc: "Net amount is transferred to your bank.",
-    recentSettlements: "Recent settlements",
-    colSettlement: "Settlement",
-    colPeriod: "Period",
-    colCarrier: "Carrier",
-    colOrders: "Orders",
-    colNet: "Net amount",
-    paid: "Paid",
-    pending: "Pending",
+    description: "Connect your own payment gateway so shoppers can pay by card or wallet. The money goes straight to your gateway account.",
+    viewOnly: "Only the store owner or a workspace manager can manage payments.",
+    viewOnlyForbidden: "Your role can't manage payments, so this is shown read-only.",
+    notAvailableTitle: "Not available yet",
+    notAvailable: "Online payments aren't switched on for this server yet. Your store keeps taking cash on delivery.",
+    offlineNotice:
+      "Online checkout isn't live on the platform yet, so shoppers only see cash on delivery for now. You can connect and test your gateway already; nothing changes for shoppers until it goes live.",
+    gatewaysTitle: "Gateways",
+    secManual: "InstaPay and wallets",
+    secManualHint: "Your own InstaPay address and wallet numbers, paid to directly.",
+    secGatewaysHint: "The payment gateways connected to this store, and their keys.",
+    secMethodsHint: "Which ways to pay shoppers see at checkout, and in which order.",
+    search: "Search the payment settings…",
+    notConnected: "Not connected",
+    connected: "Connected",
+    invalid: "Keys rejected",
+    invalidNote: "{name} rejected the saved keys. Enter them again to keep taking online payments.",
+    modeTest: "Test mode",
+    modeLive: "Live",
+    testNote:
+      "Test keys: card and wallet only show in your store preview, never to real shoppers, and orders paid in test mode can't be shipped.",
+    previewButton: "Test checkout in store preview",
+    previewOpening: "Opening preview…",
+    connectedSince: "Connected {date}",
+    lastWebhook: "Last payment update received {date}",
+    noWebhookYet: "No payment update received yet. Check that the webhook URL below is pasted into each integration.",
+    noWebhookYetAutomatic: "No payment update received yet. {name} is sent the webhook URL with every payment, so the first one arrives with the first payment.",
+    webhookTitle: "Webhook URL",
+    webhookHint: "Paste this into \"{field}\" of each {name} integration you entered below.",
+    webhookHintAutomatic:
+      "Nothing to paste for payments: {name} is given this URL with every payment. To also see refunds you make in {name}'s own dashboard, add it there under \"{field}\" (events: refund, partial_refund, void).",
+    copyWebhook: "Copy webhook URL",
+    setupTitle: "How to connect {name}",
+    helpLinks: "Help",
+    connect: "Connect {name}",
+    credentialsTitle: "Keys",
+    credentialsHint: "Stored encrypted and never shown again.",
+    methodsTitle: "Payment methods",
+    methodsHint: "Enter the integration ID for each method you want to offer.",
+    submitConnect: "Check keys and connect",
+    checking: "Checking with {name}…",
+    replaceKeys: "Replace keys",
+    editIds: "Edit integration IDs",
+    accountMethods: "Methods on your {name} account",
+    recheck: "Check the account again",
+    rechecking: "Checking…",
+    recheckedToast: "{name} account checked.",
+    methodNames: "card|mobile wallet",
+    saveIds: "Save",
+    disconnect: "Disconnect",
+    disconnectTitle: "Disconnect {name}?",
+    disconnectDescription: "Shoppers will no longer be able to pay with {name}. Past payments and refunds stay on their orders.",
+    connectedToast: "{name} is connected.",
+    savedToast: "{name} settings saved.",
+    disconnectedToast: "{name} disconnected.",
+    methodListTitle: "Checkout methods",
+    methodListHint:
+      "Choose which methods shoppers see and in what order. One gateway per method: turning one on turns the other gateway's same method off. At least one must stay on.",
+    methodCod: "Cash on delivery",
+    methodCard: "{name}: card",
+    methodWallet: "{name}: mobile wallet",
+    methodUnavailable: "Not connected",
+    moveUp: "Move up",
+    moveDown: "Move down",
+    saveMethods: "Save methods",
+    methodsSaved: "Payment methods saved.",
+    on: "On",
   },
   ar: {
     title: "المدفوعات",
-    description: "بوابات الدفع، والعملات التي تبيع بها، وكيف تصل نقدية الدفع عند الاستلام إلى حسابك البنكي.",
-    tabGateways: "بوابات الدفع",
-    tabCurrencies: "العملات",
-    tabPayouts: "التحويلات",
-    enabledToast: "تم تفعيل {name}.",
-    disabledToast: "تم تعطيل {name}.",
-    configuredToast: "تم إعداد {name}.",
-    configured: "تم الإعداد",
-    notConfigured: "غير مُعَد",
-    fee: "الرسوم",
-    perTransaction: "لكل عملية",
-    configureFirst: "قم بالإعداد أولًا",
-    configure: "إعداد",
-    reconfigure: "إعادة الإعداد",
-    configureTitle: "إعداد {name}",
-    codFeeInvalid: "أدخل رسوم دفع عند الاستلام صحيحة.",
-    codSaved: "تم حفظ خيارات الدفع عند الاستلام.",
-    otpOn: "أصبح رمز التحقق OTP مطلوبًا لطلبات الدفع عند الاستلام.",
-    otpOff: "لم يعد رمز التحقق OTP مطلوبًا.",
-    codFee: "رسوم الدفع عند الاستلام",
-    codFeeHint: "تُضاف إلى إجمالي طلبات الدفع عند الاستلام. اتركها فارغة لعدم إضافة رسوم.",
-    otpLabel: "طلب رمز تحقق OTP للدفع عند الاستلام",
-    otpDesc: "يؤكد العميل رمزًا يصله برسالة SMS قبل إنشاء طلب الدفع عند الاستلام.",
-    codNoCredentials: "الدفع عند الاستلام لا يحتاج إلى بيانات اعتماد. أكّد لتحديده كمُعَد.",
-    apiKey: "مفتاح API",
-    apiSecret: "المفتاح السري لـ API",
-    merchantId: "معرّف التاجر",
-    optional: "اختياري.",
-    currenciesSaved: "تم حفظ العملات.",
-    colCurrency: "العملة",
-    colEnabled: "مفعّلة",
-    colDefault: "الافتراضية",
-    colRate: "سعر الصرف مقابل الافتراضية",
-    colRounding: "التقريب",
-    makeDefault: "اجعل {code} العملة الافتراضية",
-    remove: "إزالة",
-    addCurrency: "إضافة عملة",
-    selectPlaceholder: "اختر…",
-    saveCurrencies: "حفظ العملات",
-    howTitle: "كيف تعمل تحويلات الدفع عند الاستلام",
-    howDesc:
-      "تحصّل شركة الشحن النقدية من العميل عند الباب، وتخصم رسوم الشحن والتحصيل، ثم تحوّل الرصيد إلى حسابك البنكي كل أسبوع. أما مدفوعات البطاقات والمحافظ فتحوّلها بوابة الدفع وفق جدولها الخاص.",
-    step1: "1. التسليم",
-    step1Desc: "المندوب يحصّل إجمالي الطلب نقدًا.",
-    step2: "2. المطابقة",
-    step2Desc: "شركة الشحن تطابق النقدية مع الشحنات المسلَّمة.",
-    step3: "3. التسوية أسبوعيًا",
-    step3Desc: "يُحوَّل صافي المبلغ إلى حسابك البنكي.",
-    recentSettlements: "أحدث التسويات",
-    colSettlement: "التسوية",
-    colPeriod: "الفترة",
-    colCarrier: "شركة الشحن",
-    colOrders: "الطلبات",
-    colNet: "صافي المبلغ",
-    paid: "مدفوعة",
-    pending: "قيد الانتظار",
+    description: "اربط بوابة الدفع الخاصة بك لكي يدفع العملاء بالكارت أو المحفظة. الفلوس بتروح مباشرة لحساب البوابة بتاعك.",
+    viewOnly: "مالك المتجر أو مدير مساحة العمل فقط يمكنه إدارة المدفوعات.",
+    viewOnlyForbidden: "دورك لا يسمح بإدارة المدفوعات، لذلك تظهر للعرض فقط.",
+    notAvailableTitle: "غير متاح بعد",
+    notAvailable: "الدفع الإلكتروني غير مفعّل على هذا الخادم بعد. متجرك مستمر في الدفع عند الاستلام.",
+    offlineNotice:
+      "الدفع الإلكتروني لم يُفعَّل على المنصة بعد، لذلك يرى العملاء الدفع عند الاستلام فقط حاليًا. يمكنك ربط البوابة وتجربتها من الآن، ولن يتغير شيء للعملاء قبل التفعيل.",
+    gatewaysTitle: "البوابات",
+    secManual: "إنستاباي والمحافظ",
+    secManualHint: "عنوان إنستاباي وأرقام المحافظ الخاصة بك، ويُدفع إليها مباشرة.",
+    secGatewaysHint: "بوابات الدفع المربوطة بهذا المتجر ومفاتيحها.",
+    secMethodsHint: "طرق الدفع التي يراها العملاء عند إتمام الشراء وترتيبها.",
+    search: "ابحث في إعدادات الدفع…",
+    notConnected: "غير مربوطة",
+    connected: "مربوطة",
+    invalid: "المفاتيح مرفوضة",
+    invalidNote: "رفضت {name} المفاتيح المحفوظة. أدخلها مرة أخرى لمواصلة الدفع الإلكتروني.",
+    modeTest: "وضع التجربة",
+    modeLive: "تشغيل فعلي",
+    testNote:
+      "مفاتيح تجربة: الكارت والمحفظة يظهران في معاينة متجرك فقط وليس للعملاء الحقيقيين، والأوردرات المدفوعة في وضع التجربة لا يمكن شحنها.",
+    previewButton: "جرّب الدفع في معاينة المتجر",
+    previewOpening: "جارٍ فتح المعاينة…",
+    connectedSince: "مربوطة منذ {date}",
+    lastWebhook: "آخر تحديث دفع وصل {date}",
+    noWebhookYet: "لم يصل أي تحديث دفع بعد. تأكد أن رابط الـ webhook بالأسفل ملصوق في كل تكامل.",
+    noWebhookYetAutomatic: "لم يصل أي تحديث دفع بعد. {name} يستلم رابط الـ webhook مع كل عملية دفع، فأول تحديث سيصل مع أول عملية دفع.",
+    webhookTitle: "رابط الـ Webhook",
+    webhookHint: "الصق هذا الرابط في خانة \"{field}\" لكل تكامل من تكاملات {name} التي أدخلتها بالأسفل.",
+    webhookHintAutomatic:
+      "لا حاجة للصق أي شيء للمدفوعات: {name} يستلم هذا الرابط مع كل عملية دفع. لو تريد أن تظهر هنا الاستردادات التي تعملها من لوحة {name} نفسها، أضفه هناك في \"{field}\" (الأحداث: refund و partial_refund و void).",
+    copyWebhook: "نسخ رابط الـ webhook",
+    setupTitle: "طريقة ربط {name}",
+    helpLinks: "مساعدة",
+    connect: "ربط {name}",
+    credentialsTitle: "المفاتيح",
+    credentialsHint: "تُحفظ مشفّرة ولا تظهر مرة أخرى.",
+    methodsTitle: "طرق الدفع",
+    methodsHint: "أدخل رقم التكامل لكل طريقة تريد تقديمها.",
+    submitConnect: "تحقق من المفاتيح واربط",
+    checking: "جارٍ التحقق مع {name}…",
+    replaceKeys: "تغيير المفاتيح",
+    editIds: "تعديل أرقام التكامل",
+    accountMethods: "الطرق المتاحة في حساب {name}",
+    recheck: "إعادة فحص الحساب",
+    rechecking: "جارٍ الفحص…",
+    recheckedToast: "تم فحص حساب {name}.",
+    methodNames: "كارت|محفظة إلكترونية",
+    saveIds: "حفظ",
+    disconnect: "إلغاء الربط",
+    disconnectTitle: "إلغاء ربط {name}؟",
+    disconnectDescription: "لن يستطيع العملاء الدفع عبر {name}. المدفوعات والاستردادات السابقة تبقى على أوردراتها.",
+    connectedToast: "تم ربط {name}.",
+    savedToast: "تم حفظ إعدادات {name}.",
+    disconnectedToast: "تم إلغاء ربط {name}.",
+    methodListTitle: "طرق الدفع في صفحة الدفع",
+    methodListHint:
+      "اختر الطرق التي يراها العملاء وترتيبها. بوابة واحدة لكل طريقة: تفعيل طريقة من بوابة يوقف نفس الطريقة من البوابة الأخرى. لازم تفضل طريقة واحدة على الأقل مفعّلة.",
+    methodCod: "الدفع عند الاستلام",
+    methodCard: "{name}: كارت",
+    methodWallet: "{name}: محفظة إلكترونية",
+    methodUnavailable: "غير مربوطة",
+    moveUp: "تحريك لأعلى",
+    moveDown: "تحريك لأسفل",
+    saveMethods: "حفظ طرق الدفع",
+    methodsSaved: "تم حفظ طرق الدفع.",
+    on: "مفعّلة",
   },
 } satisfies Messages;
 
-const GATEWAY_LOGO: Record<PaymentGateway["key"], string> = {
-  cod: "COD",
-  paymob: "PM",
-  fawry: "F",
-  stripe: "S",
-  paypal: "PP",
-  instapay: "IP",
-};
-
-const CURRENCY_OPTIONS = ["EGP", "SAR", "AED", "KWD", "USD", "EUR"] as const;
-const ROUNDING_KEYS: CurrencySetting["rounding"][] = ["none", "0.99", "whole"];
-const ROUNDING_LABEL: Record<Locale, Record<CurrencySetting["rounding"], string>> = {
-  en: { none: "No rounding", "0.99": "End in .99", whole: "Whole number" },
-  ar: { none: "بدون تقريب", "0.99": "ينتهي بـ .99", whole: "رقم صحيح" },
-};
-
+/** /payments — gateway connections and the checkout method list. */
 export function PaymentsPage() {
   const t = useT(STRINGS);
-  return (
-    <div className="min-w-0 max-w-5xl">
-      <PageHeader title={t.title} description={t.description} />
-      <Tabs defaultValue="gateways">
-        <TabsList>
-          <TabsTrigger value="gateways">{t.tabGateways}</TabsTrigger>
-          <TabsTrigger value="currencies">{t.tabCurrencies}</TabsTrigger>
-          <TabsTrigger value="payouts">{t.tabPayouts}</TabsTrigger>
-        </TabsList>
-        <TabsContent value="gateways" className="pt-4">
-          <GatewaysTab />
-        </TabsContent>
-        <TabsContent value="currencies" className="pt-4">
-          <CurrenciesTab />
-        </TabsContent>
-        <TabsContent value="payouts" className="pt-4">
-          <PayoutsTab />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-// ------------------------------------------------------------ Gateways --
-
-function GatewaysTab() {
-  const t = useT(STRINGS);
-  const c = useCommon();
   const workspaceId = useWorkspaceId();
-  const toast = useToast();
-  const gateways = useAsync(() => mockApi.listGateways(workspaceId), [workspaceId]);
-  const checkout = useAsync(() => mockApi.getCheckoutSettings(workspaceId), [workspaceId]);
-  const [configuring, setConfiguring] = useState<PaymentGateway | null>(null);
-  const list = gateways.data ?? [];
+  const { currentWorkspace } = useWorkspace();
+  const roleAllows = PAYMENT_ROLES.has(currentWorkspace?.role ?? "");
+  const [forbidden, setForbidden] = useState(false);
+  const canManage = roleAllows && !forbidden;
 
-  async function save(next: PaymentGateway[], message: string) {
-    await mockApi.saveGateways(workspaceId, next);
-    gateways.setData(next);
-    toast.success(message);
+  const gateways = useAsync(
+    () => (roleAllows ? apiClient.listPaymentGateways(workspaceId) : Promise.resolve(null)),
+    [workspaceId, roleAllows]
+  );
+  const methods = useAsync(
+    () => (roleAllows ? apiClient.listPaymentMethods(workspaceId) : Promise.resolve(null)),
+    [workspaceId, roleAllows]
+  );
+  const list = gateways.data;
+
+  function refreshAll() {
+    void gateways.refresh({ silent: true });
+    void methods.refresh({ silent: true });
   }
 
-  function toggle(g: PaymentGateway, enabled: boolean) {
-    void save(
-      list.map((x) => (x.key === g.key ? { ...x, enabled } : x)),
-      enabled ? fmt(t.enabledToast, { name: g.name }) : fmt(t.disabledToast, { name: g.name })
+  const sections = useMemo<SettingsSectionDef[]>(
+    () => [
+      { id: "manual", label: t.secManual, description: t.secManualHint, icon: IconWallet, tone: "green" },
+      { id: "gateways", label: t.gatewaysTitle, description: t.secGatewaysHint, icon: IconCard, tone: "blue" },
+      { id: "methods", label: t.methodListTitle, description: t.secMethodsHint, icon: IconSliders, tone: "purple" },
+    ],
+    [t]
+  );
+  const { current, select } = useSettingsSection(sections);
+  // What the pane holds: the section in the address, or the first.
+  const shown = sections.find((section) => section.id === current) ?? sections[0];
+
+  // A role with no payment access gets the one line it always got, in the same frame as the page.
+  if (!roleAllows) {
+    return (
+      <div className="max-w-3xl space-y-8">
+        <PageHeader title={t.title} description={t.description} />
+        <Alert>{t.viewOnly}</Alert>
+      </div>
     );
   }
 
   return (
-    <DataState loading={gateways.loading} error={gateways.error} onRetry={() => gateways.refresh()}>
-      <div className="grid gap-4 md:grid-cols-2">
-        {list.map((g) => (
-          <Card key={g.key} className={cn("min-w-0 rounded-2xl p-5", !g.configured && "opacity-90")}>
-            <div className="flex items-start gap-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-[0.6rem] bg-accent-soft font-display text-xs font-semibold text-accent-dark" dir="ltr">
-                {GATEWAY_LOGO[g.key]}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium text-ink">{g.name}</p>
-                  <StatusBadge
-                    value={g.configured ? "configured" : "not_configured"}
-                    tone={g.configured ? "success" : "warning"}
-                    label={g.configured ? t.configured : t.notConfigured}
-                  />
-                </div>
-                <p className="text-xs text-ink-soft">
-                  {t.fee} <span dir="ltr">{g.feePercent}%</span> {t.perTransaction}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {g.currencies.map((cur) => (
-                    <span key={cur} className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] font-medium text-ink-soft">
-                      {cur}
-                    </span>
-                  ))}
-                </div>
+    <SettingsLayout title={t.title} sections={sections} current={current} onSelect={select} searchPlaceholder={t.search}>
+      <SettingsPane title={shown.label} description={shown.description} icon={shown.icon} tone={shown.tone}>
+        {/* The store's own InstaPay / wallet numbers: no gateway, and not behind the online-payments switch. */}
+        {shown.id === "manual" && <ManualMethodsSection workspaceId={workspaceId} />}
+        {shown.id !== "manual" && (
+          <DataState loading={gateways.loading} error={gateways.error} onRetry={() => gateways.refresh()}>
+            {list && !list.configured ? (
+              <div className="rounded-[0.5rem] border border-dashed border-line px-4 py-5">
+                <p className="text-sm font-medium text-ink">{t.notAvailableTitle}</p>
+                <p className="mt-1 text-sm text-ink-soft">{t.notAvailable}</p>
               </div>
-              <span title={g.configured ? (g.enabled ? c.enabled : c.disabled) : t.configureFirst}>
-                <Toggle checked={g.enabled} disabled={!g.configured} onChange={(v) => toggle(g, v)} />
-              </span>
-            </div>
-
-            {g.key === "cod" && checkout.data && (
-              <CodOptions
-                settings={checkout.data}
-                onSaved={(s) => {
-                  checkout.setData(s);
-                }}
-              />
+            ) : (
+              <div className="space-y-8">
+                {forbidden && <Alert>{t.viewOnlyForbidden}</Alert>}
+                {list && !list.onlineEnabled && <Alert>{t.offlineNotice}</Alert>}
+                {shown.id === "gateways" && (
+                  <section className="space-y-4">
+                    {list?.gateways.map((gateway) => (
+                      <GatewayCard
+                        key={gateway.code}
+                        gateway={gateway}
+                        canManage={canManage}
+                        onForbidden={() => setForbidden(true)}
+                        onChanged={refreshAll}
+                      />
+                    ))}
+                  </section>
+                )}
+                {shown.id === "methods" && methods.data && list && (
+                  <MethodList
+                    key={JSON.stringify(methods.data.methods.map((m) => [m.id, m.enabled, m.available]))}
+                    methods={methods.data.methods}
+                    gateways={list.gateways}
+                    canManage={canManage}
+                    onForbidden={() => setForbidden(true)}
+                    onSaved={(next) => methods.setData({ ...methods.data!, methods: next })}
+                  />
+                )}
+              </div>
             )}
-
-            <div className="mt-4 border-t border-line pt-3">
-              <Button size="sm" variant="outline" onClick={() => setConfiguring(g)}>
-                {g.configured ? t.reconfigure : t.configure}
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Modal open={configuring !== null} onClose={() => setConfiguring(null)} title={fmt(t.configureTitle, { name: configuring?.name ?? "" })}>
-        {configuring && (
-          <GatewayConfigForm
-            key={configuring.key}
-            gateway={configuring}
-            onCancel={() => setConfiguring(null)}
-            onDone={async () => {
-              const g = configuring;
-              await save(
-                list.map((x) => (x.key === g.key ? { ...x, configured: true } : x)),
-                fmt(t.configuredToast, { name: g.name })
-              );
-              setConfiguring(null);
-            }}
-          />
+          </DataState>
         )}
-      </Modal>
-    </DataState>
+      </SettingsPane>
+    </SettingsLayout>
   );
 }
 
-function CodOptions({ settings, onSaved }: { settings: CheckoutSettings; onSaved: (s: CheckoutSettings) => void }) {
+type CardMode = "view" | "connect" | "ids";
+
+function GatewayCard({
+  gateway,
+  canManage,
+  onForbidden,
+  onChanged,
+}: {
+  gateway: PaymentGatewayInfo;
+  canManage: boolean;
+  onForbidden: () => void;
+  onChanged: () => void;
+}) {
   const t = useT(STRINGS);
-  const c = useCommon();
-  const workspaceId = useWorkspaceId();
-  const toast = useToast();
-  const [fee, setFee] = useState(minorToMajorInput(settings.codFeeAmount ?? null));
-  const [otp, setOtp] = useState(settings.phoneOtpVerification);
-  const [saving, setSaving] = useState(false);
-
-  async function saveFee() {
-    const minor = fee.trim() === "" ? null : majorToMinor(fee);
-    if (minor !== null && (!Number.isFinite(minor) || minor < 0)) {
-      toast.error(t.codFeeInvalid);
-      return;
-    }
-    setSaving(true);
-    try {
-      const next = { ...settings, codFeeAmount: minor === null ? null : String(minor), phoneOtpVerification: otp };
-      await mockApi.saveCheckoutSettings(workspaceId, next);
-      onSaved(next);
-      toast.success(t.codSaved);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function toggleOtp(v: boolean) {
-    setOtp(v);
-    const next = { ...settings, phoneOtpVerification: v };
-    await mockApi.saveCheckoutSettings(workspaceId, next);
-    onSaved(next);
-    toast.success(v ? t.otpOn : t.otpOff);
-  }
-
-  return (
-    <div className="mt-4 space-y-3 rounded-xl border border-line bg-paper p-3">
-      <Field label={t.codFee} hint={t.codFeeHint}>
-        {({ id }) => (
-          <div className="flex gap-2">
-            <Input id={id} type="number" min={0} step="0.01" dir="ltr" value={fee} onChange={(e) => setFee(e.target.value)} placeholder="0.00" className="min-w-0" />
-            <Button type="button" size="sm" variant="outline" className="h-10" onClick={saveFee} disabled={saving}>
-              {saving ? c.saving : c.save}
-            </Button>
-          </div>
-        )}
-      </Field>
-      <Toggle label={t.otpLabel} description={t.otpDesc} checked={otp} onChange={toggleOtp} />
-    </div>
-  );
-}
-
-function GatewayConfigForm({ gateway, onCancel, onDone }: { gateway: PaymentGateway; onCancel: () => void; onDone: () => Promise<void> }) {
-  const t = useT(STRINGS);
-  const c = useCommon();
-  const [apiKey, setApiKey] = useState("");
-  const [secret, setSecret] = useState("");
-  const [merchantId, setMerchantId] = useState("");
-  const [saving, setSaving] = useState(false);
-  const isCod = gateway.key === "cod";
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await onDone();
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      {isCod ? (
-        <p className="text-sm text-ink-soft">{t.codNoCredentials}</p>
-      ) : (
-        <>
-          <TextField label={t.apiKey} required type="password" autoComplete="off" dir="ltr" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
-          <TextField label={t.apiSecret} required type="password" autoComplete="off" dir="ltr" value={secret} onChange={(e) => setSecret(e.target.value)} />
-          <TextField label={t.merchantId} type="password" autoComplete="off" dir="ltr" value={merchantId} onChange={(e) => setMerchantId(e.target.value)} hint={t.optional} />
-        </>
-      )}
-      <div className="flex flex-wrap justify-end gap-3">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          {c.cancel}
-        </Button>
-        <Button type="submit" disabled={saving || (!isCod && (apiKey.trim() === "" || secret.trim() === ""))}>
-          {saving ? c.saving : c.save}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-// ---------------------------------------------------------- Currencies --
-
-function CurrenciesTab() {
-  const t = useT(STRINGS);
-  const c = useCommon();
+  const common = useCommon();
   const { locale } = useLocale();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
-  const currencies = useAsync(() => mockApi.listCurrencies(workspaceId), [workspaceId]);
-  const [draft, setDraft] = useState<CurrencySetting[]>([]);
-  const [adding, setAdding] = useState<string>("");
-  const [saving, setSaving] = useState(false);
+  const errorMessage = useErrorMessage();
+  const name = gateway.name;
+  const connection = gateway.connection;
+  // Kashier: the methods come from the account itself; only keys are typed in.
+  const fromAccount = gateway.methodsFromAccount;
+  const [cardName, walletName] = t.methodNames.split("|");
 
-  useEffect(() => {
-    if (currencies.data) setDraft(currencies.data);
-  }, [currencies.data]);
+  const [mode, setMode] = useState<CardMode>("view");
+  const [credentials, setCredentials] = useState<Record<string, string>>({});
+  const [ids, setIds] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [openingPreview, setOpeningPreview] = useState(false);
 
-  const available = CURRENCY_OPTIONS.filter((code) => !draft.some((d) => d.code === code));
-
-  function update(code: string, patch: Partial<CurrencySetting>) {
-    setDraft((prev) => prev.map((x) => (x.code === code ? { ...x, ...patch } : x)));
+  // The integration IDs as saved, to start the form from each time it opens.
+  function savedIds() {
+    const settings = connection?.settings ?? {};
+    return Object.fromEntries(
+      gateway.settingFields.map((f) => [f.key, settings[f.key] != null ? String(settings[f.key]) : ""])
+    );
   }
 
-  function setDefault(code: string) {
-    setDraft((prev) => prev.map((x) => ({ ...x, isDefault: x.code === code, enabled: x.code === code ? true : x.enabled })));
+  function openForm(next: CardMode) {
+    setError(null);
+    setIds(savedIds());
+    setMode(next);
   }
 
-  function add() {
-    if (!adding) return;
-    setDraft((prev) => [...prev, { code: adding, enabled: true, isDefault: false, rateToDefault: 1, rounding: "none" }]);
-    setAdding("");
+  function fail(err: unknown) {
+    if (err instanceof ApiError && err.status === 403) {
+      toast.error(errorMessage(err));
+      onForbidden();
+      setMode("view");
+      return;
+    }
+    setError(errorMessage(err));
+  }
+
+  function settingsPayload() {
+    return Object.fromEntries(
+      gateway.settingFields.map((f) => [f.key, ids[f.key]?.trim() ? Number(ids[f.key].trim()) : null])
+    );
+  }
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const wasConnected = Boolean(connection);
+    try {
+      await apiClient.connectPaymentGateway(workspaceId, gateway.code, {
+        ...(mode === "connect" ? { credentials } : {}),
+        ...(fromAccount ? {} : { settings: settingsPayload() }),
+      });
+      setCredentials({});
+      setMode("view");
+      toast.success(fmt(mode === "connect" && !wasConnected ? t.connectedToast : t.savedToast, { name }));
+      onChanged();
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Re-verifies the stored keys and re-reads the account's methods. */
+  async function recheck() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.connectPaymentGateway(workspaceId, gateway.code, {});
+      toast.success(fmt(t.recheckedToast, { name }));
+      onChanged();
+    } catch (err) {
+      fail(err);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmDisconnect() {
+    try {
+      await apiClient.disconnectPaymentGateway(workspaceId, gateway.code);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setDisconnecting(false);
+        fail(err);
+        return;
+      }
+      throw new Error(errorMessage(err));
+    }
+    setDisconnecting(false);
+    toast.success(fmt(t.disconnectedToast, { name }));
+    onChanged();
+  }
+
+  async function openPreview() {
+    setOpeningPreview(true);
+    // Opened before the await so the browser treats it as a user action.
+    const win = window.open("", "_blank");
+    try {
+      const { token } = await apiClient.createPaymentPreviewToken(workspaceId);
+      const url = `${STOREFRONT_URL}/store/${workspaceId}?paymentsPreview=${encodeURIComponent(token)}`;
+      if (win) win.location.href = url;
+      else window.open(url, "_blank", "noopener");
+    } catch (err) {
+      win?.close();
+      fail(err);
+    } finally {
+      setOpeningPreview(false);
+    }
+  }
+
+  const credentialsComplete = gateway.credentialFields.every((f) => (credentials[f.key] ?? "").trim().length > 0);
+  const anyId = gateway.settingFields.some((f) => /^\d+$/.test((ids[f.key] ?? "").trim()));
+  const idsValid = gateway.settingFields.every((f) => !(ids[f.key] ?? "").trim() || /^\d+$/.test(ids[f.key].trim()));
+
+  return (
+    <div className="rounded-[var(--radius-card)] border border-line p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <ProviderLogo code={gateway.code} name={name} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-medium text-ink">{name}</h3>
+              {!connection ? (
+                <StatusBadge value="not_connected" tone="neutral" text={t.notConnected} />
+              ) : connection.status === "invalid" ? (
+                <StatusBadge value="invalid" tone="danger" text={t.invalid} />
+              ) : (
+                <StatusBadge value="connected" tone="success" text={t.connected} />
+              )}
+              {connection && (
+                <StatusBadge
+                  value={connection.mode}
+                  tone={connection.mode === "live" ? "info" : "warning"}
+                  text={connection.mode === "live" ? t.modeLive : t.modeTest}
+                />
+              )}
+            </div>
+            {connection && (
+              <p className="mt-1 text-xs text-ink-soft">
+                {fmt(t.connectedSince, { date: formatDateTime(connection.connectedAt) })}
+              </p>
+            )}
+          </div>
+        </div>
+        {canManage && mode === "view" && !connection && (
+          <Button className="min-h-11" onClick={() => openForm("connect")}>
+            {fmt(t.connect, { name })}
+          </Button>
+        )}
+      </div>
+
+      {connection?.status === "invalid" && mode === "view" && (
+        <Alert variant="danger" className="mt-3">
+          {fmt(t.invalidNote, { name })}
+        </Alert>
+      )}
+
+      {connection && mode === "view" && (
+        <div className="mt-4 space-y-3">
+          {connection.mode === "test" && (
+            <div className="rounded-[0.5rem] border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-accent-dark">
+              <p>{t.testNote}</p>
+              <Button variant="outline" className="mt-2 min-h-11" disabled={openingPreview} onClick={openPreview}>
+                <ExternalLink className="size-4" aria-hidden />
+                {openingPreview ? t.previewOpening : t.previewButton}
+              </Button>
+            </div>
+          )}
+          <p className={cn("text-sm", connection.lastWebhookAt ? "text-ink-soft" : "text-warning")}>
+            {connection.lastWebhookAt
+              ? fmt(t.lastWebhook, { date: formatDateTime(connection.lastWebhookAt) })
+              : gateway.webhookSetup.automatic
+                ? fmt(t.noWebhookYetAutomatic, { name })
+                : t.noWebhookYet}
+          </p>
+          <WebhookUrl gateway={gateway} url={connection.webhookUrl} />
+          <p className="text-sm text-ink-soft">
+            {fromAccount
+              ? `${fmt(t.accountMethods, { name })}: ${connection.methods
+                  .map((m) => (m === "card" ? cardName : walletName))
+                  .join(" · ")}`
+              : gateway.settingFields
+                  .filter((f) => connection.settings[f.key])
+                  .map((f) => `${f.label[locale]}: ${String(connection.settings[f.key])}`)
+                  .join(" · ")}
+          </p>
+        </div>
+      )}
+
+      {canManage && connection && mode === "view" && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {fromAccount ? (
+            <Button variant="outline" className="min-h-11" disabled={busy} onClick={recheck}>
+              {busy ? t.rechecking : t.recheck}
+            </Button>
+          ) : (
+            <Button variant="outline" className="min-h-11" onClick={() => openForm("ids")}>
+              {t.editIds}
+            </Button>
+          )}
+          <Button
+            variant={connection.status === "invalid" ? "primary" : "outline"}
+            className="min-h-11"
+            onClick={() => openForm("connect")}
+          >
+            {t.replaceKeys}
+          </Button>
+          <Button
+            variant="ghost"
+            className="min-h-11 text-danger hover:bg-danger-soft"
+            onClick={() => setDisconnecting(true)}
+          >
+            {t.disconnect}
+          </Button>
+        </div>
+      )}
+
+      {error && (
+        <Alert variant="danger" className="mt-3">
+          {error}
+        </Alert>
+      )}
+
+      {(!connection || mode === "connect") && (
+        <SetupGuide gateway={gateway} webhookUrl={connection?.webhookUrl ?? null} />
+      )}
+
+      {canManage && (mode === "connect" || mode === "ids") && (
+        <form onSubmit={submit} className="mt-4 space-y-5 border-t border-line pt-4">
+          {mode === "connect" && (
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-medium text-ink">{t.credentialsTitle}</legend>
+              <p className="text-xs text-ink-soft">{t.credentialsHint}</p>
+              {gateway.credentialFields.map((field) => (
+                <TextInput
+                  key={field.key}
+                  label={field.label[locale]}
+                  type={field.secret ? "password" : "text"}
+                  placeholder={field.placeholder}
+                  value={credentials[field.key] ?? ""}
+                  onChange={(v) => setCredentials((c) => ({ ...c, [field.key]: v }))}
+                  disabled={busy}
+                />
+              ))}
+            </fieldset>
+          )}
+          {!fromAccount && (
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-medium text-ink">{t.methodsTitle}</legend>
+              <p className="text-xs text-ink-soft">{t.methodsHint}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {gateway.settingFields.map((field) => (
+                  <TextInput
+                    key={field.key}
+                    label={field.label[locale]}
+                    inputMode="numeric"
+                    value={ids[field.key] ?? ""}
+                    onChange={(v) => setIds((c) => ({ ...c, [field.key]: v }))}
+                    disabled={busy}
+                  />
+                ))}
+              </div>
+            </fieldset>
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              disabled={busy}
+              onClick={() => { setMode("view"); setCredentials({}); setError(null); }}
+            >
+              {common.cancel}
+            </Button>
+            <Button
+              type="submit"
+              className="min-h-11"
+              disabled={busy || (!fromAccount && (!anyId || !idsValid)) || (mode === "connect" && !credentialsComplete)}
+            >
+              {busy ? fmt(t.checking, { name }) : mode === "connect" ? t.submitConnect : t.saveIds}
+            </Button>
+          </div>
+        </form>
+      )}
+
+      <ConfirmDialog
+        open={disconnecting}
+        title={fmt(t.disconnectTitle, { name })}
+        description={fmt(t.disconnectDescription, { name })}
+        confirmLabel={t.disconnect}
+        cancelLabel={common.cancel}
+        busyLabel={common.loading}
+        destructive
+        onCancel={() => setDisconnecting(false)}
+        onConfirm={confirmDisconnect}
+      />
+    </div>
+  );
+}
+
+function WebhookUrl({ gateway, url }: { gateway: PaymentGatewayInfo; url: string }) {
+  const t = useT(STRINGS);
+  return (
+    <div className="space-y-1">
+      <p className="text-sm font-medium text-ink">{t.webhookTitle}</p>
+      <div className="flex items-center gap-2 rounded-[0.5rem] border border-line bg-paper px-3 py-2">
+        <code dir="ltr" className="min-w-0 flex-1 truncate text-xs text-ink">
+          {url}
+        </code>
+        <CopyButton value={url} label={t.copyWebhook} />
+      </div>
+      <p className="text-xs text-ink-soft">
+        {fmt(gateway.webhookSetup.automatic ? t.webhookHintAutomatic : t.webhookHint, {
+          field: gateway.webhookSetup.field,
+          name: gateway.name,
+        })}
+      </p>
+    </div>
+  );
+}
+
+function SetupGuide({ gateway, webhookUrl }: { gateway: PaymentGatewayInfo; webhookUrl: string | null }) {
+  const t = useT(STRINGS);
+  const { locale } = useLocale();
+  return (
+    <div className="mt-4 space-y-3 rounded-[0.5rem] bg-paper px-4 py-3">
+      <p className="text-sm font-medium text-ink">{fmt(t.setupTitle, { name: gateway.name })}</p>
+      <ol className="list-decimal space-y-1.5 ps-5 text-sm text-ink-soft">
+        {gateway.setupSteps[locale].map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+      {webhookUrl && <WebhookUrl gateway={gateway} url={webhookUrl} />}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <span className="text-ink-soft">{t.helpLinks}:</span>
+        {gateway.helpLinks.map((link) => (
+          <a
+            key={link.url}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-primary hover:underline"
+          >
+            {link.label[locale]}
+            <ExternalLink className="size-3.5" aria-hidden />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TextInput({
+  label,
+  value,
+  onChange,
+  disabled,
+  type = "text",
+  placeholder,
+  inputMode,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  disabled: boolean;
+  type?: "text" | "password";
+  placeholder?: string;
+  inputMode?: "numeric";
+}) {
+  const id = useId();
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        type={type}
+        dir="ltr"
+        autoComplete="off"
+        spellCheck={false}
+        inputMode={inputMode}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className="h-11"
+      />
+    </div>
+  );
+}
+
+function MethodList({
+  methods,
+  gateways,
+  canManage,
+  onForbidden,
+  onSaved,
+}: {
+  methods: PaymentMethodEntry[];
+  gateways: PaymentGatewayInfo[];
+  canManage: boolean;
+  onForbidden: () => void;
+  onSaved: (next: PaymentMethodEntry[]) => void;
+}) {
+  const t = useT(STRINGS);
+  const workspaceId = useWorkspaceId();
+  const toast = useToast();
+  const errorMessage = useErrorMessage();
+  // Remounted (key) whenever the saved list changes, so the draft starts from it.
+  const [draft, setDraft] = useState(methods);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const nameOf = (provider: string | null) => gateways.find((g) => g.code === provider)?.name ?? provider ?? "";
+  const labelOf = (m: PaymentMethodEntry) =>
+    m.method === "cod"
+      ? t.methodCod
+      : fmt(m.method === "card" ? t.methodCard : t.methodWallet, { name: nameOf(m.provider) });
+
+  const dirty = JSON.stringify(draft.map((m) => [m.id, m.enabled])) !== JSON.stringify(methods.map((m) => [m.id, m.enabled]));
+  useReportDirty(dirty);
+
+  function move(index: number, delta: number) {
+    setDraft((list) => {
+      const next = [...list];
+      const [item] = next.splice(index, 1);
+      next.splice(index + delta, 0, item);
+      return next;
+    });
   }
 
   async function save() {
-    setSaving(true);
+    setBusy(true);
+    setError(null);
     try {
-      await mockApi.saveCurrencies(workspaceId, draft);
-      currencies.setData(draft);
-      toast.success(t.currenciesSaved);
+      const result = await apiClient.updatePaymentMethods(
+        workspaceId,
+        draft.map((m) => ({ id: m.id, enabled: m.enabled }))
+      );
+      toast.success(t.methodsSaved);
+      onSaved(result.methods);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) onForbidden();
+      setError(errorMessage(err));
     } finally {
-      setSaving(false);
+      setBusy(false);
     }
   }
 
   return (
-    <DataState loading={currencies.loading} error={currencies.error} onRetry={() => currencies.refresh()}>
-      <div className="space-y-4">
-        <div className="overflow-x-auto rounded-2xl border border-line bg-paper-raised">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="border-b border-line bg-paper-raised text-xs uppercase tracking-wide text-ink-soft">
-                <th className="px-4 py-3 text-start font-medium">{t.colCurrency}</th>
-                <th className="px-4 py-3 text-start font-medium">{t.colEnabled}</th>
-                <th className="px-4 py-3 text-start font-medium">{t.colDefault}</th>
-                <th className="px-4 py-3 text-start font-medium">{t.colRate}</th>
-                <th className="px-4 py-3 text-start font-medium">{t.colRounding}</th>
-                <th className="px-4 py-3 font-medium">
-                  <span className="sr-only">{c.actions}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {draft.map((cur) => (
-                <tr key={cur.code} className="border-b border-line bg-paper last:border-0">
-                  <td className="px-4 py-3 text-start font-medium text-ink">{cur.code}</td>
-                  <td className="px-4 py-3 text-start">
-                    <Toggle checked={cur.enabled} disabled={cur.isDefault} onChange={(v) => update(cur.code, { enabled: v })} />
-                  </td>
-                  <td className="px-4 py-3 text-start">
-                    <input type="radio" name="default-currency" checked={cur.isDefault} onChange={() => setDefault(cur.code)} aria-label={fmt(t.makeDefault, { code: cur.code })} />
-                  </td>
-                  <td className="px-4 py-3 text-start">
-                    <Input
-                      type="number"
-                      step="0.0001"
-                      min={0}
-                      dir="ltr"
-                      value={cur.rateToDefault}
-                      disabled={cur.isDefault}
-                      onChange={(e) => update(cur.code, { rateToDefault: Number(e.target.value) })}
-                      className="h-9 max-w-[140px] tabular-nums"
-                      aria-label={`${t.colRate} (${cur.code})`}
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-start">
-                    <Select
-                      value={cur.rounding}
-                      onChange={(e) => update(cur.code, { rounding: e.target.value as CurrencySetting["rounding"] })}
-                      className="h-9 max-w-[160px]"
-                      aria-label={`${t.colRounding} (${cur.code})`}
-                    >
-                      {ROUNDING_KEYS.map((r) => (
-                        <option key={r} value={r}>
-                          {ROUNDING_LABEL[locale][r]}
-                        </option>
-                      ))}
-                    </Select>
-                  </td>
-                  <td className="px-4 py-3 text-end">
-                    {!cur.isDefault && (
-                      <Button size="sm" variant="ghost" className="text-danger hover:bg-danger-soft" onClick={() => setDraft((p) => p.filter((x) => x.code !== cur.code))}>
-                        {t.remove}
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex flex-wrap items-end gap-2">
-            <Field label={t.addCurrency}>
-              {({ id }) => (
-                <Select id={id} value={adding} onChange={(e) => setAdding(e.target.value)} className="w-40" disabled={available.length === 0}>
-                  <option value="">{t.selectPlaceholder}</option>
-                  {available.map((code) => (
-                    <option key={code} value={code}>
-                      {code}
-                    </option>
-                  ))}
-                </Select>
+    <section className="space-y-3">
+      <div>
+        <h2 className="font-display text-lg font-medium text-ink">{t.methodListTitle}</h2>
+        <p className="mt-1 text-sm text-ink-soft">{t.methodListHint}</p>
+      </div>
+      <ul className="divide-y divide-line rounded-[var(--radius-card)] border border-line">
+        {draft.map((m, index) => (
+          <li key={m.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+            <label className={cn("flex min-h-11 flex-1 items-center gap-3", !m.available && "opacity-60")}>
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                checked={m.enabled}
+                disabled={!canManage || busy}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  // One gateway per method: switching this on switches off the
+                  // same method on any other gateway.
+                  setDraft((list) =>
+                    list.map((x) =>
+                      x.id === m.id
+                        ? { ...x, enabled: on }
+                        : on && m.method !== "cod" && x.method === m.method
+                          ? { ...x, enabled: false }
+                          : x
+                    )
+                  );
+                }}
+              />
+              <span className="text-sm font-medium text-ink">{labelOf(m)}</span>
+              {m.mode === "test" && m.method !== "cod" && (
+                <StatusBadge value="test" tone="warning" text={t.modeTest} />
               )}
-            </Field>
-            <Button variant="outline" className="h-10" onClick={add} disabled={!adding}>
-              {c.add}
-            </Button>
-          </div>
-          <Button onClick={save} disabled={saving}>
-            {saving ? c.saving : t.saveCurrencies}
+              {!m.available && <StatusBadge value="unavailable" tone="neutral" text={t.methodUnavailable} />}
+            </label>
+            {canManage && (
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label={t.moveUp}
+                  disabled={busy || index === 0}
+                  onClick={() => move(index, -1)}
+                >
+                  <ArrowUp className="size-4" aria-hidden />
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label={t.moveDown}
+                  disabled={busy || index === draft.length - 1}
+                  onClick={() => move(index, 1)}
+                >
+                  <ArrowDown className="size-4" aria-hidden />
+                </Button>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+      {error && <Alert variant="danger">{error}</Alert>}
+      {canManage && (
+        <div className="flex justify-end">
+          <Button className="min-h-11" disabled={!dirty || busy} onClick={save}>
+            {t.saveMethods}
           </Button>
         </div>
-      </div>
-    </DataState>
-  );
-}
-
-// ------------------------------------------------------------- Payouts --
-
-const SETTLEMENTS = [
-  { id: "st-1041", period: "Sep 1 – Sep 7", carrier: "Bosta", orders: 212, amount: 18734000, status: "paid" },
-  { id: "st-1040", period: "Aug 25 – Aug 31", carrier: "Bosta", orders: 198, amount: 17210000, status: "paid" },
-  { id: "st-1039", period: "Aug 25 – Aug 31", carrier: "J&T Express", orders: 41, amount: 3928000, status: "paid" },
-  { id: "st-1042", period: "Sep 8 – Sep 14", carrier: "Bosta", orders: 96, amount: 8412000, status: "pending" },
-];
-
-function PayoutsTab() {
-  const t = useT(STRINGS);
-  const c = useCommon();
-  const payoutStatusLabel = (s: string): string | undefined => (s === "paid" ? t.paid : s === "pending" ? t.pending : undefined);
-  const steps: Array<[string, string]> = [
-    [t.step1, t.step1Desc],
-    [t.step2, t.step2Desc],
-    [t.step3, t.step3Desc],
-  ];
-
-  return (
-    <div className="space-y-6">
-      <Card className="rounded-2xl p-5">
-        <CardHeader className="px-0">
-          <CardTitle className="flex items-center gap-2 text-ink">
-            <Landmark className="size-4 text-primary" /> {t.howTitle}
-          </CardTitle>
-          <CardDescription className="text-ink-soft">{t.howDesc}</CardDescription>
-        </CardHeader>
-        <CardContent className="px-0">
-          <ol className="grid gap-3 text-sm sm:grid-cols-3">
-            {steps.map(([title, desc]) => (
-              <li key={title} className="rounded-2xl border border-line bg-paper p-3">
-                <p className="font-medium text-ink">{title}</p>
-                <p className="mt-0.5 text-xs text-ink-soft">{desc}</p>
-              </li>
-            ))}
-          </ol>
-        </CardContent>
-      </Card>
-
-      <section>
-        <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold text-ink">
-          <Banknote className="size-4 text-ink-soft" /> {t.recentSettlements}
-        </h2>
-        <div className="overflow-x-auto rounded-2xl border border-line bg-paper-raised">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="border-b border-line bg-paper-raised text-xs uppercase tracking-wide text-ink-soft">
-                <th className="px-4 py-3 text-start font-medium">{t.colSettlement}</th>
-                <th className="px-4 py-3 text-start font-medium">{t.colPeriod}</th>
-                <th className="px-4 py-3 text-start font-medium">{t.colCarrier}</th>
-                <th className="px-4 py-3 text-end font-medium">{t.colOrders}</th>
-                <th className="px-4 py-3 text-end font-medium">{t.colNet}</th>
-                <th className="px-4 py-3 text-start font-medium">{c.status}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {SETTLEMENTS.map((s) => (
-                <tr key={s.id} className="border-b border-line bg-paper last:border-0">
-                  <td className="px-4 py-3 text-start font-medium text-ink">
-                    <span dir="ltr">{s.id}</span>
-                  </td>
-                  <td className="px-4 py-3 text-start text-ink-soft">
-                    <bdi>{s.period}</bdi>
-                  </td>
-                  <td className="px-4 py-3 text-start text-ink-soft">{s.carrier}</td>
-                  <td className="px-4 py-3 text-end tabular-nums text-ink-soft">{s.orders}</td>
-                  <td className="px-4 py-3 text-end tabular-nums text-ink">
-                    <bdi>{formatMoney(s.amount, "EGP")}</bdi>
-                  </td>
-                  <td className="px-4 py-3 text-start">
-                    <StatusBadge value={s.status} label={payoutStatusLabel(s.status)} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+      )}
+    </section>
   );
 }

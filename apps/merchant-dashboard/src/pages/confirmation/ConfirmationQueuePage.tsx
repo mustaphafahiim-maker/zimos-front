@@ -1,289 +1,317 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Alert, Button, Card } from "@store-builder/ui";
-import type {
-  ConfirmationOutcome,
-  ConfirmationTask,
-  RecordConfirmationOutcomePayload,
+import {
+  isInvalidCursorError,
+  type AssignConfirmationTasksResult,
+  type ConfirmationAssignee,
+  type ConfirmationOutcome,
+  type ConfirmationQueueSort,
+  type ConfirmationQueueTab,
+  type ConfirmationTask,
 } from "@store-builder/api-client";
-import { apiClient } from "@/lib/apiClient";
-import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
-import { getErrorMessage } from "@/lib/errors";
-import { formatAddress, formatMoney } from "@/lib/format";
-import { useT, useCommon, useLocale, fmt, type Locale, type Messages } from "@/i18n/LocaleContext";
-import { PageHeader } from "@/components/PageHeader";
-import { DataState } from "@/components/DataState";
-import { TextField, Field } from "@/components/Field";
-import { Textarea } from "@/components/Textarea";
+import { ChipRow, ListToolbar } from "@/components/list";
 import { useToast } from "@/components/Toast";
+import { fmt } from "@/i18n/LocaleContext";
+import { apiClient } from "@/lib/apiClient";
+import { CONFIRMATION_STATION_ENABLED } from "@/lib/features";
+import { useListSort } from "@/lib/listSort";
+import { countOf, pluralOf } from "@/lib/plural";
+import { useAsync } from "@/lib/useAsync";
+import { useCachedAsync } from "@/lib/useCachedAsync";
+import { useCursorList } from "@/lib/useCursorList";
+import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { withViewTransition } from "@/lib/viewTransition";
+import { refreshWorkCounts } from "@/lib/workCounts";
+import type { BulkOutcomeResult } from "./BulkOutcomeDialog";
+import { CorrectOutcomeModal } from "./cards/CorrectOutcomeModal";
+import { useNow } from "./confirmationRoles";
+import { ActiveFilterChips, QueueFilterSheet, useAssignmentLabel, type ActiveFilterChip } from "./QueueFilters";
+import { QueueHeader } from "./QueueHeader";
+import { QueueList } from "./QueueList";
+import {
+  PAGE_SIZE,
+  QUEUE_SORTS,
+  SORT_STORAGE_KEY,
+  readStoredView,
+  storeView,
+  useQueueAbilities,
+  type AssignmentFilter,
+  type QueueView,
+} from "./queueModel";
+import { useOutcomeLabels, useQueueStrings } from "./queueStrings";
+import { Station } from "./station/Station";
 
-const STRINGS = {
-  en: {
-    title: "Confirmation queue",
-    description: "Call each customer to confirm their order before it moves to fulfilment.",
-    empty: "No orders waiting for confirmation right now 🎉",
-    itemsOne: "1 item",
-    itemsTwo: "{n} items",
-    itemsFew: "{n} items",
-    itemsMany: "{n} items",
-    attemptsOne: "1 previous attempt",
-    attemptsTwo: "{n} previous attempts",
-    attemptsFew: "{n} previous attempts",
-    attemptsMany: "{n} previous attempts",
-    unnamed: "Unnamed customer",
-    noPhone: "No phone number",
-    claiming: "Claiming…",
-    claim: "Claim & call",
-    rejectionReason: "Rejection reason",
-    rejectionPlaceholder: "Customer changed their mind",
-    notes: "Notes",
-    notesPlaceholder: "Anything worth recording from the call (optional).",
-    saveOutcome: "Save outcome",
-    toastMarked: "{order} marked {outcome}.",
-  },
-  ar: {
-    title: "قائمة تأكيد الطلبات",
-    description: "اتصل بكل عميل لتأكيد طلبه قبل انتقاله إلى التجهيز والشحن.",
-    empty: "لا توجد طلبات بانتظار التأكيد الآن 🎉",
-    itemsOne: "منتج واحد",
-    itemsTwo: "منتجان",
-    itemsFew: "{n} منتجات",
-    itemsMany: "{n} منتج",
-    attemptsOne: "محاولة سابقة واحدة",
-    attemptsTwo: "محاولتان سابقتان",
-    attemptsFew: "{n} محاولات سابقة",
-    attemptsMany: "{n} محاولة سابقة",
-    unnamed: "عميل بدون اسم",
-    noPhone: "لا يوجد رقم هاتف",
-    claiming: "جارٍ الاستلام…",
-    claim: "استلام والاتصال",
-    rejectionReason: "سبب الرفض",
-    rejectionPlaceholder: "العميل غيّر رأيه",
-    notes: "ملاحظات",
-    notesPlaceholder: "أي تفاصيل مهمة من المكالمة (اختياري).",
-    saveOutcome: "حفظ النتيجة",
-    toastMarked: "{order}: {outcome}.",
-  },
-} satisfies Messages;
-
-type Strings = (typeof STRINGS)["en"];
-
-const OUTCOMES: ConfirmationOutcome[] = ["confirmed", "rejected", "unreachable", "postponed"];
-
-const OUTCOME_LABEL: Record<Locale, Record<ConfirmationOutcome, string>> = {
-  en: {
-    confirmed: "Confirmed",
-    rejected: "Rejected",
-    unreachable: "Unreachable",
-    postponed: "Postponed",
-  },
-  ar: {
-    confirmed: "تم التأكيد",
-    rejected: "مرفوض",
-    unreachable: "تعذّر الوصول",
-    postponed: "مؤجل",
-  },
-};
-
-/** Picks the right plural form (Arabic has one / two / few (3–10) / many). */
-function plural(n: number, t: Strings, base: "items" | "attempts"): string {
-  const form = n === 1 ? "One" : n === 2 ? "Two" : n >= 3 && n <= 10 ? "Few" : "Many";
-  return fmt(t[`${base}${form}` as const], { n });
-}
-
+/**
+ * The confirmation queue: the calls a cash-on-delivery store makes before it
+ * ships. Three tabs (waiting, in progress, done); on the waiting tab a role
+ * that takes calls works them one at a time in the calling station
+ * (station/Station.tsx), or switches to the list, which is also what every
+ * other tab and role sees (QueueList.tsx).
+ *
+ * This file loads the data and owns what both views share: the counts, the
+ * cursor list of the tab, the sort and assignment filter, and what happens to
+ * a task after the server answered — put back in place, or taken out with a
+ * toast when its result was saved.
+ */
 export function ConfirmationQueuePage() {
-  const t = useT(STRINGS);
   const workspaceId = useWorkspaceId();
-  const queue = useAsync(
-    () => apiClient.listConfirmationQueue(workspaceId, { status: "queued", limit: 200 }),
+  const t = useQueueStrings();
+  const toast = useToast();
+  const outcomeLabel = useOutcomeLabels();
+  const { userId, canConfirm, canManage } = useQueueAbilities();
+  // One clock for the page: waiting funnel orders turn workable, lock countdowns and ages move together.
+  const now = useNow(30_000);
+  const [tab, setTab] = useState<ConfirmationQueueTab>("pending");
+  const [assignment, setAssignment] = useState<AssignmentFilter>("all");
+  // "Queue order" is each tab's own order (due callbacks first on Pending),
+  // as the queue has always been; the rest sort on the server by the order.
+  const [sort, setSort] = useListSort<ConfirmationQueueSort>(SORT_STORAGE_KEY, QUEUE_SORTS, "default");
+  const [view, setViewState] = useState<QueueView>(readStoredView);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Results recorded in this visit, in either view: the station's progress and its closing line.
+  const [session, setSession] = useState({ done: 0, confirmed: 0 });
+  // A result saved a moment ago that a manager chose to correct from its toast.
+  const [correcting, setCorrecting] = useState<ConfirmationTask | null>(null);
+
+  // The counts are kept for the session, so the tabs show their figures at once on the way back in.
+  const counts = useCachedAsync(
+    `confirmation-counts:${workspaceId}`,
+    () => apiClient.getConfirmationQueueCounts(workspaceId),
     [workspaceId]
   );
-  const tasks = queue.data ?? [];
-
-  function patchTask(updated: ConfirmationTask) {
-    queue.setData((prev) => (prev ?? []).map((x) => (x.id === updated.id ? updated : x)));
-  }
-
-  function removeTask(taskId: string) {
-    queue.setData((prev) => (prev ?? []).filter((x) => x.id !== taskId));
-  }
-
-  return (
-    <div className="min-w-0 max-w-3xl">
-      <PageHeader title={t.title} description={t.description} />
-
-      <DataState
-        loading={queue.loading}
-        error={queue.error}
-        empty={tasks.length === 0}
-        emptyMessage={t.empty}
-        onRetry={() => queue.refresh()}
-      >
-        <div className="space-y-4">
-          {tasks.map((task) => (
-            <ConfirmationCard
-              key={task.id}
-              task={task}
-              onClaimed={patchTask}
-              onResolved={removeTask}
-            />
-          ))}
-        </div>
-      </DataState>
-    </div>
+  // Only a manager assigns, so only a manager needs the team.
+  const assignees = useAsync(
+    () => (canManage ? apiClient.listConfirmationAssignees(workspaceId) : Promise.resolve([] as ConfirmationAssignee[])),
+    [workspaceId, canManage]
   );
-}
+  const list = useCursorList<ConfirmationTask>(
+    async (cursor) => {
+      const page = await apiClient.listConfirmationQueue(workspaceId, {
+        status: tab,
+        cursor,
+        limit: PAGE_SIZE,
+        sort,
+        ...(assignment === "all" ? {} : { assignedTo: assignment }),
+      });
+      return { items: page.tasks, nextCursor: page.nextCursor };
+    },
+    [workspaceId, tab, sort, assignment],
+    { isStaleCursor: (err) => isInvalidCursorError(err) }
+  );
 
-function ConfirmationCard({
-  task,
-  onClaimed,
-  onResolved,
-}: {
-  task: ConfirmationTask;
-  onClaimed: (task: ConfirmationTask) => void;
-  onResolved: (taskId: string) => void;
-}) {
-  const t = useT(STRINGS);
-  const c = useCommon();
-  const { locale } = useLocale();
-  const workspaceId = useWorkspaceId();
-  const toast = useToast();
-  const { order } = task;
-  const contact = order.contactSnapshot;
+  // The list includes the manager. A store with nobody else on it has no one
+  // to hand a call to, so it gets no assignment controls at all; a request
+  // that failed says nothing about the team, so there they stay.
+  const members = assignees.data ?? [];
+  const hasOthers = members.some((agent) => agent.id !== userId);
+  const team = hasOthers ? members : [];
+  const assigning = canManage && (hasOthers || Boolean(assignees.error));
+  // An agent keeps the filter for "Assigned to me".
+  const showAssignment = !canManage || assigning;
+  // Several orders at once. Handing them out, or taking the assignment off them, is a manager's whatever the
+  // size of the team, as it always was; accepting or cancelling them all is for a role that both takes calls
+  // and manages orders (the owner, among the roles the dashboard knows).
+  const bulk = { assign: canManage, outcome: canConfirm && canManage };
+  const assignmentLabel = useAssignmentLabel(team);
 
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [outcome, setOutcome] = useState<ConfirmationOutcome | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [notes, setNotes] = useState("");
+  // The station is for a role that takes calls, on the calls that wait; everyone and everything else gets the list.
+  // Behind its switch: with it off the queue is the list for everyone, as it always was.
+  const canSwitch = CONFIRMATION_STATION_ENABLED && canConfirm && tab === "pending";
+  const stationOn = canSwitch && view === "station";
 
-  const rejectionMissing = outcome === "rejected" && rejectionReason.trim() === "";
+  function changeView(next: QueueView) {
+    storeView(next);
+    withViewTransition(() => setViewState(next));
+  }
 
-  async function claim() {
-    setBusy(true);
-    setError(null);
-    try {
-      const updated = await apiClient.claimConfirmationTask(workspaceId, task.id);
-      onClaimed(updated);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      // The card stays mounted after a claim (its task just flips to
-      // in_progress), so it's safe to drop the busy flag here.
-      setBusy(false);
+  function refreshCounts() {
+    void counts.refresh({ silent: true });
+  }
+
+  // A task that changed in place (claimed, released, assigned, corrected) keeps its
+  // spot until the next load, so the card an agent is working doesn't jump.
+  function replaceTask(updated: ConfirmationTask) {
+    list.setItems((prev) => prev.map((task) => (task.id === updated.id ? updated : task)));
+    refreshCounts();
+  }
+
+  // A task left the tab (its result was saved, or it was finished elsewhere): the side menu's and the
+  // dock's "calls due" follow at once, not on their next minute.
+  function dropTask(taskId: string) {
+    list.setItems((prev) => prev.filter((task) => task.id !== taskId));
+    refreshCounts();
+    refreshWorkCounts();
+  }
+
+  function bulkAssigned(result: AssignConfirmationTasksResult) {
+    const byId = new Map(result.tasks.map((task) => [task.id, task]));
+    list.setItems((prev) => prev.map((task) => byId.get(task.id) ?? task));
+    refreshCounts();
+  }
+
+  // A result was saved, in the station or in the list: the task leaves the tab, the sitting counts it,
+  // and a toast says so — with the way to correct it while the order can still take a correction.
+  function outcomeSaved(task: ConfirmationTask, saved: ConfirmationTask, outcome: ConfirmationOutcome) {
+    dropTask(task.id);
+    setSession((prev) => ({ done: prev.done + 1, confirmed: prev.confirmed + (outcome === "confirmed" ? 1 : 0) }));
+    // Arabic has no letter case, so lowercasing is a no-op there.
+    const message = fmt(t.toastMarked, { order: task.order.orderNumber, outcome: outcomeLabel[outcome].toLowerCase() });
+    if (canManage && saved.status === "done" && saved.correctable) {
+      toast.notify("success", message, { action: { label: t.correct, onClick: () => setCorrecting(saved) }, duration: 8000 });
+    } else {
+      toast.success(message);
     }
   }
 
-  async function save() {
-    if (!outcome || rejectionMissing) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const payload: RecordConfirmationOutcomePayload = { outcome };
-      if (notes.trim()) payload.notes = notes.trim();
-      if (outcome === "rejected") payload.rejectionReason = rejectionReason.trim();
-      await apiClient.recordConfirmationOutcome(workspaceId, task.id, payload);
-      const label = OUTCOME_LABEL[locale][outcome];
-      toast.success(fmt(t.toastMarked, { order: order.orderNumber, outcome: locale === "en" ? label.toLowerCase() : label }));
-      onResolved(task.id);
-    } catch (err) {
-      setError(getErrorMessage(err));
-      setBusy(false);
+  // The list's "Save & next": the next order slides into view with its button focused.
+  function resolvedInList(task: ConfirmationTask, saved: ConfirmationTask, outcome: ConfirmationOutcome) {
+    const index = Array.from(document.querySelectorAll<HTMLElement>("[data-task-card]")).findIndex(
+      (el) => el.dataset.taskCard === task.id
+    );
+    outcomeSaved(task, saved, outcome);
+    requestAnimationFrame(() => {
+      const next = document.querySelectorAll<HTMLElement>("[data-task-card]")[Math.max(0, index)];
+      if (!next) return;
+      next.scrollIntoView({ behavior: "smooth", block: "start" });
+      next.querySelector<HTMLElement>("[data-next-action]")?.focus({ preventScroll: true });
+    });
+  }
+
+  // "Accept / cancel all selected" ran: the orders whose result was saved leave the tab and count toward the
+  // sitting. One left as it was may have changed under us (a teammate took it, it was finished elsewhere),
+  // so the tab is read again instead of showing what it used to be.
+  function bulkOutcomeDone(result: BulkOutcomeResult) {
+    const gone = new Set(result.saved.map(({ task }) => task.id));
+    if (gone.size > 0) {
+      list.setItems((prev) => prev.filter((task) => !gone.has(task.id)));
+      setSession((prev) => ({
+        done: prev.done + gone.size,
+        confirmed: prev.confirmed + (result.kind === "accept" ? gone.size : 0),
+      }));
     }
+    if (result.failed.length > 0) list.reload();
+    refreshCounts();
+    refreshWorkCounts();
+  }
+
+  // The header answers "how much is left?".
+  const c = counts.data;
+  const queueAnswer = !c
+    ? null
+    : c.pending === 0 && c.inProgressMine === 0
+      ? t.answerNone
+      : [
+          c.pending > 0 ? pluralOf(t, "answer", c.pending) : null,
+          c.pendingDue > 0 && c.pendingDue < c.pending ? fmt(t.answerDue, { n: c.pendingDue }) : null,
+          c.inProgressMine > 0 ? fmt(t.answerMine, { n: c.inProgressMine }) : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+  // While the counts are on their way a chip holds the place of its figure; if they cannot be read it has none.
+  const figure = (value: number | undefined) => value ?? (counts.loading ? 0 : null);
+
+  const activeChips: ActiveFilterChip[] = [];
+  if (showAssignment && assignment !== "all") {
+    activeChips.push({ id: "assignment", label: assignmentLabel(assignment), onRemove: () => setAssignment("all") });
+  }
+  if (sort !== "default") {
+    activeChips.push({ id: "sort", label: fmt(t.sortChip, { label: t[`sort_${sort}`] }), onRemove: () => setSort("default") });
+  }
+
+  function resetFilters() {
+    setAssignment("all");
+    if (sort !== "default") setSort("default");
   }
 
   return (
-    <Card className="min-w-0 space-y-4 rounded-2xl p-5">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <Link
-            to={`/orders/${order.id}`}
-            className="font-display text-lg font-semibold text-ink hover:text-primary"
-          >
-            <bdi>{order.orderNumber}</bdi>
-          </Link>
-          <p className="mt-0.5 text-sm text-ink-soft">
-            {plural(order.items.length, t, "items")} ·{" "}
-            <bdi>{formatMoney(order.totalAmount, order.currency)}</bdi>
-          </p>
-        </div>
-        {task.attemptCount > 0 && (
-          <span className="rounded-full border border-warning/30 bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
-            {plural(task.attemptCount, t, "attempts")}
-          </span>
+    <div className="max-w-3xl">
+      <QueueHeader description={queueAnswer ?? t.description} view={canSwitch ? view : null} onViewChange={changeView} />
+
+      <div className="flex items-center gap-2">
+        <ChipRow<ConfirmationQueueTab>
+          label={t.tabsLabel}
+          value={tab}
+          onChange={setTab}
+          // Three fixed tabs: an empty one stays where it is.
+          collapseEmpty={false}
+          countsLoading={counts.loading}
+          // The row scrolls off the start edge of a phone; at its end the Filters button holds its place.
+          className="min-w-0 flex-1 max-sm:mx-0 max-sm:-ms-4"
+          items={[
+            { value: "pending", label: t.tabPending, count: figure(c?.pending), tone: "attention" },
+            { value: "in_progress", label: t.tabInProgress, count: figure(c?.inProgress) },
+            { value: "done", label: t.tabDone, count: figure(c?.done) },
+          ]}
+        />
+        <ListToolbar className="shrink-0" filters={{ count: activeChips.length, onOpen: () => setFiltersOpen(true) }} />
+      </div>
+
+      {/* In the station the Filters button carries the count; the row of chips would push the order down a phone. */}
+      {!stationOn && <ActiveFilterChips chips={activeChips} onClear={resetFilters} />}
+
+      <div className="mt-2 sm:mt-4">
+        {stationOn ? (
+          <Station
+            list={list}
+            now={now}
+            counts={c}
+            session={session}
+            filtersActive={showAssignment && assignment !== "all"}
+            onClearFilters={() => setAssignment("all")}
+            onRefresh={() => {
+              list.reload();
+              refreshCounts();
+              refreshWorkCounts();
+            }}
+            onShowList={() => changeView("list")}
+            onChanged={replaceTask}
+            onDrop={dropTask}
+            onOutcomeSaved={outcomeSaved}
+          />
+        ) : (
+          <QueueList
+            // A new tab or a new assignment filter is a new list: the selection starts empty.
+            key={`${tab}:${assignment}`}
+            list={list}
+            tab={tab}
+            now={now}
+            team={team}
+            assignees={members}
+            bulk={bulk}
+            onChanged={replaceTask}
+            onResolved={resolvedInList}
+            onBulkAssigned={bulkAssigned}
+            onBulkOutcome={bulkOutcomeDone}
+          />
         )}
       </div>
 
-      <div className="rounded-lg bg-paper px-4 py-3">
-        <p className="text-sm font-medium text-ink" dir="auto">
-          {contact.fullName || t.unnamed}
-        </p>
-        <p className="mt-0.5 font-display text-xl font-semibold text-ink">
-          {contact.phone ? (
-            <a href={`tel:${contact.phone}`} className="hover:text-primary" dir="ltr">
-              {contact.phone}
-            </a>
-          ) : (
-            <span className="text-ink-soft">{t.noPhone}</span>
-          )}
-        </p>
-        <p className="mt-1 text-sm text-ink-soft" dir="auto">
-          {formatAddress(order.shippingAddressSnapshot)}
-        </p>
-      </div>
+      <QueueFilterSheet
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        sort={sort}
+        onSortChange={setSort}
+        assignment={assignment}
+        onAssignmentChange={setAssignment}
+        showAssignment={showAssignment}
+        team={canManage ? team : []}
+        activeCount={activeChips.length}
+        onReset={resetFilters}
+        applyLabel={
+          list.loading || list.hasMore ? t.showAll : fmt(t.showCount, { count: countOf("order", list.items.length) })
+        }
+      />
 
-      {error && <Alert variant="danger">{error}</Alert>}
-
-      {task.status === "queued" ? (
-        <Button onClick={claim} disabled={busy}>
-          {busy ? t.claiming : t.claim}
-        </Button>
-      ) : (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {OUTCOMES.map((o) => (
-              <Button
-                key={o}
-                type="button"
-                size="lg"
-                variant={outcome === o ? "primary" : "outline"}
-                onClick={() => setOutcome(o)}
-                disabled={busy}
-              >
-                {OUTCOME_LABEL[locale][o]}
-              </Button>
-            ))}
-          </div>
-
-          {outcome === "rejected" && (
-            <TextField
-              label={t.rejectionReason}
-              required
-              dir="auto"
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder={t.rejectionPlaceholder}
-            />
-          )}
-
-          <Field label={t.notes}>
-            {({ id }) => (
-              <Textarea
-                id={id}
-                dir="auto"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder={t.notesPlaceholder}
-              />
-            )}
-          </Field>
-
-          <Button onClick={save} disabled={busy || !outcome || rejectionMissing}>
-            {busy ? c.saving : t.saveOutcome}
-          </Button>
-        </div>
+      {correcting && (
+        <CorrectOutcomeModal
+          task={correcting}
+          onClose={() => setCorrecting(null)}
+          onCorrected={(updated) => {
+            setCorrecting(null);
+            replaceTask(updated);
+          }}
+        />
       )}
-    </Card>
+    </div>
   );
 }

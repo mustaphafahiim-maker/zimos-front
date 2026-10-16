@@ -1,37 +1,114 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
+import { ApiError, orderTrackingByToken, orderTrackingExtras, type TrackResult } from "@store-builder/api-client";
+import { SHOPPER_RETURNS_ENABLED } from "@/lib/features";
+import { ShopperReturns } from "./returns/ShopperReturns";
 import { isEgyptianMobile, normalizePhone } from "@/lib/egypt";
-import { trackOrder, type TrackResult } from "@/lib/mockCommerce";
+import { focusField } from "@/lib/focusField";
+import { createStorefrontApiClient } from "@/lib/apiClient";
 import { useStore } from "@/lib/StoreContext";
+import { useStoreCountry } from "@/lib/storeCountry";
 import { SearchIcon } from "./Icons";
-import { StatusTimeline } from "./StatusTimeline";
+import { TrackOrderProgress } from "./TrackOrderProgress";
+import { TrackOrderNotes } from "./TrackOrderNotes";
+import { TrackOrderDownloads } from "./TrackOrderDownloads";
 import { btnPrimaryLg, card, container, input, label } from "./ui";
+
+const api = createStorefrontApiClient();
 
 export function TrackOrder() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const { t, intlLocale } = useStore();
+  const { t, intlLocale, money } = useStore();
+  // The store's own country's numbers, as its checkout takes them (lib/orderForm validateOrderForm):
+  // an Egyptian mobile in Egypt, a full number elsewhere.
+  const egypt = useStoreCountry() === "EG";
+  const validPhone = (raw: string) => (egypt ? isEgyptianMobile(raw) : /^\+?\d{8,15}$/.test(normalizePhone(raw)));
 
   const [phone, setPhone] = useState("");
   const [number, setNumber] = useState("");
   const [errors, setErrors] = useState<{ phone?: string; number?: string }>({});
+  // A link the store sent (…/track?number=ORD-…) arrives with the number filled in.
+  useEffect(() => {
+    const fromLink = new URLSearchParams(window.location.search).get("number");
+    if (fromLink) setNumber(fromLink.slice(0, 60));
+  }, []);
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
   const [result, setResult] = useState<TrackResult | null>(null);
+  /** Set only when the lookup itself failed; a clean miss shows `t.track.notFound`. */
+  const [failure, setFailure] = useState<string | null>(null);
+
+  // A signed tracking link (…/track?t=<token>, from the store's messages or "Copy
+  // tracking link") opens its order straight away, with no phone number to type.
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("t");
+    if (!token) return;
+    let stale = false;
+    setStatus("loading");
+    orderTrackingByToken(api, workspaceId, token)
+      .then((found) => {
+        if (stale) return;
+        setResult(found);
+        if (found) setNumber(found.orderNumber);
+      })
+      .catch(() => {
+        if (!stale) setResult(null);
+      })
+      .finally(() => {
+        if (!stale) setStatus("done");
+      });
+    return () => {
+      stale = true;
+    };
+  }, [workspaceId]);
+
+  /** Maps a failed lookup onto one of the shopper-facing messages. */
+  function lookupError(err: unknown): string {
+    if (!(err instanceof ApiError)) return t.track.errors.failed;
+    if (err.status === 422) return t.track.errors.invalid;
+    if (err.status === 429) {
+      const minutes = err.retryAfter ? Math.max(1, Math.ceil(err.retryAfter / 60)) : null;
+      return minutes ? t.track.errors.rateLimitedIn(minutes) : t.track.errors.rateLimited;
+    }
+    return t.track.errors.failed;
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const next: typeof errors = {};
-    if (!isEgyptianMobile(phone)) next.phone = t.form.errors.phone;
+    if (!validPhone(phone)) next.phone = egypt ? t.form.errors.phone : t.form.errors.phoneIntl;
     if (!number.trim()) next.number = t.track.errors.orderNumber;
     setErrors(next);
-    if (next.phone) return document.getElementById("track-phone")?.focus();
-    if (next.number) return document.getElementById("track-number")?.focus();
+    if (next.phone) return focusField("track-phone");
+    if (next.number) return focusField("track-number");
 
     setStatus("loading");
-    setResult(await trackOrder(workspaceId, normalizePhone(phone), number));
-    setStatus("done");
+    setFailure(null);
+    setResult(null);
+    try {
+      // The API takes digits only and normalizes local vs. international itself.
+      // A "#" typed in front of the order number isn't part of it.
+      const found = await api.trackOrder(
+        workspaceId,
+        // Digits only (the API refuses a "+"); it normalizes the number as the checkout did.
+        normalizePhone(phone).replace(/^\+/, ""),
+        number.replace(/^#/, "").trim()
+      );
+      setResult(found);
+    } catch (err) {
+      setResult(null);
+      setFailure(lookupError(err));
+    } finally {
+      setStatus("done");
+    }
   }
+
+  // Every amount in one result is in the order's own currency, not the store's
+  // current one — an order placed before a currency change still adds up.
+  const currency = result?.currency;
+  // The order's signed tracking token: it names the order when the shopper asks for a return (lib/features).
+  const trackingToken = SHOPPER_RETURNS_ENABLED && result ? (orderTrackingExtras(result).trackingToken ?? null) : null;
 
   return (
     <main className={`${container} flex-1 py-10 sm:py-14`}>
@@ -53,9 +130,9 @@ export function TrackOrder() {
               id="track-phone"
               type="tel"
               inputMode="tel"
-              autoComplete="tel-national"
+              autoComplete={egypt ? "tel-national" : "tel"}
               dir="ltr"
-              placeholder={t.form.phonePlaceholder}
+              placeholder={egypt ? t.form.phonePlaceholder : undefined}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               aria-invalid={errors.phone ? true : undefined}
@@ -77,6 +154,9 @@ export function TrackOrder() {
               type="text"
               inputMode="text"
               autoComplete="off"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
               dir="ltr"
               placeholder={t.track.orderNumberPlaceholder}
               value={number}
@@ -98,7 +178,9 @@ export function TrackOrder() {
 
         <div aria-live="polite" className="mt-6">
           {status === "done" && !result && (
-            <p className="rounded-2xl bg-danger-soft px-5 py-4 text-sm text-danger">{t.track.notFound}</p>
+            <p className="rounded-2xl bg-danger-soft px-5 py-4 text-sm text-danger">
+              {failure ?? t.track.notFound}
+            </p>
           )}
           {status === "done" && result && (
             <section className={`${card} p-5 sm:p-6`} aria-labelledby="track-status-title">
@@ -110,9 +192,55 @@ export function TrackOrder() {
                   #{result.orderNumber}
                 </span>
               </div>
-              <StatusTimeline stage={result.stage} />
+              <TrackOrderProgress result={result} />
+
+              {result.items.length > 0 && (
+                <>
+                  <h3 className="mt-6 text-sm font-semibold text-ink">{t.track.items}</h3>
+                  <ul className="mt-3 space-y-3">
+                    {result.items.map((item, i) => (
+                      <li key={i} className="flex justify-between gap-3 text-sm">
+                        <span className="min-w-0 text-ink">
+                          {item.productNameSnapshot}
+                          <span className="text-xs text-ink-soft"> × {item.quantity}</span>
+                        </span>
+                        <span className="shrink-0 text-ink">{money(item.lineTotalAmount, currency)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              <dl className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-ink-soft">{t.track.subtotal}</dt>
+                  <dd className="text-ink">{money(result.subtotalAmount, currency)}</dd>
+                </div>
+                {Number(result.discountAmount) > 0 && (
+                  <div className="flex justify-between text-success">
+                    <dt>{t.track.discount}</dt>
+                    <dd>−{money(result.discountAmount, currency)}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <dt className="text-ink-soft">{t.track.shipping}</dt>
+                  <dd className="text-ink">{money(result.shippingAmount, currency)}</dd>
+                </div>
+                <div className="flex justify-between border-t border-line pt-3 text-base font-bold text-ink">
+                  <dt>{t.track.total}</dt>
+                  <dd>{money(result.totalAmount, currency)}</dd>
+                </div>
+              </dl>
+
+              <TrackOrderDownloads result={result} />
+
+              <TrackOrderNotes result={result} />
+
+              {/* Return items, when the store lets shoppers ask. */}
+              {trackingToken && <ShopperReturns key={trackingToken} token={trackingToken} workspaceId={workspaceId} />}
+
               {result.updatedAt && (
-                <p className="mt-5 text-xs text-ink-muted">
+                <p className="mt-5 text-xs text-ink-soft">
                   {t.track.lastUpdate}:{" "}
                   {new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium", timeStyle: "short" }).format(
                     new Date(result.updatedAt)

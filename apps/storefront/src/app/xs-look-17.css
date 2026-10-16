@@ -1,0 +1,688 @@
+/*
+ * Look 17 · Tropika (html.design, free with attribution) — everything that is
+ * this one template's: its colours and type, how its header and footer differ
+ * from the shared layout in xs-shell.css, and how it draws the bands it
+ * shares with other looks. Deleting this file (and its import, its pictures
+ * under public/xs/17 and its entries in lib/xsShell.ts and the editor's
+ * xsBlocks.ts) removes the template.
+ *
+ * Its text is set in Poppins — the faces look 01 already carries
+ * ("XS01 Sans", xs-sections.css), so removing look 01's fonts leaves this
+ * look on the store's own sans face. The template loads only the regular and
+ * the bold, so its smaller headings (Bootstrap's 500) are drawn regular here
+ * as they are there. The rights line at the foot is Roboto (xs-fonts.css).
+ */
+
+[data-xs-look="17"],
+.brand-theme[data-xs-shell="17"] {
+  --xs-sans: "XS01 Sans", "XS Ar Tajawal", var(--font-sans), sans-serif;
+  --xs-display: "XS01 Sans", "XS Ar Tajawal", var(--font-sans), sans-serif;
+  --xs-ink: #000;
+  --xs-ink-soft: #343434;
+  --xs-muted: #343434;
+  --xs-brand: #fc5d35;
+  --xs-accent: #fc5d35;
+  --xs-button: #fc5d35;
+  --xs-highlight: #fc5d35;
+  --xs-tint: #f7f7f7;
+  --xs-dark: #000;
+  --xs-line: rgba(0, 0, 0, 0.125);
+  --xs-ground: #fff;
+  --xs-footer-ink: #191818;
+  --xs-badge: #fc5d35;
+  --xs-btn-radius: 0px;
+  --xs-container: 1170px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* --- header: one pale-grey bar that runs on into the hero, links on the end side */
+
+.xs-header[data-xs-look="17"] {
+  padding-bottom: 0;
+}
+.xs-header[data-xs-look="17"] .xs-header__strip {
+  display: none;
+}
+.xs-header[data-xs-look="17"] .xs-header__bar,
+.xs-header[data-xs-look="17"][data-scrolled] .xs-header__bar {
+  position: static;
+  height: 86px;
+  padding-inline: 15px;
+  background: var(--xs-tint);
+  box-shadow: none;
+}
+/* The bar's content lines up with the bands', which keep their gutter outside the container. */
+.xs-header[data-xs-look="17"] .xs-header__bar-inner {
+  padding-inline: 0;
+}
+.xs-header[data-xs-look="17"] .xs-header__logo {
+  height: 45px;
+  margin-inline-end: 0;
+  color: #2e2e2d;
+}
+.xs-header[data-xs-look="17"] .xs-header__logo-name {
+  font-size: 20px;
+  letter-spacing: 0;
+}
+.xs-header[data-xs-look="17"] .xs-header__menu {
+  margin-inline-start: auto;
+}
+.xs-header[data-xs-look="17"] .xs-header__link {
+  margin-inline: 0;
+  padding: 10px 30px;
+  color: var(--xs-ink-soft);
+  font-size: 16px;
+  font-weight: 400;
+}
+.xs-header[data-xs-look="17"] .xs-header__link:is(:hover, [aria-current="page"]) {
+  color: var(--xs-brand);
+}
+.xs-header[data-xs-look="17"] .xs-header__icons {
+  flex: 0 0 auto;
+  margin-inline-start: 24px;
+}
+@media (max-width: 991px) {
+  .xs-header[data-xs-look="17"] .xs-header__icons {
+    flex: 1;
+    margin-inline-start: 0;
+  }
+}
+
+/* --- footer: black words on white, then a pale bar with the rights line ---- */
+
+.xs-footer[data-xs-look="17"] {
+  padding: 75px 15px 0;
+  background: var(--xs-ground);
+  color: var(--xs-ink);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.xs-footer[data-xs-look="17"] .xs-footer__grid {
+  padding-bottom: 25px;
+}
+.xs-footer[data-xs-look="17"] .xs-footer__title {
+  padding-bottom: 12px;
+  color: var(--xs-ink);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-transform: none;
+}
+.xs-footer[data-xs-look="17"] li {
+  padding-bottom: 6px;
+}
+.xs-footer[data-xs-look="17"] .xs-footer__social {
+  padding-top: 25px;
+}
+.xs-footer[data-xs-look="17"] .xs-footer__social a {
+  width: 35px;
+  height: 35px;
+  background: var(--xs-dark);
+  color: #fff;
+}
+.xs-footer[data-xs-look="17"] .xs-footer__bottom {
+  max-width: none;
+  margin-inline: -15px;
+  padding: 20px 15px;
+  background: #efeded;
+  color: var(--xs-footer-ink);
+  font-family: "Roboto", var(--font-sans), sans-serif;
+}
+
+/* --- buttons: square, 145px wide, orange or black; hollow under the pointer - */
+
+[data-xs-look="17"] .xs-btn {
+  min-width: 145px;
+  padding: 10px 15px;
+  border: 1px solid transparent;
+  font-size: 16px;
+  font-weight: 400;
+  text-align: center;
+}
+[data-xs-look="17"] .xs-btn[data-tone="accent"] {
+  border-color: transparent;
+  background: var(--xs-brand);
+  color: #f7f7f7;
+}
+[data-xs-look="17"] .xs-btn[data-tone="accent"]:hover {
+  border-color: var(--xs-brand);
+  background: transparent;
+  color: var(--xs-brand);
+  filter: none;
+}
+[data-xs-look="17"] .xs-btn:is([data-tone="solid"], [data-tone="outline"]) {
+  border-color: transparent;
+  background: var(--xs-dark);
+  color: #f7f7f7;
+}
+[data-xs-look="17"] .xs-btn:is([data-tone="solid"], [data-tone="outline"]):hover {
+  border-color: var(--xs-dark);
+  background: transparent;
+  color: var(--xs-dark);
+}
+
+/* --- headings: bold and centred, a centred line under them ------------------ */
+
+[data-xs-look="17"] .xs-heading {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 700;
+  text-align: center;
+}
+[data-xs-look="17"] .xs-heading + p {
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+/* --- xs_hero: a bold heading, a paragraph and two buttons on pale grey, a cut-out picture beside */
+
+.xs-hero[data-xs-look="17"] {
+  box-sizing: border-box;
+  /* The template's 98vh, less the bar; capped so a preview as tall as its page cannot grow without end. */
+  min-height: min(98vh - 86px, 814px);
+  padding: calc(8% * var(--xs-space, 1)) 15px calc(50px * var(--xs-space, 1));
+  background: var(--xs-tint);
+}
+.xs-hero[data-xs-look="17"] .xs-hero__inner {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 30px;
+  align-items: start;
+}
+.xs-hero[data-xs-look="17"] .xs-hero__text {
+  max-width: none;
+}
+.xs-hero[data-xs-look="17"] .xs-hero__heading {
+  width: 95%;
+  margin-bottom: 45px;
+  color: var(--xs-ink);
+  font-size: 60px;
+}
+.xs-hero[data-xs-look="17"] .xs-hero__line {
+  margin-bottom: 45px;
+  color: var(--xs-ink);
+}
+.xs-hero[data-xs-look="17"] .xs-hero__buttons {
+  gap: 16px;
+}
+.xs-hero[data-xs-look="17"] .xs-btn {
+  text-transform: uppercase;
+}
+.xs-hero[data-xs-look="17"] .xs-hero__art img {
+  position: static;
+  display: block;
+  width: 85%;
+  max-width: 100%;
+  margin-inline: auto;
+}
+.xs-hero[data-xs-look="17"] .xs-hero__art::after {
+  display: none;
+}
+@media (max-width: 1120px) {
+  .xs-hero[data-xs-look="17"] {
+    min-height: 0;
+    padding: calc(50px * var(--xs-space, 1)) 15px;
+  }
+}
+@media (max-width: 767px) {
+  .xs-hero[data-xs-look="17"] .xs-hero__inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .xs-hero[data-xs-look="17"] .xs-hero__art img {
+    margin-block: 65px;
+  }
+}
+@media (max-width: 576px) {
+  .xs-hero[data-xs-look="17"] .xs-hero__text {
+    text-align: center;
+  }
+  /* Bootstrap's own h1 size: the template keeps 60px here, which one long word would push off a phone. */
+  .xs-hero[data-xs-look="17"] .xs-hero__heading {
+    width: auto;
+    font-size: 40px;
+  }
+  .xs-hero[data-xs-look="17"] .xs-hero__buttons {
+    justify-content: center;
+  }
+}
+
+/* --- xs_features: three outlined cards, a small icon and an orange title each */
+
+.xs-features[data-xs-look="17"] {
+  padding: calc(75px * var(--xs-space, 1)) 15px;
+}
+.xs-features[data-xs-look="17"] .xs-features__inner {
+  grid-template-columns: minmax(0, 1fr);
+}
+.xs-features[data-xs-look="17"] .xs-features__list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+  margin: 45px 0 0;
+  text-align: center;
+}
+.xs-features[data-xs-look="17"] .xs-features__item {
+  position: relative;
+  margin: 0;
+  padding: 0 20px 20px;
+  border: 1px solid var(--xs-line);
+  border-radius: 4px;
+  background: var(--xs-ground);
+}
+/* Under the pointer the outline gives way to a soft shadow and an orange bar along the top. */
+.xs-features[data-xs-look="17"] .xs-features__item::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  inset-inline: -1px;
+  height: 7px;
+  background: transparent;
+}
+.xs-features[data-xs-look="17"] .xs-features__item:hover {
+  border-color: transparent;
+  border-radius: 0;
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.2);
+}
+.xs-features[data-xs-look="17"] .xs-features__item:hover::after {
+  background: var(--xs-brand);
+}
+.xs-features[data-xs-look="17"] .xs-features__icon {
+  display: block;
+  margin: 55px 0 25px;
+}
+.xs-features[data-xs-look="17"] .xs-features__icon::before {
+  display: none;
+}
+.xs-features[data-xs-look="17"] .xs-features__icon img {
+  width: 50px;
+  height: auto;
+  margin-inline: auto;
+}
+.xs-features[data-xs-look="17"] .xs-features__item h3 {
+  margin-bottom: 12px;
+  color: var(--xs-brand);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+.xs-features[data-xs-look="17"] .xs-features__item p {
+  font-size: 16px;
+  line-height: 1.5;
+}
+@media (max-width: 991px) {
+  .xs-features[data-xs-look="17"] .xs-features__list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 25px;
+  }
+}
+
+/* --- xs_products: one product to a row — name, price and a black button; the picture on the end side */
+
+.xs-products[data-xs-look="17"] {
+  padding: calc(75px * var(--xs-space, 1)) 15px calc(30px * var(--xs-space, 1));
+}
+/* Straight after the look's cards, as on the template's home page, the heading follows without more air. */
+section:has(.xs-features[data-xs-look="17"]) + section .xs-products[data-xs-look="17"] {
+  padding-top: 0;
+}
+.xs-products[data-xs-look="17"] .xs-products__head {
+  justify-content: center;
+}
+.xs-products[data-xs-look="17"] .xs-products__heading {
+  padding-bottom: 0;
+  color: var(--xs-ink);
+  font-size: 32px;
+  line-height: 1.2;
+  text-transform: none;
+}
+.xs-products[data-xs-look="17"] .xs-products__grid:not([data-layout="slider"]) {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin-top: 0;
+}
+/* The picture's box steps aside so its link and its label sit on the card's own grid. */
+.xs-products[data-xs-look="17"] .xs-products__card {
+  display: grid;
+  grid-template: "meta shot" auto "view shot" 1fr / minmax(0, 8fr) minmax(0, 4fr);
+  column-gap: 30px;
+  padding: 45px 0;
+}
+.xs-products[data-xs-look="17"] .xs-products__media {
+  display: contents;
+}
+.xs-products[data-xs-look="17"] .xs-products__shot {
+  position: relative;
+  grid-area: shot;
+  align-self: center;
+  justify-self: center;
+  width: 250px;
+  max-width: 100%;
+  height: auto;
+}
+.xs-products[data-xs-look="17"] .xs-products__img {
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  transform: none;
+}
+.xs-products[data-xs-look="17"] .xs-products__badge {
+  border-radius: 0;
+  background: var(--xs-badge);
+}
+.xs-products[data-xs-look="17"] .xs-products__meta {
+  grid-area: meta;
+  padding-top: 0;
+}
+.xs-products[data-xs-look="17"] .xs-products__name {
+  padding-bottom: 0;
+  color: var(--xs-ink);
+  font-size: 28px;
+  line-height: 1.2;
+}
+.xs-products[data-xs-look="17"] .xs-products__name:hover {
+  color: var(--xs-brand);
+}
+.xs-products[data-xs-look="17"] .xs-products__price {
+  margin-top: 24px;
+  color: var(--xs-ink);
+  font-size: 16px;
+}
+.xs-products[data-xs-look="17"] .xs-products__view {
+  position: static;
+  grid-area: view;
+  align-self: start;
+  justify-self: start;
+  height: auto;
+  margin-top: 48px;
+  padding: 10px 15px;
+  transform: none;
+  line-height: 1.5;
+}
+/* The card's label and the load-more button are the template's black button. */
+.xs-products[data-xs-look="17"] :is(.xs-products__view, .xs-products__more-btn) {
+  min-width: 145px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: var(--xs-dark);
+  color: #f7f7f7;
+  font-size: 16px;
+  font-weight: 400;
+  text-transform: none;
+}
+.xs-products[data-xs-look="17"] :is(.xs-products__view:hover, .xs-products__more-btn:hover:not(:disabled)) {
+  border-color: var(--xs-dark);
+  background: transparent;
+  color: var(--xs-dark);
+}
+.xs-products[data-xs-look="17"] .xs-products__more {
+  padding: 0 0 45px;
+}
+/* Laid out as one row to slide along: the picture over the words. */
+.xs-products[data-xs-look="17"] .xs-products__grid[data-layout="slider"] .xs-products__card {
+  grid-template: "shot" auto "meta" auto "view" auto / minmax(0, 1fr);
+  row-gap: 24px;
+}
+@media (max-width: 767px) {
+  .xs-products[data-xs-look="17"] .xs-products__grid:not([data-layout="slider"]) .xs-products__card {
+    grid-template: "meta" auto "view" auto "shot" auto / minmax(0, 1fr);
+    text-align: center;
+  }
+  .xs-products[data-xs-look="17"] .xs-products__meta {
+    align-items: center;
+  }
+  .xs-products[data-xs-look="17"] .xs-products__view {
+    justify-self: center;
+    margin-bottom: 40px;
+  }
+}
+
+/* --- xs_title: very large white capitals in the middle of a wide dimmed photograph */
+
+.xs-title[data-xs-look="17"] {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  padding: calc(30px * var(--xs-space, 1)) 15px;
+  background-repeat: no-repeat;
+}
+/* 125px, and 80px on a tablet or a phone, as the template has them; narrower than a word needs, it gives way. */
+.xs-title[data-xs-look="17"] .xs-title__heading {
+  max-width: 100%;
+  font-size: min(125px, 15vw);
+  line-height: 1.2;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+}
+@media (max-width: 768px) {
+  .xs-title[data-xs-look="17"] .xs-title__heading {
+    font-size: min(80px, 15vw);
+  }
+}
+
+/* --- xs_quotes: the customer's picture, name and words in the middle, two round dark arrows underneath */
+
+.xs-quotes[data-xs-look="17"] {
+  padding: calc(75px * var(--xs-space, 1)) 15px;
+}
+.xs-quotes[data-xs-look="17"] .xs-quotes__heading {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.xs-quotes[data-xs-look="17"] .xs-quotes__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: none;
+  padding: 45px 0;
+}
+.xs-quotes[data-xs-look="17"] .xs-quotes__item figcaption {
+  order: -1;
+  margin-bottom: 25px;
+}
+.xs-quotes[data-xs-look="17"] .xs-quotes__item blockquote {
+  margin: 0;
+}
+.xs-quotes[data-xs-look="17"] .xs-quotes__item p {
+  font-size: 16px;
+  line-height: 1.5;
+}
+.xs-quotes[data-xs-look="17"] .xs-quotes__face {
+  width: 350px;
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 0;
+  border-radius: 0;
+}
+.xs-quotes[data-xs-look="17"] .xs-quotes__name {
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+/* The arrows hang side by side under the words, in the band's own lower margin; no dots. */
+.xs-quotes[data-xs-look="17"] .xs-quotes__arrow {
+  top: 100%;
+  display: block;
+  width: 45px;
+  height: 45px;
+  transform: none;
+  background: #292727;
+  color: #fff;
+  font-size: 24px;
+}
+.xs-quotes[data-xs-look="17"] .xs-quotes__arrow:hover {
+  background: var(--xs-brand);
+}
+.xs-quotes[data-xs-look="17"] .xs-quotes__arrow--prev {
+  inset-inline-start: calc(50% - 52.5px);
+}
+.xs-quotes[data-xs-look="17"] .xs-quotes__arrow--next {
+  inset-inline-end: calc(50% - 52.5px);
+}
+.xs-quotes[data-xs-look="17"] .xs-quotes__dots {
+  display: none;
+}
+
+/* --- xs_contact: underlined fields and a small orange button; a dish of lemon slices at the page's edge */
+
+.xs-contact[data-xs-look="17"] {
+  position: relative;
+  padding: calc(75px * var(--xs-space, 1)) 15px;
+}
+.xs-contact[data-xs-look="17"]::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 215px;
+  background: url("/xs/17/dish.png") center / 100% auto no-repeat;
+  pointer-events: none;
+}
+/* The dish is cut along its outer edge: mirrored, it meets the other edge of an Arabic page the same way. */
+[dir="rtl"] .xs-contact[data-xs-look="17"]::after {
+  transform: scaleX(-1);
+}
+/* With contact details beside the form, the dish makes room for them. */
+.xs-contact[data-xs-look="17"]:has(.xs-contact__info)::after {
+  display: none;
+}
+.xs-contact[data-xs-look="17"] .xs-contact__grid {
+  position: relative;
+  z-index: 1;
+  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+  gap: 30px;
+}
+.xs-contact[data-xs-look="17"] .xs-contact__box {
+  padding: 0;
+  border: 0;
+}
+.xs-contact[data-xs-look="17"] .xs-contact__heading {
+  padding-bottom: 23px;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: start;
+}
+.xs-contact[data-xs-look="17"] :is(.xs-contact__field, .xs-contact__message) {
+  width: 90%;
+  margin: 10px 0;
+  border: 0;
+  border-bottom: 1px solid #252525;
+  border-radius: 0;
+}
+.xs-contact[data-xs-look="17"] .xs-contact__field svg {
+  display: none;
+}
+.xs-contact[data-xs-look="17"] :is(.xs-contact__field input, .xs-contact__message) {
+  padding: 1px 2px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.xs-contact[data-xs-look="17"] .xs-contact__field input {
+  height: auto;
+}
+.xs-contact[data-xs-look="17"] .xs-contact__message {
+  min-height: 0;
+  margin-block: 58px;
+}
+.xs-contact[data-xs-look="17"] .xs-contact__error {
+  margin: -40px 0 16px;
+}
+.xs-contact[data-xs-look="17"] .xs-contact__submit {
+  display: inline-flex;
+  width: auto;
+  height: auto;
+  padding: 8px 40px;
+  border-radius: 0;
+  background: var(--xs-brand);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.xs-contact[data-xs-look="17"] .xs-contact__submit:hover:not(:disabled) {
+  background: var(--xs-dark);
+}
+.xs-contact[data-xs-look="17"] .xs-contact__done {
+  color: var(--xs-ink);
+  font-size: 16px;
+  text-align: start;
+}
+@media (max-width: 768px) {
+  .xs-contact[data-xs-look="17"]::after {
+    width: 105px;
+  }
+}
+@media (max-width: 767px) {
+  .xs-contact[data-xs-look="17"] .xs-contact__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* One column leaves the dish no side of its own: it would sit under the fields. */
+  .xs-contact[data-xs-look="17"]::after {
+    display: none;
+  }
+}
+
+/* --- xs_newsletter: a small heading, a narrow box and an orange button under it, on pale grey */
+
+.xs-newsletter[data-xs-look="17"] {
+  padding: calc(75px * var(--xs-space, 1)) 15px;
+}
+.xs-newsletter[data-xs-look="17"] .xs-heading {
+  margin-bottom: 12px;
+  font-size: 22px;
+  font-weight: 400;
+}
+.xs-newsletter[data-xs-look="17"] .xs-newsletter__form {
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+.xs-newsletter[data-xs-look="17"] .xs-newsletter__form input[type="email"] {
+  flex: none;
+  width: 225px;
+  min-width: 0;
+  max-width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border-color: var(--xs-ink-soft);
+  font-size: 16px;
+}
+.xs-newsletter[data-xs-look="17"] .xs-newsletter__form button {
+  height: auto;
+  padding: 5px 30px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* --- phone menu: three thick black bars; the bar's grey carries on down, links in the middle */
+
+.xs-header[data-xs-look="17"] .xs-phone__toggle {
+  padding: 0 5px;
+}
+.xs-header[data-xs-look="17"] .xs-phone__toggle i {
+  height: 5px;
+  border-radius: 3px;
+}
+.xs-header[data-xs-look="17"] .xs-phone__toggle[aria-expanded="true"] i:nth-child(1) {
+  transform: translateY(10px) rotate(45deg);
+}
+.xs-header[data-xs-look="17"] .xs-phone__toggle[aria-expanded="true"] i:nth-child(3) {
+  transform: translateY(-10px) rotate(-45deg);
+}
+.xs-phone__layer[data-xs-look="17"] .xs-phone__panel {
+  --xs-ph-ground: var(--xs-tint);
+  --xs-ph-ink: var(--xs-ink-soft);
+}
+.xs-phone__layer[data-xs-look="17"] .xs-phone__link {
+  padding: 10px 30px;
+  font-size: 16px;
+  text-align: center;
+}
+.xs-phone__layer[data-xs-look="17"] .xs-phone__extras {
+  justify-content: center;
+}
+.xs-phone__layer[data-xs-look="17"] .xs-phone__notice {
+  text-align: center;
+}

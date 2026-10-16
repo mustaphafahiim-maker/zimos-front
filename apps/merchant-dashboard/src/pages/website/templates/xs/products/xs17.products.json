@@ -1,0 +1,53 @@
+{
+  "look": "17",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Fruits",
+      "nameAr": "فواكه",
+      "slug": "fruits"
+    }
+  ],
+  "products": [
+    {
+      "name": "Navel Oranges – 1 kg",
+      "nameAr": "برتقال أبو سُرّة – 1 كيلو",
+      "description": "Sweet, juicy seedless oranges, hand-picked and packed fresh. Perfect for snacking or fresh juice.",
+      "descriptionAr": "برتقال أبو سُرّة حلو ومليان عصير وبدون بذر، منتقى بعناية ومعبّأ طازج. مثالي للأكل أو العصير الفريش.",
+      "price": 35,
+      "image": "/xs/17/products/p01.png",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Black Grapes – 1 kg",
+      "nameAr": "عنب أسود – 1 كيلو",
+      "description": "Crisp, sweet black grapes in full bunches, washed-ready and chilled for delivery.",
+      "descriptionAr": "عنب أسود مقرمش وحلو في عناقيد كاملة، يصلك مبرّدًا وجاهزًا بعد الغسيل.",
+      "price": 85,
+      "compareAt": 110,
+      "image": "/xs/17/products/p02.png",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Pink Guava – 1 kg",
+      "nameAr": "جوافة بلدي – 1 كيلو",
+      "description": "Fragrant pink-flesh guava, ripe and ready to eat. Rich in vitamin C and great in juice.",
+      "descriptionAr": "جوافة بلدي بلب وردي ورائحة فوّاحة، ناضجة وجاهزة للأكل وغنية بفيتامين سي. رائعة للعصير.",
+      "price": 45,
+      "image": "/xs/17/products/p03.png",
+      "collections": [
+        "fruits"
+      ]
+    }
+  ],
+  "wording": {
+    "openLabel": "Buy Now"
+  },
+  "wordingAr": {
+    "openLabel": "اشترِ الآن"
+  }
+}

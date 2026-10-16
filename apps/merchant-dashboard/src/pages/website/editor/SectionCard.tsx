@@ -1,181 +1,64 @@
+import type { CSSProperties } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, type LucideIcon } from "lucide-react";
+import { IconDelete, IconDragHandle, IconEyeOff, type IconComponent } from "@/components/icons";
 import { cn } from "@store-builder/ui";
 import type { PageElement, PageSection } from "@store-builder/api-client";
-import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
-import { ELEMENT_SPECS, sectionElements, sectionIcon, sectionLabel, tr } from "./blocks";
-
-const STRINGS = {
-  en: {
-    reorder: "Reorder {label}",
-    deleteSection: "Delete {label}",
-    emptySection: "Empty section",
-    image: "Image",
-    noImage: "No image yet",
-    imagesOne: "1 image",
-    imagesMany: "{n} images",
-    rowsOne: "1 row",
-    rowsMany: "{n} rows",
-    itemsOne: "1 item",
-    itemsMany: "{n} items",
-    collections: "{n} collections",
-    oneProduct: "One product",
-    hours: "{n}h",
-    nothingLinked: "Nothing linked yet",
-    noAddress: "No address yet",
-    linksOne: "1 link",
-    linksMany: "{n} links",
-    form: "Form",
-    cart: "Cart",
-  },
-  ar: {
-    reorder: "إعادة ترتيب {label}",
-    deleteSection: "حذف {label}",
-    emptySection: "قسم فارغ",
-    image: "صورة",
-    noImage: "لا توجد صورة بعد",
-    imagesOne: "صورة واحدة",
-    imagesMany: "عدد الصور: {n}",
-    rowsOne: "صف واحد",
-    rowsMany: "عدد الصفوف: {n}",
-    itemsOne: "عنصر واحد",
-    itemsMany: "عدد العناصر: {n}",
-    collections: "عدد المجموعات: {n}",
-    oneProduct: "منتج واحد",
-    hours: "{n} ساعة",
-    nothingLinked: "لا يوجد رابط بعد",
-    noAddress: "لا يوجد عنوان بعد",
-    linksOne: "رابط واحد",
-    linksMany: "عدد الروابط: {n}",
-    form: "نموذج",
-    cart: "سلة التسوق",
-  },
-} satisfies Messages;
-
-type SummaryText = (typeof STRINGS)["en"];
+import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
+import { ELEMENT_SPECS, sectionElements, sectionIcon, sectionLabel } from "./blocks";
+import { editorUi, elementLabel, useEditorLocale, type EditorLocale } from "./editorLocale";
+import { RowMenu } from "./library/RowMenu";
+import { leftUi } from "./library/strings";
+import { elementSummary } from "./library/summary";
 
 /**
- * A section as it appears on the canvas: a bordered card that summarises the
- * elements inside it. This is deliberately NOT a storefront preview — it is a
- * structural view, because rendering the real thing is a later phase.
+ * A section as it appears in the outline. This is deliberately NOT a
+ * storefront preview — it is a structural view. In the website editor the real
+ * storefront is the canvas beside it, and these are its layer list (drag to
+ * reorder).
  *
- * Merchant-authored content inside it is rendered with `dir="auto"`, so an
- * English heading on an Arabic dashboard (or vice versa) still reads correctly.
+ * Two shapes:
+ *  - a ROW (`showSummary={false}`, the section list): one 48px pill — the drag
+ *    handle, the section's icon and name, how many elements it holds, a mark
+ *    when it is hidden, and «…» for what can be done to it. The selected row
+ *    is the brand-fill pill; with `outline` its elements are listed under it.
+ *  - a CARD (the default, the funnel step editor's page column): the same
+ *    header over a summary of every element inside.
  */
 
-function truncate(value: string, max = 90): string {
-  const clean = value.replace(/\s+/g, " ").trim();
-  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
-}
+/** How the rows that make room move: the house's fade curve, a little longer than a fade. */
+const MAKE_ROOM = { duration: 240, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" };
 
-function counted(n: number, one: string, many: string): string {
-  return n === 1 ? one : fmt(many, { n });
-}
-
-/** Localized label of a select option value, falling back to the raw value. */
-function optionLabel(
-  type: PageElement["type"],
-  key: string,
-  value: string,
-  locale: Locale
-): string {
-  const field = ELEMENT_SPECS[type].fields.find((f) => f.key === key);
-  if (field?.kind !== "select") return value;
-  const option = field.options.find((o) => o.value === value);
-  return option ? tr(option.label, locale) : value;
-}
-
-/** A one-line gist of an element, pulled from whichever prop carries its text. */
-function elementSummary(element: PageElement, t: SummaryText, locale: Locale): string {
-  const props = (element.props ?? {}) as Record<string, unknown>;
-  const str = (key: string) => (typeof props[key] === "string" ? (props[key] as string) : "");
-  const arrow = locale === "ar" ? "←" : "→";
-
-  switch (element.type) {
-    case "heading":
-    case "text":
-    case "rich_text":
-      return truncate(str("text"));
-    case "button":
-      // The href is isolated LTR (U+2066…U+2069) so "/products" doesn't reorder
-      // to "products/" next to an Arabic button label.
-      return truncate(
-        [str("label"), str("href") && `${arrow} \u2066${str("href")}\u2069`].filter(Boolean).join(" ")
-      );
-    case "image":
-      return str("src") ? truncate(str("alt") || t.image) : t.noImage;
-    case "gallery": {
-      const n = Array.isArray(props.images) ? props.images.length : 0;
-      return truncate([str("title"), counted(n, t.imagesOne, t.imagesMany)].filter(Boolean).join(" · "));
-    }
-    case "testimonial":
-      return truncate([str("quote") && `“${str("quote")}”`, str("author")].filter(Boolean).join(" — "));
-    case "faq":
-    case "accordion": {
-      const n = Array.isArray(props.items) ? props.items.length : 0;
-      return truncate([str("title"), counted(n, t.rowsOne, t.rowsMany)].filter(Boolean).join(" · "));
-    }
-    case "list": {
-      const n = Array.isArray(props.items) ? props.items.length : 0;
-      return truncate([str("title"), counted(n, t.itemsOne, t.itemsMany)].filter(Boolean).join(" · "));
-    }
-    case "product_list": {
-      const limit = typeof props.limit === "number" || typeof props.limit === "string" ? props.limit : "";
-      return truncate(
-        [
-          str("title"),
-          str("source") && optionLabel(element.type, "source", str("source"), locale),
-          limit !== "" && fmt(t.itemsMany, { n: limit }),
-        ]
-          .filter(Boolean)
-          .join(" · ")
-      );
-    }
-    case "collection_list": {
-      const limit = typeof props.limit === "number" || typeof props.limit === "string" ? props.limit : "";
-      return truncate(
-        [str("title"), limit !== "" && fmt(t.collections, { n: limit })].filter(Boolean).join(" · ")
-      );
-    }
-    case "product_card":
-      return truncate(str("title") || t.oneProduct);
-    case "countdown": {
-      const hours =
-        typeof props.endsInHours === "number" || typeof props.endsInHours === "string"
-          ? props.endsInHours
-          : "";
-      return truncate([str("label"), hours !== "" && fmt(t.hours, { n: hours })].filter(Boolean).join(" · "));
-    }
-    case "video":
-    case "embed":
-      return truncate(str("title") || str("url") || t.nothingLinked);
-    case "map":
-      return truncate(str("address") || t.noAddress);
-    case "social_icons": {
-      const n = Array.isArray(props.links) ? props.links.length : 0;
-      return counted(n, t.linksOne, t.linksMany);
-    }
-    case "form":
-      return truncate(str("title") || t.form);
-    case "spacer":
-      return props.height ? `${String(props.height)}px` : "";
-    case "icon":
-      return truncate(str("name"));
-    case "cart":
-      return truncate(str("title") || t.cart);
-    case "divider":
-      return "";
-  }
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 /**
- * Renders a lucide icon passed as a value. Aliasing `spec.icon` to a
- * capitalised local inside a `.map` callback trips oxlint's static-components
- * rule; taking it as a prop keeps the alias at module scope.
+ * Renders an icon passed as a value. Aliasing `spec.icon` to a capitalised
+ * local inside a `.map` callback trips oxlint's static-components rule; taking
+ * it as a prop keeps the alias at module scope.
  */
-function NodeIcon({ icon: Glyph, className }: { icon: LucideIcon; className?: string }) {
+function NodeIcon({ icon: Glyph, className }: { icon: IconComponent; className?: string }) {
   return <Glyph className={className} aria-hidden />;
+}
+
+/** One element of a section, as a line: its kind, then its own words. */
+function ElementLine({ element, locale }: { element: PageElement; locale: EditorLocale }) {
+  const spec = ELEMENT_SPECS[element.type];
+  const summary = elementSummary(element, locale);
+  return (
+    <>
+      {spec && <NodeIcon icon={spec.icon} className="mt-0.5 size-3.5 shrink-0 text-ink-soft" />}
+      <span className="min-w-0 flex-1">
+        <span className="text-ink-soft">{elementLabel(element.type, spec?.label ?? element.type, locale)}</span>
+        {summary && (
+          <span className="ms-2 text-ink" dir="auto">
+            {summary}
+          </span>
+        )}
+      </span>
+    </>
+  );
 }
 
 export function SectionCard({
@@ -183,94 +66,247 @@ export function SectionCard({
   selected,
   onSelect,
   onDelete,
+  showSummary = true,
+  variant = "panel",
+  hidden = false,
+  menuItems,
+  outline = false,
+  onSelectElement,
+  selectedElementId = null,
 }: {
   section: PageSection;
   selected: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  /** Off for a compact one-line row (the website editor's layer list). */
+  showSummary?: boolean;
+  /** `sheet`: the row inside a sheet on a phone — 56px tall, everything a thumb needs in view. */
+  variant?: "panel" | "sheet";
+  /** The section is hidden from shoppers: its row says so. */
+  hidden?: boolean;
+  /**
+   * What «…» (and a right-click or long press on the row) offers. Given, it
+   * takes the place of the bare delete button; left out, the delete button
+   * stays as it always was.
+   */
+  menuItems?: readonly ContextMenuItem[];
+  /** Row only: list the section's elements under it. */
+  outline?: boolean;
+  /** Makes the lines of that list buttons. */
+  onSelectElement?: (elementId: string) => void;
+  selectedElementId?: string | null;
 }) {
-  const t = useT(STRINGS);
-  const c = useCommon();
-  const { locale } = useLocale();
-  // The list is vertical-only (restrictToVerticalAxis), and CSS.Translate uses
-  // the pointer delta directly, so nothing here depends on text direction.
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id: section.id });
+  const locale = useEditorLocale();
+  const t = leftUi(locale);
+  const label = sectionLabel(section, locale);
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: section.id,
+    attributes: { roleDescription: t.sortableRole },
+    // Nothing slides for people who asked for less motion.
+    transition: prefersReducedMotion() ? null : MAKE_ROOM,
+  });
 
   const elements = sectionElements(section);
   const icon = sectionIcon(section);
-  const label = sectionLabel(section, locale);
+  const touch = variant === "sheet";
+  /** The row is drawn on the brand fill: what sits on it takes the fill's own text colour. */
+  const onBrand = selected && !showSummary;
+
+  // The others make room on transform; the one being carried also lifts (scale and shadow).
+  const style: CSSProperties = {
+    transform: CSS.Translate.toString(transform),
+    transition: [transition, "scale var(--dur-fade) var(--ease-out)"].filter(Boolean).join(", "),
+  };
+
+  const handle = (
+    <button
+      type="button"
+      ref={setActivatorNodeRef}
+      {...attributes}
+      {...listeners}
+      aria-label={t.reorder(label)}
+      data-slot="section-row-handle"
+      className={cn(
+        // touch-none: a finger on the handle drags the section, it does not scroll the list.
+        "flex w-11 shrink-0 cursor-grab touch-none items-center justify-center self-stretch rounded-full outline-none active:cursor-grabbing",
+        "transition-colors duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none",
+        "focus-visible:outline-2 focus-visible:-outline-offset-4",
+        onBrand ? "focus-visible:outline-current" : "text-ink-soft hover:text-ink focus-visible:outline-primary"
+      )}
+    >
+      <IconDragHandle className={cn("size-[18px]", onBrand && "opacity-80")} aria-hidden />
+    </button>
+  );
+
+  if (!showSummary) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        data-slot="section-row"
+        className={cn("zimos-section-row relative", isDragging && "z-10 scale-[1.02] motion-reduce:scale-100")}
+      >
+        <div
+          data-slot="section-pill"
+          data-selected={selected ? "" : undefined}
+          data-dragging={isDragging ? "" : undefined}
+          data-hidden={hidden ? "" : undefined}
+          className={cn(
+            "zimos-section-pill flex items-center rounded-full",
+            "transition-[background-color,color,box-shadow] duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none",
+            touch ? "h-14" : "h-12",
+            selected
+              ? "bg-primary text-primary-foreground forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]"
+              : cn("text-ink", isDragging ? "bg-paper-raised ring-1 ring-line" : "hover:bg-paper-sunken"),
+            isDragging && "shadow-[var(--shadow-raised)]"
+          )}
+        >
+          {handle}
+          {/* A right-click or a long press on the name opens the same menu as «…». The handle stays out of it:
+              a finger resting on the handle is about to drag, not asking for a menu. */}
+          <ContextMenu items={menuItems ?? []} label={t.rowMenu(label)}>
+            <button
+              type="button"
+              onClick={onSelect}
+              aria-current={selected ? "true" : undefined}
+              className={cn(
+                "flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch rounded-full pe-1 text-start outline-none",
+                "focus-visible:outline-2 focus-visible:-outline-offset-2",
+                selected ? "focus-visible:outline-current" : "focus-visible:outline-primary"
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center rounded-[0.5rem]",
+                  selected ? "bg-current/15" : "bg-primary-soft text-primary-dark dark:text-primary"
+                )}
+              >
+                <NodeIcon icon={icon} className="size-4" />
+              </span>
+              <span className={cn("min-w-0 flex-1 truncate text-sm font-medium", hidden && "opacity-60")}>{label}</span>
+              {hidden && (
+                <span className="flex shrink-0 items-center" title={t.hidden}>
+                  <IconEyeOff className="size-4 opacity-80" aria-hidden />
+                  <span className="sr-only">{t.hidden}</span>
+                </span>
+              )}
+              {elements.length > 0 && (
+                <span className={cn("hidden shrink-0 text-xs tabular-nums @[15rem]:inline", selected ? "opacity-80" : "text-ink-soft")}>
+                  {t.elements(elements.length)}
+                </span>
+              )}
+            </button>
+          </ContextMenu>
+          {menuItems ? (
+            <RowMenu items={menuItems} label={t.rowMenu(label)} onBrand={selected} />
+          ) : (
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label={t.removeAria(label)}
+              title={t.removeAria(label)}
+              className={cn(
+                "inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full outline-none",
+                "transition-[scale,background-color,color] duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none",
+                "focus-visible:outline-2 focus-visible:-outline-offset-4 active:scale-[0.97] motion-reduce:active:scale-100",
+                selected
+                  ? "text-current hover:bg-current/15 focus-visible:outline-current"
+                  : "text-ink-soft hover:bg-danger-soft hover:text-danger focus-visible:outline-danger"
+              )}
+            >
+              <IconDelete className="size-[18px]" aria-hidden />
+            </button>
+          )}
+        </div>
+
+        {outline && elements.length > 0 && (
+          <ul aria-label={t.outlineOf(label)} className="ms-[1.375rem] mt-1 space-y-0.5 border-s border-line ps-2 pb-1">
+            {elements.map((element) => {
+              const current = element.id === selectedElementId;
+              const lineClass = cn(
+                "flex w-full items-start gap-2 rounded-[0.625rem] px-2 py-1.5 text-start text-[0.8125rem] leading-5",
+                touch ? "min-h-11 items-center" : "pointer-coarse:min-h-11 pointer-coarse:items-center"
+              );
+              return (
+                <li key={element.id}>
+                  {onSelectElement ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectElement(element.id)}
+                      aria-current={current ? "true" : undefined}
+                      className={cn(
+                        lineClass,
+                        "cursor-pointer outline-none transition-colors duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none",
+                        "hover:bg-paper-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary",
+                        current && "bg-primary-soft"
+                      )}
+                    >
+                      <ElementLine element={element} locale={locale} />
+                    </button>
+                  ) : (
+                    <span className={lineClass}>
+                      <ElementLine element={element} locale={locale} />
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), transition }}
+      style={style}
+      data-slot="section-card"
+      data-selected={selected ? "" : undefined}
       className={cn(
-        "rounded-2xl border bg-paper-raised shadow-card transition-colors",
-        selected ? "border-primary ring-2 ring-primary/25" : "border-line hover:border-primary/50",
-        isDragging && "z-10 opacity-80 shadow-pop"
+        "zimos-section-card rounded-[var(--radius-card)] bg-paper-raised ring-1 transition-[box-shadow] duration-[var(--dur-fade)] ease-[var(--ease-out)] motion-reduce:transition-none",
+        selected ? "ring-2 ring-primary" : "ring-line hover:ring-primary/50",
+        isDragging && "z-10 scale-[1.02] shadow-[var(--shadow-raised)] motion-reduce:scale-100"
       )}
     >
-      <div className="flex items-center gap-1 border-b border-line px-2 py-2">
-        <button
-          type="button"
-          ref={setActivatorNodeRef}
-          {...attributes}
-          {...listeners}
-          aria-label={fmt(t.reorder, { label })}
-          title={fmt(t.reorder, { label })}
-          className="cursor-grab rounded-md p-1.5 text-ink-muted hover:bg-paper hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:cursor-grabbing"
-        >
-          <GripVertical className="size-4" aria-hidden />
-        </button>
-
+      <div className="flex min-h-12 items-center border-b border-line pe-1">
+        {handle}
         <button
           type="button"
           onClick={onSelect}
-          className="cursor-pointer flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch rounded-[0.5rem] px-1 text-start outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
         >
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-soft">
-            <NodeIcon icon={icon} className="size-3.5 text-primary" />
-          </span>
-          <span className="truncate text-sm font-semibold text-ink">{label}</span>
+          <NodeIcon icon={icon} className="size-4 shrink-0 text-primary" />
+          <span className="truncate text-sm font-medium text-ink">{label}</span>
         </button>
-
-        <button
-          type="button"
-          onClick={onDelete}
-          aria-label={fmt(t.deleteSection, { label })}
-          title={c.delete}
-          className="cursor-pointer rounded-md p-1.5 text-ink-muted hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/40"
-        >
-          <Trash2 className="size-4" aria-hidden />
-        </button>
+        {menuItems ? (
+          <RowMenu items={menuItems} label={t.rowMenu(label)} />
+        ) : (
+          <button
+            type="button"
+            onClick={onDelete}
+            aria-label={t.removeAria(label)}
+            title={t.removeAria(label)}
+            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft outline-none transition-[scale,background-color,color] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:bg-danger-soft hover:text-danger focus-visible:outline-2 focus-visible:outline-danger active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 pointer-coarse:size-11"
+          >
+            <IconDelete className="size-4" aria-hidden />
+          </button>
+        )}
       </div>
 
       <button
         type="button"
         onClick={onSelect}
-        className="cursor-pointer block w-full space-y-1.5 px-4 py-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="block w-full cursor-pointer space-y-1.5 rounded-b-[var(--radius-card)] px-4 py-3 text-start outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
       >
         {elements.length === 0 ? (
-          <span className="text-sm text-ink-soft">{t.emptySection}</span>
+          <span className="text-sm text-ink-soft">{editorUi(locale).emptySection}</span>
         ) : (
-          elements.map((element) => {
-            const spec = ELEMENT_SPECS[element.type];
-            const summary = elementSummary(element, t, locale);
-            return (
-              <span key={element.id} className="flex items-start gap-2 text-sm">
-                <NodeIcon icon={spec.icon} className="mt-0.5 size-3.5 shrink-0 text-ink-muted" />
-                <span className="min-w-0 flex-1 break-words">
-                  <span className="text-ink-soft">{tr(spec.label, locale)}</span>
-                  {summary && (
-                    <bdi dir="auto" className="ms-2 text-ink">
-                      {summary}
-                    </bdi>
-                  )}
-                </span>
-              </span>
-            );
-          })
+          elements.map((element) => (
+            <span key={element.id} className="flex items-start gap-2 text-sm">
+              <ElementLine element={element} locale={locale} />
+            </span>
+          ))
         )}
       </button>
     </div>

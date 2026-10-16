@@ -1,0 +1,79 @@
+/* ------------------------------------------------------------------ *
+ * The three looks (Settings → Language and look): Light, Black and Dark.
+ *
+ * <html> carries `data-look`; Black and Dark both keep the `.dark` class, so
+ * every dark rule and every `dark:` utility applies to the two of them.
+ * Light is tokens.css as it stands: nothing here touches it. Set by
+ * lib/appearance.ts, and by the pre-paint script in index.html before the
+ * first frame.
+ *
+ * Only the neutrals change: the page, the raised and the sunken surface, the
+ * two lines, and in Black the two inks. Everything else — cards, the side
+ * menu, the toolbar, sheets, fields — is drawn from those tokens already.
+ * The brand, its shades and the status colours are the same in every look.
+ * Contrast of each look, and of both ends of the tone, is worked out from
+ * these values in theme.test.ts.
+ * ------------------------------------------------------------------ */
+
+/* Black, for OLED screens: a pure black page, near-black surfaces told apart
+   by hairlines, neutral greys with no blue in them. No glass in this look
+   (the same attribute as the glass switch, data-glass="off"), so no
+   backdrop, no blur and nothing translucent. */
+:root[data-look="black"] {
+  --color-paper: #000000;
+  --color-paper-raised: #0a0a0a;
+  --color-paper-sunken: #141414;
+  --color-ink: #ededed;
+  --color-ink-soft: #a6a6a6;
+  --color-line: #242424;
+  --color-line-strong: #6b6b6b;
+
+  /* A shadow cannot be seen on black: what floats is told apart by a hairline. */
+  --shadow-card: none;
+  --shadow-raised: 0 0 0 1px rgb(255 255 255 / 0.08);
+  --shadow-pop: 0 0 0 1px rgb(255 255 255 / 0.1);
+}
+
+/* The few tints index.css and auth.css draw even with glass off: the brand
+   light over the sign-in ground and behind the full-screen editors, the
+   frosted bar of an editor, and the coloured shadow under the main action
+   (that one goes back to what the button has by itself, focus ring included). */
+:root[data-look="black"] .auth-glass,
+:root[data-look="black"] .glass-editor {
+  background: var(--color-paper);
+}
+:root[data-look="black"] .glass-editor .flex.h-full.flex-col > .border-b.bg-paper-raised:first-child {
+  background: var(--color-paper-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+:root[data-look="black"] .glass-app [data-slot="button"][data-variant="default"],
+:root[data-look="black"] .glass-app [data-slot="button"][data-variant="primary"],
+:root[data-look="black"] .glass-editor [data-slot="button"][data-variant="default"] {
+  box-shadow: revert-layer;
+}
+
+/* Dark, with a tone: the slider runs from midnight blue (0) through the dark
+   look as it always was (50) to slate (100). <html> carries `data-tone` and
+   the two shares below only away from 50, so at the default tone the dark
+   values of tokens.css are in force untouched.
+
+   Each neutral is three colours — midnight, the one tokens.css has, slate —
+   mixed in two steps: --zimos-tone-mid is the share of the middle one against
+   midnight (0% at tone 0, 100% from 50 up), --zimos-tone-slate the share of
+   slate (0% up to 50, 100% at 100). The middle colours are the `.dark` values
+   of tokens.css (theme.test.ts holds the two files together). */
+:root[data-look="dark"][data-tone] {
+  --tone-mid: var(--zimos-tone-mid, 100%);
+  --tone-slate: var(--zimos-tone-slate, 0%);
+
+  --color-paper: color-mix(in srgb, color-mix(in srgb, #0e1014 var(--tone-mid), #090d15), #1b1d22 var(--tone-slate));
+  --color-paper-raised: color-mix(in srgb, color-mix(in srgb, #171a20 var(--tone-mid), #101521), #24272d var(--tone-slate));
+  --color-paper-sunken: color-mix(in srgb, color-mix(in srgb, #1e2229 var(--tone-mid), #171e2c), #2d3037 var(--tone-slate));
+  --color-line: color-mix(in srgb, color-mix(in srgb, #262a33 var(--tone-mid), #1e293e), #3a3e45 var(--tone-slate));
+  --color-line-strong: color-mix(in srgb, color-mix(in srgb, #666d7c var(--tone-mid), #5b6d8f), #808793 var(--tone-slate));
+
+  /* With glass on, the ground the backdrop's glows fall on (liquid-glass.css reads it). */
+  --lg-tone-base: color-mix(in srgb, color-mix(in srgb, #070a16 var(--tone-mid), #050812), #14161a var(--tone-slate));
+}

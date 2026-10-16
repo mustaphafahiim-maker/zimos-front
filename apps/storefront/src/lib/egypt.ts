@@ -1,4 +1,5 @@
 import type { Locale } from "./i18n";
+import { arOrEn } from "./i18n";
 
 /** All 27 Egyptian governorates. `code` is stable and what the form stores. */
 export const GOVERNORATES = [
@@ -41,7 +42,7 @@ export function findGovernorate(code: string): Governorate | undefined {
 
 export function governorateName(code: string, locale: Locale): string {
   const g = findGovernorate(code);
-  return g ? g[locale] : code;
+  return g ? g[arOrEn(locale)] : code;
 }
 
 export const EGYPT_MOBILE = /^01[0125]\d{8}$/;

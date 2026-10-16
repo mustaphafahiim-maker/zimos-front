@@ -1,0 +1,261 @@
+/*
+ * The store's own pages — the catalogue, a product, the cart, checkout — on a
+ * store that wears an imported template, in that template's manner: its
+ * page-title strip, its buttons, its tabs, the product's small pictures beside
+ * the big one where its product page has them (lib/xsStorePages.ts sets which,
+ * per look and per store, as attributes on the page's <main>). Only the look's
+ * tokens are read here (--xs-ink, --xs-button, --xs-btn-radius, --xs-tint…),
+ * so one rule fits all 22; a look that draws something its own way says so in
+ * its own file. Nothing here changes what a page does: the hooks are classes
+ * (zt-*) the components carry whatever the store wears.
+ */
+
+.brand-theme[data-xs-shell] {
+  /* Corners of the boxes on these pages: the look's buttons', never rounder than a card. */
+  --xs-r: min(var(--xs-btn-radius, 0px), 12px);
+}
+
+/* --- the page-title strip (components/xs/XsPageStrip.tsx) ---------------- */
+
+.xs-crumbs {
+  background-color: var(--xs-tint, color-mix(in oklab, var(--xs-ground, #fff) 93%, var(--xs-ink, #111)));
+}
+.xs-crumbs[data-variant="inline"] {
+  background: none;
+}
+.xs-crumbs__inner {
+  box-sizing: content-box;
+  max-width: var(--xs-container, 1170px);
+  margin-inline: auto;
+  padding: 34px 15px 30px;
+}
+.xs-crumbs[data-variant="inline"] .xs-crumbs__inner {
+  padding-block: 22px 0;
+}
+.xs-crumbs__title {
+  margin: 0 0 6px;
+  color: var(--xs-ink);
+  font-family: var(--xs-display, var(--xs-sans));
+  font-size: clamp(24px, 1.2rem + 1vw, 32px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.xs-crumbs__trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  color: var(--xs-ink-soft, var(--xs-ink));
+  font-size: 14px;
+  list-style: none;
+}
+.xs-crumbs__crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.xs-crumbs__sep {
+  flex-shrink: 0;
+  opacity: 0.55;
+  rotate: -90deg;
+}
+[dir="rtl"] .xs-crumbs__sep {
+  rotate: 90deg;
+}
+.xs-crumbs__link,
+.xs-crumbs__here {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding-inline: 4px;
+}
+.xs-crumbs__link {
+  color: inherit;
+  text-decoration: none;
+}
+.xs-crumbs__link:hover {
+  color: var(--xs-accent, var(--xs-ink));
+}
+.xs-crumbs__link:focus-visible {
+  outline: 2px solid var(--xs-accent, currentColor);
+  outline-offset: 2px;
+}
+.xs-crumbs__here {
+  color: var(--xs-ink);
+  font-weight: 600;
+}
+/* The look's picture band (.xs-title, xs-pages.css and the look's own file), a little lower than an about page's. */
+.xs-crumbs[data-variant="title"] {
+  padding-block: 64px;
+  /* The look's dark title band under its picture (the strip's own tint is for the plain band). */
+  background-color: var(--xs-dark, #111);
+}
+.xs-crumbs[data-variant="title"] .xs-title__heading {
+  font-size: clamp(30px, 1.4rem + 2vw, 44px);
+}
+/*
+ * The trail under the title, in the colour the look gives its title (it carries the heading's class,
+ * components/xs/XsPageStrip): light on a dark or pictured band, dark on a light one. Only the colour —
+ * not its size, face or decorations.
+ */
+.xs-crumbs[data-variant="title"] .xs-crumbs__nav.xs-title__heading {
+  margin: 10px 0 0;
+  padding: 0;
+  font-family: var(--xs-sans);
+  font-size: 14px;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.5;
+  letter-spacing: normal;
+  text-transform: none;
+  opacity: 0.85;
+}
+.xs-crumbs[data-variant="title"] .xs-crumbs__nav.xs-title__heading::before,
+.xs-crumbs[data-variant="title"] .xs-crumbs__nav.xs-title__heading::after {
+  content: none;
+}
+.xs-crumbs[data-variant="title"] .xs-crumbs__trail {
+  justify-content: center;
+}
+.xs-crumbs[data-variant="title"] :is(.xs-crumbs__trail, .xs-crumbs__link, .xs-crumbs__here) {
+  color: inherit;
+}
+
+/* --- buttons, fields and boxes on every store page ----------------------- */
+
+.brand-theme[data-xs-shell] .zt-btn-primary {
+  border-color: var(--xs-button, var(--xs-ink));
+  border-radius: var(--xs-btn-radius, 0);
+  background: var(--xs-button, var(--xs-ink));
+  color: #fff;
+  font-family: var(--xs-sans);
+  font-weight: 700;
+}
+.brand-theme[data-xs-shell] .zt-btn-primary:hover:not(:disabled) {
+  border-color: var(--xs-highlight, var(--xs-accent, var(--xs-button)));
+  background: var(--xs-highlight, var(--xs-accent, var(--xs-button)));
+}
+.brand-theme[data-xs-shell] .zt-btn-secondary {
+  border: 1px solid var(--xs-ink);
+  border-radius: var(--xs-btn-radius, 0);
+  background: transparent;
+  color: var(--xs-ink);
+  font-family: var(--xs-sans);
+  font-weight: 700;
+}
+.brand-theme[data-xs-shell] .zt-btn-secondary:hover:not(:disabled) {
+  background: var(--xs-ink);
+  color: var(--xs-ground, #fff);
+}
+.brand-theme[data-xs-shell] main[data-page] :is(.zt-card, .zt-input, .zt-qty) {
+  border-radius: var(--xs-r);
+}
+.brand-theme[data-xs-shell] main[data-page] .zt-input:focus {
+  border-color: var(--xs-ink);
+}
+.brand-theme[data-xs-shell] main[data-page] :is(h1, h2, h3):not([class*="xs-"]) {
+  font-family: var(--xs-display, var(--xs-sans));
+}
+
+/* --- a product -------------------------------------------------------------- */
+
+main[data-xs-thumbs] .zt-pdp-title {
+  color: var(--xs-ink);
+  font-family: var(--xs-display, var(--xs-sans));
+}
+main[data-xs-thumbs] .zt-pdp-price > :first-child {
+  color: var(--xs-ink);
+  font-family: var(--xs-display, var(--xs-sans));
+}
+main[data-xs-thumbs] .zt-pdp-compare {
+  color: var(--xs-muted, var(--xs-ink-soft));
+}
+main[data-xs-thumbs] .zt-pdp-save {
+  border-radius: var(--xs-r);
+  background: var(--xs-badge, var(--xs-accent, var(--xs-ink)));
+  color: #fff;
+}
+main[data-xs-thumbs] :is(.zt-gallery-frame, .zt-gallery-thumb, .zt-option-btn) {
+  border-radius: var(--xs-r);
+}
+main[data-xs-thumbs] .zt-gallery-frame {
+  border-color: transparent;
+  background: var(--xs-tint, transparent);
+}
+main[data-xs-thumbs] .zt-option-btn[aria-pressed="true"],
+main[data-xs-thumbs] .zt-gallery-thumb[aria-pressed="true"],
+main[data-xs-thumbs] .zt-gallery-thumb[aria-current="true"] {
+  border-color: var(--xs-ink);
+  background: none;
+  color: var(--xs-ink);
+}
+main[data-xs-thumbs] .zt-pdp-order {
+  border: 1px solid var(--xs-line, currentColor);
+}
+
+/* The small pictures in a column beside the big one, as the template's own product page has them. */
+@media (min-width: 768px) {
+  main[data-xs-thumbs="side"] .zt-gallery[data-many] {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  main[data-xs-thumbs="side"] .zt-gallery[data-many] > .zt-gallery-frame {
+    grid-row: 1;
+    grid-column: 2;
+  }
+  main[data-xs-thumbs="side"] .zt-gallery[data-many] > .zt-gallery-thumbs {
+    flex-direction: column;
+    grid-row: 1;
+    grid-column: 1;
+    max-height: 100%;
+    margin-top: 0;
+    padding-bottom: 0;
+    overflow: hidden auto;
+  }
+  main[data-xs-thumbs="side"] .zt-gallery[data-many] .zt-gallery-thumb {
+    width: 84px;
+    height: 84px;
+  }
+}
+
+/* The tabs under the product: centred where the template centres them, in its type, its accent under the chosen one. */
+main[data-xs-tabs="center"] .zt-tablist {
+  justify-content: center;
+}
+main[data-xs-tabs] .zt-tab {
+  color: var(--xs-muted, var(--xs-ink-soft));
+  font-family: var(--xs-display, var(--xs-sans));
+  font-size: 16px;
+}
+main[data-xs-tabs] .zt-tab[aria-selected="true"] {
+  border-color: var(--xs-accent, var(--xs-ink));
+  color: var(--xs-ink);
+}
+main[data-xs-tabs] .zt-tabpanel :is(.rounded-2xl) {
+  border-radius: var(--xs-r);
+}
+
+/* Similar products: the look's own grid band, spaced as on its home page. */
+main[data-page] .zt-related > .xs-products {
+  padding-inline: 0;
+}
+
+/* --- the catalogue ---------------------------------------------------------- */
+
+main[data-page="catalog"] .xs-products {
+  padding: 0;
+}
+main[data-page="catalog"] .zt-catalog-head {
+  margin-top: 0;
+}
+
+/* --- the cart and checkout ------------------------------------------------ */
+
+main[data-page="cart"][data-xs-strip],
+main[data-page="checkout"][data-xs-strip] {
+  --color-primary: var(--xs-accent, var(--xs-ink));
+}

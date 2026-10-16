@@ -1,0 +1,129 @@
+{
+  "look": "06",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Dresses",
+      "slug": "dresses",
+      "nameAr": "فساتين"
+    },
+    {
+      "name": "Shirts",
+      "slug": "shirts",
+      "nameAr": "قمصان وتيشيرتات"
+    },
+    {
+      "name": "Blazers",
+      "slug": "blazers",
+      "nameAr": "بليزرات"
+    },
+    {
+      "name": "Jackets",
+      "slug": "jackets",
+      "nameAr": "جواكت"
+    }
+  ],
+  "products": [
+    {
+      "name": "Cream Crochet-Top Skater Dress",
+      "nameAr": "فستان كلوش كريمي بصدر كروشيه",
+      "description": "A breezy cream dress with a hand-crochet bodice and a soft flared skirt, made for sunny days.",
+      "descriptionAr": "فستان كريمي خفيف بصدر كروشيه يدوي وتنورة كلوش ناعمة، مثالي لأيام الصيف المشمسة.",
+      "price": 1250,
+      "image": "/xs/06/products/p01.jpg",
+      "collections": [
+        "dresses"
+      ]
+    },
+    {
+      "name": "Boys' Washed Denim Jacket",
+      "nameAr": "جاكيت جينز ولادي مغسول",
+      "description": "A classic washed denim jacket for boys with patch details and button pockets.",
+      "descriptionAr": "جاكيت جينز ولادي بغسلة كلاسيكية، بتفاصيل باتشات وجيوب بأزرار.",
+      "price": 1150,
+      "image": "/xs/06/products/p02.jpg",
+      "collections": [
+        "jackets"
+      ]
+    },
+    {
+      "name": "Men's Black Leather Jacket",
+      "nameAr": "جاكيت جلد رجالي أسود",
+      "description": "A sleek black leather jacket with a clean zip front, warm enough for Cairo winters.",
+      "descriptionAr": "جاكيت جلد أسود بتصميم أنيق وسحاب أمامي، يمنحك الدفء في شتاء القاهرة.",
+      "price": 3200,
+      "compareAt": 4200,
+      "image": "/xs/06/products/p03.jpg",
+      "collections": [
+        "jackets"
+      ]
+    },
+    {
+      "name": "Black Ruched Bodycon Dress",
+      "nameAr": "فستان أسود ضيق بكشكشة جانبية",
+      "description": "A figure-hugging black tank dress with side ruching, easy to dress up or down.",
+      "descriptionAr": "فستان أسود ضيق بحمالات وكشكشة جانبية، يناسب الخروجات والسهرات.",
+      "price": 950,
+      "image": "/xs/06/products/p04.jpg",
+      "collections": [
+        "dresses"
+      ]
+    },
+    {
+      "name": "Girls' Printed Hooded T-Shirt",
+      "nameAr": "تيشيرت بناتي مطبوع بكابيشون",
+      "description": "A soft cotton tee for girls with a playful print and a light hood.",
+      "descriptionAr": "تيشيرت بناتي قطن ناعم بطبعة مبهجة وكابيشون خفيف.",
+      "price": 450,
+      "image": "/xs/06/products/p05.jpg",
+      "collections": [
+        "shirts"
+      ]
+    },
+    {
+      "name": "Velvet Shawl-Lapel Tuxedo Blazer",
+      "nameAr": "بليزر سموكينج قطيفة بياقة شال",
+      "description": "A black velvet tuxedo blazer with a satin shawl lapel for weddings and formal evenings.",
+      "descriptionAr": "بليزر سموكينج من القطيفة السوداء بياقة شال ساتان، للأفراح والسهرات الرسمية.",
+      "price": 3900,
+      "compareAt": 4900,
+      "image": "/xs/06/products/p06.jpg",
+      "collections": [
+        "blazers"
+      ]
+    },
+    {
+      "name": "Women's Long Black Wrap Coat",
+      "nameAr": "بالطو حريمي طويل أسود بحزام",
+      "description": "A long black wrap coat with a wide collar and tie belt for an elegant winter look.",
+      "descriptionAr": "بالطو أسود طويل بياقة عريضة وحزام، لإطلالة شتوية راقية.",
+      "price": 2800,
+      "image": "/xs/06/products/p07.jpg",
+      "collections": [
+        "jackets"
+      ]
+    },
+    {
+      "name": "Boys' Light Blue Chambray Shirt",
+      "nameAr": "قميص ولادي شامبراي لبني",
+      "description": "A short-sleeve light blue chambray shirt for boys, soft and breathable.",
+      "descriptionAr": "قميص ولادي شامبراي لبني بنصف كم، ناعم ومريح في الأيام الحارة.",
+      "price": 520,
+      "compareAt": 650,
+      "image": "/xs/06/products/p08.jpg",
+      "collections": [
+        "shirts"
+      ]
+    }
+  ],
+  "wording": {
+    "searchPlaceholder": "Search by name",
+    "viewLabel": "View Detail",
+    "openLabel": "Add To Cart"
+  },
+  "wordingAr": {
+    "searchPlaceholder": "ابحث بالاسم",
+    "viewLabel": "عرض التفاصيل",
+    "openLabel": "أضف للسلة"
+  }
+}

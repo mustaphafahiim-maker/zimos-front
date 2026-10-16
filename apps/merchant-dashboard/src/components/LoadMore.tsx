@@ -1,10 +1,10 @@
 import { Button, Spinner } from "@store-builder/ui";
-import { useT } from "@/i18n/LocaleContext";
+import { useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
   en: { loadMore: "Load more", loading: "Loading…" },
   ar: { loadMore: "عرض المزيد", loading: "جارٍ التحميل…" },
-};
+} satisfies Messages;
 
 interface LoadMoreProps {
   /** Truthy when there's another page (the cursor). */
@@ -19,8 +19,8 @@ export function LoadMore({ hasMore, loading, onClick }: LoadMoreProps) {
   if (!hasMore) return null;
   return (
     <div className="flex justify-center pt-4">
-      <Button variant="outline" onClick={onClick} disabled={loading} aria-label={loading ? t.loading : undefined}>
-        {loading ? <Spinner className="size-4" /> : t.loadMore}
+      <Button variant="outline" onClick={onClick} disabled={loading} className="min-h-11">
+        {loading ? <Spinner className="size-4" aria-label={t.loading} /> : t.loadMore}
       </Button>
     </div>
   );

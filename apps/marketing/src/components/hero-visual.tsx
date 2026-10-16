@@ -29,7 +29,7 @@ export function HeroVisual({ copy }: { copy: HeroVisualCopy }) {
       />
 
       <div
-        className="z-layer relative rounded-3xl border border-line bg-paper-raised p-4 shadow-pop sm:p-5"
+        className="z-layer relative rounded-3xl border border-line bg-paper-raised p-4 shadow-lg sm:p-5"
         style={layerDelay(60)}
       >
         <div className="flex items-center justify-between gap-3 border-b border-line pb-3">
@@ -39,8 +39,8 @@ export function HeroVisual({ copy }: { copy: HeroVisualCopy }) {
             </span>
             <span className="truncate text-sm font-semibold text-ink">{copy.storeLabel}</span>
           </div>
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-dark">
-            <span className="size-1.5 rounded-full bg-zimos-blue" />
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary-dark dark:text-primary">
+            <span className="size-1.5 rounded-full bg-primary" />
             {copy.liveLabel}
           </span>
         </div>
@@ -51,15 +51,15 @@ export function HeroVisual({ copy }: { copy: HeroVisualCopy }) {
           <ol className="relative mt-3 grid grid-cols-4 gap-2">
             <span
               aria-hidden
-              className="absolute start-[12.5%] end-[12.5%] top-4 h-0.5 rounded-full bg-linear-to-r from-zimos-blue to-zimos-sky rtl:bg-linear-to-l"
+              className="absolute start-[12.5%] end-[12.5%] top-4 h-0.5 rounded-full bg-linear-to-r from-primary to-accent rtl:bg-linear-to-l"
             />
             {copy.funnelSteps.map((label, i) => (
               <li key={label} className="relative flex flex-col items-center gap-2 text-center">
                 <span
                   className={`flex size-8 items-center justify-center rounded-lg border text-xs font-semibold ${
                     i === 0
-                      ? "border-zimos-blue bg-zimos-blue text-white"
-                      : "border-line-strong bg-paper-raised text-primary"
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-line bg-paper-raised text-primary"
                   }`}
                 >
                   {i + 1}
@@ -85,7 +85,7 @@ export function HeroVisual({ copy }: { copy: HeroVisualCopy }) {
                       key={n}
                       className={`rounded-lg border bg-paper-raised p-2 ${
                         n === HIGHLIGHT
-                          ? "border-zimos-blue ring-2 ring-zimos-blue/15"
+                          ? "border-primary ring-2 ring-primary/15"
                           : "border-line"
                       }`}
                     >
@@ -106,10 +106,10 @@ export function HeroVisual({ copy }: { copy: HeroVisualCopy }) {
       {/* Confirmation card stacking on top. */}
       <div className="absolute end-2 bottom-0 w-[16rem] max-w-[85%] sm:-end-4">
         <div
-          className="z-layer flex items-start gap-3 rounded-2xl border border-line bg-paper-raised p-3.5 shadow-pop"
+          className="z-layer flex items-start gap-3 rounded-2xl border border-line bg-paper-raised p-3.5 shadow-lg"
           style={layerDelay(280)}
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-zimos-blue text-white">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <CheckIcon width="1.1rem" height="1.1rem" />
           </span>
           <div className="min-w-0">

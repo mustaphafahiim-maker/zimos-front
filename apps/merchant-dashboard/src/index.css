@@ -3,72 +3,430 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
 
-/* ZIMOS brand tokens, fonts, logo rendering. Every colour, radius and font
-   used by this app comes from here. */
-@import "../../../packages/ui/src/brand/zimos.css";
-
-/* Tailwind v4 only scans this app's own tree; the shared UI package resolves
-   through node_modules, so point the scanner at its source explicitly.
-   Path: src -> merchant-dashboard -> apps -> root. */
+/* Tailwind v4 auto-detects template sources from this app's own tree only; it
+   never looks inside node_modules, which is where the workspace-linked
+   `@store-builder/ui` package resolves. Without this directive the shared
+   components' utility classes are only emitted when this app's own source
+   happens to use the same class literally — e.g. `<Button variant="danger">`'s
+   `bg-danger` was never generated, so those buttons rendered with no fill.
+   Path is resolved relative to this file: src -> merchant-dashboard -> apps -> root. */
 @source "../../../packages/ui/src";
 
 /* Dark mode is driven by a `.dark` class on <html>, set before first paint by
    an inline script in index.html and toggled by the theme switch. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ------------------------------------------------------------------ *
+ * Palette — "Nile & Souk": a clear blue primary, warm amber
+ * from spice markets, on a warm paper ground. Deliberately not the
+ * cream+terracotta SaaS default. The `--color-*` custom properties
+ * hold the light values here and are overridden under `.dark`, so any
+ * token-based utility (bg-paper, text-ink, border-line, …) flips with
+ * the theme without needing `dark:` variants.
+ * Values and rationale: packages/ui/DESIGN_SYSTEM.md.
+ * ------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+
+  --color-ink: #16211f;
+  --color-ink-soft: #3c4a46;
+  --color-paper: #f5f4ef;
+  --color-paper-raised: #ffffff;
+  --color-line: #dcdace;
+  /* Border for interactive controls (inputs, selects, textareas, checkboxes).
+     WCAG 1.4.11 requires 3:1 for the visual boundary of a UI component;
+     --color-line is a decorative hairline (~1.3:1) and fails that, so controls
+     use this darker step while cards/dividers keep the softer line. Same hue
+     ramp, so the palette identity is unchanged. */
+  --color-line-strong: #8d8c84;
+
+  --color-primary: #2563EB;
+  --color-primary-dark: #1E3A8A;
+  --color-primary-soft: #E8F0FE;
+
+  --color-accent: #e2a33d;
+  /* Badge text on accent-soft — deep enough to hold 4.5:1 there. */
+  --color-accent-dark: #91641c;
+  --color-accent-soft: #fbf0dc;
+
+  --color-danger: #b3452f;
+  --color-danger-soft: #f6e6e1;
+  /* Badge / toast text on success-soft — deep enough to hold 4.5:1 there. */
+  --color-success: #357150;
+  --color-success-soft: #e5f0e9;
+
+  /* Tajawal follows each Latin family so Arabic copy (the funnel builder's
+     Arabic mode) draws in it; Latin text is unaffected. Same approach as the
+     storefront — see packages/ui/DESIGN_SYSTEM.md §2. */
+  --font-display: "Fraunces", "Tajawal", ui-serif, Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 0.625rem;
+
+  --shadow-card: 0 1px 3px rgb(16 24 40 / 0.05), 0 1px 2px rgb(16 24 40 / 0.03);
+
+  /* shadcn/ui (Base UI "Vega" preset) tokens — the shared components in
+     `@store-builder/ui` are built against these. They point at the brand
+     palette above, so those components render in this app's colours and
+     flip with `.dark`, rather than in the library's neutral greys. */
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+  --card: var(--color-paper-raised);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-paper-raised);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-primary-soft);
+  --secondary-foreground: var(--color-primary-dark);
+  --muted: #ecebe3;
+  --muted-foreground: var(--color-ink-soft);
+  /* `bg-accent` resolves to the brand amber, so its foreground is dark ink. */
+  --accent: var(--color-accent);
+  --accent-foreground: #16211f;
+  --destructive: var(--color-danger);
+  --border: var(--color-line);
+  --input: var(--color-line-strong);
+  --ring: var(--color-primary);
+  --chart-1: var(--color-primary);
+  --chart-2: var(--color-accent);
+  --chart-3: var(--color-primary-dark);
+  --chart-4: var(--color-accent-dark);
+  --chart-5: var(--color-success);
+  --radius: 0.625rem;
+  --sidebar: var(--color-paper-raised);
+  --sidebar-foreground: var(--color-ink);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--color-primary-soft);
+  --sidebar-accent-foreground: var(--color-primary-dark);
+  --sidebar-border: var(--color-line);
+  --sidebar-ring: var(--color-primary);
+}
+
+/* Motion, spacing and the brand fill the screens ported from zimos-additions
+   are written with. New names only: no screen that existed before reads them. */
+:root {
+  --brand: var(--color-primary);
+  --bento-gap: 0.75rem;
+  --ease-spring: linear(
+    0, 0.006, 0.025 2.6%, 0.101, 0.214 7.5%, 0.46 12.4%, 0.68 17%, 0.84 21.3%,
+    0.945 25.4%, 1.012 29.4%, 1.048 33.5%, 1.056 37.4%, 1.046 41.5%, 1.024 46.4%,
+    1.003 51.7%, 0.991 56.9%, 0.989 62.6%, 0.995 69.8%, 1.001 78.6%, 1.002 88%, 1
+  );
+  --ease-pop: cubic-bezier(0.175, 0.885, 0.32, 2.2);
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fade: 160ms;
+  --dur-move: 320ms;
+  --dur-pop: 360ms;
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --bento-gap: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fade: 0ms;
+    --dur-move: 0ms;
+    --dur-pop: 0ms;
+  }
+}
+
+html.dark {
+  --shadow-card: none;
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* ink / paper / line / primary / accent — same identity as the
+     marketing site's dark palette so the platform reads as one system. */
+  --color-ink: #e7ecf5;
+  --color-ink-soft: #a9b4c9;
+  --color-paper: #0b1220;
+  --color-paper-raised: #121b2e;
+  --color-line: #22304a;
+  --color-line-strong: #4f6a9d;
+
+  --color-primary: #5b8df6;
+  --color-primary-dark: #2563eb;
+  --color-primary-soft: #16233f;
+
+  --color-accent: #e8b96a;
+  --color-accent-dark: #d9a441;
+  --color-accent-soft: #2b2013;
+
+  /* danger / success have no marketing counterpart — same recipe:
+     a very dark hue-tinted ground with text light enough to read on it. */
+  --color-danger: #e8846a;
+  --color-danger-soft: #2b1613;
+  --color-success: #5cbf8f;
+  --color-success-soft: #132b1f;
+
+  /* The lifted dark primaries are light, so text on them is dark. */
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+  --card: var(--color-paper-raised);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-paper-raised);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-primary);
+  --primary-foreground: #0b1220;
+  --secondary: var(--color-primary-soft);
+  --secondary-foreground: var(--color-primary);
+  --muted: #1a2540;
+  --muted-foreground: var(--color-ink-soft);
+  --accent: var(--color-accent);
+  --accent-foreground: #0b1220;
+  --destructive: var(--color-danger);
+  --border: var(--color-line);
+  --input: var(--color-line-strong);
+  --ring: var(--color-primary);
+  --chart-1: var(--color-primary);
+  --chart-2: var(--color-accent);
+  --chart-3: var(--color-primary-dark);
+  --chart-4: var(--color-accent-dark);
+  --chart-5: var(--color-success);
+  --sidebar: var(--color-paper-raised);
+  --sidebar-foreground: var(--color-ink);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: #0b1220;
+  --sidebar-accent: var(--color-primary-soft);
+  --sidebar-accent-foreground: var(--color-primary);
+  --sidebar-border: var(--color-line);
+  --sidebar-ring: var(--color-primary);
+}
+
+/* ------------------------------------------------------------------ *
+ * Expose the semantic tokens to Tailwind's utility generator. `inline`
+ * keeps utilities referencing `var(--color-*)` directly so the `.dark`
+ * override cascades through.
+ * ------------------------------------------------------------------ */
+@theme inline {
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-paper: var(--color-paper);
+  --color-paper-raised: var(--color-paper-raised);
+  --color-line: var(--color-line);
+  --color-line-strong: var(--color-line-strong);
+
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-primary-soft: var(--color-primary-soft);
+
+  --color-accent: var(--color-accent);
+  --color-accent-dark: var(--color-accent-dark);
+  --color-accent-soft: var(--color-accent-soft);
+
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+
+  /* Used by ported pages (text-warning, text-on-primary); mapped onto the
+     existing palette, no new colours. */
+  --color-warning: var(--color-accent-dark);
+  --color-on-primary: var(--primary-foreground);
+  /* Wells, skeletons and code blocks of the ported screens (bg-paper-sunken):
+     the existing muted fill, no new colour. */
+  --color-paper-sunken: var(--muted);
+
+  --font-display: var(--font-display);
+  --font-sans: 'Inter Variable', sans-serif;
+
+  --radius-card: var(--radius-card);
+
+  --font-heading: var(--font-sans);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-sidebar-border: var(--sidebar-border);
+
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+
+  --color-sidebar-accent: var(--sidebar-accent);
+
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+
+  --color-sidebar-primary: var(--sidebar-primary);
+
+  --color-sidebar-foreground: var(--sidebar-foreground);
+
+  --color-sidebar: var(--sidebar);
+
+  --color-chart-5: var(--chart-5);
+
+  --color-chart-4: var(--chart-4);
+
+  --color-chart-3: var(--chart-3);
+
+  --color-chart-2: var(--chart-2);
+
+  --color-chart-1: var(--chart-1);
+
+  --color-ring: var(--ring);
+
+  --color-input: var(--input);
+
+  --color-border: var(--border);
+
+  --color-destructive: var(--destructive);
+
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-muted: var(--muted);
+
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-secondary: var(--secondary);
+
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-popover: var(--popover);
+
+  --color-card-foreground: var(--card-foreground);
+
+  --color-card: var(--card);
+
+  --color-foreground: var(--foreground);
+
+  --color-background: var(--background);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+
+  --radius-md: calc(var(--radius) * 0.8);
+
+  --radius-lg: var(--radius);
+
+  --radius-xl: calc(var(--radius) * 1.4);
+
+  --radius-2xl: calc(var(--radius) * 1.8);
+
+  --radius-3xl: calc(var(--radius) * 2.2);
+
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
 @layer base {
   * {
-    @apply outline-ring/50;
+    border-color: var(--color-line);
+    @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-paper text-ink;
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    @apply bg-background text-foreground;
   }
-  /* Anchor absolutely positioned content in header cells (e.g. `sr-only`
-     labels) to the cell. Without a positioned ancestor they resolve against
-     the page, escape the table's `overflow-x-auto` wrapper and, in RTL, widen
-     the whole document. Utilities such as `sticky` still override this. */
-  th {
-    position: relative;
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
   }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  /* Native <select> option lists inherit the control's colours; a translucent
+     dark-mode control background (e.g. dark:bg-input/30) leaves the browser
+     painting a light list under pale text. Give the popup its own surface. */
+  select option,
+  select optgroup {
+    background-color: var(--color-paper-raised);
+    color: var(--color-ink);
+  }
+  select option:checked {
+    background-color: var(--color-primary-soft);
+    color: var(--color-ink);
+  }
+  select option:disabled {
+    color: var(--color-ink-soft);
+  }
+  html {
+    @apply font-sans;
+  }
+}
+/* ------------------------------------------------------------------ *
+ * Official logo rendering.
+ *
+ * The approved ZIMOS exports carry real alpha, so they are drawn as plain
+ * transparent PNGs on any surface — no blend modes, no background-colour
+ * workarounds (see public/brand/README.md). We never redraw the logo;
+ * these rules only pick which of the two approved lockups is shown:
+ * the navy wordmark on light surfaces, the reversed white one on dark.
+ * Kept in sync with the marketing, storefront and platform-admin copies.
+ * ------------------------------------------------------------------ */
+.zimos-logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
 }
 
-@layer utilities {
-  /* Subtle numeric alignment for tables and KPIs. */
-  .tabular {
-    font-variant-numeric: tabular-nums;
-  }
-  /* Thin, brand-tinted scrollbars inside panels. */
-  .scroll-thin {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-line-strong) transparent;
-  }
+.zimos-logo img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-/* Quick, directional entrance used by drawers, palettes and popovers. */
-@keyframes zimos-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.zimos-logo .zimos-logo-on-dark {
+  display: none;
 }
-@keyframes zimos-slide-in-end {
-  from {
-    opacity: 0;
-    transform: translateX(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-light,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-light {
+  display: none;
 }
-[dir="rtl"] .animate-zimos-slide-in-end {
-  animation-name: zimos-slide-in-start;
+
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-dark,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-dark {
+  display: block;
 }
-@keyframes zimos-slide-in-start {
+
+.zimos-logo[data-surface="light"] .zimos-logo-on-dark {
+  display: none !important;
+}
+
+.zimos-logo[data-surface="light"] .zimos-logo-on-light {
+  display: block !important;
+}
+
+/* Logos are never mirrored in RTL — and the dashboard ships an Arabic UI. */
+[dir="rtl"] .zimos-logo {
+  direction: ltr;
+}
+
+.zimos-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 24%;
+  line-height: 0;
+}
+
+.zimos-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ------------------------------------------------------------------ *
+ * Mobile navigation drawer motion. "start"/"end" are writing-direction
+ * relative, so the keyframes swap under RTL and the drawer always slides
+ * in from the edge it is anchored to. Ported from the platform-admin
+ * console, which established this pattern.
+ * ------------------------------------------------------------------ */
+@keyframes slide-in-start {
   from {
     opacity: 0;
     transform: translateX(-16px);
@@ -78,9 +436,493 @@
     transform: translateX(0);
   }
 }
-.animate-zimos-slide-up {
-  animation: zimos-slide-up var(--dur-base) var(--ease-zimos) both;
+
+@keyframes slide-in-end {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
-.animate-zimos-slide-in-end {
-  animation: zimos-slide-in-end var(--dur-base) var(--ease-zimos) both;
+
+/* backwards, not both: a filled transform would make this drawer the box
+   that position: fixed inside it follows (see .page-in). */
+.animate-slide-in-start {
+  animation: slide-in-start 180ms cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+
+[dir="rtl"] .animate-slide-in-start {
+  animation-name: slide-in-end;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-in-start {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Glass dashboard (docs/UI_SYSTEM.md).
+ *
+ * The frame — sidebar, top bar, menus, dialogs — is the Glass material of
+ * @store-builder/ui/styles.css over a soft backdrop. Cards and outline
+ * buttons are translucent without blur, so tables, numbers and forms stay
+ * as readable as on a solid surface and a page of them costs nothing to
+ * draw. With reduced transparency, forced colours or data-glass="off",
+ * everything below falls back to the solid surfaces. The backdrop tints
+ * use this app's own primary and accent.
+ * ------------------------------------------------------------------ */
+.glass-app {
+  /* Cards are tinted by the backdrop instead of sitting on it as white boxes. */
+  --card: color-mix(in srgb, var(--color-paper-raised) 84%, transparent);
+  background:
+    radial-gradient(ellipse 55% 45% at 0% 0%, color-mix(in srgb, var(--color-primary) 17%, transparent), transparent 62%),
+    radial-gradient(ellipse 45% 40% at 100% 12%, color-mix(in srgb, var(--color-accent) 15%, transparent), transparent 62%),
+    radial-gradient(ellipse 60% 45% at 55% 100%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 62%),
+    var(--color-paper);
+  background-attachment: fixed;
+}
+
+/* Navigation glass is clearer than floating glass: only the backdrop is behind it. */
+.zimos-glass.glass-nav {
+  --glass-opacity: 64%;
+  --glass-blur: 22px;
+  --glass-shadow: 0 14px 34px -22px color-mix(in srgb, var(--color-ink) 38%, transparent);
+  border-color: color-mix(in srgb, var(--color-paper-raised) 72%, var(--color-line));
+}
+.dark .zimos-glass.glass-nav {
+  --glass-opacity: 60%;
+  border-color: var(--color-line);
+}
+.glass-nav.zimos-glass-panel {
+  border-radius: 1rem;
+}
+/* The top bar spans the screen on a phone and floats, rounded, from md up. */
+.glass-topbar {
+  border-width: 0 0 1px;
+}
+@media (min-width: 48rem) {
+  .glass-topbar {
+    border-width: 1px;
+    border-radius: 1rem;
+  }
+}
+
+.glass-app [data-slot="card"] {
+  --tw-ring-color: color-mix(in srgb, var(--color-paper-raised) 60%, var(--color-line));
+  --tw-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 92%, transparent),
+    0 14px 30px -22px color-mix(in srgb, var(--color-ink) 30%, transparent);
+}
+.dark .glass-app [data-slot="card"] {
+  --tw-ring-color: var(--color-line);
+  --tw-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-ink) 9%, transparent);
+}
+
+/* Secondary actions: a clear edge and a calm highlight, no blur. */
+.glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass) {
+  background: color-mix(in srgb, var(--color-paper-raised) 72%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 88%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-ink) 7%, transparent);
+}
+.glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass):hover:not(:disabled),
+.glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass)[aria-expanded="true"] {
+  background: var(--color-primary-soft);
+}
+.dark .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass) {
+  background: color-mix(in srgb, var(--color-paper-raised) 60%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-ink) 10%, transparent);
+}
+/* The main action catches a little light along its top edge. */
+.glass-app [data-slot="button"][data-variant="default"],
+.glass-app [data-slot="button"][data-variant="primary"] {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.26),
+    0 10px 18px -12px color-mix(in srgb, var(--color-primary) 80%, transparent);
+}
+
+/* Menus, selects, popovers and dialogs are portalled outside .glass-app. */
+[data-slot="dropdown-menu-content"],
+[data-slot="select-content"],
+[data-slot="popover-content"],
+[data-slot="dialog-content"],
+[data-slot="sheet-content"] {
+  background: color-mix(in srgb, var(--color-paper-raised) 88%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+.zimos-glass.glass-dialog {
+  --glass-opacity: 90%;
+  --glass-shadow: 0 24px 60px -24px color-mix(in srgb, var(--color-ink) 45%, transparent);
+}
+
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .glass-app {
+    --card: var(--color-paper-raised);
+    background: var(--color-paper);
+  }
+  .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass),
+  [data-slot="dropdown-menu-content"],
+  [data-slot="select-content"],
+  [data-slot="popover-content"],
+  [data-slot="dialog-content"],
+  [data-slot="sheet-content"] {
+    background: var(--color-paper-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+[data-glass="off"] .glass-app {
+  --card: var(--color-paper-raised);
+  background: var(--color-paper);
+}
+[data-glass="off"] .glass-app [data-slot="button"][data-variant="outline"]:not(.zimos-glass),
+[data-glass="off"] [data-slot="dropdown-menu-content"],
+[data-glass="off"] [data-slot="select-content"],
+[data-glass="off"] [data-slot="popover-content"],
+[data-glass="off"] [data-slot="dialog-content"],
+[data-glass="off"] [data-slot="sheet-content"] {
+  background: var(--color-paper-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Thin scrollbar that only shows while the sidebar is hovered. */
+.shell-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.shell-scroll:hover {
+  scrollbar-color: color-mix(in srgb, var(--color-ink) 26%, transparent) transparent;
+}
+
+/* A page settles in when you move between sections. Filled backwards only:
+   a fill that outlives the animation leaves a transform on the page column,
+   which then holds every position: fixed dialog inside a page against itself
+   instead of the window (the dialog lands at the top of a long page). */
+.page-in {
+  animation: page-in 220ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-in,
+  .quick-action {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Comfort. Every page inside the dashboard gets room to breathe: wider
+ * gutters, a centred column, taller rows and fields, and soft hover
+ * states. One layer for all pages, so none has to be restyled on its own.
+ * ------------------------------------------------------------------ */
+html {
+  scroll-behavior: smooth;
+}
+.glass-app main {
+  padding: 1.25rem 1rem 4rem;
+}
+@media (min-width: 40rem) {
+  .glass-app main {
+    padding: 1.75rem 1.5rem 4.5rem;
+  }
+}
+/* On a wide screen the page column sits in the middle, not against one edge. */
+.glass-app main .page-in > [class*="max-w-"] {
+  margin-inline: auto;
+}
+/* Pages built wide (tables, orders, products, the home cards: max-w-5xl and up)
+   use the content area up to 1600px. Forms and settings (max-w-2xl to 4xl)
+   keep their reading width. */
+.glass-app main .page-in > :is([class*="max-w-5xl"], [class*="max-w-6xl"], [class*="max-w-7xl"]) {
+  max-width: min(100%, 100rem);
+}
+.glass-app main h1 {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+/* Tables: taller rows, and the row under the pointer is easy to follow. */
+.glass-app main table th {
+  padding-block: 0.75rem;
+}
+.glass-app main table td {
+  padding-block: 0.9375rem;
+}
+.glass-app main tbody tr {
+  transition: background-color 140ms ease;
+}
+.glass-app main tbody tr:hover {
+  background: color-mix(in srgb, var(--color-primary-soft) 55%, transparent);
+}
+
+/* Fields, selects, filter tabs and default buttons share one comfortable height. */
+.glass-app main [data-slot="input"],
+.glass-app main [data-slot="select-trigger"],
+.glass-app main select {
+  min-height: 2.5rem;
+  border-radius: 0.625rem;
+}
+.glass-app main [data-slot="button"].h-9 {
+  height: 2.5rem;
+  padding-inline: 0.875rem;
+}
+.glass-app main [role="group"] > button {
+  min-height: 2.25rem;
+  padding-inline: 0.875rem;
+}
+
+/* Cards are a little rounder; a card that is a link lifts when pointed at. */
+.glass-app main [data-slot="card"] {
+  border-radius: 1rem;
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+.glass-app main a > [data-slot="card"]:hover {
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .glass-app main tbody tr,
+  .glass-app main [data-slot="card"] {
+    transition: none;
+  }
+  .glass-app main a > [data-slot="card"]:hover {
+    transform: none;
+  }
+}
+
+/* A visually hidden label inside a sideways-scrolling area (a table header,
+   say) is positioned against that area, so it is clipped with it instead of
+   widening the whole page on a phone. In the base layer: an element that sets
+   its own position keeps it. */
+@layer base {
+  .glass-app main .overflow-x-auto,
+  .glass-app main .overflow-auto {
+    position: relative;
+  }
+}
+
+/* Full screen: the side menu is hidden and the page column may use the whole width. */
+.glass-app[data-focus="on"] > aside {
+  display: none;
+}
+.glass-app[data-focus="on"] main .page-in > [class*="max-w-"] {
+  max-width: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * Full-screen editors (funnel, website): the same backdrop as the
+ * dashboard, and the editor's own top bar as glass. Styling only — the
+ * editors' markup and behaviour are untouched.
+ * ------------------------------------------------------------------ */
+.glass-editor {
+  background:
+    radial-gradient(ellipse 55% 45% at 0% 0%, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 62%),
+    radial-gradient(ellipse 45% 40% at 100% 12%, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 62%),
+    var(--color-paper);
+}
+/* The bar at the top of an editor page: its first block, drawn on the raised surface. */
+.glass-editor .flex.h-full.flex-col > .border-b.bg-paper-raised:first-child {
+  background: color-mix(in srgb, var(--color-paper-raised) 72%, transparent);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 30px -24px color-mix(in srgb, var(--color-ink) 40%, transparent);
+}
+.glass-editor [data-slot="button"][data-variant="outline"] {
+  background: color-mix(in srgb, var(--color-paper-raised) 72%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 88%, transparent);
+}
+.glass-editor [data-slot="button"][data-variant="outline"]:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+}
+.glass-editor [data-slot="button"][data-variant="default"] {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.26),
+    0 10px 18px -12px color-mix(in srgb, var(--color-primary) 80%, transparent);
+}
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .glass-editor {
+    background: var(--color-paper);
+  }
+  .glass-editor .flex.h-full.flex-col > .border-b.bg-paper-raised:first-child,
+  .glass-editor [data-slot="button"][data-variant="outline"] {
+    background: var(--color-paper-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Sign-in pages: one Glass card over a slow backdrop in the brand colours.
+ * The pages keep their own forms and logic; this only frames them.
+ * ------------------------------------------------------------------ */
+/* The sign-in pages (login, register, forgot and reset password) draw in the
+   source design's own palette and display face. Scoped to .auth-glass so
+   nothing else in the dashboard changes. The dark values are the app's own,
+   which the source shares, so only the light ones are overridden. */
+.auth-glass {
+  --color-cyan: #12c8da;
+  --font-display: "Inter Variable", "Plus Jakarta Sans", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+}
+html:not(.dark) .auth-glass {
+  --color-ink: #081f5c;
+  --color-ink-soft: #56648c;
+  --color-paper: #f6f9ff;
+  --color-line: #e3e8f2;
+  --color-line-strong: #868b98;
+  --color-primary: #165dff;
+  --color-primary-dark: #081f5c;
+  --color-primary-soft: #eaf0ff;
+  /* The shadcn tokens resolve where they are declared (:root), so the ones
+     the form controls read are re-pointed here too. */
+  --foreground: var(--color-ink);
+  --primary: var(--color-primary);
+  --ring: var(--color-primary);
+  --border: var(--color-line);
+  --input: var(--color-line-strong);
+  --muted-foreground: var(--color-ink-soft);
+  --secondary: var(--color-primary-soft);
+  --secondary-foreground: var(--color-primary-dark);
+  color: var(--color-ink);
+}
+
+.auth-glass {
+  position: relative;
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 6rem 1rem 2.5rem;
+  background: var(--color-paper);
+}
+.auth-glass-stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+.auth-glass-stage > * {
+  padding: 1.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-paper-raised) 78%, var(--color-line));
+  border-radius: 1.75rem;
+  background: var(--color-paper-raised);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 92%, transparent),
+    0 30px 70px -34px color-mix(in srgb, var(--color-primary-dark) 55%, transparent);
+}
+@media (min-width: 40rem) {
+  .auth-glass-stage > * {
+    padding: 2.25rem;
+  }
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .auth-glass-stage > * {
+    background: color-mix(in srgb, var(--color-paper-raised) 62%, transparent);
+    -webkit-backdrop-filter: blur(26px);
+    backdrop-filter: blur(26px);
+  }
+}
+.dark .auth-glass-stage > * {
+  border-color: var(--color-line);
+}
+
+/* Fields and buttons take the pill shape of the card. */
+.auth-glass [data-slot="input"] {
+  height: 2.875rem;
+  border-radius: 9999px;
+  padding-inline: 1.125rem;
+  background: color-mix(in srgb, var(--color-paper-raised) 70%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-paper-raised) 90%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent);
+}
+.auth-glass [data-slot="button"][data-variant="default"],
+.auth-glass [data-slot="button"][data-variant="primary"],
+.auth-glass [data-slot="button"][data-variant="outline"] {
+  min-height: 2.875rem;
+  border-radius: 9999px;
+}
+.auth-glass [data-slot="button"][data-variant="default"],
+.auth-glass [data-slot="button"][data-variant="primary"] {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.26),
+    0 12px 22px -14px color-mix(in srgb, var(--color-primary) 85%, transparent);
+}
+.auth-glass [data-slot="button"][data-variant="outline"] {
+  background: color-mix(in srgb, var(--color-paper-raised) 70%, transparent);
+}
+
+.auth-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.5;
+  animation: auth-float 22s ease-in-out infinite;
+}
+.auth-blob[data-n="1"] {
+  inset-block-end: -9rem;
+  inset-inline-start: -8rem;
+  width: 34rem;
+  height: 26rem;
+  background: var(--color-primary);
+}
+.auth-blob[data-n="2"] {
+  inset-block-start: -7rem;
+  inset-inline-end: -5rem;
+  width: 26rem;
+  height: 24rem;
+  background: var(--color-cyan);
+  animation-duration: 27s;
+  animation-direction: reverse;
+}
+.auth-blob[data-n="3"] {
+  inset-block-end: 3rem;
+  inset-inline-end: 16%;
+  width: 22rem;
+  height: 22rem;
+  background: var(--color-primary-dark);
+  opacity: 0.24;
+  animation-duration: 31s;
+}
+.dark .auth-blob {
+  opacity: 0.32;
+}
+@keyframes auth-float {
+  50% {
+    transform: translate(18px, -22px) scale(1.04);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-blob {
+    animation: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  .auth-glass-stage > * {
+    background: var(--color-paper-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .auth-blob {
+    display: none;
+  }
 }

@@ -1,624 +1,954 @@
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Button } from "@store-builder/ui";
+import type { CreateWebsitePagePayload, PageSection, WebsitePage } from "@store-builder/api-client";
 import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { FilePlus2, LayoutTemplate, MousePointerClick, Rocket, Save } from "lucide-react";
-import { Alert, Button, Spinner } from "@store-builder/ui";
-import type {
-  CreateWebsitePagePayload,
-  PageSection,
-  PageTree,
-  PublishProblem,
-  WebsitePage,
-} from "@store-builder/api-client";
-import { apiClient } from "@/lib/apiClient";
+  IconClock,
+  IconExternal,
+  IconInspect,
+  IconMoon,
+  IconPlus,
+  IconRefresh,
+  IconSliders,
+  IconSun,
+  IconTheme,
+} from "@/components/icons";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
-import { ApiError, getErrorMessage, getFieldErrors } from "@/lib/errors";
-import { PageHeader } from "@/components/PageHeader";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { useLocale, useT } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
-import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { StatusBadge } from "@/components/StatusBadge";
+import { MediaPicker } from "@/components/MediaPicker";
 import { useToast } from "@/components/Toast";
-import { fmt, useCommon, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
-import { BlockLibrary } from "./BlockLibrary";
-import { SectionCard } from "./SectionCard";
-import { SectionInspector } from "./SectionInspector";
+import { BlockLibrarySheet } from "./BlockLibrary";
+import { LayerList } from "./LayerList";
+import { SectionInspector, type InspectorTab } from "./SectionInspector";
+import { namedStylesOf } from "./ElementStylePanel";
+import { StoreLookPanel, ThemePresetRow } from "./StoreLookPanel";
 import { NewPageDialog } from "./NewPageDialog";
 import { PageTabs } from "./PageTabs";
-import { createSection, moveSection, normalizeTree, sectionLabel, type BlockPreset } from "./blocks";
-
-const STRINGS = {
-  en: {
-    editorTitle: "Website editor",
-    backToWebsite: "Back to website",
-    editingDescription: 'Editing "{title}". Drag sections to reorder, click one to edit its content.',
-    unsaved: "Unsaved changes",
-    publish: "Publish",
-    publishing: "Publishing…",
-    publishSaveFirst: "Save your changes first — publishing ships the last saved version.",
-    publishHint: "Publish the saved draft of every page",
-    cantPublish: "This site can’t be published yet:",
-    noPagesToEdit: "This site has no pages to edit yet.",
-    noPagesTitle: "This site has no pages yet",
-    noPagesBody: "Use “New page” above to add one.",
-    emptyPageTitle: "This page is empty",
-    emptyPageBody: "Add a block from the blocks panel to get started.",
-    selectSection: "Select a section on the canvas to edit its content.",
-    pageCreated: '"{title}" created.',
-    pageDeleted: '"{title}" deleted.',
-    pageSaved: "Page saved.",
-    saveFailed: "Couldn't save the page.",
-    published: "Site published — revision {n} is live.",
-    publishFailed: "Couldn't publish the site.",
-    deleteSectionTitle: "Delete this section?",
-    deleteSectionBody:
-      '"{label}" and its content will be removed from the page. Nothing is deleted until you save.',
-    deleteSectionConfirm: "Delete section",
-    deletePageTitle: "Delete this page?",
-    deletePageBody:
-      '"{title}" ({path}) and everything on it will be permanently deleted. This can\'t be undone.',
-    deletePageConfirm: "Delete page",
-    leaveTitle: "Leave without saving?",
-    leaveBody: "This page has changes you haven't saved. Switching pages will discard them.",
-    leaveConfirm: "Discard and switch",
-    sectionsLabel: "Page sections",
-    blocksLabel: "Blocks",
-    inspectorLabel: "Section settings",
-  },
-  ar: {
-    editorTitle: "محرّر الموقع",
-    backToWebsite: "العودة إلى الموقع",
-    editingDescription: "تعديل صفحة «{title}». اسحب الأقسام لإعادة ترتيبها، وانقر على أي قسم لتعديل محتواه.",
-    unsaved: "تغييرات غير محفوظة",
-    publish: "نشر",
-    publishing: "جارٍ النشر…",
-    publishSaveFirst: "احفظ تغييراتك أولًا — النشر يعتمد على آخر نسخة محفوظة.",
-    publishHint: "نشر المسودة المحفوظة لجميع الصفحات",
-    cantPublish: "لا يمكن نشر هذا الموقع بعد للأسباب التالية:",
-    noPagesToEdit: "لا توجد صفحات قابلة للتعديل في هذا الموقع بعد.",
-    noPagesTitle: "لا توجد صفحات في هذا الموقع بعد",
-    noPagesBody: "استخدم زر «صفحة جديدة» في الأعلى لإضافة صفحة.",
-    emptyPageTitle: "هذه الصفحة فارغة",
-    emptyPageBody: "أضف قسمًا من لوحة الأقسام للبدء.",
-    selectSection: "اختر قسمًا من مساحة العمل لتعديل محتواه.",
-    pageCreated: "تم إنشاء صفحة «{title}».",
-    pageDeleted: "تم حذف صفحة «{title}».",
-    pageSaved: "تم حفظ الصفحة.",
-    saveFailed: "تعذّر حفظ الصفحة.",
-    published: "تم نشر الموقع — الإصدار {n} متاح الآن.",
-    publishFailed: "تعذّر نشر الموقع.",
-    deleteSectionTitle: "حذف هذا القسم؟",
-    deleteSectionBody:
-      "ستتم إزالة قسم «{label}» ومحتواه من الصفحة. لن يُحذف أي شيء فعليًا حتى تحفظ التغييرات.",
-    deleteSectionConfirm: "حذف القسم",
-    deletePageTitle: "حذف هذه الصفحة؟",
-    deletePageBody: "سيتم حذف صفحة «{title}» ({path}) وكل محتواها نهائيًا. لا يمكن التراجع عن ذلك.",
-    deletePageConfirm: "حذف الصفحة",
-    leaveTitle: "المغادرة دون حفظ؟",
-    leaveBody: "في هذه الصفحة تغييرات لم تُحفظ بعد. سيؤدي التبديل إلى صفحة أخرى إلى تجاهلها.",
-    leaveConfirm: "تجاهل التغييرات والتبديل",
-    sectionsLabel: "أقسام الصفحة",
-    blocksLabel: "الأقسام",
-    inspectorLabel: "إعدادات القسم",
-  },
-} satisfies Messages;
-
-/** Isolates an LTR token (path, slug) inside a plain string so it reads correctly in RTL. */
-function ltrIsolate(value: string): string {
-  // U+2066 LEFT-TO-RIGHT ISOLATE … U+2069 POP DIRECTIONAL ISOLATE
-  return `\u2066${value}\u2069`;
-}
+import { deepTextOf, inlineTextIds, sectionHidden } from "./canvasTools";
+import { ShellPanel } from "./ShellPanels";
+import { sectionElements, sectionLabel, type BlockPreset } from "./blocks";
+import { EditorLocaleContext, editorUi, useEditorLocale } from "./editorLocale";
+import { shellPartLabel, withShellSize, type ShellPart } from "./storeShell";
+import { stepEdit, type CanvasEdit } from "@/lib/canvasDrag";
+import { EditorScreenProvider, ShellPartFocusProvider, screenOf } from "./editorScreen";
+import { StorePageList, storePageName, type StorePath } from "./StorePageList";
+import { HEADER_ZONES, movePartBeside, withZonesOn, zonesOn, type HeaderZone } from "./xsShellLayout";
+import type { ColorMode } from "./storeThemes";
+import { EditorCanvas } from "./shell/EditorCanvas";
+import { EditorPageSettings } from "./shell/EditorPageSettings";
+import { EditorStage, GuideStrip, LookBar } from "./shell/EditorStage";
+import { EditorToolbar, type EditorMenuItem, type SiteStatus } from "./shell/EditorToolbar";
+import { EndPanel, LookIntro } from "./shell/EndPanel";
+import { PageSwitcher } from "./shell/PageSwitcher";
+import { PhoneDock, PhoneInspectorSheet, PhoneSheets } from "./shell/PhoneBars";
+import { PublishSheet } from "./shell/PublishSheet";
+import { StartPanel, type StartTab } from "./shell/StartPanel";
+import { VersionHistorySheet } from "./shell/VersionHistorySheet";
+import { SHELL_STRINGS } from "./shell/shellStrings";
+import { pageChange } from "./shell/treeTools";
+import { useEditorDocument } from "./shell/useEditorDocument";
+import { useEditorShortcuts, useLeaveGuard } from "./shell/useEditorGuards";
+import {
+  EDITOR_DEVICES,
+  ROOMY_QUERY,
+  WIDE_QUERY,
+  useMediaQuery,
+  useStoredChoice,
+  useStoredFlag,
+  type EditorDevice,
+  type PreviewControls,
+} from "./shell/useEditorLayout";
+import { usePublishFlow } from "./shell/usePublishFlow";
+import { useSectionEdits } from "./shell/useSectionEdits";
 
 /**
- * The website editor: pick a page, reorder its sections by drag, edit their
- * content, save. Pages can be added and removed from the tab strip above the
- * canvas.
+ * The website editor — the real storefront, live, with the tools around it.
  *
- * `draftData` is the only field written back on save. The rest of the tree —
- * `version`, any `globalStyles` — is carried through verbatim: this editor has
- * no styling controls, and dropping keys it can't edit would silently destroy
- * template data.
+ * This file is the shell: it holds what is selected and which sheet is open,
+ * and joins the zones, each in ./shell:
  *
- * RTL: the editor chrome mirrors (block library on the start side, inspector
- * on the end side) via logical classes. The section list is vertical-only, so
- * @dnd-kit's transforms are unaffected by text direction.
+ *  - the toolbar (EditorToolbar): back, the site and its status, the page
+ *    switcher, the device switch, undo / redo, the save state in words, «…»
+ *    and «انشر»;
+ *  - start (StartPanel): the open page's sections and the site's pages;
+ *  - centre (EditorStage + EditorCanvas): the storefront itself, where a click
+ *    selects, a double-click types, an image opens the media library and a
+ *    selected section carries its own small bar;
+ *  - end (EndPanel): the inspector of whatever is selected — or, with nothing
+ *    selected, the store look.
+ *
+ * Below lg the stage fills the screen: the side panels become sheets opened
+ * from a bottom bar (PhoneDock), and the inspector rises as a bottom sheet
+ * over the lower part of the store (PhoneInspectorSheet).
+ *
+ * What is edited and how it is saved is useEditorDocument's (the page draft
+ * saves by itself, the look only when asked); the edits themselves are
+ * useSectionEdits'; the keys and the leave guard are useEditorGuards'.
+ * Selection has two levels — a section, and one element inside it — and
+ * Escape steps up through them.
  */
 
-/**
- * The pre-publish check's 422 body. Its `details[]` is page-scoped
- * (`{ field, message, pageId?, path? }`) rather than the flat form-field shape
- * `getFieldErrors` expects, so it is unpacked here instead.
- */
-function publishProblemsOf(err: unknown): PublishProblem[] {
-  if (!(err instanceof ApiError) || err.status !== 422) return [];
-  const body = err.details as { error?: { details?: unknown } } | undefined;
-  const details = body?.error?.details;
-  if (!Array.isArray(details)) return [];
-  return (details as PublishProblem[]).filter(
-    (d) => d && typeof d.message === "string"
-  );
-}
-
-/** Which page the editor opens by default, and falls back to after a delete. */
-function pickEditablePage(pages: WebsitePage[]): WebsitePage | null {
-  if (pages.length === 0) return null;
-  return (
-    pages.find((p) => p.pageType === "home") ?? pages.find((p) => p.path === "/") ?? pages[0]
-  );
-}
+type ImageRequest =
+  | { kind: "field"; sectionId: string; elementId: string; field: string }
+  | { kind: "apply"; apply: (url: string) => void };
 
 export function WebsiteEditorPage() {
-  const { websiteId = "" } = useParams();
-  const workspaceId = useWorkspaceId();
-  const toast = useToast();
-  const t = useT(STRINGS);
-  const c = useCommon();
+  // The shared editor pieces (inspector, library, image pickers) speak the
+  // dashboard's language here; the funnel builder sets its own.
   const { locale } = useLocale();
-
-  const site = useAsync(
-    () => apiClient.getWebsite(workspaceId, websiteId),
-    [workspaceId, websiteId]
+  return (
+    <EditorLocaleContext.Provider value={locale}>
+      <WebsiteEditor />
+    </EditorLocaleContext.Provider>
   );
+}
 
-  const pages = site.data?.pages ?? [];
+function WebsiteEditor() {
+  const { websiteId = "" } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const workspaceId = useWorkspaceId();
+  const { currentWorkspace } = useWorkspace();
+  const xsLook = typeof currentWorkspace?.themeSettings?.xsLook === "string" && currentWorkspace.themeSettings.xsLook !== "" ? currentWorkspace.themeSettings.xsLook : null;
+  const toast = useToast();
+  const locale = useEditorLocale();
+  const ui = editorUi(locale);
+  const t = useT(SHELL_STRINGS);
 
-  // Which page is open. Adjusted during render (below) whenever it no longer
-  // names a real page — on first load, and after the open page is deleted.
-  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
-  if (pages.length > 0 && !pages.some((p) => p.id === selectedPageId)) {
-    setSelectedPageId(pickEditablePage(pages)!.id);
-  }
-  const page = pages.find((p) => p.id === selectedPageId) ?? null;
+  const doc = useEditorDocument(workspaceId, websiteId);
 
-  // Editing state. `baseline` is the tree as last loaded/saved — the dirty
-  // check compares against it rather than tracking every mutation.
-  const [sections, setSections] = useState<PageSection[]>([]);
-  const [baseline, setBaseline] = useState<string>("[]");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<PageSection | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  // Publishing. A failed publish comes back with a *list* of problems (one per
-  // offending page), so they get their own state rather than sharing saveError.
-  const [publishing, setPublishing] = useState(false);
-  const [publishError, setPublishError] = useState<string | null>(null);
-  const [publishProblems, setPublishProblems] = useState<PublishProblem[]>([]);
-
-  // Page-level dialogs.
-  const [showNewPage, setShowNewPage] = useState(false);
-  const [pendingPageDelete, setPendingPageDelete] = useState<WebsitePage | null>(null);
-  /** Page the merchant asked to switch to while the canvas had unsaved edits. */
-  const [pendingSwitchId, setPendingSwitchId] = useState<string | null>(null);
-
-  // Everything in the tree the editor doesn't touch, preserved across a save.
-  const [treeMeta, setTreeMeta] = useState<Omit<PageTree, "sections">>({ version: 1 });
-
-  // Seed the editing state from the loaded page, adjusting state during render
-  // (React's documented pattern for "reset state when a prop changes") rather
-  // than in an effect, which would render once with the previous page's tree.
-  //
-  // Keyed on the page id we last seeded from, NOT on the page object: a save
-  // swaps a fresh page object into `site.data`, and re-seeding on that would
-  // wipe the merchant's current selection every time they save.
-  const [seededPageId, setSeededPageId] = useState<string | null>(null);
-  if (page && page.id !== seededPageId) {
-    const { sections: loaded, ...meta } = normalizeTree(page.draftData);
-    setSeededPageId(page.id);
-    setSections(loaded);
-    setTreeMeta(meta);
-    setBaseline(JSON.stringify(loaded));
-    setSelectedId(null);
-    setSaveError(null);
-  }
-
-  const dirty = JSON.stringify(sections) !== baseline;
-
-  // Browsers only honour this on a real user gesture, but it's the standard
-  // guard against losing an unsaved tree to a refresh or a closed tab.
-  useEffect(() => {
-    if (!dirty) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
-
-  const selected = sections.find((s) => s.id === selectedId) ?? null;
-
-  const sensors = useSensors(
-    // A small distance threshold so a click on the handle still selects rather
-    // than starting a phantom drag.
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setSections((prev) => {
-      const from = prev.findIndex((s) => s.id === active.id);
-      const to = prev.findIndex((s) => s.id === over.id);
-      return moveSection(prev, from, to);
-    });
-  }, [setSections]);
-
-  function addBlock(preset: BlockPreset) {
-    const section = createSection(preset);
-    setSections((prev) => [...prev, section]);
-    setSelectedId(section.id);
-  }
-
-  function updateSection(next: PageSection) {
-    setSections((prev) => prev.map((s) => (s.id === next.id ? next : s)));
-  }
-
-  function deleteSection(section: PageSection) {
-    setSections((prev) => prev.filter((s) => s.id !== section.id));
-    setSelectedId((prev) => (prev === section.id ? null : prev));
-    setPendingDelete(null);
+  /**
+   * A template logo resized on the canvas (lib/canvasDrag.ts): its height on
+   * the screen being previewed, in the store look's header or footer — one
+   * undo step, or with `key` one per burst of arrow presses.
+   */
+  function resizeLogo(edit: Extract<CanvasEdit, { kind: "logo-size" }>, key?: string) {
+    const { look } = doc;
+    const part = look[edit.part];
+    doc.updateLook({ ...look, [edit.part]: { ...part, sizes: withShellSize(part.sizes, "logo", edit.device, edit.px) } }, key);
   }
 
   /**
-   * Switching pages throws away whatever is in the canvas, so an unsaved tree
-   * has to be confirmed away first.
+   * A template header's part moved on the canvas (xsShellLayout.ts), on the
+   * screen it was moved on: one undo step, or with `key` one per burst of
+   * arrow presses.
    */
-  function requestPageSwitch(pageId: string) {
-    if (pageId === selectedPageId) return;
-    if (dirty) {
+  function moveShellPart(move: { id: string; zone: string; before: string | null; after: string | null; device: Extract<CanvasEdit, { kind: "shell-move" }>["device"] }, key?: string) {
+    if (!HEADER_ZONES.includes(move.zone as HeaderZone)) return;
+    const { look } = doc;
+    const zones = zonesOn(look.header.zones, move.device, xsLook);
+    const next = movePartBeside(zones, move.id, move.zone as HeaderZone, move.before, move.after);
+    if (JSON.stringify(next) === JSON.stringify(zones)) return;
+    doc.updateLook({ ...look, header: { ...look.header, zones: withZonesOn(look.header.zones, move.device, next, xsLook) } }, key);
+  }
+  const { site, website, pages, page, sections, look, treeMeta } = doc;
+
+  // --- layout ---------------------------------------------------------------
+  /** From lg: three zones side by side. Under it: the stage, a bottom bar and sheets. */
+  const wide = useMediaQuery(WIDE_QUERY, true);
+  /** From md the toolbar has the device switch; under it the phone IS the device. */
+  const roomy = useMediaQuery(ROOMY_QUERY, true);
+  // Remembered in this browser: the device the stage shows (phone first), and each side panel shown or hidden.
+  const [device, setDevice] = useStoredChoice<EditorDevice>("zimos:website-editor:device", "phone", EDITOR_DEVICES);
+  const [startShown, setStartShown] = useStoredFlag("zimos:website-editor:start-panel", true);
+  const [endShown, setEndShown] = useStoredFlag("zimos:website-editor:end-panel", true);
+  const [startTab, setStartTab] = useState<StartTab>("sections");
+
+  // --- selection: a section, and one element inside it ----------------------
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  /** The announcement bar, header or footer, when one of those is open instead of a section. */
+  const [selectedShell, setSelectedShell] = useState<ShellPart | null>(null);
+  const [shellPartFocus, setShellPartFocus] = useState<{ id: string; nonce: number } | null>(null);
+  // One of the store's own pages in the preview instead of the open page (StorePageList.tsx).
+  const [storeView, setStoreView] = useState<StorePath | null>(null);
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("content");
+  /** Where "add a section here" pointed; the next block from the library lands there. */
+  const [insertIndex, setInsertIndex] = useState<number | null>(null);
+  const [scrollRequest, setScrollRequest] = useState<{ sectionId: string; nonce: number } | null>(null);
+  const [shellScrollRequest, setShellScrollRequest] = useState<{ part: ShellPart; nonce: number } | null>(null);
+
+  // A freshly opened page starts with nothing selected (adjusted during render, like the seeding it follows).
+  const [selectionFor, setSelectionFor] = useState<string | null>(null);
+  if (doc.seededPageId !== selectionFor) {
+    setSelectionFor(doc.seededPageId);
+    setSelectedSectionId(null);
+    setSelectedElementId(null);
+    setInsertIndex(null);
+  }
+
+  // --- the preview's own switches (driven from «…») --------------------------
+  // Its light/dark mode (null: whatever the page opens in). The look panel
+  // switches it to the mode whose accent is being edited.
+  const [previewMode, setPreviewMode] = useState<ColorMode | null>(null);
+  const [xray, setXray] = useState(false);
+  const controlsRef = useRef<PreviewControls | null>(null);
+
+  // --- sheets and dialogs -----------------------------------------------------
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  /** Below lg: the section list, the store look and the inspector are sheets. */
+  const [sectionsOpen, setSectionsOpen] = useState(false);
+  const [lookOpen, setLookOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  /** Below lg, the first-run «لوّنه بهويتك»: the ready styles alone, in a short sheet under the store. */
+  const [brandOpen, setBrandOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showNewPage, setShowNewPage] = useState(false);
+  /** Asked from the keyboard (Delete / Backspace): a stray key should not cost a section. */
+  const [pendingDelete, setPendingDelete] = useState<PageSection | null>(null);
+  const [pendingPageDelete, setPendingPageDelete] = useState<WebsitePage | null>(null);
+  /** Page the merchant asked to switch to while this page's last changes could not be saved. */
+  const [pendingSwitchId, setPendingSwitchId] = useState<string | null>(null);
+  /** In-app address the merchant tried to leave for with something unsaved, and what it was. */
+  const [pendingLeave, setPendingLeave] = useState<{ to: string; reason: "page" | "look" } | null>(null);
+  const [imageOpen, setImageOpen] = useState(false);
+  const imageRequest = useRef<ImageRequest | null>(null);
+
+  // --- what is selected, as things are now -----------------------------------
+  const selected = sections.find((s) => s.id === selectedSectionId) ?? null;
+  const elementId =
+    selected && selectedElementId && sectionElements(selected).some((el) => el.id === selectedElementId)
+      ? selectedElementId
+      : null;
+  const labels = useMemo(
+    () => Object.fromEntries(sections.map((s) => [s.id, sectionLabel(s, locale)])),
+    [sections, locale]
+  );
+  const tree = useMemo(() => ({ ...treeMeta, sections }), [treeMeta, sections]);
+  const inlineText = useMemo(() => inlineTextIds(sections), [sections]);
+  // The words of each band with many (an imported template's), which a double-click edits where they stand.
+  const deepText = useMemo(() => deepTextOf(sections), [sections]);
+  const hasUnpublished = useMemo(() => pages.some((p) => pageChange(p) !== "same"), [pages]);
+  const slug = currentWorkspace?.slug ?? "";
+
+  function revealInspector() {
+    if (wide) setEndShown(true);
+    else setInspectorOpen(true);
+  }
+
+  /** Selecting from the editor side also brings the section into view in the preview. */
+  function selectSection(sectionId: string, { scroll, reveal = true }: { scroll: boolean; reveal?: boolean }) {
+    setSelectedSectionId(sectionId);
+    setSelectedElementId(null);
+    setSelectedShell(null);
+    setSectionsOpen(false);
+    if (reveal) revealInspector();
+    if (scroll) setScrollRequest((prev) => ({ sectionId, nonce: (prev?.nonce ?? 0) + 1 }));
+  }
+
+  /** A click on an element of the selected section — in the preview, or in the section list. */
+  function selectElement(target: { sectionId: string; elementId: string }) {
+    setSelectedSectionId(target.sectionId);
+    setSelectedElementId(target.elementId);
+    setSelectedShell(null);
+    setSectionsOpen(false);
+    revealInspector();
+  }
+
+  /** Opens the announcement bar's, header's or footer's panel — and, from the editor side, scrolls the preview to it. */
+  function selectShell(part: ShellPart, { scroll, xsPart }: { scroll: boolean; xsPart?: string }) {
+    setSelectedShell(part);
+    setShellPartFocus((prev) => (xsPart ? { id: xsPart, nonce: (prev?.nonce ?? 0) + 1 } : null));
+    setSelectedSectionId(null);
+    setSelectedElementId(null);
+    setSectionsOpen(false);
+    setLookOpen(false);
+    revealInspector();
+    if (scroll) setShellScrollRequest((prev) => ({ part, nonce: (prev?.nonce ?? 0) + 1 }));
+  }
+
+  function clearSelection() {
+    setSelectedSectionId(null);
+    setSelectedElementId(null);
+    setSelectedShell(null);
+    setInspectorOpen(false);
+  }
+
+  /** Escape: the element, then its section, then nothing. True when there was something to let go of. */
+  function stepSelectionUp(): boolean {
+    if (elementId) {
+      setSelectedElementId(null);
+      return true;
+    }
+    if (selected || selectedShell) {
+      clearSelection();
+      return true;
+    }
+    return false;
+  }
+
+  /** The store look: the end panel shows it when nothing is selected; on a phone it is a sheet. */
+  function showStoreLook() {
+    clearSelection();
+    if (wide) setEndShown(true);
+    else setLookOpen(true);
+  }
+
+  // --- edits ----------------------------------------------------------------
+  const edits = useSectionEdits({
+    doc,
+    selectedSectionId,
+    // A section an edit made or landed in. On a phone it is shown first; its
+    // inspector stays one tap away on the bottom bar instead of covering it.
+    onSelect: (sectionId, how) => selectSection(sectionId, { scroll: how.scroll, reveal: wide }),
+    onDeselect: clearSelection,
+  });
+
+  /** "+" between two sections — in the preview or in the list: the library opens, and its pick lands there. */
+  function requestInsert(index: number | null) {
+    setInsertIndex(index);
+    setSectionsOpen(false);
+    setLibraryOpen(true);
+  }
+
+  function addBlock(preset: BlockPreset) {
+    edits.addPreset(preset, insertIndex ?? sections.length);
+    setInsertIndex(null);
+    setLibraryOpen(false);
+  }
+
+  function insertSaved(section: PageSection) {
+    edits.addSection(section, insertIndex);
+    setInsertIndex(null);
+    setLibraryOpen(false);
+  }
+
+  // --- pictures: one media picker for the canvas and the inspector ---------------
+  function requestImage(request: ImageRequest) {
+    imageRequest.current = request;
+    setImageOpen(true);
+  }
+
+  function imagePicked(file: { url: string; id?: string }) {
+    const request = imageRequest.current;
+    imageRequest.current = null;
+    setImageOpen(false);
+    if (!request) return;
+    if (request.kind === "apply") request.apply(file.url);
+    else edits.setImage(request, file.url);
+  }
+
+  // --- saving -------------------------------------------------------------------
+
+  /** Ctrl/⌘+S: everything now — the page draft, and the look if it has changes (what the old Save did). */
+  async function saveNow() {
+    const hadPage = doc.pageDirty;
+    const hadLook = doc.lookDirty;
+    if (!hadPage && !hadLook) return;
+    const pageOk = await doc.flush();
+    const lookOk = hadLook ? await doc.saveLook() : true;
+    if (!pageOk) toast.error(ui.saveFailed);
+    else if (!lookOk) toast.error(ui.lookSaveFailed);
+    else toast.success(hadPage && hadLook ? ui.savedBoth : hadLook ? ui.lookSaved : ui.pageSaved);
+  }
+
+  /** "Try again" after a failed save of the draft. */
+  async function retrySave() {
+    const stored = await doc.flush();
+    if (!stored) toast.error(ui.saveFailed);
+  }
+
+  async function saveLookNow() {
+    const stored = await doc.saveLook();
+    if (stored) toast.success(ui.lookSaved);
+    else toast.error(ui.lookSaveFailed);
+  }
+
+  // --- pages --------------------------------------------------------------------
+
+  /**
+   * Switching pages replaces what is on the canvas, so the open page's last
+   * changes are stored first. Only if that fails is the merchant asked.
+   * (An unsaved store look is workspace-wide and survives the switch.)
+   */
+  /** One of the store's own pages in the preview: nothing on it is a section of the page to select. */
+  function openStoreView(path: StorePath) {
+    setStoreView(path);
+    setSelectedSectionId(null);
+    setSelectedElementId(null);
+  }
+
+  async function requestPageSwitch(pageId: string) {
+    if (pageId === doc.selectedPageId) return;
+    const stored = await doc.flush();
+    if (!stored) {
       setPendingSwitchId(pageId);
       return;
     }
-    setSelectedPageId(pageId);
+    doc.openPage(pageId);
   }
 
   async function createPage(payload: CreateWebsitePagePayload) {
-    const created = await apiClient.createPage(workspaceId, websiteId, payload);
-    const detail = site.data;
-    if (detail) site.setData({ ...detail, pages: [...detail.pages, created] });
-    // Open it straight away — the canvas re-seeds off the new id.
-    setSelectedPageId(created.id);
+    // The new page opens at once; what is on the canvas now is stored before it goes.
+    const stored = await doc.flush();
+    if (!stored) throw new Error(t.switchBody);
+    const created = await doc.createPage(payload);
     setShowNewPage(false);
-    toast.success(fmt(t.pageCreated, { title: created.title }));
+    toast.success(ui.pageCreated(created.title));
   }
 
   async function deletePage(target: WebsitePage) {
-    // The backend deletes any page, home included; this is the real guard, not
-    // just the disabled button in the tab strip.
-    if (target.pageType === "home") return;
-    await apiClient.deletePage(workspaceId, websiteId, target.id);
-    const detail = site.data;
-    if (detail) {
-      site.setData({ ...detail, pages: detail.pages.filter((p) => p.id !== target.id) });
-    }
-    // If that was the open page, the render-time check above reselects home.
+    const deleted = await doc.deletePage(target);
     setPendingPageDelete(null);
-    toast.success(fmt(t.pageDeleted, { title: target.title }));
+    if (deleted) toast.success(ui.pageDeleted(target.title));
   }
 
-  async function save() {
-    if (!page) return;
-    setSaving(true);
-    setSaveError(null);
-    const tree: PageTree = { ...treeMeta, sections };
-    try {
-      const updated = await apiClient.updateWebsitePage(workspaceId, websiteId, page.id, {
-        draftData: tree,
-      });
-      // Re-baseline off what the server stored, not off what we sent.
-      const { sections: saved } = normalizeTree(updated.draftData);
-      setBaseline(JSON.stringify(saved));
-      const detail = site.data;
-      if (detail) {
-        site.setData({
-          ...detail,
-          pages: detail.pages.map((p) => (p.id === updated.id ? updated : p)),
-        });
-      }
-      toast.success(t.pageSaved);
-    } catch (err) {
-      // A malformed tree comes back as a 422 whose details name the node path
-      // (e.g. "data.sections[1].rows"); surface that instead of a bare message.
-      const fields = getFieldErrors(err);
-      const detail = Object.entries(fields)
-        .filter(([key]) => key.includes("["))
-        .map(([key, message]) => `${key}: ${message}`)[0];
-      setSaveError(detail ?? getErrorMessage(err));
-      toast.error(t.saveFailed);
-    } finally {
-      setSaving(false);
+  // --- publish: the sheet that says what will change, then the one button ----------
+  const publish = usePublishFlow(doc, slug);
+
+  // --- first run ----------------------------------------------------------------
+  // The template gallery sends a new site here with ?start=1. The steps show
+  // until the site is published once, or the merchant puts them away.
+  const firstRun = searchParams.get("start") === "1" && website !== null && website.publishedRevisionId === null;
+
+  /** Step two. On a wide screen the look panel (ready styles first) beside the store; on a phone a short sheet under it. */
+  function openBrand() {
+    if (wide) {
+      showStoreLook();
+      return;
     }
+    clearSelection();
+    setBrandOpen(true);
   }
 
-  const website = site.data?.website;
+  function dismissGuide() {
+    const next = new URLSearchParams(searchParams);
+    next.delete("start");
+    setSearchParams(next, { replace: true });
+  }
 
-  /**
-   * Publishes the whole site. The server snapshots `draftData` as it is stored,
-   * so this deliberately refuses to run while the canvas is dirty — publishing
-   * unsaved edits would silently ship the *previous* content.
-   */
-  async function publish() {
-    if (!website || dirty) return;
-    setPublishing(true);
-    setPublishError(null);
-    setPublishProblems([]);
-    try {
-      const { website: published, revision } = await apiClient.publishWebsite(
-        workspaceId,
-        websiteId
-      );
-      const detail = site.data;
-      if (detail) site.setData({ ...detail, website: published, publishedRevision: revision });
-      toast.success(fmt(t.published, { n: revision.revisionNumber }));
-    } catch (err) {
-      // A 422 is the pre-publish check: it reports every problem at once, keyed
-      // by page rather than by form field, so getFieldErrors can't flatten it.
-      const problems = publishProblemsOf(err);
-      if (problems.length > 0) {
-        setPublishProblems(problems);
-      } else {
-        setPublishError(getErrorMessage(err));
+  // --- never lose work: leaving, and the keys ------------------------------------
+
+  /** Leaving for another screen: the draft is stored on the way; only what can't be is asked about. */
+  async function leaveTo(to: string) {
+    const stored = await doc.flush();
+    if (!stored) setPendingLeave({ to, reason: "page" });
+    else if (doc.lookDirty) setPendingLeave({ to, reason: "look" });
+    else navigate(to);
+  }
+  useLeaveGuard(doc.pageDirty || doc.lookDirty, (to) => void leaveTo(to));
+
+  useEditorShortcuts({
+    save: () => void saveNow(),
+    undo: doc.undo,
+    redo: doc.redo,
+    escape: stepSelectionUp,
+    // Delete / Backspace on a selected section asks first: a stray key should not cost a section.
+    remove: () => {
+      if (!selected || elementId) return false;
+      setPendingDelete(selected);
+      return true;
+    },
+    copy: () => edits.copy(selectedSectionId, elementId),
+    // Pasting needs no selection: a copied section lands at the end of the page.
+    paste: () => edits.paste(selectedSectionId, elementId),
+    duplicate: () => edits.duplicateSelected(selectedSectionId, elementId),
+  });
+
+  // --- what the zones show ------------------------------------------------------
+
+  // «منشور» / «مسودة» / «فيه تغييرات ما اتنشرتش»: a published site whose drafts moved on says so.
+  const status: SiteStatus | null = !website
+    ? null
+    : website.status === "suspended"
+      ? "suspended"
+      : website.status !== "published"
+        ? "draft"
+        : hasUnpublished || doc.pageDirty
+          ? "changed"
+          : "published";
+
+  // The save state in a word or two, under the page's name on a phone (the toolbar says it in full from lg).
+  const saveWords =
+    doc.saveState === "failed"
+      ? t.saveShortFailed
+      : doc.saveState === "saving"
+        ? t.saveShortSaving
+        : doc.saveState === "saved"
+          ? t.saveShortSaved
+          : t.saveShortIdle;
+
+  const dark = previewMode === "dark";
+  function togglePreviewMode() {
+    const next: ColorMode = dark ? "light" : "dark";
+    setPreviewMode(next);
+    controlsRef.current?.setColorMode(next);
+  }
+  function toggleXray() {
+    const next = !xray;
+    setXray(next);
+    controlsRef.current?.setXray(next);
+  }
+
+  // «…»: what used to be buttons on two bars. A shareable link to the DRAFT is
+  // not here: the API has none.
+  const menu: EditorMenuItem[][] = [
+    [
+      ...(page ? [{ id: "settings", label: t.menuPageSettings, icon: IconSliders, onSelect: () => setSettingsOpen(true) }] : []),
+      { id: "history", label: t.menuHistory, icon: IconClock, onSelect: () => setHistoryOpen(true) },
+      ...(website?.status === "published" && slug
+        ? [{ id: "live", label: t.menuLiveStore, icon: IconExternal, onSelect: publish.openStore }]
+        : []),
+    ],
+    [
+      { id: "look", label: t.menuStoreLook, icon: IconTheme, onSelect: showStoreLook },
+    ],
+    [
+      { id: "mode", label: dark ? t.menuLight : t.menuDark, icon: dark ? IconSun : IconMoon, onSelect: togglePreviewMode },
+      { id: "xray", label: xray ? t.menuXrayOff : t.menuXrayOn, icon: IconInspect, onSelect: toggleXray },
+      { id: "refresh", label: t.menuRefresh, icon: IconRefresh, onSelect: () => controlsRef.current?.refresh() },
+    ],
+  ];
+
+  const announcementOn = look.announcement.enabled && look.announcement.messages.some((m) => m.trim() !== "");
+
+  const layerList = (variant: "panel" | "sheet") => (
+    <LayerList
+      variant={variant}
+      sections={sections}
+      selectedId={selectedSectionId}
+      insertIndex={insertIndex}
+      onSelect={(id) => selectSection(id, { scroll: true })}
+      onDelete={edits.remove}
+      onMove={edits.move}
+      onInsertAt={requestInsert}
+      onDuplicate={(section) => edits.duplicate(section.id)}
+      onToggleHidden={(section) => edits.toggleHidden(section.id)}
+      isHidden={sectionHidden}
+      onSelectElement={(sectionId, id) => selectElement({ sectionId, elementId: id })}
+      selectedElementId={elementId}
+      selectedShell={selectedShell}
+      onSelectShell={(part) => selectShell(part, { scroll: true })}
+      announcementOn={announcementOn}
+    />
+  );
+
+  // The store's own pages, shown in the preview in the unsaved look (StorePageList.tsx).
+  const storePages = <StorePageList current={storeView} onSelect={openStoreView} />;
+  const pageList = (
+    <>
+      <PageTabs
+        variant="list"
+        pages={pages}
+        selectedId={storeView ? null : doc.selectedPageId}
+        onSelect={(pageId) => {
+          setStoreView(null);
+          void requestPageSwitch(pageId);
+        }}
+        onDelete={setPendingPageDelete}
+        onAdd={() => setShowNewPage(true)}
+      />
+      {storePages}
+    </>
+  );
+
+  const lookPanel = (variant: "panel" | "sheet") => (
+    <StoreLookPanel
+      variant={variant}
+      look={look}
+      onChange={doc.updateLook}
+      onEditShell={(part) => selectShell(part, { scroll: true })}
+      storeName={currentWorkspace?.name ?? ""}
+      previewMode={previewMode ?? "light"}
+      onPreviewMode={setPreviewMode}
+    />
+  );
+
+  // The inspector of whatever is selected; null when nothing is.
+  const inspector = selectedShell ? (
+    <ShellPanel
+      part={selectedShell}
+      look={look}
+      onChange={doc.updateLook}
+      pages={pages}
+      usage={doc.settingsUsage}
+      onClose={clearSelection}
+    />
+  ) : selected ? (
+    <SectionInspector
+      section={selected}
+      onChange={edits.update}
+      namedStyles={namedStylesOf(treeMeta.globalStyles)}
+      onNamedStylesChange={(named) =>
+        // Saved with the page tree; the element that triggered it changes too.
+        doc.setTreeMeta((prev) => ({ ...prev, globalStyles: { ...(prev.globalStyles ?? {}), named } }))
       }
-      toast.error(t.publishFailed);
-    } finally {
-      setPublishing(false);
-    }
-  }
+      onDelete={() => edits.remove(selected)}
+      onDuplicate={() => edits.duplicate(selected.id)}
+      onClose={clearSelection}
+      focusElementId={elementId}
+      tab={inspectorTab}
+      onTabChange={setInspectorTab}
+      onRequestImage={(apply) => requestImage({ kind: "apply", apply })}
+      onFocusElementChange={setSelectedElementId}
+      variant={wide ? "panel" : "sheet"}
+    />
+  ) : null;
+  const selectionLabel = selectedShell ? shellPartLabel(selectedShell, ui) : selected ? labels[selected.id] : "";
 
   return (
-    <div className="-m-6 flex h-[calc(100vh-4rem)] flex-col">
-      <div className="border-b border-line bg-paper-raised px-4 py-4 sm:px-6">
-        <PageHeader
-          title={website ? website.name : t.editorTitle}
-          titleMeta={page ? ltrIsolate(page.path) : undefined}
-          back={{ to: "/website", label: t.backToWebsite }}
-          description={page ? fmt(t.editingDescription, { title: page.title }) : undefined}
-          titleBadge={
-            website && (
-              <StatusBadge
-                value={website.status}
-                tone={
-                  website.status === "published"
-                    ? "success"
-                    : website.status === "suspended"
-                      ? "danger"
-                      : "neutral"
-                }
-              />
-            )
-          }
-          actions={
-            <>
-              {dirty && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
-                  <span className="size-1.5 rounded-full bg-warning" aria-hidden />
-                  {t.unsaved}
-                </span>
-              )}
-              <Button type="button" onClick={() => void save()} disabled={!page || !dirty || saving}>
-                {saving ? <Spinner className="size-4" /> : <Save className="size-4" aria-hidden />}
-                {saving ? c.saving : c.save}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void publish()}
-                disabled={!website || dirty || publishing}
-                title={dirty ? t.publishSaveFirst : t.publishHint}
-              >
-                {publishing ? (
-                  <Spinner className="size-4" />
-                ) : (
-                  <Rocket className="size-4 rtl:-scale-x-100" aria-hidden />
-                )}
-                {publishing ? t.publishing : t.publish}
-              </Button>
-            </>
-          }
-        />
-        {saveError && <Alert variant="danger">{saveError}</Alert>}
-        {publishError && <Alert variant="danger">{publishError}</Alert>}
-        {publishProblems.length > 0 && (
-          <Alert variant="danger">
-            <p className="font-semibold">{t.cantPublish}</p>
-            <ul className="mt-1 list-disc space-y-0.5 ps-5">
-              {publishProblems.map((problem, i) => (
-                <li key={`${problem.pageId ?? problem.field}-${i}`}>
-                  {problem.path && (
-                    <span className="font-medium">
-                      <bdi dir="ltr">{problem.path}</bdi>:{" "}
-                    </span>
-                  )}
-                  {problem.message}
-                </li>
-              ))}
-            </ul>
-          </Alert>
-        )}
-      </div>
+    // A full-viewport page (mounted in EditorLayout, not DashboardLayout — see
+    // App.tsx): a column of the toolbar, the strips that come and go, the three
+    // zones, and on a phone the bottom bar. Only the zones scroll, each on its own.
+    // (`size-full`, not `h-full`: index.css has an old rule for the previous editor's bar keyed on
+    // `.flex.h-full.flex-col > .border-b.bg-paper-raised:first-child`, which would outrank the toolbar's glass.)
+    // The screen the preview shows: what a per-screen setting is set for (editorScreen.tsx).
+    <EditorScreenProvider value={screenOf(roomy ? device : "phone")}>
+    <ShellPartFocusProvider value={shellPartFocus}>
+    <div data-slot="editor" className="flex size-full flex-col">
+      <EditorToolbar
+        siteName={website ? website.name : ui.editorTitle}
+        status={status}
+        switcher={
+          site.data && (
+            <PageSwitcher
+              pages={pages}
+              page={page}
+              extra={storePages}
+              title={storeView ? storePageName(storeView, locale) : undefined}
+              onSelect={(pageId) => {
+                setStoreView(null);
+                void requestPageSwitch(pageId);
+              }}
+              onDelete={setPendingPageDelete}
+              onAdd={() => setShowNewPage(true)}
+              asSheet={!roomy}
+              caption={saveWords}
+              captionTone={doc.saveState === "failed" ? "alert" : "quiet"}
+            />
+          )
+        }
+        device={device}
+        onDeviceChange={setDevice}
+        canUndo={doc.canUndo}
+        canRedo={doc.canRedo}
+        onUndo={doc.undo}
+        onRedo={doc.redo}
+        saveState={doc.saveState}
+        onSaveNow={() => void retrySave()}
+        menu={menu}
+        onPublish={publish.start}
+        publishDisabled={!website}
+        panels={
+          wide
+            ? {
+                start: startShown,
+                onStart: () => setStartShown(!startShown),
+                end: endShown,
+                onEnd: () => setEndShown(!endShown),
+              }
+            : null
+        }
+      />
+
+      {firstRun && (
+        <GuideStrip brandDone={doc.lookSaves > 0} onBrand={openBrand} onPublish={publish.start} onDismiss={dismissGuide} />
+      )}
+
+      {/* A failed save says so in words, with the reason and the way out. The changes stay in memory. */}
+      {doc.saveState === "failed" && (
+        <div
+          role="alert"
+          data-slot="editor-alert"
+          className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-line bg-danger-soft px-3 py-2"
+        >
+          <p className="min-w-0 flex-1 basis-56 text-sm text-ink">
+            <span className="font-medium text-danger">{t.saveErrorTitle}</span> {doc.saveError}
+          </p>
+          <Button type="button" variant="outline" size="sm" className="rounded-full px-3" onClick={() => void retrySave()}>
+            {t.retry}
+          </Button>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1">
         <DataState
           loading={site.loading}
           error={site.error}
           empty={!site.data}
-          emptyMessage={t.noPagesToEdit}
-          onRetry={() => site.refresh()}
+          emptyMessage={ui.noPagesToEdit}
+          onRetry={() => void site.refresh()}
         >
-          <div className="flex h-full min-h-0 flex-col">
-            <PageTabs
-              pages={pages}
-              selectedId={selectedPageId}
-              onSelect={requestPageSwitch}
-              onDelete={setPendingPageDelete}
-              onAdd={() => setShowNewPage(true)}
-            />
+          <div className="flex h-full min-h-0">
+            {wide && startShown && (
+              <StartPanel
+                tab={startTab}
+                onTabChange={setStartTab}
+                sections={layerList("panel")}
+                pages={pageList}
+                onAddSection={() => requestInsert(null)}
+              />
+            )}
 
-            <div className="flex min-h-0 flex-1">
-              <aside
-                aria-label={t.blocksLabel}
-                className="hidden w-56 shrink-0 border-e border-line bg-paper-raised lg:block"
-              >
-                <BlockLibrary onAdd={addBlock} />
-              </aside>
-
-              <main
-                aria-label={t.sectionsLabel}
-                className="min-w-0 flex-1 overflow-y-auto bg-paper p-4 sm:p-6"
-              >
-                <div className="mx-auto max-w-2xl">
-                  {!page ? (
-                    <EmptyState
-                      className="rounded-2xl bg-paper-raised"
-                      icon={<FilePlus2 aria-hidden />}
-                      title={t.noPagesTitle}
-                      description={t.noPagesBody}
-                    />
-                  ) : sections.length === 0 ? (
-                    <EmptyState
-                      className="rounded-2xl bg-paper-raised"
-                      icon={<LayoutTemplate aria-hidden />}
-                      title={t.emptyPageTitle}
-                      description={t.emptyPageBody}
-                    />
-                  ) : (
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <SortableContext
-                        items={sections.map((s) => s.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className="space-y-3">
-                          {sections.map((section) => (
-                            <SectionCard
-                              key={section.id}
-                              section={section}
-                              selected={section.id === selectedId}
-                              onSelect={() => setSelectedId(section.id)}
-                              onDelete={() => setPendingDelete(section)}
-                            />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                  )}
-
-                  {/* The library lives in the sidebar on desktop; on small screens
-                      it moves below the canvas so the editor stays usable. */}
-                  <div className="mt-6 overflow-hidden rounded-2xl border border-line bg-paper-raised lg:hidden">
-                    <BlockLibrary onAdd={addBlock} />
+            <EditorStage
+              device={roomy ? device : "phone"}
+              onClear={clearSelection}
+              bar={
+                doc.lookDirty ? (
+                  <LookBar
+                    saving={doc.savingLook}
+                    error={doc.lookError}
+                    onSave={() => void saveLookNow()}
+                    onRevert={doc.revertLook}
+                  />
+                ) : null
+              }
+            >
+              {!page ? (
+                <div className="flex h-full items-center justify-center p-6">
+                  <div className="max-w-sm rounded-[1.5rem] bg-paper-raised px-6 py-8 text-center ring-1 ring-line">
+                    <p className="text-sm leading-6 text-ink-soft">{ui.noPages}</p>
+                    <Button type="button" variant="secondary" className="zimos-editor-soft mt-4 h-11 rounded-full px-5" onClick={() => setShowNewPage(true)}>
+                      <IconPlus className="size-4" aria-hidden />
+                      {t.newPage}
+                    </Button>
                   </div>
                 </div>
-              </main>
+              ) : (
+                <EditorCanvas
+                  storePath={storeView}
+                  workspaceId={workspaceId}
+                  tree={tree}
+                  look={look}
+                  savedThemeSettings={currentWorkspace?.themeSettings}
+                  shellDirty={doc.shellDirty}
+                  device={roomy ? device : "phone"}
+                  onDeviceChange={setDevice}
+                  controlsRef={controlsRef}
+                  colorMode={previewMode}
+                  onColorModeChange={setPreviewMode}
+                  selectedSectionId={selectedSectionId}
+                  selectedElementId={elementId}
+                  selectedShell={selectedShell}
+                  labels={labels}
+                  inlineText={inlineText}
+                  deepText={deepText}
+                  scrollRequest={scrollRequest}
+                  shellScrollRequest={shellScrollRequest}
+                  onSelectSection={(id) => selectSection(id, { scroll: false })}
+                  onSelectElement={selectElement}
+                  onSelectShell={(part, xsPart) => selectShell(part, { scroll: false, xsPart })}
+                  onInsert={requestInsert}
+                  onMoveSection={edits.moveBy}
+                  onSectionAction={edits.act}
+                  onPickImage={(target) => {
+                    // A band with many pictures names the one that was pressed by its address, not by a field.
+                    const { src, nth, elementId: picked } = target;
+                    if (src) requestImage({ kind: "apply", apply: (url) => edits.replacePicture(picked, src, nth ?? 0, url) });
+                    else requestImage({ kind: "field", sectionId: target.sectionId, elementId: picked, field: target.field });
+                  }}
+                  onCanvasEdit={(edit) =>
+                    edit.kind === "logo-size"
+                      ? resizeLogo(edit)
+                      : edit.kind === "shell-move"
+                        ? moveShellPart(edit)
+                        : edits.applyCanvas(edit)
+                  }
+                  onCanvasStep={(step) => {
+                    if (step.kind === "shell-part") {
+                      // One arrow press, placed by the frame; a burst is one undo step.
+                      moveShellPart({ ...step, id: step.partId }, `canvas:part:${step.partId}`);
+                      return;
+                    }
+                    const edit = step.kind === "logo" ? stepEdit(step) : null;
+                    if (edit?.kind === "logo-size") resizeLogo(edit, `canvas:logo:${edit.part}`);
+                    else edits.stepCanvas(step);
+                  }}
+                  onTextEdit={edits.editText}
+                  onCanvasKey={(key) => {
+                    // The same keys as on the editor itself (useEditorShortcuts), pressed while the page had the focus.
+                    if (key === "copy") edits.copy(selectedSectionId, elementId);
+                    else if (key === "paste") edits.paste(selectedSectionId, elementId);
+                    else if (key === "duplicate") edits.duplicateSelected(selectedSectionId, elementId);
+                    else if (key === "undo") doc.undo();
+                    else if (key === "redo") doc.redo();
+                    else if (key === "delete" && selected && !elementId) setPendingDelete(selected);
+                  }}
+                />
+              )}
+            </EditorStage>
 
-              <aside
-                aria-label={t.inspectorLabel}
-                className="hidden w-80 shrink-0 border-s border-line bg-paper-raised xl:block"
-              >
-                {selected ? (
-                  <SectionInspector
-                    section={selected}
-                    onChange={updateSection}
-                    onDelete={() => setPendingDelete(selected)}
-                    onClose={() => setSelectedId(null)}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-2 px-4 py-10 text-center text-sm text-ink-soft">
-                    <span className="flex size-10 items-center justify-center rounded-full bg-primary-soft text-primary">
-                      <MousePointerClick className="size-5" aria-hidden />
-                    </span>
-                    <p>{t.selectSection}</p>
-                  </div>
+            {wide && endShown && (
+              <EndPanel>
+                {inspector ?? (
+                  <>
+                    <LookIntro />
+                    {lookPanel("panel")}
+                  </>
                 )}
-              </aside>
-            </div>
+              </EndPanel>
+            )}
           </div>
         </DataState>
       </div>
 
-      {/* Below xl the panel can't sit beside the canvas, so it becomes an overlay. */}
-      {selected && (
-        <div
-          role="dialog"
-          aria-label={t.inspectorLabel}
-          className="fixed inset-y-0 end-0 z-30 w-80 max-w-full border-s border-line bg-paper-raised shadow-pop xl:hidden"
-        >
-          <SectionInspector
-            section={selected}
-            onChange={updateSection}
-            onDelete={() => setPendingDelete(selected)}
-            onClose={() => setSelectedId(null)}
-          />
-        </div>
+      {!wide && site.data && (
+        <PhoneDock
+          onSections={() => setSectionsOpen(true)}
+          onAdd={() => requestInsert(null)}
+          onLook={showStoreLook}
+          edit={inspector && !inspectorOpen ? { label: selectionLabel, onOpen: () => setInspectorOpen(true) } : null}
+        />
       )}
 
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title={t.deleteSectionTitle}
-        description={
-          pendingDelete
-            ? fmt(t.deleteSectionBody, { label: sectionLabel(pendingDelete, locale) })
-            : undefined
-        }
-        confirmLabel={t.deleteSectionConfirm}
-        destructive
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={() => pendingDelete && deleteSection(pendingDelete)}
+      {/* Below lg the side panels are sheets. */}
+      {!wide && (
+        <>
+          <PhoneSheets
+            sectionsOpen={sectionsOpen}
+            onSectionsOpenChange={setSectionsOpen}
+            sectionList={layerList("sheet")}
+            lookOpen={lookOpen}
+            onLookOpenChange={setLookOpen}
+            lookPanel={lookPanel("sheet")}
+            brandOpen={brandOpen}
+            onBrandOpenChange={setBrandOpen}
+            presets={
+              <ThemePresetRow
+                look={look}
+                onChange={doc.updateLook}
+                storeName={currentWorkspace?.name ?? ""}
+                previewMode={previewMode ?? "light"}
+                variant="sheet"
+                className="[--look-bleed:1.25rem]"
+              />
+            }
+            lookDirty={doc.lookDirty}
+            savingLook={doc.savingLook}
+            onSaveLook={() => void saveLookNow()}
+            onRevertLook={doc.revertLook}
+          />
+          {/* Not a dialog: the store above it stays alive (see PhoneInspectorSheet). */}
+          {inspectorOpen && inspector && (
+            <PhoneInspectorSheet title={selectionLabel || t.editSheet} onHide={() => setInspectorOpen(false)}>
+              {inspector}
+            </PhoneInspectorSheet>
+          )}
+        </>
+      )}
+
+      {/* The library: where every new section comes from, at the place that was pointed at. */}
+      <BlockLibrarySheet
+        open={libraryOpen}
+        onOpenChange={(open) => {
+          setLibraryOpen(open);
+          if (!open) setInsertIndex(null);
+        }}
+        onPick={addBlock}
+        // Saved sections live in the library too, under their own chip.
+        onInsertSaved={insertSaved}
+        insertIndex={insertIndex}
       />
 
-      <NewPageDialog
-        open={showNewPage}
-        onClose={() => setShowNewPage(false)}
-        onCreate={createPage}
+      <MediaPicker
+        open={imageOpen}
+        onOpenChange={(open) => {
+          if (!open) setImageOpen(false);
+        }}
+        onPick={imagePicked}
+        accept="image"
+        title={t.pickImage}
+      />
+
+      <PublishSheet
+        open={publish.open}
+        onOpenChange={publish.setOpen}
+        workspaceId={workspaceId}
+        website={website}
+        pages={pages}
+        checking={publish.checking}
+        publishing={publish.publishing}
+        error={publish.error}
+        problems={publish.problems}
+        lookDirty={doc.lookDirty}
+        savingLook={doc.savingLook}
+        onSaveLook={() => void saveLookNow()}
+        onPublish={() => void publish.publishNow()}
+        onOpenPage={(pageId) => {
+          publish.setOpen(false);
+          void requestPageSwitch(pageId);
+        }}
+      />
+
+      <VersionHistorySheet
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        workspaceId={workspaceId}
+        websiteId={websiteId}
+        liveRevisionId={website?.publishedRevisionId ?? null}
+        onRestored={doc.reloadSite}
+      />
+
+      {settingsOpen && page && (
+        <EditorPageSettings
+          key={page.id}
+          page={page}
+          treeMeta={treeMeta}
+          onTreeMetaChange={doc.setTreeMeta}
+          onSaveSeo={(seo) => doc.saveSeo(page.id, seo)}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+
+      <NewPageDialog open={showNewPage} onClose={() => setShowNewPage(false)} onCreate={createPage} />
+
+      {/* Only the keyboard asks: a button deletes at once and offers Undo. */}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={ui.deleteSectionTitle}
+        description={pendingDelete ? ui.deleteSectionBody(sectionLabel(pendingDelete, locale)) : undefined}
+        confirmLabel={ui.deleteSection}
+        destructive
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) edits.remove(pendingDelete);
+          setPendingDelete(null);
+        }}
       />
 
       <ConfirmDialog
         open={pendingPageDelete !== null}
-        title={t.deletePageTitle}
-        description={
-          pendingPageDelete
-            ? fmt(t.deletePageBody, {
-                title: pendingPageDelete.title,
-                path: ltrIsolate(pendingPageDelete.path),
-              })
-            : undefined
-        }
-        confirmLabel={t.deletePageConfirm}
+        title={ui.deletePageTitle}
+        description={pendingPageDelete ? ui.deletePageBody(pendingPageDelete.title, pendingPageDelete.path) : undefined}
+        confirmLabel={ui.deletePage}
         destructive
         onCancel={() => setPendingPageDelete(null)}
         onConfirm={() => pendingPageDelete && deletePage(pendingPageDelete)}
       />
 
+      {/* Reached only when the page's last changes could not be stored. */}
       <ConfirmDialog
         open={pendingSwitchId !== null}
         title={t.leaveTitle}
-        description={t.leaveBody}
-        confirmLabel={t.leaveConfirm}
+        description={t.switchBody}
+        confirmLabel={t.switchConfirm}
         destructive
         onCancel={() => setPendingSwitchId(null)}
         onConfirm={() => {
-          setSelectedPageId(pendingSwitchId);
+          if (pendingSwitchId) doc.openPage(pendingSwitchId);
           setPendingSwitchId(null);
         }}
       />
+
+      <ConfirmDialog
+        open={pendingLeave !== null}
+        title={t.leaveTitle}
+        description={pendingLeave?.reason === "look" ? t.leaveLookBody : t.leavePageBody}
+        confirmLabel={t.leaveConfirm}
+        destructive
+        onCancel={() => setPendingLeave(null)}
+        onConfirm={() => {
+          const to = pendingLeave?.to;
+          setPendingLeave(null);
+          if (to) navigate(to);
+        }}
+      />
     </div>
+    </ShellPartFocusProvider>
+    </EditorScreenProvider>
   );
 }

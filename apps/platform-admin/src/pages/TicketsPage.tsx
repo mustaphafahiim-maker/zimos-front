@@ -1,129 +1,145 @@
-import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { RefreshCw } from "lucide-react";
+import { Button, Table, TableBody, TableHeader, TableRow } from "@store-builder/ui";
+import type { SupportTicketPriority, SupportTicketStatus } from "@store-builder/api-client";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState, EmptyBlock } from "@/components/DataState";
 import { FilterChips, NativeSelect, SearchInput } from "@/components/forms";
 import { Panel, Td, Th } from "@/components/Panel";
 import { Status } from "@/components/StatusBadge";
 import { useAsync } from "@/lib/useAsync";
-import { adminApi } from "@/mock/adminApi";
-import type { TicketPriority, TicketStatus } from "@/mock/types";
+import * as adminApi from "@/lib/adminApi";
 import { formatDateTime, formatRelative } from "@/lib/format";
+import { Pager } from "@/pages/BlocklistPage";
+import { PRIORITY_LABEL, STATUS_LABEL } from "@/lib/tickets";
 
-type StatusFilter = "all" | TicketStatus;
+type StatusFilter = "all" | SupportTicketStatus;
 
-const PRIORITY_RANK: Record<TicketPriority, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+function useDebounced<T>(value: T, ms = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return debounced;
+}
 
 export function TicketsPage() {
-  const navigate = useNavigate();
-  const { data, loading, error, refresh } = useAsync(() => Promise.all([adminApi.listTickets(), adminApi.listAdminUsers()]), []);
   const [status, setStatus] = useState<StatusFilter>("open");
-  const [priority, setPriority] = useState<"all" | TicketPriority>("all");
-  const [assignee, setAssignee] = useState("all");
+  const [priority, setPriority] = useState<"" | SupportTicketPriority>("");
   const [query, setQuery] = useState("");
+  const q = useDebounced(query.trim());
 
-  const tickets = useMemo(() => data?.[0] ?? [], [data]);
-  const admins = useMemo(() => data?.[1] ?? [], [data]);
-  const adminName = (id: string | null) => (id ? admins.find((a) => a.id === id)?.name ?? "Unknown" : null);
+  const filterKey = [status, priority, q].join("|");
+  const [page, setPage] = useState({ key: filterKey, offset: 0 });
+  const offset = page.key === filterKey ? page.offset : 0;
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return tickets
-      .filter((t) => status === "all" || t.status === status)
-      .filter((t) => priority === "all" || t.priority === priority)
-      .filter((t) => assignee === "all" || (assignee === "unassigned" ? t.assigneeId === null : t.assigneeId === assignee))
-      .filter(
-        (t) =>
-          !q ||
-          t.subject.toLowerCase().includes(q) ||
-          t.workspaceName.toLowerCase().includes(q) ||
-          t.requesterEmail.toLowerCase().includes(q) ||
-          String(t.number).includes(q)
-      )
-      .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || b.updatedAt.localeCompare(a.updatedAt));
-  }, [tickets, status, priority, assignee, query]);
+  const { data, loading, error, refresh } = useAsync(
+    () =>
+      adminApi.listTickets({
+        status: status === "all" ? undefined : status,
+        priority: priority || undefined,
+        q: q || undefined,
+        offset,
+      }),
+    [status, priority, q, offset]
+  );
 
-  const options = (
-    [
-      ["open", "Open"],
-      ["pending", "Pending"],
-      ["resolved", "Resolved"],
-      ["closed", "Closed"],
-      ["all", "All"],
-    ] as Array<[StatusFilter, string]>
-  ).map(([value, label]) => ({ value, label, count: value === "all" ? tickets.length : tickets.filter((t) => t.status === value).length }));
+  const counts = data?.counts;
+  const all = counts ? counts.open + counts.pending + counts.resolved + counts.closed : undefined;
+  const options: Array<{ value: StatusFilter; label: string; count?: number }> = [
+    { value: "open", label: STATUS_LABEL.open, count: counts?.open },
+    { value: "pending", label: STATUS_LABEL.pending, count: counts?.pending },
+    { value: "resolved", label: STATUS_LABEL.resolved, count: counts?.resolved },
+    { value: "closed", label: STATUS_LABEL.closed, count: counts?.closed },
+    { value: "all", label: "All", count: all },
+  ];
+  const tickets = data?.tickets ?? [];
 
   return (
     <div>
-      <PageHeader title="Tickets" description="Support requests from merchants." />
-      <DataState loading={loading} error={error} onRetry={() => void refresh()}>
-        <div className="mb-4 flex flex-col gap-3">
-          <FilterChips options={options} value={status} onChange={setStatus} />
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <SearchInput value={query} onChange={setQuery} placeholder="Search subject, workspace or #" />
-            <NativeSelect value={priority} onChange={(e) => setPriority(e.target.value as "all" | TicketPriority)} className="sm:w-40" aria-label="Filter by priority">
-              <option value="all">All priorities</option>
-              <option value="urgent">Urgent</option>
-              <option value="high">High</option>
-              <option value="normal">Normal</option>
-              <option value="low">Low</option>
-            </NativeSelect>
-            <NativeSelect value={assignee} onChange={(e) => setAssignee(e.target.value)} className="sm:w-48" aria-label="Filter by assignee">
-              <option value="all">All assignees</option>
-              <option value="unassigned">Unassigned</option>
-              {admins
-                .filter((a) => a.status !== "disabled")
-                .map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-            </NativeSelect>
-          </div>
+      <PageHeader
+        title="Support tickets"
+        description="Merchant requests waiting on the platform team."
+        actions={
+          <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading}>
+            <RefreshCw /> Refresh
+          </Button>
+        }
+      />
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <FilterChips options={options} value={status} onChange={setStatus} />
+        <div className="flex flex-wrap items-center gap-2">
+          <NativeSelect
+            aria-label="Priority"
+            className="h-10 w-36"
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as "" | SupportTicketPriority)}
+          >
+            <option value="">Any priority</option>
+            {(Object.keys(PRIORITY_LABEL) as SupportTicketPriority[]).map((p) => (
+              <option key={p} value={p}>
+                {PRIORITY_LABEL[p]}
+              </option>
+            ))}
+          </NativeSelect>
+          <SearchInput value={query} onChange={setQuery} placeholder="Search subjects" />
         </div>
-        {filtered.length === 0 ? (
-          <EmptyBlock message={tickets.length === 0 ? "No support tickets yet." : "No tickets match these filters."} />
+      </div>
+
+      <DataState loading={loading && !data} error={error} onRetry={() => void refresh()}>
+        {tickets.length === 0 ? (
+          <EmptyBlock message={status === "open" ? "Nothing is waiting on the platform team." : "No tickets match."} />
         ) : (
           <Panel flush>
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <Th>Ticket</Th>
+                  <Th>Subject</Th>
                   <Th>Workspace</Th>
-                  <Th>Priority</Th>
                   <Th>Status</Th>
-                  <Th>Assignee</Th>
-                  <Th>Updated</Th>
+                  <Th>Priority</Th>
+                  <Th>Last message</Th>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((t) => (
-                  <TableRow key={t.id} className="cursor-pointer" onClick={() => navigate(`/tickets/${t.id}`)}>
-                    <Td className="max-w-md whitespace-normal">
-                      <Link to={`/tickets/${t.id}`} onClick={(e) => e.stopPropagation()} className="block font-medium text-ink hover:text-primary">
-                        <span className="text-ink-soft">#{t.number}</span> {t.subject}
+                {tickets.map((t) => (
+                  <TableRow key={t.id}>
+                    <Td className="max-w-96">
+                      <Link to={`/tickets/${t.id}`} className="block truncate font-medium text-ink hover:text-primary">
+                        {t.subject}
                       </Link>
                       <span className="text-xs text-ink-soft">
-                        {t.requesterName} · {t.messages.length} message{t.messages.length === 1 ? "" : "s"}
+                        {t.category} · {t.messageCount ?? 0} message{t.messageCount === 1 ? "" : "s"} · opened by{" "}
+                        {t.createdBy ?? "a deleted user"}
                       </span>
                     </Td>
-                    <Td className="text-ink-soft">{t.workspaceName}</Td>
-                    <Td>
-                      <Status value={t.priority} />
+                    <Td className="text-sm">
+                      <Link to={`/workspaces/${t.workspaceId}`} className="hover:text-primary">
+                        {t.workspaceName ?? "Deleted workspace"}
+                      </Link>
                     </Td>
                     <Td>
-                      <Status value={t.status} />
+                      <Status value={t.status} label={STATUS_LABEL[t.status]} />
                     </Td>
-                    <Td className={t.assigneeId ? "text-ink" : "text-ink-muted"}>{adminName(t.assigneeId) ?? "Unassigned"}</Td>
-                    <Td className="text-ink-soft">
-                      <span title={formatDateTime(t.updatedAt)}>{formatRelative(t.updatedAt)}</span>
+                    <Td>
+                      <Status value={t.priority} label={PRIORITY_LABEL[t.priority]} />
+                    </Td>
+                    <Td className="whitespace-nowrap text-sm">
+                      <span title={formatDateTime(t.lastMessageAt)}>{formatRelative(t.lastMessageAt)}</span>
+                      <span className="block text-xs text-ink-soft">
+                        {t.lastMessageBy === "admin" ? "by the platform" : "by the merchant"}
+                      </span>
                     </Td>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </Panel>
+        )}
+        {data && (
+          <Pager total={data.total} limit={data.limit} offset={offset} onOffset={(o) => setPage({ key: filterKey, offset: o })} />
         )}
       </DataState>
     </div>

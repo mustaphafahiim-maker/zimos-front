@@ -1,0 +1,11 @@
+/*
+ * Look 01 · Coza Store — its colours and type are the shared defaults in
+ * xs-sections.css; this file only adds the Arabic faces it is paired with
+ * (xs-fonts.css), so a look-01 page carries them and no other look's.
+ */
+
+[data-xs-look="01"],
+.brand-theme[data-xs-shell="01"] {
+  --xs-sans: "XS01 Sans", "XS Ar Tajawal", var(--font-sans), sans-serif;
+  --xs-display: "XS01 Display", "XS Ar El Messiri", var(--font-display), serif;
+}

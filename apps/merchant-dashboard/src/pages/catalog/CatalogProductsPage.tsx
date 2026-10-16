@@ -1,87 +1,134 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, LayoutGrid, List, Package } from "lucide-react";
-import { Button, Input, cn } from "@store-builder/ui";
+import { LayoutGrid, List } from "lucide-react";
+import { Button, cn } from "@store-builder/ui";
 import type { Product, ProductStatus } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useCursorList } from "@/lib/useCursorList";
-import { getErrorMessage } from "@/lib/errors";
-import { formatMoneyRange, formatProductCode, parseMoney } from "@/lib/format";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { formatDate, formatMoneyRange, formatProductCode, parseMoney } from "@/lib/format";
+import { STOREFRONT_URL } from "@/lib/storefrontUrl";
+import { useProductFilters } from "./components/ProductFilterBar";
 import { primaryImage } from "@/lib/media";
+import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
-import { EmptyState } from "@/components/EmptyState";
+import { FilterTabs } from "@/components/FilterTabs";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProductImage } from "@/components/ProductImage";
 import { LoadMore } from "@/components/LoadMore";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
-import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
+import { useCatalogLabels } from "./catalogLabels";
+import { ProductRemoveDialog } from "./components/ProductRemoveDialog";
+import {
+  DuplicateProductButton,
+  ProductTransferButton,
+  ProductBulkBar,
+  SelectAllCheckbox,
+  SelectRowCheckbox,
+  useProductSelection,
+  type ProductSelection,
+} from "./components/ProductListBulk";
+import { PREORDERS_ENABLED, SHOPPER_ACCOUNTS_ENABLED, STOCK_ALERTS_ENABLED } from "@/lib/features";
+import { PreorderBadge } from "./components/PreorderBadge";
+import { WaitingRestockCard } from "./components/WaitingRestockCard";
+import { MostWishedCard } from "./components/MostWishedCard";
 
 const STRINGS = {
   en: {
     title: "Products",
     description: "Everything you sell — with variants, offers, and stock.",
     newProduct: "New product",
-    searchPlaceholder: "Filter loaded products by name or SKU",
+    filterLabel: "Filter products by status",
+    tabAll: "All",
+    tabActive: "Active",
+    tabDraft: "Draft",
+    tabArchived: "Archived",
     listView: "List view",
     gridView: "Grid view",
-    statusFilter: "Filter by status",
-    viewToggle: "Choose view",
-    manageCollections: "Manage collections",
-    emptyTitle: "No products yet",
-    emptyDescription: "Create your first product to start selling.",
-    noMatchTitle: "No products match your filter",
-    noMatchDescription: "Try a different name or SKU, or switch the status tab.",
-    archivedToast: "\"{name}\" archived. It's hidden from the storefront; existing orders keep their history.",
-    confirmTitle: "Delete \"{name}\"?",
-    confirmDescription:
-      "Products are soft-deleted (archived), not removed — so past orders and inventory history stay intact. It disappears from the storefront and can't take new orders.",
-    confirmLabel: "Archive product",
+    manageCollections: "Manage collections →",
+    insights: "What your shoppers are telling you",
+    emptyAll: "No products yet. Create your first one.",
+    emptyActive: "No active products.",
+    emptyDraft: "No draft products.",
+    emptyArchived: "No archived products. Products you archive show up here.",
+    emptyFilter: "No products match your filter.",
     colProduct: "Product",
-    colPriceRange: "Price range",
+    colStatus: "Status",
+    colPrice: "Price range",
     colStock: "Stock",
+    colCreated: "Created",
+    notTracked: "Not tracked",
+    preview: "Preview",
+    previewHint: "Open it in your store",
+    colActions: "Actions",
     noVariants: "No variants",
+    stock: "{total} in stock · {count} variants",
     stockOne: "{total} in stock · 1 variant",
-    stockMany: "{total} in stock · {count} variants",
+    noWeight: "No weight",
+    noWeightHint: "A variant has no weight. Shipping uses your default item weight for it.",
+    edit: "Edit",
+    delete: "Delete",
+    restore: "Restore",
+    restoring: "Restoring…",
+    restoreHint: "Restores the product as a draft",
+    deletePermanently: "Delete permanently",
+    restoredToast: "“{name}” restored as a draft. Set it to Active when it's ready to sell.",
   },
   ar: {
     title: "المنتجات",
-    description: "كل ما تبيعه — بمتغيّراته وعروضه ومخزونه.",
+    description: "كل ما تبيعه — مع المتغيرات والعروض والمخزون.",
     newProduct: "منتج جديد",
-    searchPlaceholder: "ابحث في المنتجات المحمّلة بالاسم أو SKU",
+    filterLabel: "تصفية المنتجات حسب الحالة",
+    tabAll: "الكل",
+    tabActive: "نشط",
+    tabDraft: "مسودة",
+    tabArchived: "المؤرشف",
     listView: "عرض القائمة",
     gridView: "عرض الشبكة",
-    statusFilter: "تصفية حسب الحالة",
-    viewToggle: "اختر طريقة العرض",
-    manageCollections: "إدارة المجموعات",
-    emptyTitle: "لا توجد منتجات بعد",
-    emptyDescription: "أنشئ أول منتج لتبدأ البيع.",
-    noMatchTitle: "لا توجد منتجات مطابقة",
-    noMatchDescription: "جرّب اسمًا أو SKU مختلفًا، أو غيّر تبويب الحالة.",
-    archivedToast: "تمت أرشفة \"{name}\". أصبح مخفيًا من المتجر، وتحتفظ الطلبات السابقة بسجلها.",
-    confirmTitle: "حذف \"{name}\"؟",
-    confirmDescription:
-      "لا تُحذف المنتجات نهائيًا بل تُؤرشف، لذلك يبقى سجل الطلبات السابقة والمخزون كما هو. سيختفي المنتج من المتجر ولن يستقبل طلبات جديدة.",
-    confirmLabel: "أرشفة المنتج",
+    manageCollections: "إدارة المجموعات ←",
+    insights: "ما يخبرك به عملاؤك",
+    emptyAll: "لا توجد منتجات بعد. أنشئ أول منتج.",
+    emptyActive: "لا توجد منتجات نشطة.",
+    emptyDraft: "لا توجد منتجات في المسودة.",
+    emptyArchived: "لا توجد منتجات مؤرشفة. المنتجات التي تؤرشفها تظهر هنا.",
+    emptyFilter: "لا توجد منتجات مطابقة للبحث.",
     colProduct: "المنتج",
-    colPriceRange: "نطاق السعر",
+    colStatus: "الحالة",
+    colPrice: "نطاق السعر",
     colStock: "المخزون",
-    noVariants: "لا توجد متغيّرات",
-    stockOne: "{total} في المخزون · متغيّر واحد",
-    stockMany: "{total} في المخزون · {count} متغيّرات",
+    colCreated: "تاريخ الإنشاء",
+    notTracked: "غير متتبع",
+    preview: "معاينة",
+    previewHint: "افتحه في متجرك",
+    colActions: "إجراءات",
+    noVariants: "بدون متغيرات",
+    stock: "المخزون: {total} · المتغيرات: {count}",
+    stockOne: "المخزون: {total} · متغير واحد",
+    noWeight: "بدون وزن",
+    noWeightHint: "يوجد متغير بدون وزن. الشحن يستخدم الوزن الافتراضي للمنتج بدلًا منه.",
+    edit: "تعديل",
+    delete: "حذف",
+    restore: "استعادة",
+    restoring: "جارٍ الاستعادة…",
+    restoreHint: "يستعيد المنتج كمسودة",
+    deletePermanently: "حذف نهائي",
+    restoredToast: "تمت استعادة “{name}” كمسودة. اجعله نشطًا عندما يكون جاهزًا للبيع.",
   },
 } satisfies Messages;
 
-type CatalogStrings = (typeof STRINGS)["en"];
+type Strings = (typeof STRINGS)["en"];
 
-const STATUS_LABELS: Record<Locale, Record<"" | ProductStatus, string>> = {
-  en: { "": "All", active: "Active", draft: "Draft", archived: "Archived" },
-  ar: { "": "الكل", active: "نشط", draft: "مسودة", archived: "مؤرشف" },
+/** "all" is every product that can still sell or be finished: archived ones have their own tab. */
+type Tab = "all" | "active" | "draft" | "archived";
+
+const TAB_STATUS: Record<Tab, ProductStatus | ProductStatus[]> = {
+  all: ["draft", "active"],
+  active: "active",
+  draft: "draft",
+  archived: "archived",
 };
-
-const STATUS_TABS: Array<"" | ProductStatus> = ["", "active", "draft", "archived"];
 
 type CatalogView = "list" | "grid";
 const VIEW_KEY = "sb.catalogView";
@@ -101,24 +148,41 @@ function priceRange(product: Product): string {
   return formatMoneyRange(Math.min(...prices), Math.max(...prices), variants[0].currency);
 }
 
-function stockSummary(product: Product, t: CatalogStrings): string {
+/** A live physical product with an active variant that has no weight set. */
+function missingWeight(product: Product): boolean {
+  if (product.productType !== "physical" || product.status === "archived") return false;
+  return (product.variants ?? []).some((v) => v.status === "active" && v.weightGrams === null);
+}
+
+function NoWeightBadge({ product, t }: { product: Product; t: Strings }) {
+  if (!missingWeight(product)) return null;
+  return <StatusBadge value="no_weight" tone="warning" text={t.noWeight} className="ms-1.5" />;
+}
+
+function stockSummary(product: Product, t: Strings): string {
+  // Digital products and services have no stock to count.
+  if (product.productType === "digital" || product.productType === "service") return t.notTracked;
   const variants = product.variants ?? [];
   if (variants.length === 0) return t.noVariants;
   const total = variants.reduce((sum, v) => sum + v.stockOnHand, 0);
-  return variants.length === 1
-    ? fmt(t.stockOne, { total })
-    : fmt(t.stockMany, { total, count: variants.length });
+  return fmt(variants.length === 1 ? t.stockOne : t.stock, { total, count: variants.length });
 }
 
 export function CatalogProductsPage() {
   const t = useT(STRINGS);
-  const { locale } = useLocale();
+  const labels = useCatalogLabels();
   const workspaceId = useWorkspaceId();
   const toast = useToast();
-  const [status, setStatus] = useState<"" | ProductStatus>("");
-  const [search, setSearch] = useState("");
+  const errorMessage = useErrorMessage();
+  const [tab, setTab] = useState<Tab>("all");
+  // Server-side search and filters (components/ProductFilterBar.tsx).
+  const filters = useProductFilters();
   const [view, setView] = useState<CatalogView>(readView);
-  const [toDelete, setToDelete] = useState<Product | null>(null);
+  const [toRemove, setToRemove] = useState<Product | null>(null);
+  // Rows ticked for bulk edit (list view).
+  const selection = useProductSelection();
+  // Rows with a restore in flight, so a second click can't send it twice.
+  const [restoring, setRestoring] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
     try {
@@ -131,29 +195,98 @@ export function CatalogProductsPage() {
   const list = useCursorList<Product>(
     (cursor) =>
       apiClient
-        .listProducts(workspaceId, { status: status || undefined, cursor, limit: 50 })
+        .listProducts(workspaceId, { status: TAB_STATUS[tab], cursor, limit: 50, ...filters.params })
         .then((r) => ({ items: r.products, nextCursor: r.nextCursor })),
-    [workspaceId, status]
+    [workspaceId, tab, filters.key]
   );
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return list.items;
-    return list.items.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        (p.variants ?? []).some((v) => v.sku?.toLowerCase().includes(q))
-    );
-  }, [list.items, search]);
+  const filtered = list.items;
 
-  async function confirmDelete() {
-    if (!toDelete) return;
-    const name = toDelete.name;
-    await apiClient.deleteProduct(workspaceId, toDelete.id);
-    toast.success(fmt(t.archivedToast, { name }));
-    setToDelete(null);
-    list.reload();
+  async function restore(product: Product) {
+    if (restoring.has(product.id)) return;
+    setRestoring((prev) => new Set(prev).add(product.id));
+    try {
+      await apiClient.restoreProduct(workspaceId, product.id);
+      toast.success(fmt(t.restoredToast, { name: product.name }));
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setRestoring((prev) => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+      // Either way the row's real state is worth re-reading: a
+      // PRODUCT_NOT_ARCHIVED means someone else already moved it.
+      list.reload();
+    }
   }
+
+  const tabs = [
+    { value: "all" as const, label: t.tabAll },
+    { value: "active" as const, label: t.tabActive },
+    { value: "draft" as const, label: t.tabDraft },
+    { value: "archived" as const, label: t.tabArchived },
+  ];
+
+  const emptyByTab: Record<Tab, string> = {
+    all: t.emptyAll,
+    active: t.emptyActive,
+    draft: t.emptyDraft,
+    archived: t.emptyArchived,
+  };
+
+  function renderActions(product: Product) {
+    const busy = restoring.has(product.id);
+    return (
+      <>
+        <Button asChild size="sm" variant="ghost">
+          <Link to={`/catalog/${product.id}`}>{t.edit}</Link>
+        </Button>
+        {product.status !== "archived" && (
+          <Button asChild size="sm" variant="ghost" title={t.previewHint}>
+            <a href={`${STOREFRONT_URL}/store/${workspaceId}/products/${product.slug}`} target="_blank" rel="noreferrer">
+              {t.preview}
+            </a>
+          </Button>
+        )}
+        <DuplicateProductButton product={product} />
+        {product.status === "archived" ? (
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              title={t.restoreHint}
+              disabled={busy}
+              onClick={() => restore(product)}
+            >
+              {busy ? t.restoring : t.restore}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-danger hover:bg-danger-soft"
+              disabled={busy}
+              onClick={() => setToRemove(product)}
+            >
+              {t.deletePermanently}
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-danger hover:bg-danger-soft"
+            onClick={() => setToRemove(product)}
+          >
+            {t.delete}
+          </Button>
+        )}
+      </>
+    );
+  }
+
+  const rowProps = { products: filtered, t, statusLabel: labels.status, renderActions, selection };
 
   return (
     <div className="max-w-6xl">
@@ -161,54 +294,28 @@ export function CatalogProductsPage() {
         title={t.title}
         description={t.description}
         actions={
-          <Button asChild>
-            <Link to="/catalog/new">{t.newProduct}</Link>
-          </Button>
+          <>
+            <ProductTransferButton onImported={list.reload} />
+            <Button asChild>
+              <Link to="/catalog/new">{t.newProduct}</Link>
+            </Button>
+          </>
         }
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div
-          role="group"
-          aria-label={t.statusFilter}
-          className="flex max-w-full gap-1 overflow-x-auto rounded-xl border border-line bg-paper-raised p-1"
-        >
-          {STATUS_TABS.map((value) => (
-            <button
-              key={value || "all"}
-              onClick={() => setStatus(value)}
-              aria-pressed={status === value}
-              className={cn(
-                "cursor-pointer whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                status === value ? "bg-primary-soft text-primary-dark" : "text-ink-soft hover:text-ink"
-              )}
-            >
-              {STATUS_LABELS[locale][value]}
-            </button>
-          ))}
-        </div>
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t.searchPlaceholder}
-          aria-label={t.searchPlaceholder}
-          className="w-full sm:max-w-xs"
-        />
+        <FilterTabs tabs={tabs} value={tab} onChange={setTab} label={t.filterLabel} />
+        {filters.bar}
 
         <div className="ms-auto flex items-center gap-3">
-          <div
-            role="group"
-            aria-label={t.viewToggle}
-            className="flex gap-1 rounded-xl border border-line bg-paper-raised p-1"
-          >
+          <div className="flex gap-1 rounded-[0.5rem] border border-line bg-paper-raised p-1">
             <button
               onClick={() => setView("list")}
               aria-label={t.listView}
-              title={t.listView}
               aria-pressed={view === "list"}
               className={cn(
-                "cursor-pointer rounded-lg p-1.5 transition-colors",
-                view === "list" ? "bg-primary-soft text-primary-dark" : "text-ink-soft hover:text-ink"
+                "cursor-pointer rounded-[0.375rem] p-1.5 transition-colors",
+                view === "list" ? "bg-primary-soft text-primary-dark dark:text-primary" : "text-ink-soft hover:text-ink"
               )}
             >
               <List className="size-4" aria-hidden />
@@ -216,131 +323,132 @@ export function CatalogProductsPage() {
             <button
               onClick={() => setView("grid")}
               aria-label={t.gridView}
-              title={t.gridView}
               aria-pressed={view === "grid"}
               className={cn(
-                "cursor-pointer rounded-lg p-1.5 transition-colors",
-                view === "grid" ? "bg-primary-soft text-primary-dark" : "text-ink-soft hover:text-ink"
+                "cursor-pointer rounded-[0.375rem] p-1.5 transition-colors",
+                view === "grid" ? "bg-primary-soft text-primary-dark dark:text-primary" : "text-ink-soft hover:text-ink"
               )}
             >
               <LayoutGrid className="size-4" aria-hidden />
             </button>
           </div>
-          <Link
-            to="/catalog/collections"
-            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-          >
+          <Link to="/catalog/collections" className="text-sm text-primary hover:underline">
             {t.manageCollections}
-            <ArrowRight className="size-3.5 rtl:rotate-180" aria-hidden />
           </Link>
         </div>
       </div>
 
+      {/* What shoppers are waiting for and wishing for (lib/features): one slim row, gone when neither has anything to say. */}
+      {(STOCK_ALERTS_ENABLED || SHOPPER_ACCOUNTS_ENABLED) && (
+        <div
+          role="group"
+          aria-label={t.insights}
+          data-slot="catalog-insights"
+          className="flex items-center gap-2 overflow-x-auto overscroll-x-contain py-1 [scrollbar-width:none] empty:hidden max-sm:-mx-4 max-sm:px-4 sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden"
+        >
+          {STOCK_ALERTS_ENABLED && <WaitingRestockCard />}
+          {SHOPPER_ACCOUNTS_ENABLED && <MostWishedCard />}
+        </div>
+      )}
+
+      <ProductBulkBar selection={selection} onDone={list.reload} />
+
       <DataState
         loading={list.loading}
         error={list.items.length ? null : list.error}
+        empty={filtered.length === 0}
+        emptyMessage={list.items.length === 0 ? emptyByTab[tab] : t.emptyFilter}
         onRetry={list.reload}
       >
-        {filtered.length === 0 ? (
-          list.items.length === 0 ? (
-            <EmptyState
-              icon={<Package aria-hidden />}
-              title={t.emptyTitle}
-              description={t.emptyDescription}
-              action={
-                <Button asChild>
-                  <Link to="/catalog/new">{t.newProduct}</Link>
-                </Button>
-              }
-            />
-          ) : (
-            <EmptyState title={t.noMatchTitle} description={t.noMatchDescription} />
-          )
-        ) : view === "list" ? (
-          <ProductTable products={filtered} onDelete={setToDelete} />
-        ) : (
-          <ProductGrid products={filtered} onDelete={setToDelete} />
-        )}
+        {view === "list" ? <ProductTable {...rowProps} /> : <ProductGrid {...rowProps} />}
         <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onClick={list.loadMore} />
       </DataState>
 
-      <ConfirmDialog
-        open={toDelete !== null}
-        title={fmt(t.confirmTitle, { name: toDelete?.name ?? "" })}
-        description={t.confirmDescription}
-        confirmLabel={t.confirmLabel}
-        destructive
-        onCancel={() => setToDelete(null)}
-        onConfirm={confirmDelete}
-      />
+      {toRemove && (
+        <ProductRemoveDialog
+          key={toRemove.id}
+          product={toRemove}
+          onClose={() => setToRemove(null)}
+          onDone={() => {
+            setToRemove(null);
+            list.reload();
+          }}
+        />
+      )}
 
       {Boolean(list.error) && list.items.length > 0 && (
-        <p className="mt-2 text-xs text-danger">{getErrorMessage(list.error)}</p>
+        <p className="mt-2 text-xs text-danger">{errorMessage(list.error)}</p>
       )}
     </div>
   );
 }
 
-function ProductTable({
-  products,
-  onDelete,
-}: {
+interface RowsProps {
   products: Product[];
-  onDelete: (p: Product) => void;
-}) {
-  const t = useT(STRINGS);
-  const c = useCommon();
+  t: Strings;
+  statusLabel: (status: ProductStatus) => string;
+  renderActions: (product: Product) => ReactNode;
+  selection: ProductSelection;
+}
+
+function ProductTable({ products, t, statusLabel, renderActions, selection }: RowsProps) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-line bg-paper-raised">
-      <table className="w-full min-w-[720px] text-sm">
+    <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line">
+      <table className="w-full min-w-[820px] text-sm">
         <thead>
-          <tr className="border-b border-line bg-paper text-start text-xs uppercase tracking-wide text-ink-soft">
+          <tr className="border-b border-line bg-paper-raised text-start text-xs uppercase tracking-wide text-ink-soft">
+            <th className="w-10 py-3 ps-4">
+              <SelectAllCheckbox selection={selection} products={products} />
+            </th>
             <th className="w-14 px-4 py-3 font-medium" />
             <th className="px-4 py-3 text-start font-medium">{t.colProduct}</th>
-            <th className="px-4 py-3 text-start font-medium">{c.status}</th>
-            <th className="px-4 py-3 text-start font-medium">{t.colPriceRange}</th>
+            <th className="px-4 py-3 text-start font-medium">{t.colStatus}</th>
+            <th className="px-4 py-3 text-start font-medium">{t.colPrice}</th>
             <th className="px-4 py-3 text-start font-medium">{t.colStock}</th>
+            <th className="px-4 py-3 text-start font-medium">{t.colCreated}</th>
             <th className="px-4 py-3 font-medium">
-              <span className="sr-only">{c.actions}</span>
+              <span className="sr-only">{t.colActions}</span>
             </th>
           </tr>
         </thead>
         <tbody>
           {products.map((product) => (
-            <tr key={product.id} className="border-b border-line last:border-0 hover:bg-paper">
+            <tr key={product.id} className="border-b border-line last:border-0 hover:bg-paper-raised">
               <td className="py-2 ps-4">
-                <ProductImage media={primaryImage(product)} alt={product.name} className="size-10" />
+                <SelectRowCheckbox selection={selection} product={product} />
+              </td>
+              <td className="py-2 ps-4">
+                <ProductImage
+                  media={primaryImage(product)}
+                  alt={product.name}
+                  className="size-10"
+                />
               </td>
               <td className="px-4 py-3">
-                <Link to={`/catalog/${product.id}`} className="font-medium text-ink hover:text-primary">
+                <Link
+                  to={`/catalog/${product.id}`}
+                  className="font-medium text-ink hover:text-primary"
+                >
                   {product.name}
                 </Link>
                 {formatProductCode(product.productCode) && (
                   <span className="ms-1.5 text-xs text-ink-soft">
-                    · <bdi dir="ltr">{formatProductCode(product.productCode)}</bdi>
+                    · {formatProductCode(product.productCode)}
                   </span>
                 )}
-                <div className="text-xs text-ink-soft">
-                  <bdi dir="ltr">{product.slug}</bdi>
-                </div>
+                <div className="text-xs text-ink-soft">{product.slug}</div>
               </td>
               <td className="px-4 py-3">
-                <StatusBadge value={product.status} />
+                <span className="inline-flex flex-wrap items-center gap-y-1" title={missingWeight(product) ? t.noWeightHint : undefined}>
+                  <StatusBadge value={product.status} text={statusLabel(product.status)} />
+                  <NoWeightBadge product={product} t={t} />
+                {PREORDERS_ENABLED && <PreorderBadge product={product} className="ms-1.5" />}
+                </span>
               </td>
-              <td className="px-4 py-3 text-ink-soft">
-                <bdi dir="ltr">{priceRange(product)}</bdi>
-              </td>
+              <td className="px-4 py-3 text-ink-soft">{priceRange(product)}</td>
               <td className="px-4 py-3 text-ink-soft">{stockSummary(product, t)}</td>
-              <td className="px-4 py-3 text-end">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-danger hover:bg-danger-soft"
-                  onClick={() => onDelete(product)}
-                >
-                  {c.delete}
-                </Button>
-              </td>
+              <td className="px-4 py-3 whitespace-nowrap text-ink-soft">{formatDate(product.createdAt)}</td>
+              <td className="px-4 py-3 text-end whitespace-nowrap">{renderActions(product)}</td>
             </tr>
           ))}
         </tbody>
@@ -349,21 +457,13 @@ function ProductTable({
   );
 }
 
-function ProductGrid({
-  products,
-  onDelete,
-}: {
-  products: Product[];
-  onDelete: (p: Product) => void;
-}) {
-  const t = useT(STRINGS);
-  const c = useCommon();
+function ProductGrid({ products, t, statusLabel, renderActions }: RowsProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {products.map((product) => (
         <div
           key={product.id}
-          className="flex flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised transition-colors hover:border-primary"
+          className="flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-paper-raised transition-colors hover:border-primary"
         >
           <Link to={`/catalog/${product.id}`} className="block">
             <ProductImage
@@ -376,33 +476,29 @@ function ProductGrid({
           <div className="flex flex-1 flex-col gap-2 p-4">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <Link to={`/catalog/${product.id}`} className="font-medium text-ink hover:text-primary">
+                <Link
+                  to={`/catalog/${product.id}`}
+                  className="font-medium text-ink hover:text-primary"
+                >
                   {product.name}
                 </Link>
                 {formatProductCode(product.productCode) && (
                   <span className="ms-1.5 text-xs text-ink-soft">
-                    · <bdi dir="ltr">{formatProductCode(product.productCode)}</bdi>
+                    · {formatProductCode(product.productCode)}
                   </span>
                 )}
               </div>
-              <StatusBadge value={product.status} />
+              <span className="flex shrink-0 flex-col items-end gap-1" title={missingWeight(product) ? t.noWeightHint : undefined}>
+                <StatusBadge value={product.status} text={statusLabel(product.status)} />
+                <NoWeightBadge product={product} t={t} />
+                {PREORDERS_ENABLED && <PreorderBadge product={product} className="ms-1.5" />}
+              </span>
             </div>
             <div className="mt-auto space-y-0.5 text-sm text-ink-soft">
-              <div>
-                <bdi dir="ltr">{priceRange(product)}</bdi>
-              </div>
+              <div>{priceRange(product)}</div>
               <div className="text-xs">{stockSummary(product, t)}</div>
             </div>
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-danger hover:bg-danger-soft"
-                onClick={() => onDelete(product)}
-              >
-                {c.delete}
-              </Button>
-            </div>
+            <div className="flex flex-wrap justify-end gap-1">{renderActions(product)}</div>
           </div>
         </div>
       ))}

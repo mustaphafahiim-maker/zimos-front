@@ -1,0 +1,769 @@
+{
+  "key": "xs-21",
+  "name": "XS 21",
+  "category": "food_beverage",
+  "kind": "store",
+  "tags": [
+    "xs"
+  ],
+  "rtl": false,
+  "primaryColor": "#50A06C",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#50A06C",
+      "themeSettings": {
+        "xsLook": "21",
+        "header": {
+          "menu": [
+            {
+              "label": "Welcome",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "Pricing",
+              "href": "/menu",
+              "kind": "page"
+            },
+            {
+              "label": "Featured",
+              "href": "/products",
+              "kind": "url"
+            },
+            {
+              "label": "Contact",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "Menu",
+              "links": [
+                {
+                  "label": "Pricing",
+                  "href": "/menu",
+                  "kind": "page"
+                },
+                {
+                  "label": "Featured",
+                  "href": "/products",
+                  "kind": "url"
+                },
+                {
+                  "label": "Cart",
+                  "href": "/cart",
+                  "kind": "cart"
+                }
+              ]
+            },
+            {
+              "title": "Reservation",
+              "links": [
+                {
+                  "label": "Contact",
+                  "href": "/contact",
+                  "kind": "page"
+                },
+                {
+                  "label": "Track Order",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            }
+          ],
+          "text": "Or call us any day during our opening hours",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "Home",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs21-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s1-e1",
+                          "type": "xs_slider",
+                          "props": {
+                            "look": "21",
+                            "slides": [
+                              {
+                                "image": "/xs/21/steak.jpg",
+                                "heading": "Restaurant",
+                                "text": "\" Best in the city \""
+                              }
+                            ],
+                            "autoplay": true,
+                            "seconds": 6
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s2-e1",
+                          "type": "xs_gallery",
+                          "props": {
+                            "look": "21",
+                            "heading": "About us",
+                            "images": [
+                              "/xs/21/kabob.jpg",
+                              "/xs/21/limes.jpg",
+                              "/xs/21/radish.jpg",
+                              "/xs/21/corn.jpg"
+                            ],
+                            "text": "Restaurant is a place for simplicity. Good food, good beer, and good service. Simple is the name of the game, and we’re good at finding it in all the right places, even in your dining experience. We’re a small group from Cairo who make simple food possible. Come join us and see what simplicity tastes like."
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s3-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "21",
+                            "heading": "Affordable pricing",
+                            "image": "/xs/21/pricing.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s4-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "21",
+                            "heading": "",
+                            "collection": "",
+                            "limit": 8,
+                            "showDiscount": true,
+                            "showTabs": true,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "searchLabel": "Search",
+                            "searchPlaceholder": "Search",
+                            "loadMoreLabel": "Load More",
+                            "viewLabel": "Quick View",
+                            "openLabel": "Add to cart",
+                            "allLabel": "All"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s5-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "21",
+                            "heading": "Great Place to enjoy",
+                            "image": "/xs/21/beer.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p1-s6",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s6-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s6-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s6-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "21",
+                            "heading": "OUR BEER",
+                            "text": "Here at Restaurant we’re all about the love of beer. New and bold flavors enter our doors every week, and we can’t help but show them off. While we enjoy the classics, we’re always passionate about discovering something new, so stop by and experience our craft at its best.",
+                            "images": [
+                              "/xs/21/beer_spec.jpg"
+                            ],
+                            "points": []
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p1-s7",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s7-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s7-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s7-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "21",
+                            "heading": "Our Breakfast Menu",
+                            "image": "/xs/21/breakfast.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p1-s8",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s8-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s8-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s8-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "21",
+                            "heading": "OUR BREAD",
+                            "text": "We love the smell of fresh baked bread. Each loaf is handmade at the crack of dawn, using only the simplest of ingredients to bring out smells and flavors that beckon the whole block. Stop by anytime and experience simplicity at its finest.",
+                            "images": [
+                              "/xs/21/bread1.jpg",
+                              "/xs/21/bread1.jpg"
+                            ],
+                            "points": [],
+                            "flip": true
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p1-s9",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s9-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s9-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s9-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "21",
+                            "heading": "Our Featured Dishes Menu",
+                            "image": "/xs/21/featured.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p1-s10",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s10-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s10-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s10-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "21",
+                            "heading": "Have a look to our dishes!",
+                            "text": "Each food is handmade at the crack of dawn, using only the simplest of ingredients to bring out smells and flavors that beckon the whole block. Stop by anytime and experience simplicity at its finest.",
+                            "images": [
+                              "/xs/21/slider1.jpg",
+                              "/xs/21/slider2.jpg",
+                              "/xs/21/slider3.jpg"
+                            ],
+                            "points": [],
+                            "flip": true
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p1-s11",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s11-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s11-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s11-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "21",
+                            "heading": "Reserve a Table!",
+                            "image": "/xs/21/reservation-seat.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p1-s12",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p1-s12-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p1-s12-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p1-s12-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "21",
+                            "heading": "Reservation",
+                            "info": [
+                              {
+                                "icon": "address",
+                                "title": "Hours",
+                                "text": "Monday to Friday: 7:30 AM - 11:30 AM"
+                              },
+                              {
+                                "icon": "address",
+                                "title": "",
+                                "text": "Saturday & Sunday: 8:00 AM - 9:00 AM"
+                              },
+                              {
+                                "icon": "address",
+                                "title": "",
+                                "text": "Monday to Friday: 12:00 PM - 5:00 PM"
+                              },
+                              {
+                                "icon": "address",
+                                "title": "",
+                                "text": "Monday to Saturday: 6:00 PM - 1:00 AM"
+                              }
+                            ],
+                            "contactPlaceholder": "Phone or Email",
+                            "messagePlaceholder": "Reservation Date, Guest Number",
+                            "buttonLabel": "Reserve"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "Contact",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs21-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "21",
+                            "heading": "Contact",
+                            "image": "/xs/21/steak.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p2-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "21",
+                            "heading": "Send Message",
+                            "info": [
+                              {
+                                "icon": "phone",
+                                "title": "Or Call Us",
+                                "text": "Any day during our opening hours"
+                              }
+                            ],
+                            "contactPlaceholder": "Email",
+                            "messagePlaceholder": "Message",
+                            "buttonLabel": "Send Message"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/menu",
+        "title": "Menu",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs21-p3-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p3-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p3-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p3-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "21",
+                            "heading": "Affordable pricing",
+                            "image": "/xs/21/pricing.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs21-p3-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs21-p3-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs21-p3-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs21-p3-s2-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "21",
+                            "heading": "",
+                            "collection": "",
+                            "limit": 12,
+                            "showDiscount": true,
+                            "showTabs": true,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "searchLabel": "Search",
+                            "searchPlaceholder": "Search",
+                            "loadMoreLabel": "Load More",
+                            "viewLabel": "Quick View",
+                            "openLabel": "Add to cart",
+                            "allLabel": "All"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

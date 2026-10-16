@@ -1,270 +1,207 @@
-import { useCallback, useEffect, useState } from "react";
-import { Database, HardDrive, Layers, Mail, MessageCircle, MessageSquare, RefreshCw, Server } from "lucide-react";
-import { Button, Spinner, cn } from "@store-builder/ui";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { Info, RefreshCw } from "lucide-react";
+import { Alert, Button, Spinner } from "@store-builder/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { DataState } from "@/components/DataState";
-import { JsonBlock, Mono, Panel } from "@/components/Panel";
-import { Status, StatusBadge } from "@/components/StatusBadge";
-import { useToast } from "@/components/Toast";
+import { Mono, Panel } from "@/components/Panel";
+import { Status } from "@/components/StatusBadge";
 import { useAsync } from "@/lib/useAsync";
-import { getErrorMessage } from "@/lib/errors";
-import { API_BASE_URL, backendRootUrl } from "@/lib/apiClient";
-import { adminApi } from "@/mock/adminApi";
-import type { ServiceTile } from "@/mock/types";
-import { formatDateTime, formatRelative } from "@/lib/format";
+import * as adminApi from "@/lib/adminApi";
+import type { SystemHealthReport, SystemService, SystemServiceStatus } from "@/lib/adminApi";
+import { formatDateTime, formatNumber, formatRelative } from "@/lib/format";
 
-interface ProbeResult {
-  label: string;
-  path: string;
-  url: string;
-  running: boolean;
-  ok: boolean | null;
-  httpStatus: number | null;
-  latencyMs: number | null;
-  body: unknown;
-  error: string | null;
-  checkedAt: string | null;
-}
-
-const PROBES = [
-  { label: "Liveness", path: "/health", description: "Process is up and serving HTTP." },
-  { label: "Readiness", path: "/health/ready", description: "Dependencies (database, queue) are reachable." },
-] as const;
-
-const TIMEOUT_MS = 8000;
-
-function initialProbe(label: string, path: string): ProbeResult {
-  return { label, path, url: `${backendRootUrl()}${path}`, running: true, ok: null, httpStatus: null, latencyMs: null, body: null, error: null, checkedAt: null };
-}
-
-async function runProbe(label: string, path: string): Promise<ProbeResult> {
-  const url = `${backendRootUrl()}${path}`;
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), TIMEOUT_MS);
-  const started = performance.now();
-  const base = { label, path, url, running: false, checkedAt: new Date().toISOString() };
-  try {
-    const res = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" }, cache: "no-store" });
-    const latencyMs = Math.round(performance.now() - started);
-    const type = res.headers.get("content-type") ?? "";
-    const text = await res.text();
-    if (!type.includes("json")) {
-      return {
-        ...base,
-        ok: false,
-        httpStatus: res.status,
-        latencyMs,
-        body: null,
-        error: type.includes("html")
-          ? "Received an HTML page instead of JSON — the request did not reach the backend (check the dev proxy / API base URL)."
-          : `Unexpected content type “${type || "none"}”.`,
-      };
-    }
-    let body: unknown = text;
-    try {
-      body = JSON.parse(text) as unknown;
-    } catch {
-      /* keep raw text */
-    }
-    return { ...base, ok: res.ok, httpStatus: res.status, latencyMs, body, error: res.ok ? null : `HTTP ${res.status} ${res.statusText}`.trim() };
-  } catch (err) {
-    return {
-      ...base,
-      ok: false,
-      httpStatus: null,
-      latencyMs: null,
-      body: null,
-      error: controller.signal.aborted ? `Timed out after ${TIMEOUT_MS / 1000}s.` : `Backend unreachable — ${getErrorMessage(err, "network error")}`,
-    };
-  } finally {
-    window.clearTimeout(timer);
+/**
+ * Worst reading wins, so a single bad service can't be averaged away.
+ *
+ * `not_configured` services are set aside first rather than ranked: a switched
+ * off integration is not a fault, so it must not drag the headline down — and
+ * it must not prop it up either. A board whose every tile is switched off has
+ * measured nothing, and says so instead of reporting "Operational".
+ */
+function overallStatus(services: SystemService[]): SystemServiceStatus {
+  const probed = services.filter((svc) => svc.status !== "not_configured");
+  if (probed.length === 0) return "not_configured";
+  for (const s of ["down", "degraded", "unknown"] as const) {
+    if (probed.some((svc) => svc.status === s)) return s;
   }
+  return "operational";
 }
 
-const SERVICE_ICON: Record<string, typeof Database> = {
-  svc_db: Database,
-  svc_queue: Layers,
-  svc_email: Mail,
-  svc_sms: MessageSquare,
-  svc_whatsapp: MessageCircle,
-  svc_storage: HardDrive,
-};
+function ServiceTile({ service }: { service: SystemService }) {
+  return (
+    <Panel
+      title={service.name}
+      actions={<Status value={service.status} />}
+      // Only the browser-side probes know which check they ran. The server
+      // reports outcomes, so its tiles carry no line here rather than a
+      // plausible-looking one this console invented.
+      description={service.description ? <Mono>{service.description}</Mono> : undefined}
+    >
+      <p className="text-sm text-ink">{service.detail}</p>
+      <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-soft">
+        <div className="flex gap-1.5">
+          <dt>Response time</dt>
+          <dd className="tabular font-medium text-ink">
+            {service.latencyMs === null ? "—" : `${formatNumber(service.latencyMs)} ms`}
+          </dd>
+        </div>
+        <div className="flex gap-1.5">
+          <dt>Checked</dt>
+          <dd className="font-medium text-ink" title={formatDateTime(service.checkedAt)}>
+            {formatRelative(service.checkedAt)}
+          </dd>
+        </div>
+        {/* Uptime and incident history only ever render when the server sends
+            them. The fallback has no history to draw on, and an invented
+            "100%" would be read as a measurement. */}
+        {service.uptime30d !== null && (
+          <div className="flex gap-1.5">
+            <dt>30-day uptime</dt>
+            <dd className="tabular font-medium text-ink">
+              {(service.uptime30d * 100).toFixed(2)}%
+            </dd>
+          </div>
+        )}
+        {service.lastIncidentAt !== null && (
+          <div className="flex gap-1.5">
+            <dt>Last incident</dt>
+            <dd className="font-medium text-ink" title={service.lastIncidentSummary ?? undefined}>
+              {formatRelative(service.lastIncidentAt)}
+            </dd>
+          </div>
+        )}
+      </dl>
+    </Panel>
+  );
+}
+
+/**
+ * What the readings on screen actually are — which is not one fixed sentence.
+ *
+ * A page load takes whatever the server has, which may be a reading it cached
+ * moments ago; Re-check forces a fresh probe; and when the endpoint can't be
+ * reached at all the numbers come from this browser instead. Stating any one
+ * of those unconditionally would be wrong two thirds of the time.
+ */
+function sourceDescription(report: SystemHealthReport | null): string {
+  if (!report) return "Service checks for the platform's dependencies.";
+  if (report.source === "probe") {
+    return "Checked from your browser just now. Nothing here is cached or recorded.";
+  }
+  return report.cached
+    ? "Probed on the server. These readings came from its cache — Re-check forces a fresh probe."
+    : "Probed on the server, just now. Re-check probes again.";
+}
 
 export function SystemHealthPage() {
-  const toast = useToast();
-  const [probes, setProbes] = useState<ProbeResult[]>(() => PROBES.map((p) => initialProbe(p.label, p.path)));
-  const services = useAsync(() => adminApi.listServices(), []);
-  const [recheckingServices, setRecheckingServices] = useState(false);
-
-  const runProbes = useCallback(async () => {
-    setProbes((prev) => prev.map((p) => ({ ...p, running: true })));
-    const results = await Promise.all(PROBES.map((p) => runProbe(p.label, p.path)));
-    setProbes(results);
+  // `useAsync` re-runs one loader, so the re-check switches which call that
+  // loader makes rather than opening a second request path — the stale-call
+  // guard and the 401/403 handling stay in one place.
+  const forceFresh = useRef(false);
+  const { data, loading, error, refresh } = useAsync(() => {
+    const fresh = forceFresh.current;
+    forceFresh.current = false;
+    return fresh ? adminApi.recheckSystemHealth() : adminApi.loadSystemHealth();
   }, []);
+  const [rechecking, setRechecking] = useState(false);
 
-  useEffect(() => {
-    void runProbes();
-  }, [runProbes]);
+  const services = useMemo(() => data?.services ?? [], [data]);
+  const overall = useMemo(() => overallStatus(services), [services]);
+  const busy = loading || rechecking;
 
-  async function recheckAll() {
-    setRecheckingServices(true);
+  // A re-check refreshes silently so the current readings stay on screen
+  // instead of collapsing to a spinner — but `useAsync` leaves `loading`
+  // false throughout a silent refresh, so the button needs its own busy
+  // state. Without it the control looks inert, and an admin who clicks
+  // again fires a second round of real third-party probes.
+  const recheck = useCallback(async () => {
+    forceFresh.current = true;
+    setRechecking(true);
     try {
-      const [, next] = await Promise.all([runProbes(), adminApi.recheckServices()]);
-      services.setData(next);
-      toast.success("Health checks refreshed.");
-    } catch (err) {
-      toast.error(getErrorMessage(err));
+      await refresh({ silent: true });
     } finally {
-      setRecheckingServices(false);
+      setRechecking(false);
     }
-  }
-
-  const anyRunning = probes.some((p) => p.running) || recheckingServices;
+  }, [refresh]);
 
   return (
     <div>
       <PageHeader
         title="System health"
-        description="Live backend probes plus the status of platform dependencies."
+        titleBadge={services.length > 0 ? <Status value={overall} /> : undefined}
+        description={sourceDescription(data)}
         actions={
-          <Button variant="outline" size="sm" onClick={() => void recheckAll()} disabled={anyRunning}>
-            <RefreshCw className={cn(anyRunning && "animate-spin")} /> Re-run checks
+          <Button variant="outline" size="sm" onClick={() => void recheck()} disabled={busy}>
+            {busy ? <Spinner /> : <RefreshCw />} {busy ? "Checking…" : "Re-check"}
           </Button>
         }
       />
-
-      <section className="mb-6">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Server className="size-4 text-primary" aria-hidden />
-          <h2 className="text-sm font-semibold text-ink">Backend API</h2>
-          <StatusBadge tone="primary">Live</StatusBadge>
-          <span className="text-xs text-ink-soft">
-            API base <Mono>{API_BASE_URL}</Mono>
-          </span>
-        </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {probes.map((p, i) => (
-            <Panel
-              key={p.path}
-              title={
-                <span className="flex items-center gap-2">
-                  {p.label} <Mono>GET {p.path}</Mono>
+      <DataState loading={loading} error={error} onRetry={() => void refresh()}>
+        {data && (
+          <div className="space-y-4">
+            {data.source === "probe" && (
+              <Alert variant="info">
+                <Info aria-hidden />
+                <span className="font-medium">
+                  Per-service reporting isn&rsquo;t available — showing direct probes instead.
                 </span>
-              }
-              description={PROBES[i].description}
-              actions={
-                p.running ? (
-                  <Spinner className="text-ink-soft" />
-                ) : p.ok ? (
-                  <StatusBadge tone="success" dot>
-                    Healthy
-                  </StatusBadge>
-                ) : (
-                  <StatusBadge tone="danger" dot>
-                    {p.httpStatus === 503 ? "Not ready" : "Failing"}
-                  </StatusBadge>
-                )
-              }
-            >
-              {p.running && p.checkedAt === null ? (
-                <p className="text-sm text-ink-soft">Checking…</p>
-              ) : (
-                <div className="space-y-3">
-                  <dl className="grid grid-cols-3 gap-3 text-sm">
-                    <div>
-                      <dt className="text-xs text-ink-soft">HTTP status</dt>
-                      <dd className={cn("tabular font-semibold", p.ok ? "text-success" : "text-danger")}>{p.httpStatus ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-ink-soft">Latency</dt>
-                      <dd className={cn("tabular font-semibold", (p.latencyMs ?? 0) > 1000 ? "text-warning" : "text-ink")}>
-                        {p.latencyMs !== null ? `${p.latencyMs} ms` : "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-ink-soft">Checked</dt>
-                      <dd className="text-ink" title={formatDateTime(p.checkedAt)}>
-                        {formatRelative(p.checkedAt)}
-                      </dd>
-                    </div>
-                  </dl>
-                  <p className="truncate text-xs text-ink-soft" title={p.url}>
-                    {p.url}
-                  </p>
-                  {p.error && <p className="rounded-[10px] border border-danger/25 bg-danger-soft px-3 py-2 text-sm text-danger">{p.error}</p>}
-                  {p.body !== null && <JsonBlock value={p.body} className="max-h-48" />}
-                </div>
-              )}
-            </Panel>
-          ))}
-        </div>
-      </section>
+                <span className="text-ink-soft">
+                  <Mono>GET /admin/system/services</Mono> answered:{" "}
+                  <span className="text-ink">{data.endpointError}</span> Falling back to the two
+                  health endpoints the backend serves at its root, checked from your browser —
+                  which covers the API process and its database, and nothing else.
+                </span>
+              </Alert>
+            )}
 
-      <section>
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h2 className="text-sm font-semibold text-ink">Platform services</h2>
-          <StatusBadge tone="neutral">Mock data</StatusBadge>
-        </div>
-        <DataState loading={services.loading} error={services.error} onRetry={() => void services.refresh()} empty={services.data?.length === 0}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {(services.data ?? []).map((s) => (
-              <ServiceCard key={s.id} service={s} />
-            ))}
-          </div>
-        </DataState>
-      </section>
-    </div>
-  );
-}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {services.map((s) => (
+                <ServiceTile key={s.id} service={s} />
+              ))}
+            </div>
 
-function ServiceCard({ service: s }: { service: ServiceTile }) {
-  const Icon = SERVICE_ICON[s.id] ?? Server;
-  return (
-    <article
-      className={cn(
-        "rounded-[var(--radius-card)] border bg-paper-raised p-4 shadow-[var(--shadow-card)]",
-        s.status === "down" ? "border-danger/40" : s.status === "degraded" ? "border-warning/40" : "border-line"
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-[10px] bg-primary-soft text-primary">
-            <Icon className="size-4" aria-hidden />
-          </span>
-          <div>
-            <h3 className="text-sm font-semibold text-ink">{s.name}</h3>
-            <p className="text-xs text-ink-soft">{s.description}</p>
+            {data.source === "probe" && (
+              <Panel
+                title="Not checked"
+                description="Dependencies this console currently has no way to observe."
+              >
+                <ul className="flex flex-wrap gap-2">
+                  {adminApi.UNPROBED_DEPENDENCIES.map((d) => (
+                    <li
+                      key={d}
+                      className="rounded-full border border-line bg-paper px-2.5 py-1 text-xs text-ink-soft"
+                    >
+                      {d}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-xs text-ink-soft">
+                  These are reachable only from the server, so their state is unknown here — treat
+                  the tiles above as a partial view, not an all-clear.
+                </p>
+              </Panel>
+            )}
+
+            {services.some((s) => s.status === "not_configured") && (
+              <p className="text-xs text-ink-soft">
+                <span className="text-ink">Not configured</span> means the integration is switched
+                off in this environment, so nothing was probed. It is a statement about the
+                deployment, not a fault — read the tile&rsquo;s detail line for which setting turned
+                it off.
+              </p>
+            )}
+
+            {overall === "unknown" && (
+              <p className="text-xs text-ink-soft">
+                A check that gets no answer is reported as{" "}
+                <span className="text-ink">Unknown</span> rather than Down: from the browser, an
+                outage and a request blocked before it ever left (CORS, network, an ad-blocker)
+                look identical. Confirm from the server before acting on it.
+              </p>
+            )}
           </div>
-        </div>
-        <Status value={s.status} />
-      </div>
-      <dl className="mt-4 grid grid-cols-3 gap-2 text-sm">
-        <div>
-          <dt className="text-xs text-ink-soft">Latency</dt>
-          <dd className="tabular font-medium text-ink">{s.latencyMs !== null ? `${s.latencyMs} ms` : "—"}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-ink-soft">Uptime 30d</dt>
-          <dd className="tabular font-medium text-ink">{s.uptime30d.toFixed(2)}%</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-ink-soft">Checked</dt>
-          <dd className="font-medium text-ink">{formatRelative(s.lastCheckAt)}</dd>
-        </div>
-      </dl>
-      <div className="mt-3 border-t border-line pt-3 text-xs">
-        <p className="font-medium text-ink-soft">Last incident</p>
-        {s.lastIncidentAt ? (
-          <p className="mt-0.5 text-ink">
-            <span className="text-ink-soft" title={formatDateTime(s.lastIncidentAt)}>
-              {formatRelative(s.lastIncidentAt)} ·{" "}
-            </span>
-            {s.lastIncidentSummary}
-          </p>
-        ) : (
-          <p className="mt-0.5 text-ink-soft">No incidents recorded.</p>
         )}
-      </div>
-    </article>
+      </DataState>
+    </div>
   );
 }

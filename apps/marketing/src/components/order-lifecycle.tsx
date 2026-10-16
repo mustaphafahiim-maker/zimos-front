@@ -56,10 +56,10 @@ export function OrderLifecycle() {
   }, [steps.length, last]);
 
   return (
-    <figure className="relative rounded-3xl border border-line bg-paper-raised p-5 shadow-card sm:p-7">
+    <figure className="relative rounded-3xl border border-line bg-paper-raised p-5 sm:p-7">
       <span
         aria-hidden
-        className="absolute inset-x-6 top-0 h-1 rounded-b-full bg-linear-to-r from-zimos-blue to-zimos-sky rtl:bg-linear-to-l"
+        className="absolute inset-x-6 top-0 h-1 rounded-b-full bg-linear-to-r from-primary to-accent rtl:bg-linear-to-l"
       />
       <figcaption className="mb-6 text-sm font-semibold text-ink-soft">{flowCaption}</figcaption>
 
@@ -69,7 +69,7 @@ export function OrderLifecycle() {
         <span aria-hidden className="absolute top-5 bottom-5 start-[calc(1.25rem-1px)] w-0.5 rounded-full bg-line" />
         <span
           aria-hidden
-          className="flow-playhead absolute top-5 start-[calc(1.25rem-1px)] w-0.5 rounded-full bg-zimos-blue"
+          className="flow-playhead absolute top-5 start-[calc(1.25rem-1px)] w-0.5 rounded-full bg-primary"
           style={{ blockSize: `calc((100% - 2.5rem) * ${step / last})` }}
         />
 
@@ -82,14 +82,14 @@ export function OrderLifecycle() {
                 <span
                   className={`flow-step relative z-10 flex size-10 items-center justify-center rounded-xl border ${
                     reached
-                      ? "border-zimos-blue bg-zimos-blue text-white"
+                      ? "border-primary bg-primary text-primary-foreground"
                       : "border-line bg-paper-raised text-ink-soft"
                   }`}
                 >
                   <Icon width="1.15rem" height="1.15rem" />
                 </span>
 
-                <div className={`flow-step pt-0.5 ${reached ? "opacity-100" : "opacity-60"}`}>
+                <div className={`flow-step pt-0.5 ${reached ? "opacity-100" : "opacity-85"}`}>
                   <p className={`font-semibold ${reached ? "text-ink" : "text-ink-soft"}`}>
                     {flowStep.title}
                   </p>
@@ -97,11 +97,11 @@ export function OrderLifecycle() {
 
                   {flowStep.id === "tracked" && (
                     <span
-                      className={`flow-code mt-2.5 inline-flex items-center gap-2 rounded-lg border border-zimos-blue/25 bg-primary-soft px-2.5 py-1 ${
+                      className={`flow-code mt-2.5 inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary-soft px-2.5 py-1 ${
                         step >= i ? "opacity-100" : "opacity-0"
                       }`}
                     >
-                      <span className="text-xs font-medium text-primary-dark">{trackingLabel}</span>
+                      <span className="text-xs font-medium text-primary-dark dark:text-primary">{trackingLabel}</span>
                       <span dir="ltr" className="text-sm font-semibold tracking-wide text-ink tabular-nums">
                         {EXAMPLE_TRACKING_CODE}
                       </span>

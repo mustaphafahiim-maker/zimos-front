@@ -30,7 +30,7 @@ export function KpiCard({
   const body = (
     <div
       className={cn(
-        "h-full rounded-[var(--radius-card)] border border-line bg-paper-raised p-4 shadow-[var(--shadow-card)]",
+        "h-full rounded-[var(--radius-card)] border border-line bg-paper-raised p-4",
         to && "transition-colors hover:border-primary/40",
         className
       )}

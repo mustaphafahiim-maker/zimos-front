@@ -1,0 +1,847 @@
+{
+  "key": "xs-20",
+  "name": "XS 20",
+  "category": "food_beverage",
+  "kind": "store",
+  "tags": [
+    "xs"
+  ],
+  "rtl": false,
+  "primaryColor": "#FEA116",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#FEA116",
+      "themeSettings": {
+        "xsLook": "20",
+        "header": {
+          "menu": [
+            {
+              "label": "Home",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "About",
+              "href": "/about",
+              "kind": "page"
+            },
+            {
+              "label": "Menu",
+              "href": "/menu",
+              "kind": "page"
+            },
+            {
+              "label": "Contact",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "Company",
+              "links": [
+                {
+                  "label": "About Us",
+                  "href": "/about",
+                  "kind": "page"
+                },
+                {
+                  "label": "Contact Us",
+                  "href": "/contact",
+                  "kind": "page"
+                },
+                {
+                  "label": "Reservation",
+                  "href": "/contact",
+                  "kind": "page"
+                }
+              ]
+            },
+            {
+              "title": "Food Menu",
+              "links": [
+                {
+                  "label": "Menu",
+                  "href": "/menu",
+                  "kind": "page"
+                },
+                {
+                  "label": "Cart",
+                  "href": "/cart",
+                  "kind": "cart"
+                },
+                {
+                  "label": "Track Order",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            }
+          ],
+          "text": "Mohandessin, Giza\nCall us any day to book your table\nWrite to us from our Contact page\nMonday - Saturday: 09AM - 09PM\nSunday: 10AM - 08PM",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "Home",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs20-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p1-s1-e1",
+                          "type": "xs_hero",
+                          "props": {
+                            "look": "20",
+                            "heading": "Enjoy Our Delicious Meal",
+                            "text": "Fresh dishes made by our master chefs with carefully chosen ingredients, in a warm setting made for family and friends.",
+                            "image": "/xs/20/hero.png",
+                            "buttonLabel": "Book A Table",
+                            "buttonHref": "/contact"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs20-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p1-s2-e1",
+                          "type": "xs_features",
+                          "props": {
+                            "look": "20",
+                            "heading": "",
+                            "text": "",
+                            "image": "",
+                            "items": [
+                              {
+                                "icon": "support",
+                                "title": "Master Chefs",
+                                "text": "Experienced chefs who put their passion into every plate."
+                              },
+                              {
+                                "icon": "bag",
+                                "title": "Quality Food",
+                                "text": "Fresh ingredients chosen every morning for real flavour."
+                              },
+                              {
+                                "icon": "truck",
+                                "title": "Online Order",
+                                "text": "Order online and enjoy your meal hot at home."
+                              },
+                              {
+                                "icon": "return",
+                                "title": "24/7 Service",
+                                "text": "We care about every detail to give you a meal worth repeating."
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs20-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p1-s3-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "20",
+                            "heading": "Welcome to Restoran",
+                            "text": "For more than fifteen years we have served our guests food that brings authentic flavour and a modern kitchen together, with fresh ingredients chosen every morning.\n\nOur team of professional chefs puts its passion into every dish, so you enjoy a well-made meal and friendly service whether you visit us or order online.",
+                            "images": [
+                              "/xs/20/about-1.jpg",
+                              "/xs/20/about-2.jpg",
+                              "/xs/20/about-3.jpg"
+                            ],
+                            "points": [
+                              "15 Years of Experience",
+                              "50 Popular Master Chefs"
+                            ],
+                            "buttonLabel": "Read More",
+                            "buttonHref": "/about"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs20-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p1-s4-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "20",
+                            "heading": "Most Popular Items",
+                            "collection": "",
+                            "limit": 8,
+                            "showDiscount": true,
+                            "showTabs": true,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "allLabel": "All Products",
+                            "searchLabel": "Search",
+                            "searchPlaceholder": "Search",
+                            "loadMoreLabel": "Load More",
+                            "viewLabel": "Quick View",
+                            "openLabel": "Add to cart",
+                            "linkLabel": "Food Menu",
+                            "linkHref": "/menu"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs20-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p1-s5-e1",
+                          "type": "xs_video",
+                          "props": {
+                            "look": "20",
+                            "heading": "",
+                            "url": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs20-p1-s6",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p1-s6-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p1-s6-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p1-s6-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "20",
+                            "heading": "Book A Table Online",
+                            "info": [
+                              {
+                                "icon": "phone",
+                                "title": "Reservation",
+                                "text": "Call us any day to book your table"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "Booking",
+                                "text": "Fill in the form and we will confirm your table"
+                              },
+                              {
+                                "icon": "address",
+                                "title": "Contact",
+                                "text": "Mohandessin, Giza"
+                              }
+                            ],
+                            "contactPlaceholder": "Your Email",
+                            "messagePlaceholder": "Special Request",
+                            "buttonLabel": "Book Now"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs20-p1-s7",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p1-s7-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p1-s7-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p1-s7-e1",
+                          "type": "xs_team",
+                          "props": {
+                            "look": "20",
+                            "heading": "Our Master Chefs",
+                            "items": [
+                              {
+                                "image": "/xs/20/team-1.jpg",
+                                "name": "Youssef Adel",
+                                "role": "Sous Chef"
+                              },
+                              {
+                                "image": "/xs/20/team-2.jpg",
+                                "name": "Karim Mansour",
+                                "role": "Executive Chef"
+                              },
+                              {
+                                "image": "/xs/20/team-3.jpg",
+                                "name": "Omar Fathy",
+                                "role": "Head Chef"
+                              },
+                              {
+                                "image": "/xs/20/team-4.jpg",
+                                "name": "Tarek Nabil",
+                                "role": "Grill Chef"
+                              }
+                            ],
+                            "text": "Team Members"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs20-p1-s8",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p1-s8-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p1-s8-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p1-s8-e1",
+                          "type": "xs_quotes",
+                          "props": {
+                            "look": "20",
+                            "heading": "Our Clients Say!!!",
+                            "items": [
+                              {
+                                "quote": "Fresh food that tastes like home cooking, with quick and friendly service. It has become our favourite place every week.",
+                                "name": "Sara Mahmoud",
+                                "role": "Architect",
+                                "image": "/xs/20/testimonial-1.jpg"
+                              },
+                              {
+                                "quote": "Fresh food that tastes like home cooking, with quick and friendly service. It has become our favourite place every week.",
+                                "name": "Ahmed Samir",
+                                "role": "Engineer",
+                                "image": "/xs/20/testimonial-2.jpg"
+                              },
+                              {
+                                "quote": "Fresh food that tastes like home cooking, with quick and friendly service. It has become our favourite place every week.",
+                                "name": "Mostafa Kamal",
+                                "role": "Photographer",
+                                "image": "/xs/20/testimonial-3.jpg"
+                              },
+                              {
+                                "quote": "Fresh food that tastes like home cooking, with quick and friendly service. It has become our favourite place every week.",
+                                "name": "Nour Hany",
+                                "role": "Teacher",
+                                "image": "/xs/20/testimonial-4.jpg"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/about",
+        "title": "About",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs20-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "20",
+                            "heading": "About Us",
+                            "image": "/xs/20/bg-hero.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs20-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p2-s2-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "20",
+                            "heading": "Welcome to Restoran",
+                            "text": "For more than fifteen years we have served our guests food that brings authentic flavour and a modern kitchen together, with fresh ingredients chosen every morning.\n\nOur team of professional chefs puts its passion into every dish, so you enjoy a well-made meal and friendly service whether you visit us or order online.",
+                            "images": [
+                              "/xs/20/about-1.jpg",
+                              "/xs/20/about-2.jpg",
+                              "/xs/20/about-3.jpg"
+                            ],
+                            "points": [
+                              "15 Years of Experience",
+                              "50 Popular Master Chefs"
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs20-p2-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p2-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p2-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p2-s3-e1",
+                          "type": "xs_team",
+                          "props": {
+                            "look": "20",
+                            "heading": "Our Master Chefs",
+                            "items": [
+                              {
+                                "image": "/xs/20/team-1.jpg",
+                                "name": "Youssef Adel",
+                                "role": "Sous Chef"
+                              },
+                              {
+                                "image": "/xs/20/team-2.jpg",
+                                "name": "Karim Mansour",
+                                "role": "Executive Chef"
+                              },
+                              {
+                                "image": "/xs/20/team-3.jpg",
+                                "name": "Omar Fathy",
+                                "role": "Head Chef"
+                              },
+                              {
+                                "image": "/xs/20/team-4.jpg",
+                                "name": "Tarek Nabil",
+                                "role": "Grill Chef"
+                              }
+                            ],
+                            "text": "Team Members"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/menu",
+        "title": "Menu",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs20-p3-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p3-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p3-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p3-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "20",
+                            "heading": "Food Menu",
+                            "image": "/xs/20/bg-hero.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs20-p3-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p3-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p3-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p3-s2-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "20",
+                            "heading": "Most Popular Items",
+                            "collection": "",
+                            "limit": 16,
+                            "showDiscount": true,
+                            "showTabs": true,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "allLabel": "All Products",
+                            "searchLabel": "Search",
+                            "searchPlaceholder": "Search",
+                            "loadMoreLabel": "Load More",
+                            "viewLabel": "Quick View",
+                            "openLabel": "Add to cart",
+                            "linkLabel": "Food Menu",
+                            "linkHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "Contact",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs20-p4-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p4-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p4-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p4-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "20",
+                            "heading": "Contact Us",
+                            "image": "/xs/20/bg-hero.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs20-p4-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs20-p4-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs20-p4-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs20-p4-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "20",
+                            "heading": "Contact For Any Query",
+                            "info": [
+                              {
+                                "icon": "email",
+                                "title": "Booking",
+                                "text": "Fill in the form and we will confirm your table"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "General",
+                                "text": "Questions and feedback through the form"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "Technical",
+                                "text": "Help with online orders through the form"
+                              }
+                            ],
+                            "contactPlaceholder": "Your Email",
+                            "messagePlaceholder": "Leave a message here",
+                            "buttonLabel": "Send Message"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

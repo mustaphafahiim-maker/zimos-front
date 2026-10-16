@@ -34,7 +34,7 @@ export function HowItWorks({ copy }: { copy: Dictionary["howItWorks"] }) {
                   {Array.from({ length: i + 1 }, (_, k) => (
                     <span
                       key={k}
-                      className="block h-2 -skew-x-[24deg] rounded-[3px] bg-linear-to-r from-zimos-blue to-zimos-sky rtl:bg-linear-to-l"
+                      className="block h-2 -skew-x-[24deg] rounded-[3px] bg-linear-to-r from-primary to-accent rtl:bg-linear-to-l"
                       style={{ inlineSize: `${34 + (i - k) * 14}%`, opacity: 1 - k * 0.3 }}
                     />
                   ))}

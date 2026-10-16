@@ -109,7 +109,7 @@ interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "
 export function SearchInput({ value, onChange, className, placeholder = "Search…", ...props }: SearchInputProps) {
   return (
     <div className={cn("relative w-full sm:w-72", className)}>
-      <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted" aria-hidden />
+      <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft" aria-hidden />
       <Input
         type="search"
         value={value}
@@ -138,7 +138,7 @@ export function FilterChips<T extends string>({
 }: {
   options: ChipOption<T>[];
   value: T;
-  onChange: (value: T) => void;
+  onChange: (value: NoInfer<T>) => void;
   className?: string;
 }) {
   return (
@@ -156,7 +156,7 @@ export function FilterChips<T extends string>({
               "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors",
               active
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-line bg-paper-raised text-ink-soft hover:border-line-strong hover:text-ink"
+                : "border-line bg-paper-raised text-ink-soft hover:border-ink-soft hover:text-ink"
             )}
           >
             {o.label}

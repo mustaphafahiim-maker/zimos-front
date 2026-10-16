@@ -1,55 +1,55 @@
-import { parseMoney } from "@store-builder/api-client";
+import { formatMoney as formatMoneyIn, formatMoneyRange, parseMoney } from "@store-builder/api-client";
 import type { OrderAddressSnapshot, Variant } from "@store-builder/api-client";
 import { getIntlLocale, getLocale } from "@/i18n/LocaleContext";
 
-export { parseMoney };
+export { formatMoneyRange, parseMoney };
 
 /**
- * Formats integer minor units (piastres/cents; BIGINT strings accepted) as
- * money in the active dashboard language.
- *   en -> "EGP 1,234.00" (Latin digits, ISO code)
- *   ar -> "‏١٬٢٣٤٫٠٠ ج.م.‏" (Arabic digits, local symbol)
+ * Integer minor units -> display string, in the app's language: Arabic
+ * digits under "ar", Latin digits under "en". Both use the Egyptian region
+ * (ar-EG / en-EG). An explicit `locale` still wins.
  */
-export function formatMoney(amountMinorUnits: number | string | null | undefined, currency = "EGP"): string {
-  const major = parseMoney(amountMinorUnits) / 100;
-  const ar = getLocale() === "ar";
+export function formatMoney(
+  amountMinorUnits: number | string | null | undefined,
+  currency = "EGP",
+  locale: string = getLocale() === "ar" ? "ar-EG" : "en-EG"
+): string {
+  return formatMoneyIn(amountMinorUnits, currency, locale);
+}
+
+const minorDigits = new Map<string, number>();
+
+/** Decimal places of a currency's minor unit (EGP/USD 2, JPY 0, KWD 3), from Intl. */
+function minorUnitDigits(currency: string): number {
+  let digits = minorDigits.get(currency);
+  if (digits === undefined) {
+    try {
+      digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2;
+    } catch {
+      digits = 2;
+    }
+    minorDigits.set(currency, digits);
+  }
+  return digits;
+}
+
+/**
+ * A plan price (minor units of its own currency, as the API sends every
+ * amount) for display, divided by that currency's own unit rather than by a
+ * fixed 100: "799 ج.م." / "EGP 799". Whole amounts show no decimals.
+ */
+export function formatMinorMoney(minor: number | string | null | undefined, currency: string): string {
+  const value = parseMoney(minor) / 10 ** minorUnitDigits(currency);
+  const locale = getLocale() === "ar" ? "ar-EG" : "en-EG";
   try {
-    return new Intl.NumberFormat(getIntlLocale(), {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
-      currencyDisplay: ar ? "symbol" : "code",
-    }).format(major);
+      maximumFractionDigits: Number.isInteger(value) ? 0 : minorUnitDigits(currency),
+    }).format(value);
   } catch {
-    return `${major.toFixed(2)} ${currency}`;
+    return `${value} ${currency}`;
   }
-}
-
-/** Low–high minor-unit range, collapsing to a single value when equal. */
-export function formatMoneyRange(
-  lowMinorUnits: number | string | null | undefined,
-  highMinorUnits: number | string | null | undefined,
-  currency = "EGP"
-): string {
-  const low = parseMoney(lowMinorUnits);
-  const high = parseMoney(highMinorUnits);
-  if (low === high) return formatMoney(low, currency);
-  return `${formatMoney(low, currency)} – ${formatMoney(high, currency)}`;
-}
-
-/** 12345.6 -> "12,345.6" (en) / "١٢٬٣٤٥٫٦" (ar). */
-export function formatNumber(n: number | null | undefined, options?: Intl.NumberFormatOptions): string {
-  if (n === null || n === undefined || !Number.isFinite(n)) return "—";
-  return new Intl.NumberFormat(getIntlLocale(), options).format(n);
-}
-
-/** 0.1234 -> "12.3%" in the active locale. */
-export function formatPercentValue(ratio: number | null | undefined, digits = 1): string {
-  if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return "—";
-  return new Intl.NumberFormat(getIntlLocale(), {
-    style: "percent",
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(ratio);
 }
 
 /**
@@ -84,30 +84,6 @@ export function formatDateTime(iso: string | null | undefined): string {
   });
 }
 
-/** "Mar 4" / "٤ مارس" — compact axis / list label. */
-export function formatShortDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString(getIntlLocale(), { month: "short", day: "numeric" });
-}
-
-/** "3 hours ago" / "منذ ٣ ساعات". */
-export function formatRelativeTime(iso: string | null | undefined, now: number = Date.now()): string {
-  if (!iso) return "—";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return "—";
-  const diffSec = Math.round((t - now) / 1000);
-  const abs = Math.abs(diffSec);
-  const rtf = new Intl.RelativeTimeFormat(getIntlLocale(), { numeric: "auto" });
-  if (abs < 60) return rtf.format(diffSec, "second");
-  if (abs < 3600) return rtf.format(Math.round(diffSec / 60), "minute");
-  if (abs < 86400) return rtf.format(Math.round(diffSec / 3600), "hour");
-  if (abs < 86400 * 30) return rtf.format(Math.round(diffSec / 86400), "day");
-  if (abs < 86400 * 365) return rtf.format(Math.round(diffSec / (86400 * 30)), "month");
-  return rtf.format(Math.round(diffSec / (86400 * 365)), "year");
-}
-
 /** { Size: "M", Color: "Red" } -> "Size: M · Color: Red" */
 export function formatOptions(options: Record<string, string> | null | undefined): string {
   if (!options) return "";
@@ -116,11 +92,28 @@ export function formatOptions(options: Record<string, string> | null | undefined
   return entries.map(([k, v]) => `${k}: ${v}`).join(" · ");
 }
 
+/**
+ * A place name in the screen's language. The storefront saves known places as
+ * "القاهرة (Cairo)"; the Arabic screen shows «القاهرة», the English one
+ * "Cairo". Anything else is shown as it is.
+ */
+export function placeName(name: string | null | undefined): string {
+  if (!name) return "";
+  const match = /^(.+?)\s*\(([^()]+)\)\s*$/.exec(name.trim());
+  if (!match) return name;
+  const [, first, second] = match;
+  const arabic = /[\u0600-\u06FF]/;
+  const ar = arabic.test(first) ? first : arabic.test(second) ? second : null;
+  const latin = !arabic.test(second) ? second : !arabic.test(first) ? first : null;
+  if (!ar || !latin) return name;
+  return getLocale() === "ar" ? ar.trim() : latin.trim();
+}
+
 export function formatAddress(address: OrderAddressSnapshot | null | undefined): string {
-  if (!address) return getLocale() === "ar" ? "لا يوجد عنوان شحن" : "No shipping address";
+  if (!address) return "No shipping address";
   return [address.addressLine, address.city, address.province, address.postalCode, address.country]
     .filter(Boolean)
-    .join(getLocale() === "ar" ? "، " : ", ");
+    .join(", ");
 }
 
 /** Human label for a variant in a picker: options, or SKU, or a short id. */
@@ -128,10 +121,10 @@ export function variantLabel(variant: Variant): string {
   const opts = formatOptions(variant.optionValues);
   if (opts) return opts;
   if (variant.sku) return variant.sku;
-  return `${getLocale() === "ar" ? "متغير" : "Variant"} ${variant.id.slice(0, 8)}`;
+  return `Variant ${variant.id.slice(0, 8)}`;
 }
 
-const HUMANIZE_EN: Record<string, string> = {
+const HUMANIZE: Record<string, string> = {
   partially_paid: "Partially paid",
   partially_refunded: "Partially refunded",
   partially_fulfilled: "Partially fulfilled",
@@ -144,82 +137,13 @@ const HUMANIZE_EN: Record<string, string> = {
   arrived_late: "Arrived late",
   bank_transfer: "Bank transfer",
   cod: "Cash on delivery",
+  valu: "valU",
 };
 
-/** Arabic labels for every status the dashboard renders (StatusBadge tones + HUMANIZE_EN). */
-const HUMANIZE_AR: Record<string, string> = {
-  // product
-  draft: "مسودة",
-  active: "نشط",
-  archived: "مؤرشف",
-  // discount
-  scheduled: "مجدول",
-  expired: "منتهي",
-  disabled: "معطّل",
-  inactive: "غير نشط",
-  // confirmation
-  pending: "قيد الانتظار",
-  confirmed: "مؤكَّد",
-  rejected: "مرفوض",
-  unreachable: "تعذّر الوصول",
-  postponed: "مؤجَّل",
-  // financial
-  partially_paid: "مدفوع جزئيًا",
-  paid: "مدفوع",
-  failed: "فشل",
-  refunded: "مُسترد",
-  partially_refunded: "مُسترد جزئيًا",
-  // fulfillment
-  unfulfilled: "لم يُجهَّز",
-  partially_fulfilled: "مُجهَّز جزئيًا",
-  fulfilled: "مُجهَّز",
-  returned: "مرتجع",
-  // shipment
-  created: "تم الإنشاء",
-  picked_up: "تم الاستلام من المتجر",
-  in_transit: "في الطريق",
-  out_for_delivery: "خرج للتوصيل",
-  delivered: "تم التوصيل",
-  cancelled: "ملغي",
-  // return
-  requested: "مطلوب",
-  approved: "مقبول",
-  received: "تم الاستلام",
-  // return reasons / payment methods
-  no_longer_wanted: "لم يعد مرغوبًا",
-  not_as_described: "غير مطابق للوصف",
-  wrong_item: "منتج خاطئ",
-  arrived_late: "وصل متأخرًا",
-  bank_transfer: "تحويل بنكي",
-  cod: "الدفع عند الاستلام",
-  // common extras seen across mock data
-  published: "منشور",
-  paused: "متوقف",
-  ended: "منتهي",
-  connected: "متصل",
-  disconnected: "غير متصل",
-  flagged: "مُعلَّم",
-  blocked: "محظور",
-  verified: "تم التحقق",
-  pending_verification: "بانتظار التحقق",
-  open: "مفتوح",
-  closed: "مغلق",
-  completed: "مكتمل",
-  running: "قيد التشغيل",
-  expected: "متوقع",
-  discrepancy: "فرق في المبلغ",
-  reconciled: "تمت التسوية",
-  not_contacted: "لم يتم التواصل",
-  contacted: "تم التواصل",
-  recovered: "تم الاسترداد",
-  lost: "مفقود",
-};
-
-/** "partially_paid" -> "Partially paid" / "مدفوع جزئيًا" */
+/** "partially_paid" -> "Partially paid" */
 export function humanize(value: string | null | undefined): string {
   if (!value) return "—";
-  if (getLocale() === "ar" && HUMANIZE_AR[value]) return HUMANIZE_AR[value];
-  if (HUMANIZE_EN[value]) return HUMANIZE_EN[value];
+  if (HUMANIZE[value]) return HUMANIZE[value];
   return value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, " ");
 }
 
@@ -266,4 +190,19 @@ export function basisPointsToPercentInput(bp: string | number | null | undefined
 export function formatPercent(bp: string | number | null | undefined): string {
   const text = basisPointsToPercentInput(bp);
   return text === "" ? "—" : `${text}%`;
+}
+
+/**
+ * 0.1234 -> "12.3%". Takes a ratio (not basis points) — used for
+ * period-over-period deltas on <KpiCard>, where the change is already a
+ * fraction. `formatPercent` above is the basis-points variant the discount
+ * and tax screens use.
+ */
+export function formatPercentValue(ratio: number | null | undefined, digits = 1): string {
+  if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return "—";
+  return new Intl.NumberFormat(getIntlLocale(), {
+    style: "percent",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(ratio);
 }

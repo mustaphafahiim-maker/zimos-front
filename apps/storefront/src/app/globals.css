@@ -1,77 +1,439 @@
 @import "tailwindcss";
-@import "../../../../packages/ui/src/brand/zimos.css";
+/* The six store themes (Store look → Theme). Inert unless the store wrapper
+   carries `data-store-theme`; see the file for how a theme is put together. */
+@import "./store-themes.css";
+/* The page builder's full-width bands (picture slider, category tiles, trust
+   cards, product rails, video shelf, picture banner). Every rule of theirs is
+   in this one file: without the import their markup is drawn with no styles
+   at all — a picture at its own size, plain text under it, a black wave. */
+@import "./store-sections.css";
+/* The imported templates ("xs" looks): their bands, shell and one file per look — all through xs.css. */
+@import "./xs.css";
 
 /* Dark mode is driven by a `.dark` class on <html>, set before first paint by
    an inline script in the root layout and toggled by the theme switch. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ------------------------------------------------------------------ *
- * Storefront defaults.
- *
- * All semantic tokens (ink, paper, line, primary, accent, success, danger …)
- * come from the shared ZIMOS brand file imported above. The storefront only
- * adds two things on top:
- *
- *   1. the self-hosted next/font families (see src/app/fonts.ts) wired into
- *      the brand's --font-latin / --font-arabic slots, and
- *   2. the per-merchant colour override (`.brand-theme`).
+ * Default storefront theme — used until a merchant's own branding /
+ * themeSettings is wired in. Same base palette as the dashboard apps
+ * for brand consistency across the platform. The `--color-*` custom
+ * properties hold the light values here and are overridden under
+ * `.dark`, so any token-based utility (bg-paper, text-ink, border-line,
+ * …) flips with the theme without needing `dark:` variants.
  * ------------------------------------------------------------------ */
 :root {
-  --font-latin: var(--font-inter), "Inter", Arial, system-ui, sans-serif;
-  --font-arabic: var(--font-noto-arabic), var(--font-inter), "Noto Sans Arabic", Arial, sans-serif;
+  color-scheme: light;
 
   /* Merchant branding. The store layout overrides these two per workspace from
-     `themeSettings`; with nothing saved the store falls back to ZIMOS Blue/Sky. */
-  --brand-primary: #0066ff;
-  --brand-secondary: #66c2ff;
+     `themeSettings`; these values are the fallback when nothing is saved and
+     deliberately mirror --color-primary / --color-accent below. */
+  --brand-primary: #1f5d5b;
+  --brand-secondary: #e2a33d;
+  /* The accent a store gets in this mode when it has saved none. A store
+     theme sets its own (see "Store themes" below). */
+  --brand-primary-default: #1f5d5b;
+
+  --color-ink: #16211f;
+  --color-ink-soft: #3c4a46;
+  --color-paper: #f5f4ef;
+  --color-paper-raised: #ffffff;
+  --color-line: #dcdace;
+  /* Border for interactive controls (inputs, selects, textareas, checkboxes).
+     WCAG 1.4.11 requires 3:1 for the visual boundary of a UI component;
+     --color-line is a decorative hairline (~1.3:1) and fails that, so controls
+     use this darker step while cards/dividers keep the softer line. Same hue
+     ramp, so the palette identity is unchanged. */
+  --color-line-strong: #8d8c84;
+  /* Stock-palette foregrounds for brand surfaces; .brand-theme overrides these
+     from the merchant's own colours. */
+  --color-on-primary: var(--color-paper-raised);
+  --color-on-accent: var(--color-ink);
+
+  --color-primary: #1f5d5b;
+  --color-primary-dark: #123c3a;
+  --color-primary-soft: #e4efee;
+
+  --color-accent: #e2a33d;
+  --color-accent-dark: #b87f24;
+  --color-accent-soft: #fbf0dc;
+
+  --color-danger: #b3452f;
+  --color-danger-soft: #f6e6e1;
+
+  /* Functional status only, never decoration. Same values as the other apps. */
+  --color-success: #357150;
+  --color-success-soft: #e5f0e9;
+
+  /* Tajawal follows each Latin face: those have no Arabic glyphs, so Arabic
+     text falls through to it while Latin text renders unchanged. */
+  --font-display: "Fraunces", "Tajawal", ui-serif, Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Tajawal", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 0.625rem;
 }
 
 .dark {
-  --brand-primary: #3d8bff;
-  --brand-secondary: #66c2ff;
+  color-scheme: dark;
+
+  --brand-primary: #5b8df6;
+  --brand-secondary: #e8b96a;
+  --brand-primary-default: #5b8df6;
+
+  /* ink / paper / line / primary / accent — same identity as the
+     marketing site's dark palette so the platform reads as one system. */
+  --color-ink: #e7ecf5;
+  --color-ink-soft: #a9b4c9;
+  --color-paper: #0b1220;
+  --color-paper-raised: #121b2e;
+  --color-line: #22304a;
+  --color-line-strong: #4f6a9d;
+
+  --color-primary: #5b8df6;
+  --color-primary-dark: #2563eb;
+  --color-primary-soft: #16233f;
+
+  --color-accent: #e8b96a;
+  --color-accent-dark: #d9a441;
+  --color-accent-soft: #2b2013;
+
+  /* danger has no marketing counterpart — same recipe: a very dark
+     hue-tinted ground with text light enough to read on it. */
+  --color-danger: #e8846a;
+  --color-danger-soft: #2b1613;
+  --color-success: #5cbf8f;
+  --color-success-soft: #132b1f;
 }
 
 /* ------------------------------------------------------------------ *
  * Per-store branding. The store layout puts this class on its wrapper and
- * sets --brand-primary / --brand-secondary inline from the workspace's
- * themeSettings; re-pointing the semantic primary/accent tokens at them
- * here means every `bg-primary` / `text-accent` / `border-primary` utility
- * inside the store picks up the merchant's colours. The -dark / -soft steps
- * are derived so a single hex still yields a coherent ramp.
+ * sets the merchant's accent inline from the workspace's themeSettings —
+ * once per mode, --brand-primary-light-mode / --brand-primary-dark-mode
+ * (each with a contrast-picked `-fg`), because an inline value can't follow
+ * the `.dark` class and a merchant may pick a different accent for each.
+ * --brand-primary is the one for the current mode, falling back to the
+ * default (a theme's own, or the stock teal/blue) when the merchant saved
+ * none. A store that saved a single colour has it written to both, so it
+ * looks exactly as it did when there was only one.
+ *
+ * --brand-secondary is still set inline, as it always was, on the original
+ * look (a store theme brings its own).
+ *
+ * Re-pointing the semantic primary/accent tokens at them here means every
+ * existing `bg-primary` / `text-accent` / `border-primary` utility inside the
+ * store picks up the merchant's colours, instead of each component having to
+ * opt in. The -dark / -soft steps are derived so a single hex still yields a
+ * coherent ramp.
  * ------------------------------------------------------------------ */
 .brand-theme {
+  --brand-primary: var(--brand-primary-light-mode, var(--brand-primary-default));
+  --brand-primary-foreground: var(--brand-primary-light-mode-fg);
+
   --color-primary: var(--brand-primary);
-  --color-primary-dark: color-mix(in oklab, var(--brand-primary) 70%, #0b1f66);
-  --color-primary-soft: color-mix(in oklab, var(--brand-primary) 10%, #fff);
+  --color-primary-dark: color-mix(in oklab, var(--brand-primary) 78%, #000);
+  --color-primary-soft: color-mix(in oklab, var(--brand-primary) 12%, #fff);
 
   --color-accent: var(--brand-secondary);
-  --color-accent-dark: color-mix(in oklab, var(--brand-secondary) 72%, #0b1f66);
-  --color-accent-soft: color-mix(in oklab, var(--brand-secondary) 14%, #fff);
+  --color-accent-dark: color-mix(in oklab, var(--brand-secondary) 78%, #000);
+  --color-accent-soft: color-mix(in oklab, var(--brand-secondary) 16%, #fff);
+
+  /* Text on a brand-coloured surface. `brandStyle()` in lib/storeMeta.ts picks
+     the foreground from the merchant's own hex by contrast; the fallback covers
+     the stock palette, whose primary is dark in light mode and light in dark
+     mode — exactly when paper-raised is the readable choice. */
+  --color-on-primary: var(--brand-primary-foreground, var(--color-paper-raised));
+  --color-on-accent: var(--brand-secondary-foreground, var(--color-ink));
 }
 
-/* On dark backgrounds the "soft" tints sink toward the navy paper rather than
-   white, or they read as glaring light blocks. */
+/* On dark backgrounds the "soft" tints have to sink toward the paper colour
+   rather than white, or they read as glaring light blocks. */
 .dark .brand-theme {
-  --color-primary-dark: color-mix(in oklab, var(--brand-primary) 60%, #fff);
-  --color-primary-soft: color-mix(in oklab, var(--brand-primary) 22%, #081a4a);
-  --color-accent-dark: color-mix(in oklab, var(--brand-secondary) 60%, #fff);
-  --color-accent-soft: color-mix(in oklab, var(--brand-secondary) 20%, #081a4a);
+  --brand-primary: var(--brand-primary-dark-mode, var(--brand-primary-default));
+  --brand-primary-foreground: var(--brand-primary-dark-mode-fg);
+
+  --color-primary-dark: color-mix(in oklab, var(--brand-primary) 72%, #fff);
+  --color-primary-soft: color-mix(in oklab, var(--brand-primary) 22%, #0b1220);
+  --color-accent-dark: color-mix(in oklab, var(--brand-secondary) 72%, #fff);
+  --color-accent-soft: color-mix(in oklab, var(--brand-secondary) 20%, #0b1220);
+}
+
+/* ------------------------------------------------------------------ *
+ * Expose the semantic tokens to Tailwind's utility generator. `inline`
+ * keeps utilities referencing `var(--color-*)` directly so the `.dark`
+ * override cascades through.
+ * ------------------------------------------------------------------ */
+@theme inline {
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-paper: var(--color-paper);
+  --color-paper-raised: var(--color-paper-raised);
+  --color-line: var(--color-line);
+  --color-line-strong: var(--color-line-strong);
+
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-primary-soft: var(--color-primary-soft);
+
+  --color-accent: var(--color-accent);
+  --color-accent-dark: var(--color-accent-dark);
+  --color-accent-soft: var(--color-accent-soft);
+
+  --color-on-primary: var(--color-on-primary);
+  --color-on-accent: var(--color-on-accent);
+
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+
+  --radius-card: var(--radius-card);
 }
 
 @layer base {
-  html {
-    scroll-behavior: smooth;
+  * {
+    border-color: var(--color-line);
   }
-  input,
-  select,
-  textarea,
-  button {
-    font: inherit;
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
 }
 
+
+
+/* ------------------------------------------------------------------ *
+ * Official logo rendering.
+ *
+ * The approved exports carry real alpha, so they are drawn as plain
+ * transparent PNGs on any surface — no blend modes, no background-colour
+ * workarounds (see public/brand/README.md). We never redraw the logo;
+ * these rules only pick which of the two approved lockups is shown:
+ * the navy wordmark on light surfaces, the reversed white one on dark.
+ *
+ * Inside a store ZIMOS appears in the footer's "Powered by" line, and as
+ * the header fallback when the merchant has not uploaded a logo.
+ * ------------------------------------------------------------------ */
+.zimos-logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.zimos-logo img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.zimos-logo .zimos-logo-on-dark {
+  display: none;
+}
+
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-light,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-light {
+  display: none;
+}
+
+.dark .zimos-logo[data-surface="auto"] .zimos-logo-on-dark,
+.zimos-logo[data-surface="dark"] .zimos-logo-on-dark {
+  display: block;
+}
+
+.zimos-logo[data-surface="light"] .zimos-logo-on-dark {
+  display: none !important;
+}
+
+.zimos-logo[data-surface="light"] .zimos-logo-on-light {
+  display: block !important;
+}
+
+/* Logos are never mirrored in RTL — and most stores here are Arabic. */
+[dir="rtl"] .zimos-logo {
+  direction: ltr;
+}
+
+/* Transparent-over-hero header (StickyHeader's `data-overlay`): force the
+   dark-surface (light wordmark) export regardless of the `surface` prop or
+   the `.dark` class, since the header sits on arbitrary hero content while
+   unscrolled and always wants the light treatment there. */
+header[data-overlay] .zimos-logo .zimos-logo-on-light {
+  display: none !important;
+}
+
+header[data-overlay] .zimos-logo .zimos-logo-on-dark {
+  display: block !important;
+}
+
+.zimos-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 24%;
+  line-height: 0;
+}
+
+.zimos-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ------------------------------------------------------------------ *
+ * Marquee — the `marquee` page-tree section.
+ *
+ * A strip of short claims that slides on forever. The track holds the
+ * same row twice (the second copy is aria-hidden), so translating it by
+ * exactly half its width lands back on an identical frame and the loop
+ * has no seam. That is the whole trick: one keyframe pair, no library,
+ * no JavaScript, and nothing for the server and the client to disagree
+ * about.
+ *
+ * It pauses on hover and on focus-within, so a shopper can read a claim
+ * and a keyboard user can tab through the strip without chasing it.
+ *
+ * RTL runs the other way. With `dir="rtl"` the flex track is laid out
+ * from the container's right edge, so "forward" is a positive translate;
+ * the LTR keyframes would scroll it backwards into the empty side.
+ *
+ * Under reduced motion the whole thing collapses to a plain, wrapping
+ * row of the same claims: the duplicate is dropped (it would read as the
+ * list said twice) and nothing moves.
+ * ------------------------------------------------------------------ */
+@keyframes zimos-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes zimos-marquee-rtl {
+  from { transform: translateX(0); }
+  to { transform: translateX(50%); }
+}
+
+.zimos-marquee {
+  overflow: hidden;
+  /* Fade the two ends so claims arrive and leave instead of being cut. */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 3rem,
+    #000 calc(100% - 3rem),
+    transparent 100%
+  );
+}
+
+.zimos-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: zimos-marquee var(--zimos-marquee-duration, 40s) linear infinite;
+}
+
+[dir="rtl"] .zimos-marquee-track {
+  animation-name: zimos-marquee-rtl;
+}
+
+.zimos-marquee:hover .zimos-marquee-track,
+.zimos-marquee:focus-within .zimos-marquee-track {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
+  .zimos-marquee {
+    overflow: visible;
+    mask-image: none;
+  }
+  .zimos-marquee-track {
+    animation: none;
+    width: 100%;
+  }
+  .zimos-marquee-row {
+    /* Back to an ordinary row of text: no screen-wide minimum to loop over,
+       and no spreading — it wraps and reads left to right like a list. */
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .zimos-marquee-copy {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Announcement bar rotation — `AnnouncementBar`, and the `gallery` element's
+ * `slideshow` layout (`GallerySlideshow`).
+ *
+ * Each message/slide remounts its own text or progress-fill node on a change
+ * (`key={index}`), which is what restarts the animation below — no timer
+ * ever has to fight a transition that was already playing. Reduced motion
+ * turns the fade off outright; the slideshow's autoplay timer never starts
+ * under reduced motion in the first place, so its progress-fill only ever
+ * needs to sit at "done" for the active slide, never animate.
+ * ------------------------------------------------------------------ */
+@keyframes zimos-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.zimos-announce-msg {
+  animation: zimos-fade-in 400ms ease;
+}
+
+@keyframes zimos-slide-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.zimos-slide-progress-fill {
+  transform-origin: left;
+  animation: zimos-slide-progress linear;
+}
+
+[dir="rtl"] .zimos-slide-progress-fill {
+  transform-origin: right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zimos-announce-msg {
+    animation: none;
+  }
+  .zimos-slide-progress-fill {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+
+/* A small, occasional nudge on the product page's sticky mobile order button —
+   long pauses between wiggles so it reads as a tiny reminder, never a nag. */
+@keyframes zimos-wiggle {
+  0%, 92%, 100% { transform: rotate(0); }
+  93% { transform: rotate(-2deg); }
+  95% { transform: rotate(2deg); }
+  97% { transform: rotate(-1.5deg); }
+  99% { transform: rotate(1deg); }
+}
+
+.zimos-wiggle {
+  animation: zimos-wiggle 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zimos-wiggle {
+    animation: none;
   }
 }

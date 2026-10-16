@@ -5,6 +5,9 @@ import { fontVariables } from "../fonts";
 import { directionOf, isLocale, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { I18nProvider } from "@/i18n/provider";
+import { ogImage } from "@/lib/og";
+import { SITE_URL } from "@/lib/urls";
+import { SiteAnalytics } from "@/components/site-analytics";
 
 type LocaleParams = { locale: string };
 
@@ -27,8 +30,11 @@ export async function generateMetadata({
   if (!isLocale(locale)) return {};
 
   const { meta } = getDictionary(locale);
-  // Icons come from the file conventions src/app/icon.png + apple-icon.png.
+  // Icons come from src/app/favicon.ico; the brand PNGs in public/brand are
+  // rendered in-page by <ZimosLogo />.
   return {
+    // Resolves every page's relative canonical and language links.
+    metadataBase: new URL(SITE_URL),
     title: meta.title,
     description: meta.description,
     applicationName: "ZIMOS",
@@ -42,15 +48,22 @@ export async function generateMetadata({
       siteName: "ZIMOS",
       locale: locale === "ar" ? "ar_EG" : "en_US",
       type: "website",
+      url: `/${locale}`,
+      images: [ogImage(locale)],
+    },
+    // Title and description come from each page's Open Graph tags.
+    twitter: {
+      card: "summary_large_image",
+      images: [ogImage(locale).url],
     },
   };
 }
 
-// ZIMOS Cloud for light, deep Navy for dark.
+// Matches the page background in each theme.
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F7FAFF" },
-    { media: "(prefers-color-scheme: dark)", color: "#0B1F66" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f7fb" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
   ],
 };
 
@@ -79,6 +92,7 @@ export default async function LocaleLayout({
       </head>
       <body className="min-h-dvh bg-paper text-ink">
         <I18nProvider value={{ locale, dir, dict }}>{children}</I18nProvider>
+        <SiteAnalytics />
       </body>
     </html>
   );

@@ -1,72 +1,68 @@
 import { useState, type FormEvent } from "react";
 import { Alert, Button } from "@store-builder/ui";
-import type { CreateWebsitePagePayload, WebsitePage } from "@store-builder/api-client";
+import { isApiErrorCode, type CreateWebsitePagePayload, type WebsitePage } from "@store-builder/api-client";
 import { Modal } from "@/components/Modal";
 import { Field, TextField } from "@/components/Field";
 import { Select } from "@/components/Select";
 import { getErrorMessage, getFieldErrors } from "@/lib/errors";
-import { useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
-
-type PageType = WebsitePage["pageType"];
-
-/** The backend's pageType enum, minus nothing — all seven are selectable. */
-const PAGE_TYPE_ORDER: PageType[] = [
-  "custom",
-  "static",
-  "product",
-  "collection",
-  "blog_post",
-  "cart",
-  "home",
-];
-
-const PAGE_TYPE_LABELS: Record<Locale, Record<PageType, string>> = {
-  en: {
-    custom: "Custom",
-    static: "Static (About, Contact…)",
-    product: "Product",
-    collection: "Collection",
-    blog_post: "Blog post",
-    cart: "Cart",
-    home: "Home",
-  },
-  ar: {
-    custom: "مخصّصة",
-    static: "ثابتة (من نحن، تواصل معنا…)",
-    product: "منتج",
-    collection: "مجموعة",
-    blog_post: "مقال مدوّنة",
-    cart: "سلة التسوق",
-    home: "الرئيسية",
-  },
-};
+import { useErrorMessage } from "@/lib/errorMessages";
+import { useT, type Messages } from "@/i18n/LocaleContext";
 
 const STRINGS = {
   en: {
     title: "New page",
-    description: "Adds an empty page to this site. You can add blocks to it right away.",
+    description: "Adds a page to this site with a few example blocks — a title, some text, a picture and a button — for you to edit or remove.",
+    cancel: "Cancel",
+    create: "Create page",
     creating: "Creating…",
-    createPage: "Create page",
     pageTitle: "Title",
-    pageTitleHint: "Shown in the editor's page switcher.",
-    path: "Path",
-    pathInvalid: "Use a path like /about — letters, numbers and dashes.",
-    pathHint: "The URL this page lives at, e.g. /about.",
+    pageTitleHint: "Shown in the editor's page list.",
+    path: "Address",
+    pathHint: "Where the page lives on your store, e.g. /about. English letters, numbers and dashes.",
+    pathInvalid: "Use an address like /about — English letters, numbers and dashes.",
     pageType: "Page type",
+    typeCustom: "Custom",
+    typeStatic: "Static (About, Contact…)",
+    typeProduct: "Product",
+    typeCollection: "Collection",
+    typeBlogPost: "Blog post",
+    typeCart: "Cart",
+    typeHome: "Home",
   },
   ar: {
     title: "صفحة جديدة",
-    description: "تُضيف صفحة فارغة إلى هذا الموقع، ويمكنك إضافة الأقسام إليها فورًا.",
+    description: "سنضيف إلى الموقع صفحة فيها بعض العناصر كمثال — عنوان ونص وصورة وزر — تعدّلها أو تحذفها كما تريد.",
+    cancel: "إلغاء",
+    create: "إنشاء الصفحة",
     creating: "جارٍ الإنشاء…",
-    createPage: "إنشاء الصفحة",
-    pageTitle: "العنوان",
-    pageTitleHint: "يظهر في شريط تبديل الصفحات داخل المحرّر.",
-    path: "المسار",
-    pathInvalid: "استخدم مسارًا مثل ‎/about‎ — أحرف لاتينية وأرقام وشرطات فقط.",
-    pathHint: "رابط الصفحة (URL)، مثل ‎/about‎.",
+    pageTitle: "اسم الصفحة",
+    pageTitleHint: "يظهر في قائمة الصفحات داخل المحرر.",
+    path: "عنوان الصفحة",
+    pathHint: "مكان الصفحة في متجرك، مثل /about. حروف إنجليزية وأرقام وشرطة.",
+    pathInvalid: "اكتب عنوانًا مثل /about — حروف إنجليزية وأرقام وشرطة.",
     pageType: "نوع الصفحة",
+    typeCustom: "صفحة حرة",
+    typeStatic: "ثابتة (من نحن، اتصل بنا…)",
+    typeProduct: "منتج",
+    typeCollection: "مجموعة",
+    typeBlogPost: "مقال",
+    typeCart: "السلة",
+    typeHome: "الرئيسية",
   },
 } satisfies Messages;
+
+type PageTypeLabel = "typeCustom" | "typeStatic" | "typeProduct" | "typeCollection" | "typeBlogPost" | "typeCart" | "typeHome";
+
+/** The backend's pageType enum, minus nothing — all seven are selectable. */
+const PAGE_TYPES: { value: WebsitePage["pageType"]; label: PageTypeLabel }[] = [
+  { value: "custom", label: "typeCustom" },
+  { value: "static", label: "typeStatic" },
+  { value: "product", label: "typeProduct" },
+  { value: "collection", label: "typeCollection" },
+  { value: "blog_post", label: "typeBlogPost" },
+  { value: "cart", label: "typeCart" },
+  { value: "home", label: "typeHome" },
+];
 
 /** "Our Story" -> "/our-story". Leading slash, lowercase, no double dashes. */
 function slugifyPath(title: string): string {
@@ -90,18 +86,15 @@ export function NewPageDialog({
   onCreate: (payload: CreateWebsitePagePayload) => Promise<void>;
 }) {
   const t = useT(STRINGS);
-  const c = useCommon();
-  const { locale } = useLocale();
-  const typeLabels = PAGE_TYPE_LABELS[locale];
-
   const [title, setTitle] = useState("");
   const [path, setPath] = useState("");
   // Once the merchant edits the path themselves, stop overwriting it from the title.
   const [pathTouched, setPathTouched] = useState(false);
-  const [pageType, setPageType] = useState<PageType>("custom");
+  const [pageType, setPageType] = useState<WebsitePage["pageType"]>("custom");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const errorMessage = useErrorMessage();
 
   function reset() {
     setTitle("");
@@ -118,6 +111,7 @@ export function NewPageDialog({
     onClose();
   }
 
+  // An Arabic title gives no address by itself (addresses are English letters): the merchant types one.
   const effectivePath = pathTouched ? path : slugifyPath(title);
   const pathValid = /^\/[a-z0-9\-/]*$/i.test(effectivePath);
   const canSubmit = title.trim().length > 0 && effectivePath.length > 0 && pathValid && !busy;
@@ -132,6 +126,12 @@ export function NewPageDialog({
       await onCreate({ title: title.trim(), path: effectivePath, pageType });
       reset();
     } catch (err) {
+      // A reserved path (/cart, /checkout…) belongs under the path field, in
+      // our own words rather than the server's.
+      if (isApiErrorCode(err, "PAGE_PATH_RESERVED") || isApiErrorCode(err, "PAGE_PATH_IN_TRASH")) {
+        setFieldErrors({ path: errorMessage(err) });
+        return;
+      }
       const fields = getFieldErrors(err);
       setFieldErrors(fields);
       if (Object.keys(fields).length === 0) setError(getErrorMessage(err));
@@ -149,10 +149,10 @@ export function NewPageDialog({
       footer={
         <>
           <Button variant="outline" onClick={close} disabled={busy}>
-            {c.cancel}
+            {t.cancel}
           </Button>
           <Button onClick={(e) => void submit(e)} disabled={!canSubmit}>
-            {busy ? t.creating : t.createPage}
+            {busy ? t.creating : t.create}
           </Button>
         </>
       }
@@ -175,7 +175,6 @@ export function NewPageDialog({
           label={t.path}
           required
           dir="ltr"
-          placeholder="/about"
           value={effectivePath}
           onChange={(e) => {
             setPathTouched(true);
@@ -191,11 +190,11 @@ export function NewPageDialog({
               id={id}
               {...aria}
               value={pageType}
-              onChange={(e) => setPageType(e.target.value as PageType)}
+              onChange={(e) => setPageType(e.target.value as WebsitePage["pageType"])}
             >
-              {PAGE_TYPE_ORDER.map((value) => (
-                <option key={value} value={value}>
-                  {typeLabels[value]}
+              {PAGE_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {t[type.label]}
                 </option>
               ))}
             </Select>
@@ -203,7 +202,7 @@ export function NewPageDialog({
         </Field>
 
         {/* Lets Enter submit the form without a visible duplicate button. */}
-        <button type="submit" className="hidden" tabIndex={-1} aria-hidden />
+        <button type="submit" className="cursor-pointer hidden" tabIndex={-1} aria-hidden />
       </form>
     </Modal>
   );

@@ -25,18 +25,20 @@ export function SiteHeader() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // Sections of the home page, and the pricing page: whole addresses, so
+  // they work from every page, not only the home page.
   const sections = [
-    { href: "#product", label: nav.product },
-    { href: "#solutions", label: nav.solutions },
-    { href: "#pricing", label: nav.pricing },
-    { href: "#faq", label: nav.faq },
+    { href: `/${locale}#product`, label: nav.product },
+    { href: `/${locale}#solutions`, label: nav.solutions },
+    { href: `/${locale}/pricing`, label: nav.pricing },
+    { href: `/${locale}#faq`, label: nav.faq },
   ];
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/80 bg-paper-raised/85 backdrop-blur-md">
       <a
         href="#main"
-        className="sr-only rounded-lg bg-zimos-blue px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:absolute focus:start-4 focus:top-3 focus:z-50"
+        className="sr-only rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:absolute focus:start-4 focus:top-3 focus:z-50"
       >
         {nav.skipToContent}
       </a>
@@ -64,12 +66,14 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <LocaleSwitcher className="hidden sm:inline-flex" />
+          {/* max-*:hidden, not hidden + sm:inline-flex: the button recipes already set
+              inline-flex, which would win over a bare `hidden` and crowd the bar. */}
+          <LocaleSwitcher className="max-sm:hidden" />
           <ThemeToggle />
-          <a href={LOGIN_URL} className={`${btnGhost} hidden h-9 px-3 text-sm md:inline-flex`}>
+          <a href={LOGIN_URL} className={`${btnGhost} h-9 px-3 text-sm max-md:hidden`}>
             {nav.signIn}
           </a>
-          <a href={REGISTER_URL} className={`${btnPrimary} hidden h-9 px-4 text-sm sm:inline-flex`}>
+          <a href={REGISTER_URL} className={`${btnPrimary} h-9 px-4 text-sm max-sm:hidden`}>
             {nav.startFree}
           </a>
           <button
@@ -108,7 +112,7 @@ export function SiteHeader() {
         <div className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4">
           <a
             href={LOGIN_URL}
-            className="inline-flex h-11 items-center justify-center rounded-lg border border-line-strong text-sm font-medium text-ink"
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-line text-sm font-medium text-ink"
           >
             {nav.signIn}
           </a>

@@ -1,20 +1,28 @@
-import { getDictionary } from "@/lib/i18n";
+import { NotFoundContent } from "@/components/NotFoundContent";
 
-/** Outside any store (e.g. an unknown workspace id) — bilingual, neutral. */
+/**
+ * The 404 for everything the store boundary can't catch.
+ *
+ * Two kinds of request land here. A URL that matches no route at all — `/store`
+ * with nothing after it, a stray path on a host that names no store. And,
+ * less obviously, an unknown store: the store layout itself calls `notFound()`
+ * for a workspace the API doesn't know, and a boundary sits *inside* the layout
+ * of its own segment, so when that layout aborts its boundary aborts with it
+ * and the 404 surfaces here instead.
+ *
+ * Which means there is no store to go back to in either case — the link is the
+ * site root, not a store home.
+ */
 export default function NotFound() {
-  const ar = getDictionary("ar");
-  const en = getDictionary("en");
+  // A store that doesn't exist and one that isn't public yet (a draft) get the
+  // same neutral page: nothing here says which it was.
   return (
-    <main className="flex flex-1 flex-col items-center justify-center bg-paper px-6 py-24 text-center font-sans">
-      <p className="text-6xl font-bold tracking-tight text-primary">404</p>
-      <div lang="ar" dir="rtl" className="mt-6">
-        <h1 className="text-2xl font-bold text-ink">{ar.notFound.title}</h1>
-        <p className="mt-2 max-w-md text-sm text-ink-soft">{ar.notFound.body}</p>
-      </div>
-      <div lang="en" dir="ltr" className="mt-6">
-        <p className="text-lg font-semibold text-ink">{en.notFound.title}</p>
-        <p className="mt-1 max-w-md text-sm text-ink-soft">{en.notFound.body}</p>
-      </div>
-    </main>
+    <NotFoundContent
+      homeHref="/"
+      homeLabel="Back to home"
+      title="This store isn't available right now"
+      body="Check the address, or come back later."
+      secondary={{ lang: "ar", text: "المتجر ده غير متاح حاليًا. راجع العنوان أو ارجع تاني بعدين." }}
+    />
   );
 }

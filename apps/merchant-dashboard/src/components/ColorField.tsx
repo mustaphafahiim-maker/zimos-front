@@ -1,21 +1,7 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { Check } from "lucide-react";
 import { Input, Label, cn } from "@store-builder/ui";
 import { BRAND_COLOR_PRESETS, normalizeHex } from "@/lib/brandColors";
-import { fmt, useT } from "@/i18n/LocaleContext";
-
-const STRINGS = {
-  en: {
-    picker: "{label} colour picker",
-    use: "Use {hex}",
-    invalid: "Enter a hex colour like #1F5D5B.",
-  },
-  ar: {
-    picker: "منتقي لون {label}",
-    use: "استخدام {hex}",
-    invalid: "أدخل لونًا بصيغة hex مثل ‎#1F5D5B.",
-  },
-};
 
 /**
  * A colour swatch + native picker + hex text box + preset row, all bound to one
@@ -25,16 +11,18 @@ const STRINGS = {
  */
 export function ColorField({
   label,
+  icon,
   hint,
   value,
   onChange,
 }: {
   label: string;
+  /** Drawn before the label, e.g. a sun or moon for a per-mode colour. */
+  icon?: ReactNode;
   hint?: string;
   value: string;
   onChange: (hex: string) => void;
 }) {
-  const t = useT(STRINGS);
   const id = useId();
   const valid = normalizeHex(value);
   // Keep the native picker on the last valid colour — it cannot show a partial hex.
@@ -42,15 +30,18 @@ export function ColorField({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id} className={icon ? "inline-flex items-center gap-1.5" : undefined}>
+        {icon}
+        {label}
+      </Label>
       <div className="flex items-center gap-2">
         <input
           id={id}
           type="color"
-          aria-label={fmt(t.picker, { label })}
+          aria-label={`${label} colour picker`}
           value={swatch}
           onChange={(e) => onChange(e.target.value.toUpperCase())}
-          className="size-10 shrink-0 cursor-pointer rounded-[10px] border border-line bg-paper-raised p-1"
+          className="size-10 shrink-0 cursor-pointer rounded-[0.5rem] border border-line-strong bg-paper-raised p-1"
         />
         <Input
           value={value}
@@ -73,11 +64,11 @@ export function ColorField({
               type="button"
               onClick={() => onChange(preset)}
               title={preset}
-              aria-label={fmt(t.use, { hex: preset })}
+              aria-label={`Use ${preset}`}
               aria-pressed={active}
               className={cn(
-                "flex size-7 cursor-pointer items-center justify-center rounded-full border transition-transform hover:scale-110",
-                active ? "border-ink ring-2 ring-primary/30" : "border-line"
+                "cursor-pointer flex size-7 items-center justify-center rounded-full border transition-transform hover:scale-110",
+                active ? "border-ink" : "border-line"
               )}
               style={{ backgroundColor: preset }}
             >
@@ -88,9 +79,9 @@ export function ColorField({
       </div>
 
       {valid ? (
-        hint && <p className="text-xs text-ink-muted">{hint}</p>
+        hint && <p className="text-xs text-ink-soft">{hint}</p>
       ) : (
-        <p className="text-xs font-medium text-danger">{t.invalid}</p>
+        <p className="text-xs font-medium text-danger">Enter a hex colour like #1F5D5B.</p>
       )}
     </div>
   );

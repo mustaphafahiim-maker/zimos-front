@@ -16,10 +16,10 @@ export default defineConfig({
     port: 5174,
     // Proxy API calls to the backend so the browser talks same-origin — the
     // backend's CORS allowlist does not include this Vite dev server. With
-    // VITE_API_BASE_URL=/api/v1 (see .env.example) requests hit this proxy.
-    // `/uploads` is proxied so backend-served media loads same-origin.
-    // `/health` is proxied so the System health page can probe the backend's
-    // root-level liveness/readiness endpoints in development.
+    // VITE_API_BASE_URL=/api/v1 (see .env) requests hit this proxy instead.
+    // `/uploads` is proxied so backend-served media loads same-origin, and
+    // `/health` so the System health page can probe the backend's root-level
+    // liveness/readiness endpoints in development.
     proxy: {
       '/api': {
         target: proxyTarget,

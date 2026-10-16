@@ -1,0 +1,137 @@
+{
+  "look": "18",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Burger",
+      "nameAr": "برجر",
+      "slug": "burger"
+    },
+    {
+      "name": "Pizza",
+      "nameAr": "بيتزا",
+      "slug": "pizza"
+    },
+    {
+      "name": "Pasta",
+      "nameAr": "باستا",
+      "slug": "pasta"
+    },
+    {
+      "name": "Fries",
+      "nameAr": "بطاطس",
+      "slug": "fries"
+    }
+  ],
+  "products": [
+    {
+      "name": "Seafood Pizza – Large",
+      "nameAr": "بيتزا سي فود – كبير",
+      "description": "Shrimp, crab sticks and calamari on a golden crust with mozzarella and a touch of onion.",
+      "descriptionAr": "جمبري وكابوريا وكاليماري على عجينة ذهبية مع موتزاريلا ولمسة بصل.",
+      "price": 395,
+      "image": "/xs/18/products/p01.png",
+      "collections": [
+        "pizza"
+      ]
+    },
+    {
+      "name": "Classic Beef Cheeseburger",
+      "nameAr": "تشيز برجر لحم كلاسيك",
+      "description": "Juicy grilled beef patty with melted cheddar, tomato, red onion and lettuce in a sesame bun.",
+      "descriptionAr": "قطعة لحم مشوية عصارية مع جبنة شيدر سايحة وطماطم وبصل أحمر وخس في عيش بالسمسم.",
+      "price": 195,
+      "compareAt": 240,
+      "image": "/xs/18/products/p02.png",
+      "collections": [
+        "burger"
+      ]
+    },
+    {
+      "name": "Salami, Olive & Basil Pizza",
+      "nameAr": "بيتزا سلامي بالزيتون والريحان",
+      "description": "Stone-baked pizza with salami, black olives, peppers, mozzarella and fresh basil leaves.",
+      "descriptionAr": "بيتزا بالفرن مع سلامي وزيتون أسود وفلفل وموتزاريلا وأوراق ريحان فريش.",
+      "price": 310,
+      "image": "/xs/18/products/p03.png",
+      "collections": [
+        "pizza"
+      ]
+    },
+    {
+      "name": "Mediterranean Pasta Salad",
+      "nameAr": "سلطة مكرونة متوسطية",
+      "description": "Cold corkscrew pasta tossed with olives, tomatoes and sweet peppers in a light herb dressing.",
+      "descriptionAr": "مكرونة باردة مع زيتون وطماطم وفلفل ألوان في صوص خفيف بالأعشاب.",
+      "price": 150,
+      "image": "/xs/18/products/p04.png",
+      "collections": [
+        "pasta"
+      ]
+    },
+    {
+      "name": "Classic French Fries",
+      "nameAr": "بطاطس محمرة كلاسيك",
+      "description": "Golden, crispy fries cooked to order and lightly salted. The perfect side for any meal.",
+      "descriptionAr": "بطاطس محمرة ذهبية ومقرمشة، تُقلى عند الطلب ومملحة بخفة. أحلى رفيق لأي وجبة.",
+      "price": 65,
+      "image": "/xs/18/products/p05.png",
+      "collections": [
+        "fries"
+      ]
+    },
+    {
+      "name": "Chef's Mix Pizza",
+      "nameAr": "بيتزا ميكس اختيار الشيف",
+      "description": "One pizza, many flavours: veggie, salami, mushroom and seafood slices to share with the whole table.",
+      "descriptionAr": "بيتزا واحدة بنكهات كتير: شرائح خضار وسلامي ومشروم وسي فود، مثالية للمشاركة مع الشلة.",
+      "price": 360,
+      "compareAt": 450,
+      "image": "/xs/18/products/p06.png",
+      "collections": [
+        "pizza"
+      ]
+    },
+    {
+      "name": "Crispy Chicken & Beef Bacon Burger",
+      "nameAr": "برجر فراخ كريسبي بالبيف بيكون",
+      "description": "Crunchy fried chicken fillet with beef bacon, cheese, lettuce, tomato and house sauce in a brioche bun.",
+      "descriptionAr": "صدر فراخ كريسبي مع بيف بيكون وجبنة وخس وطماطم وصوص البيت في عيش بريوش.",
+      "price": 235,
+      "image": "/xs/18/products/p07.png",
+      "collections": [
+        "burger"
+      ]
+    },
+    {
+      "name": "Grilled Chicken Burger",
+      "nameAr": "برجر فراخ مشوية",
+      "description": "Herb-marinated grilled chicken breast with lettuce and tomato in a soft sesame bun. Lighter, still filling.",
+      "descriptionAr": "صدر فراخ متبّل بالأعشاب ومشوي مع خس وطماطم في عيش طري بالسمسم. أخف لكن مشبع.",
+      "price": 185,
+      "image": "/xs/18/products/p08.png",
+      "collections": [
+        "burger"
+      ]
+    },
+    {
+      "name": "Baked Fusilli al Forno",
+      "nameAr": "مكرونة فوسيلي بالفرن",
+      "description": "Fusilli baked in rich tomato sauce under a layer of melted mozzarella, finished with fresh basil.",
+      "descriptionAr": "مكرونة فوسيلي بالفرن في صوص طماطم غني تحت طبقة موتزاريلا سايحة، مع ريحان فريش.",
+      "price": 190,
+      "image": "/xs/18/products/p09.png",
+      "collections": [
+        "pasta"
+      ]
+    }
+  ],
+  "wording": {
+    "allLabel": "All",
+    "loadMoreLabel": "View More"
+  },
+  "wordingAr": {
+    "allLabel": "الكل",
+    "loadMoreLabel": "عرض المزيد"
+  }
+}

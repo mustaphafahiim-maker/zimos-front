@@ -1,0 +1,953 @@
+/*
+ * The "xs" sections — bands drawn in the look of an imported third-party
+ * template (components/page-renderer/xs). Every rule of theirs is in this one
+ * file, every class starts with `xs-`, and each template's own look is a
+ * `[data-xs-look="NN"]` block of custom properties (plus its faces under
+ * public/xs/NN/fonts) — so removing a template is deleting its block here.
+ *
+ * The shared rules below lay a band out; a look only names colours, type and
+ * a few sizes. Directions are logical (inline-start/end) so a band mirrors on
+ * an Arabic store the way the rest of the storefront does.
+ */
+
+/* --- look 01 · Coza Store (Colorlib, CC BY 3.0) ---------------------------- */
+
+[data-xs-look="01"],
+.brand-theme[data-xs-shell="01"] {
+  --xs-sans: "XS01 Sans", var(--font-sans), sans-serif;
+  --xs-display: "XS01 Display", var(--font-display), serif;
+  --xs-ink: #333;
+  --xs-ink-soft: #555;
+  --xs-muted: #999;
+  --xs-accent: #6c7ae0;
+  --xs-button: #717fe0;
+  --xs-brand: #717fe0;
+  --xs-accent-veil: rgba(103, 117, 214, 0.8);
+  --xs-dark: #222;
+  --xs-line: #e6e6e6;
+  --xs-ground: #fff;
+  --xs-container: 1200px;
+  --xs-footer-ink: #b2b2b2;
+  --xs-badge: #717fe0;
+  --xs-btn-radius: 23px;
+}
+
+/* --- shared ---------------------------------------------------------------- */
+
+[data-xs-look] {
+  font-family: var(--xs-sans);
+  color: var(--xs-ink);
+  background: var(--xs-ground);
+}
+
+/* --- xs_slider ------------------------------------------------------------- */
+
+.xs-slider {
+  position: relative;
+  height: calc(100vh - 40px);
+  min-height: 420px;
+  max-height: 900px;
+  overflow: hidden;
+}
+.xs-slider__slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.9s ease, visibility 0s linear 0.9s;
+}
+.xs-slider__slide[data-active] {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.9s ease;
+}
+/* The words keep to the side the template's pictures leave empty: the left. On a right-to-left
+   store they go to the right instead, and a template's own photograph is mirrored with them
+   (.xs-slider__photo, below), so what it shows still stays clear of the words. */
+.xs-slider__inner {
+  direction: ltr;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  height: 100%;
+  max-width: var(--xs-container);
+  margin-inline: auto;
+  padding: 100px 15px 30px;
+}
+.xs-slider__eyebrow {
+  font-size: 28px;
+  line-height: 1.2857;
+}
+.xs-slider__heading {
+  margin: 0;
+  padding: 19px 0 43px;
+  font-family: var(--xs-display);
+  font-weight: 700;
+  font-size: 60px;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+.xs-slider__line {
+  margin: 0 0 30px;
+}
+.xs-slider__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 161px;
+  height: 46px;
+  padding: 0 15px;
+  border-radius: 23px;
+  background: var(--xs-button);
+  color: #fff;
+  font-weight: 500;
+  font-size: 15px;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background-color 0.4s;
+}
+.xs-slider__button:hover {
+  background: var(--xs-dark);
+}
+/* The three lines drop in one after the other each time a slide comes up. */
+.xs-slider__eyebrow,
+.xs-slider__heading,
+.xs-slider__line,
+.xs-slider__button {
+  opacity: 0;
+}
+.xs-slider__slide[data-active] .xs-slider__line {
+  animation: xs-rise 0.8s ease 0.75s both;
+}
+.xs-slider__slide[data-active] .xs-slider__eyebrow {
+  animation: xs-drop 0.8s ease both;
+}
+.xs-slider__slide[data-active] .xs-slider__heading {
+  animation: xs-rise 0.8s ease 0.5s both;
+}
+.xs-slider__slide[data-active] .xs-slider__button {
+  animation: xs-zoom 0.8s ease 1s both;
+}
+@keyframes xs-drop {
+  from { opacity: 0; transform: translateY(-40px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes xs-rise {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes xs-zoom {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: none; }
+}
+.xs-slider__arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  transform: translateY(-50%);
+  border: 0;
+  background: none;
+  color: rgba(0, 0, 0, 0.3);
+  font-size: 80px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s, color 0.3s;
+}
+.xs-slider:hover .xs-slider__arrow,
+.xs-slider__arrow:focus-visible {
+  opacity: 1;
+}
+.xs-slider__arrow:hover {
+  color: var(--xs-accent);
+}
+.xs-slider__arrow--prev {
+  inset-inline-start: 20px;
+}
+.xs-slider__arrow--next {
+  inset-inline-end: 20px;
+}
+/* The arrows are drawn for left-to-right; an Arabic store reads them mirrored. */
+[dir="rtl"] .xs-slider__arrow span {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+@media (max-width: 991px) {
+  .xs-slider {
+    height: calc(100vh - 70px);
+  }
+  .xs-slider__inner {
+    padding-inline: 50px;
+  }
+}
+@media (max-width: 575px) {
+  .xs-slider__eyebrow {
+    font-size: 20px;
+  }
+  .xs-slider__heading {
+    font-size: 30px;
+  }
+  .xs-slider__inner {
+    padding-inline: 15px;
+  }
+  .xs-slider__arrow {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xs-slider__slide,
+  .xs-slider__slide[data-active] {
+    transition: none;
+  }
+  .xs-slider__slide[data-active] .xs-slider__eyebrow,
+  .xs-slider__slide[data-active] .xs-slider__heading,
+  .xs-slider__slide[data-active] .xs-slider__line,
+  .xs-slider__slide[data-active] .xs-slider__button {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* --- xs_banners ------------------------------------------------------------ */
+
+.xs-banners {
+  padding: calc(80px * var(--xs-space, 1)) 15px calc(50px * var(--xs-space, 1));
+}
+/* An opening heading and line, centred over the pictures. */
+.xs-banners__intro {
+  max-width: 660px;
+  margin: 0 auto 24px;
+  text-align: center;
+}
+.xs-banners__intro p {
+  margin: 0;
+}
+.xs-banners__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+  max-width: var(--xs-container);
+  margin-inline: auto;
+}
+.xs-banners__item {
+  position: relative;
+  display: block;
+  border: 1px solid var(--xs-line);
+  color: inherit;
+  text-decoration: none;
+}
+.xs-banners__img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* Like the slider's: the pictures keep their subject to the right, so the words stay left —
+   or, on a right-to-left store, right, with a template picture mirrored (below). */
+.xs-banners__text {
+  direction: ltr;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 34px 38px;
+  background: transparent;
+  transition: background-color 0.3s;
+}
+.xs-banners__top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.xs-banners__title {
+  padding-bottom: 8px;
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--xs-ink);
+  transition: color 0.4s;
+}
+.xs-banners__info {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--xs-ink-soft);
+  transition: color 0.4s;
+}
+.xs-banners__more {
+  padding-bottom: 4px;
+  border-bottom: 2px solid #fff;
+  overflow: hidden;
+  transform: scaleX(0);
+  transition: transform 0.5s;
+}
+.xs-banners__link {
+  display: block;
+  font-weight: 500;
+  font-size: 15px;
+  text-transform: uppercase;
+  color: #fff;
+  transform: translateY(250%);
+  transition: transform 0.9s;
+}
+.xs-banners__item:hover .xs-banners__text {
+  background: var(--xs-accent-veil);
+}
+.xs-banners__item:hover .xs-banners__more {
+  transform: scaleX(1);
+}
+.xs-banners__item:hover .xs-banners__link {
+  transform: none;
+}
+.xs-banners__item:hover .xs-banners__title,
+.xs-banners__item:hover .xs-banners__info {
+  color: #fff;
+}
+/* Two rows of banners, one band after the other (two pictures over three): they sit as one block. */
+section:has(.xs-banners[data-xs-look="01"]):has(+ section .xs-banners[data-xs-look="01"]) .xs-banners {
+  padding-bottom: 30px;
+}
+section:has(.xs-banners[data-xs-look="01"]) + section .xs-banners[data-xs-look="01"] {
+  padding-top: 0;
+}
+/* Edge to edge: the pictures fill the page's width and touch. */
+.xs-banners[data-wide] {
+  padding: 0;
+}
+.xs-banners[data-wide] .xs-banners__intro {
+  padding: 60px 15px 0;
+}
+.xs-banners[data-wide] .xs-banners__grid {
+  gap: 0;
+  max-width: none;
+}
+.xs-banners[data-wide] .xs-banners__img {
+  height: 100%;
+  object-fit: cover;
+}
+@media (max-width: 1199px) {
+  .xs-banners__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .xs-banners__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .xs-banners__text {
+    padding: 20px;
+  }
+}
+
+/* --- xs_products ----------------------------------------------------------- */
+
+.xs-products {
+  padding: calc(23px * var(--xs-space, 1)) 15px calc(140px * var(--xs-space, 1));
+}
+/* The heading, with a link to the whole catalogue across from it. */
+.xs-products__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  max-width: var(--xs-container);
+  margin: 0 auto;
+}
+.xs-products__all {
+  color: var(--xs-ink);
+  font-size: 14px;
+  letter-spacing: 0.0875rem;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+.xs-products__all:hover {
+  color: var(--xs-accent);
+}
+.xs-products__heading {
+  margin: 0;
+  padding-bottom: 10px;
+  /* Named here because a store theme sets its own face on every heading. */
+  font-family: var(--xs-sans);
+  font-weight: 700;
+  font-size: 36px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  color: var(--xs-dark);
+}
+/* Category tabs on the start side, the search button on the end side. */
+.xs-products__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  max-width: var(--xs-container);
+  margin: 0 auto;
+  padding-bottom: 10px;
+}
+.xs-products__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 32px;
+}
+.xs-products__tab {
+  padding: 3px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: none;
+  color: #888;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: color 0.4s, border-color 0.4s;
+}
+.xs-products__tab:hover,
+.xs-products__tab[data-active] {
+  border-bottom-color: #797979;
+  color: var(--xs-ink);
+}
+.xs-products__tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 105px;
+  height: 40px;
+  padding: 0 15px;
+  border: 1px solid var(--xs-line);
+  border-radius: 2px;
+  background: none;
+  color: #888;
+  font-family: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.4s, border-color 0.4s, color 0.4s;
+}
+.xs-products__tool:hover,
+.xs-products__tool[aria-expanded="true"] {
+  border-color: var(--xs-button);
+  background: var(--xs-button);
+  color: #fff;
+}
+.xs-products__search {
+  display: flex;
+  align-items: center;
+  max-width: var(--xs-container);
+  margin: 10px auto 0;
+  border: 1px solid var(--xs-line);
+  border-radius: 2px;
+}
+.xs-products__search button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border: 0;
+  background: none;
+  color: var(--xs-ink);
+  cursor: pointer;
+  transition: color 0.4s;
+}
+.xs-products__search button:hover {
+  color: var(--xs-accent);
+}
+.xs-products__search input {
+  flex: 1;
+  min-width: 0;
+  height: 60px;
+  padding-inline-end: 30px;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--xs-ink);
+  font-family: inherit;
+  font-size: 15px;
+}
+.xs-products__empty {
+  max-width: var(--xs-container);
+  margin: 42px auto 0;
+  color: #888;
+  font-size: 15px;
+  text-align: center;
+}
+.xs-products__grid[aria-busy] {
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.xs-products__more {
+  display: flex;
+  justify-content: center;
+  padding-top: 45px;
+}
+.xs-products__more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 179px;
+  height: 46px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 23px;
+  background: var(--xs-line);
+  color: #666;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.4s, color 0.4s;
+}
+.xs-products__more-btn:hover:not(:disabled) {
+  background: var(--xs-dark);
+  color: #fff;
+}
+.xs-products__more-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.xs-products__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 35px 30px;
+  max-width: var(--xs-container);
+  margin: 42px auto 0;
+}
+/* The link round the picture fills the card's picture box; the label sits over its lower edge. */
+.xs-products__shot {
+  display: block;
+  height: 100%;
+}
+.xs-products__media {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 300 / 372;
+  background: #f2f2f2;
+}
+.xs-products__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.9s;
+}
+.xs-products__media:hover .xs-products__img {
+  transform: scale(1.1);
+}
+.xs-products__badge {
+  position: absolute;
+  top: 12px;
+  inset-inline-start: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: #66a8a6;
+  color: #fff;
+  font-size: 12px;
+}
+.xs-products__view {
+  border: 0;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  position: absolute;
+  bottom: -50px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 139px;
+  height: 40px;
+  padding: 0 15px;
+  transform: translateX(-50%);
+  border-radius: 20px;
+  background: #fff;
+  color: var(--xs-ink);
+  font-size: 15px;
+  white-space: nowrap;
+  transition: bottom 0.4s, background-color 0.4s, color 0.4s;
+}
+.xs-products__media:hover .xs-products__view {
+  bottom: 20px;
+}
+.xs-products__view:hover {
+  background: var(--xs-dark);
+  color: #fff;
+}
+.xs-products__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-top: 14px;
+}
+.xs-products__name {
+  padding-bottom: 6px;
+  font-size: 14px;
+  line-height: 1.466667;
+  color: var(--xs-muted);
+  text-decoration: none;
+  transition: color 0.4s;
+}
+.xs-products__name:hover {
+  color: var(--xs-accent);
+}
+.xs-products__price {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+  color: #666;
+}
+.xs-products__price s {
+  color: var(--xs-muted);
+}
+@media (max-width: 1199px) {
+  .xs-products__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .xs-products__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 25px 15px;
+  }
+  .xs-products {
+    padding-bottom: calc(80px * var(--xs-space, 1));
+  }
+}
+
+/* --- the attribution a template's licence asks for (XsCredit) -------------- */
+
+.xs-credit {
+  margin: 0;
+  padding: 10px 15px;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  color: #777;
+  background: #fff;
+}
+.xs-credit a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* --- xs_products as a slider: one row, moved with the arrows or by swiping ---- */
+
+.xs-products__stage {
+  position: relative;
+  max-width: var(--xs-container);
+  margin-inline: auto;
+}
+.xs-products__grid[data-layout="slider"] {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 3 * 30px) / 4);
+  column-gap: 30px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.xs-products__grid[data-layout="slider"]::-webkit-scrollbar {
+  display: none;
+}
+.xs-products__grid[data-layout="slider"] > * {
+  scroll-snap-align: start;
+}
+.xs-products__arrow {
+  position: absolute;
+  top: 35%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: min(var(--xs-btn-radius, 0px), 22px);
+  background: var(--xs-ground, #fff);
+  color: var(--xs-ink);
+  font-size: 26px;
+  line-height: 1;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+.xs-products__arrow:hover {
+  background: var(--xs-dark);
+  color: #fff;
+}
+.xs-products__arrow--prev {
+  inset-inline-start: -12px;
+}
+.xs-products__arrow--next {
+  inset-inline-end: -12px;
+}
+[dir="rtl"] .xs-products__arrow span {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+@media (max-width: 1199px) {
+  .xs-products__grid[data-layout="slider"] {
+    grid-auto-columns: calc((100% - 2 * 30px) / 3);
+  }
+  .xs-products__arrow--prev {
+    inset-inline-start: 4px;
+  }
+  .xs-products__arrow--next {
+    inset-inline-end: 4px;
+  }
+}
+@media (max-width: 767px) {
+  .xs-products__grid[data-layout="slider"] {
+    grid-auto-columns: calc((100% - 15px) / 2);
+    column-gap: 15px;
+  }
+}
+
+/* --- the quick-view panel (XsQuickView) ----------------------------------------- */
+
+.xs-quick {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  animation: xs-quick-in 0.25s ease both;
+}
+@keyframes xs-quick-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.xs-quick__panel {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 40px;
+  width: 100%;
+  max-width: 980px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 50px 40px;
+  outline: 0;
+  background: var(--xs-ground, #fff);
+  color: var(--xs-ink-soft);
+}
+.xs-quick__close {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 12px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: none;
+  color: var(--xs-ink);
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+.xs-quick__close:hover {
+  color: var(--xs-accent);
+}
+.xs-quick__img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  background: #f2f2f2;
+}
+.xs-quick__thumbs {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.xs-quick__thumbs button {
+  width: 64px;
+  padding: 0;
+  border: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+}
+.xs-quick__thumbs button[data-active] {
+  border-color: var(--xs-accent);
+}
+.xs-quick__thumbs img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.xs-quick__name {
+  margin: 0 0 14px;
+  color: var(--xs-ink);
+  font-family: var(--xs-display, var(--xs-sans));
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.xs-quick__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 22px;
+  color: var(--xs-ink);
+  font-size: 20px;
+  font-weight: 500;
+}
+.xs-quick__price s {
+  color: var(--xs-muted);
+  font-size: 16px;
+  font-weight: 400;
+}
+.xs-quick__price em {
+  padding: 2px 10px;
+  background: var(--xs-badge, var(--xs-accent));
+  color: #fff;
+  font-size: 13px;
+  font-style: normal;
+}
+.xs-quick__text {
+  margin: 0 0 30px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.xs-quick__go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 180px;
+  height: 46px;
+  padding: 0 24px;
+  border-radius: var(--xs-btn-radius, 23px);
+  background: var(--xs-button);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: background-color 0.3s;
+}
+.xs-quick__go:hover {
+  background: var(--xs-dark);
+}
+@media (max-width: 767px) {
+  .xs-quick__panel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    padding: 50px 20px 30px;
+  }
+}
+
+/* --- pictures (components/xs/XsPicture, lib/xsPicture) --------------------- */
+
+/* A <picture> takes no box of its own: every rule written for its <img> holds. */
+.xs-pic {
+  display: contents;
+}
+
+/* One picture's own size, dragged out on the editor's canvas (XsPicture `size`):
+   a computer's, then a tablet's and a phone's where they differ. `:not(#\#)`
+   lifts these over the look's rules and the band's own picture sizes — this
+   one picture is the more particular say. A width never runs past the box. */
+img[data-xs-w]:not(#\#) {
+  width: var(--xs-w) !important;
+  max-width: 100% !important;
+}
+img[data-xs-h]:not(#\#) {
+  height: var(--xs-h) !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  object-fit: var(--xs-own-img-fit, cover);
+}
+@media (max-width: 1023px) {
+  img[data-xs-w-t]:not(#\#) {
+    width: var(--xs-w-t) !important;
+    max-width: 100% !important;
+  }
+  img[data-xs-h-t]:not(#\#) {
+    height: var(--xs-h-t) !important;
+    max-height: none !important;
+    aspect-ratio: auto !important;
+    object-fit: var(--xs-own-img-fit, cover);
+  }
+}
+@media (max-width: 639px) {
+  img[data-xs-w-m]:not(#\#) {
+    width: var(--xs-w-m) !important;
+    max-width: 100% !important;
+  }
+  img[data-xs-h-m]:not(#\#) {
+    height: var(--xs-h-m) !important;
+    max-height: none !important;
+    aspect-ratio: auto !important;
+    object-fit: var(--xs-own-img-fit, cover);
+  }
+}
+
+/* A template picture as a box's background: a phone takes its 1200-wide copy. */
+@media (max-width: 767px) {
+  [style*="--xs-bg-phone"] {
+    background-image: var(--xs-bg-phone) !important;
+  }
+}
+
+/* --- right to left (an Arabic store) ------------------------------------------------ */
+
+/* The slider's words read from the right; a template's own photograph (one with --xs-bg,
+   lib/xsPicture) is drawn mirrored on a layer under the slide's veil and words, so its
+   subject moves to the other side with them. A merchant's own picture is drawn as it is. */
+.xs-slider__photo {
+  display: none;
+}
+[dir="rtl"] .xs-slider__inner {
+  direction: rtl;
+}
+[dir="rtl"] .xs-slider__slide[style*="--xs-bg:"] {
+  background-image: none !important;
+  isolation: isolate;
+}
+[dir="rtl"] .xs-slider__slide[style*="--xs-bg:"] > .xs-slider__photo {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--xs-bg);
+  background-size: inherit;
+  background-position: inherit;
+  background-repeat: no-repeat;
+  transform: scaleX(-1);
+}
+@media (max-width: 767px) {
+  [dir="rtl"] .xs-slider__slide[style*="--xs-bg:"] > .xs-slider__photo {
+    background-image: var(--xs-bg-phone, var(--xs-bg));
+  }
+}
+
+/* A banner whose words lie on its picture: the words go to the right and a template's own picture is mirrored the same way. */
+[dir="rtl"] .xs-banners:not([data-variant="card"]) .xs-banners__text {
+  direction: rtl;
+}
+[dir="rtl"] .xs-banners:not([data-variant="card"]) .xs-banners__img[data-xs-tpl] {
+  scale: -1 1;
+}
