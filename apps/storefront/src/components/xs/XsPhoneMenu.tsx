@@ -3,7 +3,9 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
+import { ColorModeSwitch } from "@/components/ColorModeSwitch";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
+import type { ColorMode } from "@/lib/storeColorMode";
 import { ShellLink } from "@/components/ShellLink";
 import { StoreLink } from "@/components/StoreRoute";
 import type { ResolvedShellLink } from "@/lib/storeShell";
@@ -23,7 +25,7 @@ import { xsPhoneMenuOf } from "@/lib/xsShell";
  * What is in it is the store's, whatever the look: the header's menu with
  * the lists that open under its links, the links the bar has no room for
  * (cart, order tracking, the account), the announcement line the strip shows
- * on a wide screen, and the language switch. The look decides the order.
+ * on a wide screen, the language switch and the light/dark one. The look decides the order.
  *
  * The layer is portalled to the store wrapper (not left in the header, whose
  * bar is fixed) and carries the look's name itself, so the look's colours
@@ -38,6 +40,7 @@ export function XsPhoneMenu({
   notice,
   noticeHref,
   showLanguage,
+  colorMode = null,
   labels,
   own,
 }: {
@@ -51,6 +54,8 @@ export function XsPhoneMenu({
   notice: string;
   noticeHref?: string | null;
   showLanguage: boolean;
+  /** The light/dark button, in the mode the store is drawn in; null when the store shows none. */
+  colorMode?: ColorMode | null;
   labels: { open: string; close: string; menu: string };
   /** The bar's own colours from the editor (`--xs-own-bar…`), which the menu follows. */
   own: Record<string, string>;
@@ -133,7 +138,7 @@ export function XsPhoneMenu({
                   })}
                 </ul>
               </nav>
-              {extras.length > 0 || showLanguage ? (
+              {extras.length > 0 || showLanguage || colorMode ? (
                 <ul className="xs-phone__extras">
                   {extras.map((link) => (
                     <li key={link.key}>
@@ -143,6 +148,11 @@ export function XsPhoneMenu({
                   {showLanguage ? (
                     <li>
                       <LanguageSwitch />
+                    </li>
+                  ) : null}
+                  {colorMode ? (
+                    <li>
+                      <ColorModeSwitch mode={colorMode} />
                     </li>
                   ) : null}
                 </ul>

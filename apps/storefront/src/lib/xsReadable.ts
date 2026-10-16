@@ -6,6 +6,9 @@
  * read" switch (lib/xsTokens.ts `readable`).
  */
 export const XS_READABLE: Record<string, Record<string, string>> = {
+  "01": {
+    "--xs-muted": "#767676"
+  },
   "10": {
     "--xs-footer-ink": "#6f747e"
   },

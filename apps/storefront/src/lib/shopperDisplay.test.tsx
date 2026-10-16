@@ -4,20 +4,23 @@ import type { StorefrontMeta } from "@store-builder/api-client";
 import { readShopperDisplay } from "./shopperDisplay";
 import { storeDefaultLocale } from "./storeLocale";
 
+/** The look a store reads as when it never chose one: light, no button. */
+const LIGHT = { colorMode: "light", colorModeSwitch: false } as const;
+
 /** A store as GET /store/:ws answers it: its own language (always Arabic today) and its themeSettings. */
 const store = (themeSettings: Record<string, unknown>) => ({ defaultLocale: "ar-EG", themeSettings }) as unknown as StorefrontMeta;
 
 describe("the store's language for shoppers", () => {
   it("reads as no language of its own and no button for a store that never saved it", () => {
-    expect(readShopperDisplay({})).toEqual({ locale: null, localeSwitch: false });
-    expect(readShopperDisplay(undefined)).toEqual({ locale: null, localeSwitch: false });
-    expect(readShopperDisplay({ shopperDisplay: "en" })).toEqual({ locale: null, localeSwitch: false });
+    expect(readShopperDisplay({})).toEqual({ locale: null, localeSwitch: false, ...LIGHT });
+    expect(readShopperDisplay(undefined)).toEqual({ locale: null, localeSwitch: false, ...LIGHT });
+    expect(readShopperDisplay({ shopperDisplay: "en" })).toEqual({ locale: null, localeSwitch: false, ...LIGHT });
   });
 
   it("reads Arabic or English and a button switched on, nothing else", () => {
-    expect(readShopperDisplay({ shopperDisplay: { locale: "en", localeSwitch: true } })).toEqual({ locale: "en", localeSwitch: true });
-    expect(readShopperDisplay({ shopperDisplay: { locale: "ar" } })).toEqual({ locale: "ar", localeSwitch: false });
-    expect(readShopperDisplay({ shopperDisplay: { locale: "fr", localeSwitch: "yes" } })).toEqual({ locale: null, localeSwitch: false });
+    expect(readShopperDisplay({ shopperDisplay: { locale: "en", localeSwitch: true } })).toEqual({ locale: "en", localeSwitch: true, ...LIGHT });
+    expect(readShopperDisplay({ shopperDisplay: { locale: "ar" } })).toEqual({ locale: "ar", localeSwitch: false, ...LIGHT });
+    expect(readShopperDisplay({ shopperDisplay: { locale: "fr", localeSwitch: "yes" } })).toEqual({ locale: null, localeSwitch: false, ...LIGHT });
   });
 
   it("opens the store in the language the merchant picked, over the API's", () => {

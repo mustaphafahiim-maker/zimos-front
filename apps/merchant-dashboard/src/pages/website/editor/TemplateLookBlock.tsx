@@ -33,7 +33,7 @@ export const TEMPLATE_FACES: ReadonlyArray<{ key: string; label: string }> = [
 ];
 
 /** How many of each template's text colours are under 4.5:1 on their own ground (storefront lib/xsReadable.ts). */
-export const TOO_LIGHT: Record<string, number> = {"10":1,"13":3,"14":1,"15":1,"18":1,"21":1,"03":3,"05":1,"07":2,"08":3};
+export const TOO_LIGHT: Record<string, number> = {"01":1,"10":1,"13":3,"14":1,"15":1,"18":1,"21":1,"03":3,"05":1,"07":2,"08":3};
 
 export interface TemplateTokens {
   readable?: boolean;

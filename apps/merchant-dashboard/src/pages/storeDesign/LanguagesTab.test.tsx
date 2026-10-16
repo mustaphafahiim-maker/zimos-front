@@ -78,3 +78,45 @@ describe("Languages: shoppers' language", () => {
     expect(button()).toHaveAccessibleName(/website editor → Header/);
   });
 });
+
+describe("Languages: shoppers' look", () => {
+  const looksIn = () => screen.findByRole("radiogroup", { name: "Store looks" });
+  const modeButton = () => screen.getByRole("checkbox", { name: /Show the light\/dark button/ });
+
+  it("reads a store that never chose as light, with no button", async () => {
+    setup({ xsLook: "05" });
+    expect(within(await looksIn()).getByRole("radio", { name: "Light" })).toHaveAttribute("aria-checked", "true");
+    expect(modeButton()).not.toBeChecked();
+  });
+
+  it("opens the store dark, writing the look only once it is chosen", async () => {
+    const { user } = setup({ xsLook: "05" });
+
+    await user.click(within(await looksIn()).getByRole("radio", { name: "Dark" }));
+
+    await waitFor(() => expect(api.updateWorkspace).toHaveBeenCalledTimes(1));
+    expect(api.updateWorkspace).toHaveBeenCalledWith("ws_1", {
+      themeSettings: { xsLook: "05", shopperDisplay: { locale: "ar", localeSwitch: false, colorMode: "dark" } },
+    });
+  });
+
+  it("shows the light/dark button, keeping the language as it was", async () => {
+    const { user } = setup({ xsLook: "05", shopperDisplay: { locale: "en", localeSwitch: true } });
+    await looksIn();
+
+    await user.click(modeButton());
+
+    await waitFor(() => expect(api.updateWorkspace).toHaveBeenCalledTimes(1));
+    expect(api.updateWorkspace).toHaveBeenCalledWith("ws_1", {
+      themeSettings: { xsLook: "05", shopperDisplay: { locale: "en", localeSwitch: true, colorModeSwitch: true } },
+    });
+  });
+
+  it("offers nothing to switch on a template that is dark already", async () => {
+    setup({ xsLook: "22" });
+    await opensIn();
+    expect(screen.getByText(/template is dark already/)).toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup", { name: "Store looks" })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: /Show the light\/dark button/ })).toBeNull();
+  });
+});

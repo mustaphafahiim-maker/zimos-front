@@ -65,7 +65,7 @@ function subscribe(onStoreChange: () => void): () => void {
   };
 }
 
-function MoonIcon() {
+export function MoonIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -82,7 +82,7 @@ function MoonIcon() {
   );
 }
 
-function SunIcon() {
+export function SunIcon() {
   return (
     <svg
       viewBox="0 0 24 24"

@@ -21,17 +21,24 @@
  * What stays in every page is the shared base xs.css imports (bands, pages,
  * home bands, header and footer): a store that wears no look and uses none of
  * its bands loads none of these files.
+ *
+ * The looks' dark mode is one more file, public/xs/dark.<hash>.css, worked out
+ * here from the shared base and every look's file (scripts/xs-dark.mjs); only
+ * a store that can be dark links it.
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, unlinkSync, watch, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { transform } from "lightningcss";
+import { tokensOf, xsDarkCss } from "./xs-dark.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const APP = join(ROOT, "src", "app");
 const PUBLIC = join(ROOT, "public");
 const MANIFEST = join(ROOT, "src", "lib", "xsLookCss.json");
+/** The shared base, in the order its rules cascade (app/xs.css), and the phone header after it. */
+const SHARED = ["xs-sections.css", "xs-pages.css", "xs-home.css", "xs-shell.css", "xs-store.css", "xs-phone.css"];
 
 // The browsers the storefront is built for (Tailwind 4's floor): logical
 // properties, nesting and :is() pass through as written.
@@ -85,13 +92,25 @@ function emit(dir, stem, css) {
 /** The part of a file's name that names its content. */
 export const hashOf = (css) => createHash("sha256").update(css).digest("hex").slice(0, 10);
 
-/** What each file holds, minified: every look's, and the phone header's. */
+/** A look's own file ("" for look 01, whose rules are the shared defaults). */
+const lookSource = (look) => {
+  const path = join(APP, `xs-look-${look}.css`);
+  return existsSync(path) ? read(path) : "";
+};
+
+/** The dark mode's stylesheet before minifying (scripts/xs-dark.mjs), from the sources as they are now. */
+export function xsDarkSource() {
+  const shared = SHARED.map((name) => read(join(APP, name))).join("\n");
+  const sources = Object.fromEntries(looks().map((look) => [look, lookSource(look)]));
+  return xsDarkCss({ shared, looks: sources, baseTokens: tokensOf(read(join(APP, "xs-sections.css"))) });
+}
+
+/** What each file holds, minified: every look's, the phone header's and the dark mode's. */
 export function xsLookBundles() {
   const allFaces = faces();
-  const bundles = { looks: {}, phone: minify("xs-phone.css", read(join(APP, "xs-phone.css"))) };
+  const bundles = { looks: {}, phone: minify("xs-phone.css", read(join(APP, "xs-phone.css"))), dark: minify("xs-dark.css", xsDarkSource()) };
   for (const look of looks()) {
-    const path = join(APP, `xs-look-${look}.css`);
-    const source = existsSync(path) ? read(path) : "";
+    const source = lookSource(look);
     const families = familiesOf(source);
     const fonts = allFaces.filter((face) => families.has(face.family)).map((face) => face.rule);
     bundles.looks[look] = minify(`xs-look-${look}.css`, `${fonts.join("\n")}\n${source}`);
@@ -101,7 +120,7 @@ export function xsLookBundles() {
 
 export function buildXsLookCss() {
   const bundles = xsLookBundles();
-  const manifest = { looks: {}, phone: emit(["xs"], "phone", bundles.phone) };
+  const manifest = { looks: {}, phone: emit(["xs"], "phone", bundles.phone), dark: emit(["xs"], "dark", bundles.dark) };
   for (const [look, css] of Object.entries(bundles.looks)) manifest.looks[look] = emit(["xs", look], "look", css);
   const json = `${JSON.stringify(manifest, null, 2)}\n`;
   // Rewritten only when it changes, so a dev server is not sent round a reload for nothing.
@@ -114,7 +133,8 @@ export function watchXsLookCss() {
   buildXsLookCss();
   let timer = null;
   watch(APP, (_event, name) => {
-    if (!name || !/^xs-(look-\d\d|fonts|phone)\.css$/.test(name)) return;
+    // The shared base's files feed the dark mode's file too.
+    if (!name || !/^xs-(look-\d\d|fonts|phone|sections|pages|home|shell|store)\.css$/.test(name)) return;
     clearTimeout(timer);
     timer = setTimeout(() => {
       try {
