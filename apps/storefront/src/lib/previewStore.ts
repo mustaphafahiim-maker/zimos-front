@@ -34,6 +34,11 @@ export interface PreviewOptions {
    * for it. Null leaves the preview on the shopper's stored or system choice.
    */
   colorMode?: ColorMode | null;
+  /**
+   * One of the store's own pages to show instead of the posted tree ("/cart",
+   * "/products/<slug>"…): the frame goes to that page in the unsaved look (lib/editorView.ts).
+   */
+  storePath?: string | null;
 }
 
 export interface PreviewEntry {

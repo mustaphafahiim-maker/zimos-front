@@ -1,0 +1,389 @@
+/*
+ * The bands of an imported template's inner pages — xs_title, xs_story,
+ * xs_contact (components/page-renderer/xs/pages.tsx). Like xs-sections.css:
+ * every class starts with `xs-`, the shared rules lay a band out, and a
+ * look's `[data-xs-look="NN"]` block there names its colours and type.
+ */
+
+/* --- xs_title -------------------------------------------------------------- */
+
+.xs-title {
+  padding: calc(92px * var(--xs-space, 1)) 15px;
+  background-color: var(--xs-dark);
+  background-position: center;
+  background-size: cover;
+  text-align: center;
+}
+.xs-title__heading {
+  margin: 0;
+  color: #fff;
+  font-family: var(--xs-sans);
+  font-size: 50px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* --- xs_story -------------------------------------------------------------- */
+
+.xs-story {
+  padding: calc(75px * var(--xs-space, 1)) 15px calc(120px * var(--xs-space, 1));
+}
+.xs-story__part {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 30px;
+  align-items: start;
+  max-width: var(--xs-container);
+  margin-inline: auto;
+}
+.xs-story__part + .xs-story__part {
+  margin-top: 148px;
+}
+.xs-story__text {
+  padding-block: 7px 0;
+  padding-inline: 0 85px;
+}
+.xs-story__part[data-flip] .xs-story__text {
+  order: 2;
+  padding-block: 7px 0;
+  padding-inline: 85px 0;
+}
+.xs-story__part[data-flip] {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+.xs-story__title {
+  margin: 0;
+  padding-bottom: 16px;
+  color: var(--xs-ink);
+  font-family: var(--xs-sans);
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.xs-story__body {
+  margin: 0;
+  padding-bottom: 26px;
+  color: #888;
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.7857;
+}
+.xs-story__quote {
+  margin: 22px 0 0;
+  padding-block: 0 9px;
+  padding-inline: 29px 40px;
+  border-inline-start: 3px solid var(--xs-line);
+}
+.xs-story__quote p {
+  margin: 0;
+  padding-bottom: 11px;
+  color: #888;
+  font-size: 15px;
+  font-style: italic;
+  line-height: 1.666667;
+}
+.xs-story__quote cite {
+  color: var(--xs-ink-soft);
+  font-size: 13px;
+  font-style: normal;
+}
+/* The picture stands on a grey outline that is set off to one side of it. */
+.xs-story__frame {
+  position: relative;
+  z-index: 1;
+}
+.xs-story__frame::before {
+  content: "";
+  position: absolute;
+  bottom: -21px;
+  inset-inline-start: -21px;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  border: 3px solid #ccc;
+}
+.xs-story__part[data-flip] .xs-story__frame::before {
+  inset-inline-end: -21px;
+  inset-inline-start: auto;
+}
+.xs-story__zoom {
+  overflow: hidden;
+}
+.xs-story__zoom img {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: transform 0.9s;
+}
+.xs-story__zoom:hover img {
+  transform: scale(1.1);
+}
+@media (max-width: 767px) {
+  .xs-story__part,
+  .xs-story__part[data-flip] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+  .xs-story__text,
+  .xs-story__part[data-flip] .xs-story__text {
+    order: 0;
+    padding-block: 7px 0;
+    padding-inline: 0;
+  }
+  .xs-story__frame {
+    width: 85%;
+    margin-inline: auto;
+  }
+  .xs-story__part + .xs-story__part {
+    margin-top: 90px;
+  }
+}
+
+/* --- xs_contact ------------------------------------------------------------ */
+
+.xs-contact {
+  padding: calc(104px * var(--xs-space, 1)) 15px calc(116px * var(--xs-space, 1));
+}
+.xs-contact__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: var(--xs-container);
+  margin-inline: auto;
+}
+.xs-contact__box {
+  padding: 55px 70px 70px;
+  border: 1px solid var(--xs-line);
+}
+.xs-contact__box + .xs-contact__box {
+  border-inline-start: 0;
+}
+.xs-contact__heading {
+  margin: 0;
+  padding-bottom: 30px;
+  color: var(--xs-ink);
+  font-family: var(--xs-sans);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: center;
+}
+.xs-contact__field {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  border: 1px solid var(--xs-line);
+  border-radius: 2px;
+  color: #999;
+}
+.xs-contact__field svg {
+  flex-shrink: 0;
+  margin-inline: 28px 16px;
+}
+.xs-contact__field input,
+.xs-contact__message {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--xs-ink);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6923;
+}
+.xs-contact__field input {
+  height: 50px;
+  padding-inline-end: 30px;
+}
+.xs-contact__message {
+  display: block;
+  min-height: 199px;
+  margin-bottom: 30px;
+  padding: 25px 28px;
+  border: 1px solid var(--xs-line);
+  border-radius: 2px;
+  resize: vertical;
+}
+.xs-contact__trap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.xs-contact__error {
+  margin: -14px 0 16px;
+  color: #c0392b;
+  font-size: 13px;
+}
+.xs-contact__done {
+  margin: 0;
+  color: #888;
+  font-size: 15px;
+  line-height: 1.666667;
+  text-align: center;
+}
+.xs-contact__submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 46px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 23px;
+  background: var(--xs-dark);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.4s;
+}
+.xs-contact__submit:hover:not(:disabled) {
+  background: var(--xs-button);
+}
+.xs-contact__submit:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.xs-contact__info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 42px;
+  padding: 30px 93px;
+}
+.xs-contact__row {
+  display: flex;
+  gap: 0;
+  color: var(--xs-dark);
+}
+.xs-contact__row svg {
+  flex-shrink: 0;
+  width: 60px;
+  height: 20px;
+}
+.xs-contact__label {
+  display: block;
+  color: var(--xs-ink);
+  font-size: 18px;
+  line-height: 1.222222;
+}
+.xs-contact__value {
+  max-width: 204px;
+  margin: 0;
+  padding-top: 18px;
+  /* A phone number or an address keeps its own reading order on an Arabic store. */
+  unicode-bidi: plaintext;
+  color: #888;
+  font-size: 15px;
+  line-height: 1.666667;
+}
+.xs-contact__value[data-accent] {
+  color: var(--xs-button);
+}
+@media (max-width: 991px) {
+  .xs-contact__box {
+    padding-inline: 15px;
+  }
+  .xs-contact__info {
+    padding: 30px 15px;
+  }
+}
+@media (max-width: 767px) {
+  .xs-contact__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .xs-contact__box + .xs-contact__box {
+    border-inline-start: 1px solid var(--xs-line);
+    border-top: 0;
+  }
+}
+
+/* --- xs_team --------------------------------------------------------------- */
+
+.xs-team {
+  padding: calc(100px * var(--xs-space, 1)) 15px;
+}
+.xs-team__intro {
+  max-width: 660px;
+  margin: 0 auto 50px;
+  text-align: center;
+}
+.xs-team__intro p {
+  margin: 0;
+}
+.xs-team__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 40px 30px;
+  max-width: var(--xs-container);
+  margin-inline: auto;
+}
+.xs-team__person img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  margin-bottom: 24px;
+  border-radius: min(var(--xs-btn-radius, 0px), 20px);
+  object-fit: cover;
+}
+.xs-team__person h3 {
+  margin: 0 0 4px;
+  color: var(--xs-ink);
+  font-family: var(--xs-display, var(--xs-sans));
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.xs-team__role {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--xs-brand, var(--xs-accent));
+  font-size: 14px;
+}
+.xs-team__person p {
+  margin: 0;
+}
+@media (max-width: 991px) {
+  .xs-team__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 575px) {
+  .xs-team__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --- xs_video -------------------------------------------------------------- */
+
+.xs-video {
+  padding: calc(100px * var(--xs-space, 1)) 15px;
+}
+.xs-video__intro {
+  max-width: 660px;
+  margin: 0 auto 40px;
+  text-align: center;
+}
+.xs-video__intro p {
+  margin: 0;
+}
+.xs-video__frame {
+  max-width: var(--xs-container);
+  margin-inline: auto;
+}
+/* The player is the page builder's own; here it only takes the look's corners. */
+.xs-video__frame > div > div {
+  border: 0;
+  border-radius: min(var(--xs-btn-radius, 0px), 20px);
+}
+.xs-video__empty {
+  max-width: var(--xs-container);
+  margin: 0 auto;
+  padding: 60px 20px;
+  border: 1px dashed var(--xs-line);
+  text-align: center;
+}

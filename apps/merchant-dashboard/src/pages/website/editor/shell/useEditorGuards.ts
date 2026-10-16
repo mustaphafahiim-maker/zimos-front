@@ -24,6 +24,10 @@ function overlayOpen(): boolean {
  *  - Ctrl/⌘+S        save now (even from inside a field);
  *  - Ctrl/⌘+Z        undo, Ctrl/⌘+Shift+Z or Ctrl/⌘+Y redo — not inside a
  *                    text field, which has its own;
+ *  - Ctrl/⌘+C, +V    copy the selected section or element, and paste what
+ *                    was copied; Ctrl/⌘+D makes a copy right after it. Not in a
+ *                    text field, and C not while text is selected — those are
+ *                    the browser's own copy and paste;
  *  - Escape          one step up through the selection (`escape` answers
  *                    whether there was anything to let go of);
  *  - Delete / Backspace  on a selected section (`remove` answers whether it
@@ -43,6 +47,9 @@ export function useEditorShortcuts(actions: {
   redo: () => void;
   escape: () => boolean;
   remove: () => boolean;
+  copy?: () => boolean;
+  paste?: () => boolean;
+  duplicate?: () => boolean;
 }) {
   // The listener is attached once and reaches the newest actions through this.
   const latest = useRef(actions);
@@ -71,6 +78,15 @@ export function useEditorShortcuts(actions: {
         } else if ((pressed("z", "KeyZ") && event.shiftKey) || pressed("y", "KeyY")) {
           event.preventDefault();
           act.redo();
+        } else if (!event.shiftKey && !overlayOpen()) {
+          if (pressed("c", "KeyC")) {
+            // With text selected, Ctrl/⌘+C is the browser's own copy.
+            if (!window.getSelection()?.toString() && act.copy?.()) event.preventDefault();
+          } else if (pressed("v", "KeyV")) {
+            if (act.paste?.()) event.preventDefault();
+          } else if (pressed("d", "KeyD")) {
+            if (act.duplicate?.()) event.preventDefault();
+          }
         }
         return;
       }

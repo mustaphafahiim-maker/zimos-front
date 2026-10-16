@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
-import { IconArrowDown, IconArrowUp, IconCaretDown, IconDelete, IconPlus } from "@/components/icons";
+import { IconArrowDown, IconArrowUp, IconCaretDown, IconCopy, IconDelete, IconDragHandle, IconPlus } from "@/components/icons";
 import { Button, Input, Label, cn } from "@store-builder/ui";
 import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
@@ -16,7 +16,8 @@ import { inspectorNumber, inspectorUi } from "./inspector/strings";
  * category tiles, a need picker's needs, a shelf of videos. Each entry is a
  * card that folds under its own title (and its picture, when it has one);
  * one is open at a time. An open card starts with its own actions — move up,
- * move down, remove — and then the fields its spec names.
+ * move down, copy, remove — and then the fields its spec names. A card is
+ * also dragged by the grip at its start to another place in the list.
  *
  * A sub-field with an English twin (`title` + `titleEn`) is drawn once, as a
  * two-language field (inspector/fields.tsx); both keys are stored exactly as
@@ -82,6 +83,7 @@ export function ItemListField({
   fields,
   max,
   onChange,
+  arrange = false,
 }: {
   label: string;
   hint?: string;
@@ -93,6 +95,11 @@ export function ItemListField({
   fields: ItemSubField[];
   max: number;
   onChange: (next: Item[]) => void;
+  /**
+   * Each card also has a grip to drag it to another place, and a copy button:
+   * an imported template's band (ElementFields). Off, the list is as it was.
+   */
+  arrange?: boolean;
 }) {
   const locale = useEditorLocale();
   const ar = locale === "ar";
@@ -119,6 +126,27 @@ export function ItemListField({
       })
     );
   const patch = (i: number, key: string, v: unknown) => patchMany(i, { [key]: v });
+  // Dragging a card by its grip: where it was picked up, and the card it is over.
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
+  const dropAt = (to: number) => {
+    const from = dragFrom;
+    setDragFrom(null);
+    setDragOver(null);
+    if (from === null || from === to) return;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange(next);
+    // The open card stays the open card, wherever it went.
+    if (open !== null) setOpen(open === from ? to : open > from && open <= to ? open - 1 : open < from && open >= to ? open + 1 : open);
+  };
+  const copyOf = (i: number) => {
+    if (items.length >= max) return;
+    onChange([...items.slice(0, i + 1), JSON.parse(JSON.stringify(items[i])) as Record<string, unknown>, ...items.slice(i + 1)]);
+    setOpen(i + 1);
+  };
+
   const move = (i: number, delta: -1 | 1) => {
     const j = i + delta;
     if (j < 0 || j >= items.length) return;
@@ -258,13 +286,58 @@ export function ItemListField({
             const picture = pictureKey ? str(item[pictureKey]) : "";
             const bodyId = `${uid}-${i}`;
             return (
-              <li key={i} data-slot="inspector-item" data-open={isOpen ? "" : undefined} className="overflow-hidden rounded-[1rem] bg-paper-raised ring-1 ring-line">
+              <li
+                key={i}
+                data-slot="inspector-item"
+                data-open={isOpen ? "" : undefined}
+                className={cn(
+                  "overflow-hidden rounded-[1rem] bg-paper-raised ring-1 ring-line",
+                  arrange && "relative",
+                  dragFrom === i && "opacity-50",
+                  dragOver === i && dragFrom !== null && dragFrom !== i && "ring-2 ring-primary"
+                )}
+                onDragOver={(e) => {
+                  if (dragFrom === null) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (dragOver !== i) setDragOver(i);
+                }}
+                onDrop={(e) => {
+                  if (dragFrom === null) return;
+                  e.preventDefault();
+                  dropAt(i);
+                }}
+              >
+                {arrange && items.length > 1 && (
+                  <span
+                    draggable
+                    role="img"
+                    aria-label={t.itemDrag(title)}
+                    title={t.itemDrag(title)}
+                    className="absolute start-1 top-3 z-10 grid h-6 w-5 cursor-grab place-items-center text-ink-soft hover:text-ink active:cursor-grabbing"
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", String(i));
+                      setDragFrom(i);
+                    }}
+                    onDragEnd={() => {
+                      setDragFrom(null);
+                      setDragOver(null);
+                    }}
+                  >
+                    <IconDragHandle className="size-4" aria-hidden />
+                  </span>
+                )}
                 <button
                   type="button"
                   aria-expanded={isOpen}
                   aria-controls={bodyId}
                   onClick={() => setOpen(isOpen ? null : i)}
-                  className="flex min-h-12 w-full cursor-pointer items-center gap-2.5 px-3 py-1.5 text-start focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+                  className={cn(
+                    "flex min-h-12 w-full cursor-pointer items-center gap-2.5 px-3 py-1.5 text-start focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary",
+                    // Room for the grip.
+                    arrange && items.length > 1 && "ps-7"
+                  )}
                 >
                   {picture && (
                     <img
@@ -307,6 +380,12 @@ export function ItemListField({
                         <IconArrowDown className="size-4" aria-hidden />
                         {t.itemDown}
                       </Button>
+                      {arrange && (
+                        <Button type="button" size="sm" variant="outline" aria-label={t.itemCopyOf(title)} disabled={items.length >= max} onClick={() => copyOf(i)}>
+                          <IconCopy className="size-4" aria-hidden />
+                          {t.itemCopy}
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         size="sm"

@@ -73,6 +73,8 @@ import { emptyOrderFormFor, useStoreCountry } from "@/lib/storeCountry";
 import { LineCustomizations } from "@/components/LineCustomizations";
 import { LineOptions } from "@/components/LineOptions";
 import { PolicyLinks } from "@/components/PolicyLinks";
+import { XsPageStrip } from "@/components/xs/XsPageStrip";
+import { storePageAttrs, stripHoldsTitle } from "@/lib/xsStorePages";
 
 const FORM_PREFIX = "checkout";
 
@@ -86,6 +88,8 @@ export default function CheckoutPage() {
   const basePath = useStoreBasePath();
   const { cart, clearCart } = useCart();
   const { t, money, store, locale } = useStore();
+  // On a store that wears a template, its shop's title strip (lib/xsStorePages).
+  const xsPages = store?.xsPages ?? null;
   const [client] = useState(() => createStorefrontApiClient());
   const { fields, reveal } = useOrderFormFields(useFreshCheckoutSettings(client, workspaceId));
   const { byVariant } = useCatalog(workspaceId);
@@ -395,15 +399,26 @@ export default function CheckoutPage() {
   const etaMinutes = pickingUp ? null : (zoneChosen?.etaMinutes ?? store?.delivery?.etaMinutes ?? null);
 
   return (
-    <main className={`${container} flex-1 py-8 sm:py-10`}>
-      <StoreLink
-        href="/cart"
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-medium text-ink-soft hover:text-primary"
-      >
-        <ArrowIcon size={16} className="rotate-180 rtl:rotate-0" />
-        {t.checkout.backToCart}
-      </StoreLink>
-      <h1 className="mt-2 font-display text-2xl font-bold text-ink sm:text-3xl">{t.checkout.title}</h1>
+    <main className="flex-1" {...storePageAttrs("checkout", xsPages)}>
+      {xsPages && (
+        <XsPageStrip
+          pages={xsPages}
+          title={stripHoldsTitle(xsPages) ? (xsPages.titles.checkout ?? t.checkout.title) : undefined}
+          label={t.catalog.breadcrumbs}
+          crumbs={[{ label: t.common.home, href: "/" }, { label: xsPages.titles.cart ?? t.cart.title, href: "/cart" }, { label: xsPages.titles.checkout ?? t.checkout.title }]}
+        />
+      )}
+      <div className={`${container} py-8 sm:py-10`}>
+      {!xsPages && (
+        <StoreLink
+          href="/cart"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-medium text-ink-soft hover:text-primary"
+        >
+          <ArrowIcon size={16} className="rotate-180 rtl:rotate-0" />
+          {t.checkout.backToCart}
+        </StoreLink>
+      )}
+      {!stripHoldsTitle(xsPages) && <h1 className="zt-page-title mt-2 font-display text-2xl font-bold text-ink sm:text-3xl">{t.checkout.title}</h1>}
 
       <div className="mt-6 max-w-xl">
         <CheckoutProgress done={progressDone} current={progressCurrent} />
@@ -468,7 +483,7 @@ export default function CheckoutPage() {
           </section>
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+        <aside className="zt-checkout-summary space-y-4 lg:sticky lg:top-24 lg:self-start">
           <section className={`${card} p-5`} aria-labelledby="summary-title">
             <h2 id="summary-title" className="text-base font-semibold text-ink">
               {t.checkout.summary}
@@ -636,6 +651,7 @@ export default function CheckoutPage() {
           productIds={[...new Set(items.map((line) => byVariant.get(line.variantId)?.id).filter((id): id is string => Boolean(id)))]}
         />
       )}
+      </div>
     </main>
   );
 }

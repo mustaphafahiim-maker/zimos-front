@@ -17,7 +17,7 @@ function copyId(id: string): string {
   return `${base}-c${rand}`;
 }
 
-function cloneElement(element: PageElement): PageElement {
+export function cloneElement(element: PageElement): PageElement {
   const copy = JSON.parse(JSON.stringify(element)) as PageElement;
   return { ...copy, id: copyId(element.id) };
 }
@@ -89,8 +89,136 @@ export function inlineTextIds(sections: PageSection[]): string[] {
   return ids;
 }
 
+// --- a band with many words (an imported template's "xs" bands) -----------------
+//
+// Such a band is one element whose props hold every word and picture in it
+// (a slider's slides, a row of banners). Its markup names no fields, so an
+// edit made on the page comes back as "the word-run that read X, the nth of
+// the equal ones" and is matched against the props here, in the same order
+// the page draws them: the props' own.
+
+/** Prop keys that are never words on the page: addresses, choices, ids. */
+const NOT_WORDS = new Set([
+  "look", "image", "images", "href", "linkHref", "buttonHref", "button2Href", "url", "collection", "variant", "layout", "icon",
+  "align", "headingWeight", "imageRatio", "imageFit", "endsAt", "bindings", "id",
+]);
+const looksLikeAddress = (value: string) => /^(\/|#|https?:|mailto:|tel:)/i.test(value);
+const tidy = (text: string) => text.replace(/\s+/g, " ").trim();
+const isWords = (value: string, key: string) => !NOT_WORDS.has(key) && !/(Color|Href)$/.test(key) && value.trim() !== "" && !looksLikeAddress(value.trim());
+
+/** Every string under `value`, in order; `visit` returns a replacement or null to leave it. The same value back when nothing changed. */
+function mapStrings(value: unknown, key: string, visit: (text: string, key: string) => string | null): unknown {
+  if (typeof value === "string") {
+    const next = visit(value, key);
+    return next === null ? value : next;
+  }
+  if (Array.isArray(value)) {
+    let changed = false;
+    const out = value.map((item) => {
+      const next = mapStrings(item, key, visit);
+      if (next !== item) changed = true;
+      return next;
+    });
+    return changed ? out : value;
+  }
+  if (value && typeof value === "object") {
+    let changed = false;
+    const out: Record<string, unknown> = {};
+    for (const [k, item] of Object.entries(value as Record<string, unknown>)) {
+      const next = mapStrings(item, k, visit);
+      if (next !== item) changed = true;
+      out[k] = next;
+    }
+    return changed ? out : value;
+  }
+  return value;
+}
+
+const isDeep = (element: PageElement) => element.type.startsWith("xs_");
+
+/** Element id → the word-runs in it that a double-click edits on the page (a paragraph each, for a text of several). */
+export function deepTextOf(sections: PageSection[]): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const section of sections) {
+    for (const row of section.rows ?? []) {
+      for (const column of row.columns ?? []) {
+        for (const element of column.elements ?? []) {
+          if (!isDeep(element)) continue;
+          const words = new Set<string>();
+          mapStrings(element.props ?? {}, "", (text, key) => {
+            if (isWords(text, key)) for (const part of text.split(/\n+/)) if (tidy(part)) words.add(tidy(part));
+            return null;
+          });
+          if (words.size > 0) out[element.id] = Array.from(words).slice(0, 600);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function mapElement(sections: PageSection[], elementId: string, change: (element: PageElement) => PageElement): PageSection[] {
+  let changed = false;
+  const next = sections.map((section) => {
+    let touched = false;
+    const rows = (section.rows ?? []).map((row) => ({
+      ...row,
+      columns: (row.columns ?? []).map((column) => ({
+        ...column,
+        elements: (column.elements ?? []).map((element) => {
+          if (element.id !== elementId) return element;
+          const out = change(element);
+          if (out !== element) touched = true;
+          return out;
+        }),
+      })),
+    }));
+    if (!touched) return section;
+    changed = true;
+    return { ...section, rows };
+  });
+  return changed ? next : sections;
+}
+
+/** One word-run of a many-worded band set from the page: the `nth` of those that read `was`. */
+export function replaceDeepWords(sections: PageSection[], elementId: string, was: string, nth: number, text: string): PageSection[] {
+  return mapElement(sections, elementId, (element) => {
+    let seen = 0;
+    let done = false;
+    const props = mapStrings(element.props ?? {}, "", (value, key) => {
+      if (done || !isWords(value, key)) return null;
+      // Paragraphs are separate runs on the page; the breaks between them are kept as they were.
+      const parts = value.split(/(\n+)/);
+      for (let i = 0; i < parts.length; i += 2) {
+        if (tidy(parts[i]) !== was) continue;
+        if (seen++ !== nth) continue;
+        parts[i] = text;
+        done = true;
+        return parts.join("");
+      }
+      return null;
+    });
+    return done ? { ...element, props: props as PageElement["props"] } : element;
+  });
+}
+
+/** One picture of a many-pictured band replaced from the page: the `nth` of those whose address is `was`. */
+export function replaceDeepAddress(sections: PageSection[], elementId: string, was: string, nth: number, url: string): PageSection[] {
+  return mapElement(sections, elementId, (element) => {
+    let seen = 0;
+    let done = false;
+    const props = mapStrings(element.props ?? {}, "", (value) => {
+      if (done || value !== was || seen++ !== nth) return null;
+      done = true;
+      return url;
+    });
+    return done ? { ...element, props: props as PageElement["props"] } : element;
+  });
+}
+
 /** The element's text set from the canvas; the same array when nothing changes. */
-export function setElementText(sections: PageSection[], elementId: string, text: string): PageSection[] {
+export function setElementText(sections: PageSection[], elementId: string, text: string, match?: { was: string; nth: number }): PageSection[] {
+  if (match) return replaceDeepWords(sections, elementId, match.was, match.nth, text);
   let changed = false;
   const next = sections.map((section) => {
     let touched = false;

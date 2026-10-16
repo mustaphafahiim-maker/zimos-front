@@ -2,6 +2,7 @@
 import Image from "next/image";
 import type { ImgHTMLAttributes } from "react";
 import { isOptimizableImage } from "@/lib/imageOrigins";
+import { xsPicturePath, xsSrcSet } from "@/lib/xsPicture";
 
 type StoreImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "width" | "height" | "srcSet" | "sizes"> & {
   src: string;
@@ -20,13 +21,25 @@ type StoreImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "width"
  * serve the ones on an origin listed in NEXT_PUBLIC_STORE_IMAGE_ORIGINS (the
  * media bucket's public address, set at build time — lib/imageOrigins.ts). For
  * those, next/image sends a resized WebP picked by `sizes` instead of the
- * full upload. Everything else — and every image while the variable is unset —
- * is the same plain <img> the storefront always drew, with the same width,
- * height, loading and priority attributes.
+ * full upload. A picture of an imported template's demo catalogue (public/xs)
+ * comes as its own AVIF and WebP copies, picked by `sizes` the same way
+ * (lib/xsPicture). Everything else — and every image while the variable is
+ * unset — is the same plain <img> the storefront always drew, with the same
+ * width, height, loading and priority attributes.
  */
 export function StoreImage({ src, alt, width, height, sizes, ...rest }: StoreImageProps) {
   if (isOptimizableImage(src)) {
     return <Image src={src} alt={alt} width={width} height={height} sizes={sizes} {...rest} />;
   }
-  return <img src={src} alt={alt} width={width} height={height} {...rest} />;
+  const img = <img src={src} alt={alt} width={width} height={height} {...rest} />;
+  const path = xsPicturePath(src);
+  if (!path) return img;
+  // No box of its own (.xs-pic, app/xs-sections.css): the <img> is laid out as before.
+  return (
+    <picture className="xs-pic">
+      <source type="image/avif" srcSet={xsSrcSet(path, "avif")} sizes={sizes} />
+      <source type="image/webp" srcSet={xsSrcSet(path, "webp")} sizes={sizes} />
+      {img}
+    </picture>
+  );
 }

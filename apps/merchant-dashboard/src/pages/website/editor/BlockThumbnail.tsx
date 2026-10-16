@@ -1,3 +1,4 @@
+import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import { memo, useMemo, type CSSProperties, type ReactNode } from "react";
 import type { PageElementType, PageSection } from "@store-builder/api-client";
 import { cn } from "@store-builder/ui";
@@ -1043,8 +1044,54 @@ export const BlockThumbnail = memo(function BlockThumbnail({
   );
 });
 
+/** The first of a band's own pictures (`/xs/NN/…`), leaving out its small icons. */
+function xsPicture(value: unknown): string | null {
+  if (typeof value === "string") return /^\/xs\/\d\d\/(?!ico-|truck|bag|support|return)[\w.-]+\.(jpe?g|png|webp)$/i.test(value) ? value : null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = xsPicture(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (value && typeof value === "object") {
+    for (const item of Object.values(value)) {
+      const found = xsPicture(item);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/**
+ * A band of an imported template ("xs"): its own first picture, as the
+ * storefront serves it, with the template's number in the corner — or, for a
+ * band that shows the store's own products or a form, the number alone on a
+ * quiet ground. The sketches below know nothing of these bands' insides.
+ */
+function XsThumb({ preset, className }: { preset: BlockPreset; className?: string }) {
+  const look = /^xs-(\d\d)-/.exec(preset.key)?.[1] ?? "";
+  const picture = xsPicture(preset.content);
+  return (
+    <span aria-hidden className="block w-full">
+      <span
+        data-slot="block-thumb"
+        className={cn("relative block aspect-[16/10] w-full overflow-hidden rounded-[0.75rem] bg-paper-sunken ring-1 ring-line ring-inset", className)}
+      >
+        {picture ? (
+          <img src={`${STOREFRONT_URL}${picture}`} alt="" loading="lazy" decoding="async" className="absolute inset-0 size-full object-cover" />
+        ) : (
+          <span className="absolute inset-0 grid place-items-center bg-gradient-to-br from-paper-raised to-paper-sunken text-[2.5em] font-semibold text-ink-soft/40">{look}</span>
+        )}
+        <span className="absolute start-1.5 top-1.5 rounded-full bg-ink/75 px-1.5 py-0.5 text-[10px] leading-none font-semibold text-paper">XS {look}</span>
+      </span>
+    </span>
+  );
+}
+
 /** The thumbnail of a library preset, read straight off it. */
 export function PresetThumbnail({ preset, className }: { preset: BlockPreset; className?: string }) {
+  if (preset.key.startsWith("xs-")) return <XsThumb preset={preset} className={className} />;
   return <Thumb elements={preset.elements} rows={preset.rows} settings={preset.settings} content={preset.content} className={className} />;
 }
 

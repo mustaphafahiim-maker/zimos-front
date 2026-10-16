@@ -18,8 +18,9 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useCodeLabel } from "./codes";
 import { DevicePreview } from "./DevicePreview";
 import { TemplatePlaceholder } from "./TemplatePlaceholder";
-import { storeHasOwnLook, takeTemplateLook, templateColour, templateStoreTheme, useTemplatePreviewTheme, withTemplateTheme } from "./templateLook";
+import { dropXsShell, storeHasOwnLook, takeTemplateLook, takeXsShell, templateColour, templateStoreTheme, templateXsLook, useTemplatePreviewTheme, withTemplateTheme } from "./templateLook";
 import { useMountedOpen } from "./useMountedOpen";
+import { addXsCatalog, xsCatalogOf } from "./xsCatalog";
 
 const STRINGS = {
   en: {
@@ -58,6 +59,12 @@ const STRINGS = {
     create: "Start with this template",
     creating: "Setting up your site…",
     created: "“{name}” is ready. Make it yours.",
+    withProducts: "Add the template's products",
+    withProductsHint: "{n} products in {k} groups, with their pictures and prices — the store opens exactly like the template. Edit or delete them any time.",
+    bringsProducts: "We add the template's {n} products to your catalogue. Products you already have stay as they are.",
+    addingProducts: "Adding the template's products… {done} of {total}",
+    productsAdded: "{n} of the template's products were added to your store.",
+    productsFailed: "Some of the template's products could not be added ({n}). You can add them yourself in Products.",
   },
   ar: {
     use: "استخدام هذا القالب",
@@ -95,6 +102,12 @@ const STRINGS = {
     create: "البدء بهذا القالب",
     creating: "جارٍ تجهيز موقعك…",
     created: "موقع «{name}» جاهز. اجعله بهويتك.",
+    withProducts: "أضف منتجات القالب",
+    withProductsHint: "{n} منتج في {k} أقسام، بصورها وأسعارها، عشان المتجر يفتح زي القالب بالظبط. تقدر تعدّلها أو تمسحها في أي وقت.",
+    bringsProducts: "هنضيف منتجات القالب ({n} منتج) لكتالوجك. منتجاتك الموجودة هتفضل زي ما هي.",
+    addingProducts: "بنضيف منتجات القالب… {done} من {total}",
+    productsAdded: "اتضاف {n} منتج من منتجات القالب لمتجرك.",
+    productsFailed: "في منتجات من القالب ما اتضافتش ({n}). تقدر تضيفها بنفسك من المنتجات.",
   },
 } satisfies Messages;
 
@@ -168,6 +181,9 @@ export function TemplateSheet({
   const [step, setStep] = useState<"preview" | "confirm">("preview");
   const [name, setName] = useState(storeName);
   const [saving, setSaving] = useState(false);
+  // An imported template's own products come along unless the merchant says not (xsCatalog.ts).
+  const [withProducts, setWithProducts] = useState(true);
+  const [progress, setProgress] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -199,13 +215,21 @@ export function TemplateSheet({
    * Best effort: the site exists either way, so a failure here is not surfaced.
    */
   async function applyTemplateColour() {
-    if (!colour || ownLook) return;
+    // An imported template is its header and footer too, so it is taken whole whatever the store wore.
+    const xs = templateXsLook(styles);
+    // Nothing to carry across, and no imported shell to take off: no need to ask the server.
+    if (!xs && (!colour || ownLook) && !dropXsShell(currentWorkspace?.themeSettings ?? {})) return;
     try {
       // Asked again of the server's copy: another tab may have picked a look since.
-      await saveThemeSettings((current) =>
+      await saveThemeSettings((current) => {
+        if (xs) return { themeSettings: takeXsShell(current, styles, colour) };
+        // One of our own templates: an imported template's shell does not stay on over it.
+        const bare = dropXsShell(current);
+        const base = bare ?? current;
         // A template may bring its whole look — theme, header, footer (globalStyles.themeSettings).
-        storeHasOwnLook(current) ? null : { themeSettings: takeTemplateLook(current, styles, colour) }
-      );
+        if (colour && !storeHasOwnLook(base)) return { themeSettings: takeTemplateLook(base, styles, colour) };
+        return bare ? { themeSettings: bare } : null;
+      });
     } catch {
       /* the site was created; the merchant can still pick a colour in the editor */
     }
@@ -224,6 +248,23 @@ export function TemplateSheet({
     try {
       const result = await apiClient.createWebsite(workspaceId, payload);
       await applyTemplateColour();
+      if (catalog && withProducts) {
+        try {
+          // An Arabic template brings the catalogue's Arabic names and descriptions.
+          const added = await addXsCatalog(
+            workspaceId,
+            catalog,
+            (done, total) => setProgress(fmt(t.addingProducts, { done: String(done), total: String(total) })),
+            template.rtl ? "ar" : "en"
+          );
+          if (added.added > 0) toast.success(fmt(t.productsAdded, { n: String(added.added) }));
+          if (added.failed > 0) toast.error(fmt(t.productsFailed, { n: String(added.failed) }));
+        } catch {
+          toast.error(fmt(t.productsFailed, { n: String(catalog.products.length) }));
+        } finally {
+          setProgress(null);
+        }
+      }
       // The website page's remembered list no longer holds every site.
       invalidateCached(`website:sites:${workspaceId}`);
       toast.success(fmt(t.created, { name: result.website.name }));
@@ -241,12 +282,17 @@ export function TemplateSheet({
   const kind = template.category ? codeLabel("category", template.category) : "";
   const goodFor = codeLabel("goodFor", template.category);
 
+  // The template's own catalogue, when it is an imported template that has one.
+  const catalog = xsCatalogOf(templateXsLook(styles));
+
   const outcomes: Outcome[] = [
     { id: "makes", icon: IconFileAdd, tone: "brand", text: currentSite ? t.makesNew : t.makesFirst },
     ...(currentSite
       ? [{ id: "site", icon: IconCheck, tone: "kept" as const, text: fmt(t.keepsSite, { name: currentSite.name }) }]
       : []),
-    { id: "data", icon: IconCheck, tone: "kept", text: t.keepsData },
+    ...(catalog && withProducts
+      ? [{ id: "products", icon: IconFileAdd, tone: "brand" as const, text: fmt(t.bringsProducts, { n: String(catalog.products.length) }) }]
+      : [{ id: "data", icon: IconCheck, tone: "kept" as const, text: t.keepsData }]),
     ...(colour && !ownLook
       ? currentSite?.status === "published"
         ? [{ id: "look", icon: IconWarning, tone: "heed" as const, text: bringsTheme ? t.takesThemeLive : t.takesLookLive }]
@@ -368,6 +414,24 @@ export function TemplateSheet({
               })}
             </ul>
           </div>
+          {catalog && (
+            <label className="flex cursor-pointer items-start gap-3 rounded-[0.875rem] bg-paper-raised p-3 ring-1 ring-line">
+              <input
+                type="checkbox"
+                className="mt-1 size-4 shrink-0 accent-[var(--color-primary)]"
+                checked={withProducts}
+                disabled={saving}
+                onChange={(e) => setWithProducts(e.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-ink">{t.withProducts}</span>
+                <span className="block text-xs leading-5 text-ink-soft">
+                  {fmt(t.withProductsHint, { n: String(catalog.products.length), k: String(catalog.collections.length) })}
+                </span>
+              </span>
+            </label>
+          )}
+          {progress && <p className="text-sm text-ink-soft" role="status">{progress}</p>}
           <TextField
             label={t.siteName}
             required

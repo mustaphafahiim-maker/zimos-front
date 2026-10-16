@@ -1,0 +1,140 @@
+{
+  "xsLook": "05",
+  "header": {
+    "announcement": {
+      "enabled": true,
+      "text": "Free shipping, 30-day return or refund guarantee."
+    },
+    "menu": [
+      {
+        "label": "Home",
+        "href": "/",
+        "kind": "home"
+      },
+      {
+        "label": "Shop",
+        "href": "/products",
+        "kind": "url"
+      },
+      {
+        "label": "About Us",
+        "href": "/about",
+        "kind": "page"
+      },
+      {
+        "label": "Contacts",
+        "href": "/contact",
+        "kind": "page"
+      }
+    ],
+    "show": {
+      "theme": false,
+      "trackOrder": false,
+      "language": false
+    },
+    "zones": {
+      "notice": [
+        {
+          "id": "notice",
+          "type": "notice"
+        }
+      ],
+      "links": [
+        {
+          "id": "strip-0",
+          "type": "link",
+          "label": "Sign in",
+          "href": "/account"
+        },
+        {
+          "id": "strip-1",
+          "type": "link",
+          "label": "FAQs",
+          "href": "/contact"
+        },
+        {
+          "id": "strip-2",
+          "type": "text",
+          "label": "EGP"
+        }
+      ],
+      "brand": [
+        {
+          "id": "logo",
+          "type": "logo"
+        }
+      ],
+      "menu": [
+        {
+          "id": "menu",
+          "type": "menu"
+        }
+      ],
+      "icons": [
+        {
+          "id": "search",
+          "type": "search"
+        },
+        {
+          "id": "account",
+          "type": "account"
+        },
+        {
+          "id": "wishlist",
+          "type": "wishlist"
+        },
+        {
+          "id": "cart",
+          "type": "cart"
+        },
+        {
+          "id": "phone",
+          "type": "phone"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "groups": [
+      {
+        "title": "Shopping",
+        "links": [
+          {
+            "label": "Clothing Store",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Cart",
+            "href": "/cart",
+            "kind": "cart"
+          }
+        ]
+      },
+      {
+        "title": "Help",
+        "links": [
+          {
+            "label": "About Us",
+            "href": "/about",
+            "kind": "page"
+          },
+          {
+            "label": "Contact Us",
+            "href": "/contact",
+            "kind": "page"
+          },
+          {
+            "label": "Track Order",
+            "href": "/track",
+            "kind": "track"
+          }
+        ]
+      }
+    ],
+    "text": "The customer is at the heart of our unique business model, which includes design.",
+    "show": {
+      "help": false
+    }
+  }
+}

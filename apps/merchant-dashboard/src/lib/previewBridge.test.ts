@@ -87,6 +87,12 @@ describe("readFrameMessage — payloads", () => {
     });
   });
 
+  it("reads which part of a template header was clicked, and only a plain id", () => {
+    expect(read({ type: "zimos:select-shell", part: "header", xsPart: "strip-2" })).toEqual({ type: "zimos:select-shell", part: "header", xsPart: "strip-2" });
+    expect(read({ type: "zimos:select-shell", part: "header", xsPart: "<img onerror>" })).toEqual({ type: "zimos:select-shell", part: "header" });
+    expect(read({ type: "zimos:select-shell", part: "footer" })).toEqual({ type: "zimos:select-shell", part: "footer" });
+  });
+
   it("drops junk entries from a section-rects message rather than the whole message", () => {
     expect(
       read({

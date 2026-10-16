@@ -1,0 +1,155 @@
+{
+  "xsLook": "01",
+  "header": {
+    "announcement": {
+      "enabled": true,
+      "text": "Free shipping on standard orders over EGP 1,500"
+    },
+    "menu": [
+      {
+        "label": "Home",
+        "href": "/",
+        "kind": "home"
+      },
+      {
+        "label": "Shop",
+        "href": "/products",
+        "kind": "url"
+      },
+      {
+        "label": "About",
+        "href": "/about",
+        "kind": "page"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact",
+        "kind": "page"
+      }
+    ],
+    "show": {
+      "theme": false,
+      "trackOrder": false,
+      "language": false
+    },
+    "zones": {
+      "notice": [
+        {
+          "id": "notice",
+          "type": "notice"
+        }
+      ],
+      "links": [
+        {
+          "id": "strip-0",
+          "type": "link",
+          "label": "Help & FAQs",
+          "href": "/contact"
+        },
+        {
+          "id": "strip-1",
+          "type": "link",
+          "label": "My Account",
+          "href": "/account"
+        },
+        {
+          "id": "strip-2",
+          "type": "text",
+          "label": "EN"
+        },
+        {
+          "id": "strip-3",
+          "type": "text",
+          "label": "EGP"
+        }
+      ],
+      "brand": [
+        {
+          "id": "logo",
+          "type": "logo"
+        }
+      ],
+      "menu": [
+        {
+          "id": "menu",
+          "type": "menu"
+        }
+      ],
+      "icons": [
+        {
+          "id": "search",
+          "type": "search"
+        },
+        {
+          "id": "account",
+          "type": "account"
+        },
+        {
+          "id": "wishlist",
+          "type": "wishlist"
+        },
+        {
+          "id": "cart",
+          "type": "cart"
+        },
+        {
+          "id": "phone",
+          "type": "phone"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "groups": [
+      {
+        "title": "Categories",
+        "links": [
+          {
+            "label": "Women",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Men",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Shoes",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Watches",
+            "href": "/products",
+            "kind": "url"
+          }
+        ]
+      },
+      {
+        "title": "Help",
+        "links": [
+          {
+            "label": "Track Order",
+            "href": "/track",
+            "kind": "track"
+          },
+          {
+            "label": "Contact",
+            "href": "/contact",
+            "kind": "page"
+          },
+          {
+            "label": "About",
+            "href": "/about",
+            "kind": "page"
+          }
+        ]
+      }
+    ],
+    "text": "Any questions? Visit us at our store in New Cairo, or call us any day from 10 am to 10 pm",
+    "show": {
+      "help": false
+    }
+  }
+}

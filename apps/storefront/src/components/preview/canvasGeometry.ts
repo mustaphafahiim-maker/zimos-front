@@ -242,3 +242,121 @@ export function sectionHidden(sectionId: string): boolean {
   const elements = Array.from(section.querySelectorAll(`[${EL_ATTR}]`));
   return elements.length > 0 && elements.every(isHiddenNow);
 }
+
+// --- the imported templates' pictures and logos ------------------------------------
+
+/** Where a template band saves a picture ("image", "items.2.image", "images.1"); its header's and footer's logo say "logo". */
+export const PIC_ATTR = "data-xs-pic";
+
+export type PictureHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+export const PICTURE_HANDLES: readonly PictureHandle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+
+/** A picture of an imported template's band, by where the band saves it. */
+export function pictureNode(elementId: string, path: string): HTMLElement | null {
+  return elementNode(elementId)?.querySelector<HTMLElement>(`[${PIC_ATTR}="${CSS.escape(path)}"]`) ?? null;
+}
+
+/** Every picture of the same list in the band ("items.*.image", "images.*") — or the one picture, when it is in none. */
+export function picturesLike(elementId: string, path: string): HTMLElement[] {
+  const marker = elementNode(elementId);
+  if (!marker) return [];
+  const parts = path.split(".");
+  if (parts.length === 1) {
+    const one = pictureNode(elementId, path);
+    return one ? [one] : [];
+  }
+  const same = parts.length === 3 ? new RegExp(`^${parts[0]}\\.\\d+\\.${parts[2]}$`) : new RegExp(`^${parts[0]}\\.\\d+$`);
+  return Array.from(marker.querySelectorAll<HTMLElement>(`[${PIC_ATTR}]`)).filter((el) => same.test(el.getAttribute(PIC_ATTR) ?? ""));
+}
+
+/** The box a picture's width is measured against: its nearest ancestor that has one (its <picture> has none). */
+export function pictureBox(el: HTMLElement): HTMLElement | null {
+  let box = el.parentElement;
+  while (box && getComputedStyle(box).display === "contents") box = box.parentElement;
+  return box;
+}
+
+const OWN_SIZE_ATTRS = ["data-xs-w", "data-xs-h", "data-xs-w-t", "data-xs-h-t", "data-xs-w-m", "data-xs-h-m"];
+
+/**
+ * The size the look gives a picture with no size of its own: its own taken
+ * off for a moment and put back, in one go, before anything is painted.
+ */
+export function naturalSize(el: HTMLElement): { width: number; height: number } {
+  const saved = OWN_SIZE_ATTRS.map((name) => [name, el.getAttribute(name)] as const);
+  const style = el.getAttribute("style");
+  for (const name of OWN_SIZE_ATTRS) el.removeAttribute(name);
+  for (const property of ["width", "height", "max-width", "object-fit"]) el.style.removeProperty(property);
+  const rect = el.getBoundingClientRect();
+  for (const [name, value] of saved) if (value !== null) el.setAttribute(name, value);
+  if (style === null) el.removeAttribute("style");
+  else el.setAttribute("style", style);
+  return { width: rect.width, height: rect.height };
+}
+
+/** A template header's or footer's logo (components/xs XsHeader, XsFooter). */
+export function logoNode(part: "header" | "footer"): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[data-zimos-shell="${part}"] [${PIC_ATTR}="logo"]`);
+}
+
+/** What a logo's size is set on: the header's logo box (the picture fills its height), the footer's picture itself. */
+export function logoBox(part: "header" | "footer"): HTMLElement | null {
+  const logo = logoNode(part);
+  return part === "header" ? (logo?.closest<HTMLElement>(".xs-header__logo") ?? logo) : logo;
+}
+
+/** A logo's height with the header's or footer's own sizes switched off for a moment (components/xs/shellSizes). */
+export function naturalLogoHeight(part: "header" | "footer"): number {
+  const box = logoBox(part);
+  if (!box) return 0;
+  const sheet = document.querySelector<HTMLStyleElement>(`[data-zimos-shell="${part}"] > style`)?.sheet ?? null;
+  const style = box.getAttribute("style");
+  box.style.removeProperty("height");
+  if (sheet) sheet.disabled = true;
+  const height = box.getBoundingClientRect().height;
+  if (sheet) sheet.disabled = false;
+  if (style === null) box.removeAttribute("style");
+  else box.setAttribute("style", style);
+  return height;
+}
+
+/** The screen the preview shows, as a per-screen setting names it (storefront lib/deviceValue.ts). */
+export function settingDevice(): "base" | "tablet" | "mobile" {
+  const device = viewDevice();
+  return device === "desktop" ? "base" : device;
+}
+
+// --- the parts of an imported template's header (lib/xsLayout) ---------------------------
+
+/** A box on the page in document coordinates, from an element — or, for one that takes no box (display: contents), what it holds. */
+function docRect(el: HTMLElement): Rect | null {
+  const own = el.getBoundingClientRect();
+  const rect = own.width === 0 && own.height === 0 ? elementRect(el) : { top: own.top, left: own.left, width: own.width, height: own.height };
+  if (!rect || (rect.width === 0 && rect.height === 0)) return null;
+  return { top: rect.top + window.scrollY, left: rect.left + window.scrollX, width: rect.width, height: rect.height };
+}
+
+/** A part of the header, by id. */
+export function shellPartNode(id: string): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[data-zimos-shell="header"] [data-xs-part="${CSS.escape(id)}"]`);
+}
+
+/** Every zone of the header that shows on this screen, with its parts in order — document coordinates. */
+export function shellZones(): Array<{ zone: string; top: number; left: number; width: number; height: number; parts: Array<{ id: string; top: number; left: number; width: number; height: number }> }> {
+  const header = document.querySelector<HTMLElement>('[data-zimos-shell="header"]');
+  if (!header) return [];
+  const out: ReturnType<typeof shellZones> = [];
+  for (const zoneEl of Array.from(header.querySelectorAll<HTMLElement>("[data-xs-zone]"))) {
+    const zone = zoneEl.getAttribute("data-xs-zone") ?? "";
+    const box = docRect(zoneEl);
+    if (!zone || !box) continue;
+    const parts = Array.from(zoneEl.querySelectorAll<HTMLElement>("[data-xs-part]"))
+      .filter((el) => el.closest("[data-xs-zone]") === zoneEl && !el.parentElement?.closest("[data-xs-part]"))
+      .flatMap((el) => {
+        const rect = docRect(el);
+        return rect ? [{ id: el.getAttribute("data-xs-part") ?? "", ...rect }] : [];
+      });
+    out.push({ zone, ...box, parts });
+  }
+  return out;
+}

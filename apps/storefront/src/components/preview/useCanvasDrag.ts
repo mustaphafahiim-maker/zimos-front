@@ -8,10 +8,19 @@ import {
   imageBox,
   imageNode,
   isRtl,
+  logoBox,
+  naturalLogoHeight,
+  naturalSize,
+  pictureBox,
+  pictureNode,
+  picturesLike,
   rowColumns,
   rowNode,
   sectionBody,
   sectionBoxes,
+  settingDevice,
+  shellZones,
+  type PictureHandle,
 } from "./canvasGeometry";
 
 /**
@@ -31,7 +40,13 @@ export type CanvasTarget =
   | { kind: "element"; sectionId: string; elementId: string }
   | { kind: "section-height"; sectionId: string }
   | { kind: "column-width"; sectionId: string; rowId: string; index: number }
-  | { kind: "image-width"; sectionId: string; elementId: string };
+  | { kind: "image-width"; sectionId: string; elementId: string }
+  /** A picture of a template band by an edge or corner; `band`: the "every picture" toggle is on. */
+  | { kind: "picture"; sectionId: string; elementId: string; path: string; handle: PictureHandle; band?: boolean }
+  /** A template header's or footer's logo by a corner. */
+  | { kind: "logo"; part: "header" | "footer"; handle: PictureHandle }
+  /** A part of a template header (lib/xsLayout), moved within its zone or to another. */
+  | { kind: "shell-part"; id: string };
 
 /** What the editor says to draw — checked, since it arrives in a message. */
 export type CanvasFeedback =
@@ -39,7 +54,13 @@ export type CanvasFeedback =
   | { kind: "element"; columnId: string; index: number }
   | { kind: "section-height"; sectionId: string; px: number | null; label: string }
   | { kind: "column-width"; sectionId: string; rowId: string; index: number; spans: [number, number]; label: string }
-  | { kind: "image-width"; elementId: string; pct: number | null; label: string };
+  | { kind: "image-width"; elementId: string; pct: number | null; label: string }
+  | { kind: "picture"; elementId: string; path: string; scope: "one" | "band"; width: number | null; height: number | null; label: string }
+  | { kind: "logo"; part: "header" | "footer"; px: number | null; label: string }
+  /** Where a header part would land: a place in a zone. */
+  | { kind: "shell-part"; zone: string; index: number };
+
+const PATH = /^[A-Za-z]{1,30}(?:\.\d{1,2}(?:\.[A-Za-z]{1,30})?)?$/;
 
 function isId(v: unknown): v is string {
   return typeof v === "string" && v.length > 0 && v.length <= 200;
@@ -86,6 +107,19 @@ export function readFeedback(raw: unknown): CanvasFeedback | null {
       const pct = sizeOrNull(f.pct, 100);
       return isId(f.elementId) && pct !== undefined ? { kind: "image-width", elementId: f.elementId, pct, label: label(f.label) } : null;
     }
+    case "picture": {
+      const width = sizeOrNull(f.width, 4000);
+      const height = sizeOrNull(f.height, 4000);
+      return isId(f.elementId) && typeof f.path === "string" && PATH.test(f.path) && (f.scope === "one" || f.scope === "band") && width !== undefined && height !== undefined
+        ? { kind: "picture", elementId: f.elementId, path: f.path, scope: f.scope, width, height, label: label(f.label) }
+        : null;
+    }
+    case "shell-part":
+      return typeof f.zone === "string" && /^[a-z]{1,20}$/.test(f.zone) && isIndex(f.index) ? { kind: "shell-part", zone: f.zone, index: f.index } : null;
+    case "logo": {
+      const px = sizeOrNull(f.px, 400);
+      return (f.part === "header" || f.part === "footer") && px !== undefined ? { kind: "logo", part: f.part, px, label: label(f.label) } : null;
+    }
     default:
       return null;
   }
@@ -119,6 +153,42 @@ function measureDrag(target: CanvasTarget): Record<string, unknown> | null {
         width: img.getBoundingClientRect().width,
         columnWidth: column.getBoundingClientRect().width,
         rtl: isRtl(column),
+      };
+    }
+    case "picture": {
+      const node = pictureNode(target.elementId, target.path);
+      const box = node ? pictureBox(node) : null;
+      if (!node || !box) return null;
+      const rect = node.getBoundingClientRect();
+      const natural = naturalSize(node);
+      return {
+        kind: "picture",
+        sectionId: target.sectionId,
+        elementId: target.elementId,
+        path: target.path,
+        handle: target.handle,
+        width: rect.width,
+        height: rect.height,
+        naturalWidth: natural.width,
+        naturalHeight: natural.height,
+        boxWidth: box.clientWidth,
+        device: settingDevice(),
+      };
+    }
+    case "shell-part":
+      return { kind: "shell-part", sectionId: "header", partId: target.id, device: settingDevice(), rtl: isRtl(document.querySelector('[data-zimos-shell="header"]') ?? document.documentElement), zones: shellZones() };
+    case "logo": {
+      const box = logoBox(target.part);
+      if (!box) return null;
+      const rect = box.getBoundingClientRect();
+      return {
+        kind: "logo",
+        sectionId: target.part,
+        handle: target.handle,
+        width: rect.width,
+        height: rect.height,
+        naturalHeight: naturalLogoHeight(target.part),
+        device: settingDevice(),
       };
     }
   }
@@ -163,6 +233,11 @@ interface Session {
   x: number;
   y: number;
   shift: boolean;
+  /** Alt: resize from the centre. Ctrl/⌘ (or the toggle): every picture of the band. */
+  alt: boolean;
+  ctrl: boolean;
+  /** What a picture would be with no size of its own — drawn while a drag says "the look's". */
+  natural: { width: number; height: number } | null;
   frame: number;
   released: boolean;
   timeout: number;
@@ -241,6 +316,34 @@ export function useCanvasDrag({
         box.style.width = "100%";
         box.style.maxWidth = `${fb.pct ?? 100}%`;
         box.style.marginInline = "auto";
+      } else if (fb.kind === "picture") {
+        // "important", like the size it stands in for (app/xs-sections.css); the look's own size where the drag says null.
+        const natural = session.current?.natural ?? null;
+        const nodes = fb.scope === "band" ? picturesLike(fb.elementId, fb.path) : [pictureNode(fb.elementId, fb.path)];
+        for (const node of nodes) {
+          if (!node) continue;
+          remember(node);
+          const width = fb.width ?? natural?.width ?? null;
+          const height = fb.height ?? natural?.height ?? null;
+          if (width !== null) {
+            node.style.setProperty("width", `${width}px`, "important");
+            node.style.setProperty("max-width", "100%", "important");
+          }
+          if (height !== null) {
+            node.style.setProperty("height", `${height}px`, "important");
+            node.style.setProperty("object-fit", "cover");
+          }
+        }
+      } else if (fb.kind === "logo") {
+        const box = logoBox(fb.part);
+        if (!box || fb.px === null) return;
+        remember(box);
+        box.style.setProperty("height", `${fb.px}px`, "important");
+        if (fb.part === "footer") {
+          box.style.setProperty("width", "auto", "important");
+          box.style.setProperty("max-width", "none", "important");
+          box.style.setProperty("max-height", "none", "important");
+        }
       }
     },
     [remember]
@@ -302,7 +405,7 @@ export function useCanvasDrag({
     (phase: "move" | "end") => {
       const s = session.current;
       if (!s) return;
-      post({ type: "zimos:canvas-drag", phase, x: s.x + window.scrollX, y: s.y + window.scrollY, shift: s.shift });
+      post({ type: "zimos:canvas-drag", phase, x: s.x + window.scrollX, y: s.y + window.scrollY, shift: s.shift, alt: s.alt, ctrl: s.ctrl });
     },
     [post]
   );
@@ -354,6 +457,10 @@ export function useCanvasDrag({
         x: event.clientX,
         y: event.clientY,
         shift: event.shiftKey,
+        alt: event.altKey,
+        ctrl: event.ctrlKey || event.metaKey || (target.kind === "picture" && target.band === true),
+        natural:
+          drag.kind === "picture" ? { width: drag.naturalWidth as number, height: drag.naturalHeight as number } : null,
         frame: 0,
         released: false,
         timeout: 0,
@@ -369,6 +476,8 @@ export function useCanvasDrag({
         x: event.clientX + window.scrollX,
         y: event.clientY + window.scrollY,
         shift: event.shiftKey,
+        alt: event.altKey,
+        ctrl: session.current.ctrl,
       });
 
       const move = (e: PointerEvent) => {
@@ -377,6 +486,8 @@ export function useCanvasDrag({
         s.x = e.clientX;
         s.y = e.clientY;
         s.shift = e.shiftKey;
+        s.alt = e.altKey;
+        s.ctrl = e.ctrlKey || e.metaKey || (s.target.kind === "picture" && s.target.band === true);
         badge.set({ x: e.clientX, y: e.clientY });
         if (!s.frame) s.frame = requestAnimationFrame(() => tickRef.current());
       };
@@ -394,6 +505,8 @@ export function useCanvasDrag({
         s.x = e.clientX;
         s.y = e.clientY;
         s.shift = e.shiftKey;
+        s.alt = e.altKey;
+        s.ctrl = e.ctrlKey || e.metaKey || (s.target.kind === "picture" && s.target.band === true);
         s.released = true;
         report("end");
         // The editor answers with `done`; if it never does, put things back.
@@ -520,6 +633,80 @@ export function useCanvasDrag({
           post({
             type: "zimos:canvas-step",
             step: { kind: "image-width", sectionId: target.sectionId, elementId: target.elementId, delta, fine: shift, current },
+          });
+          return true;
+        }
+        case "picture": {
+          // Left and right: its width (wider towards the right); up and down: its height (taller upwards). Shift: a pixel.
+          const node = pictureNode(target.elementId, target.path);
+          const box = node ? pictureBox(node) : null;
+          const axis = key === "ArrowLeft" || key === "ArrowRight" ? "w" : key === "ArrowUp" || key === "ArrowDown" ? "h" : null;
+          if (!node || !box || !axis) return false;
+          const rect = node.getBoundingClientRect();
+          const natural = naturalSize(node);
+          rememberFocus(`pic:${target.elementId}:${target.path}:${target.handle}`);
+          post({
+            type: "zimos:canvas-step",
+            step: {
+              kind: "picture",
+              sectionId: target.sectionId,
+              elementId: target.elementId,
+              path: target.path,
+              device: settingDevice(),
+              axis,
+              delta: key === "ArrowRight" || key === "ArrowUp" ? 1 : -1,
+              fine: shift,
+              band: target.band === true,
+              width: rect.width,
+              height: rect.height,
+              naturalWidth: natural.width,
+              naturalHeight: natural.height,
+              boxWidth: box.clientWidth,
+            },
+          });
+          return true;
+        }
+        case "shell-part": {
+          // Along the zone with the arrows that read its way; to the zone before or after with up and down.
+          const rtl = isRtl(document.querySelector('[data-zimos-shell="header"]') ?? document.documentElement);
+          const along = key === "ArrowLeft" || key === "ArrowRight" ? ((key === "ArrowRight") !== rtl ? 1 : -1) : 0;
+          const across = key === "ArrowUp" ? -1 : key === "ArrowDown" ? 1 : 0;
+          if (!along && !across) return false;
+          rememberFocus(`part:${target.id}`);
+          // Named by the parts that show beside it (a look may hide parts its zone holds).
+          const zones = shellZones();
+          const from = zones.findIndex((z) => z.parts.some((p) => p.id === target.id));
+          if (from === -1) return true;
+          let place: { zone: string; before: string | null; after: string | null } | null = null;
+          if (along) {
+            const parts = zones[from].parts;
+            const neighbour = parts[parts.findIndex((p) => p.id === target.id) + along];
+            if (neighbour) place = along > 0 ? { zone: zones[from].zone, before: null, after: neighbour.id } : { zone: zones[from].zone, before: neighbour.id, after: null };
+          } else {
+            const order = ["notice", "links", "brand", "menu", "icons"];
+            const shown = zones.slice().sort((a, b) => order.indexOf(a.zone) - order.indexOf(b.zone));
+            const to = shown[shown.findIndex((z) => z.zone === zones[from].zone) + across];
+            if (to) place = { zone: to.zone, before: null, after: to.parts.at(-1)?.id ?? null };
+          }
+          if (place) post({ type: "zimos:canvas-step", step: { kind: "shell-part", sectionId: "header", partId: target.id, device: settingDevice(), ...place } });
+          return true;
+        }
+        case "logo": {
+          const box = logoBox(target.part);
+          const delta = key === "ArrowUp" || key === "ArrowRight" ? 1 : key === "ArrowDown" || key === "ArrowLeft" ? -1 : 0;
+          if (!box || !delta) return false;
+          rememberFocus(`logo:${target.part}:${target.handle}`);
+          post({
+            type: "zimos:canvas-step",
+            step: {
+              kind: "logo",
+              sectionId: target.part,
+              device: settingDevice(),
+              delta,
+              fine: shift,
+              current: Math.round(box.getBoundingClientRect().height),
+              natural: Math.round(naturalLogoHeight(target.part)),
+            },
           });
           return true;
         }

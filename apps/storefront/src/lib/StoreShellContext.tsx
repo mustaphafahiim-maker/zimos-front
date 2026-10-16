@@ -46,6 +46,12 @@ export interface StoreShell {
   announcement: StoreAnnouncement | null;
 }
 
+/** The Template look this store shows right now (lib/xsTokens.ts): the editor's unsaved one in its preview, else the saved one. */
+export function useXsTokensSource(store: StorefrontMeta): unknown {
+  const override = useContext(ShellOverrideContext)?.override ?? null;
+  return override && override.tokens !== undefined ? override.tokens : store.themeSettings?.xsTokens;
+}
+
 /** The header, footer and announcement bar this store shows right now. */
 export function useStoreShell(store: StorefrontMeta): StoreShell {
   const override = useContext(ShellOverrideContext)?.override ?? null;

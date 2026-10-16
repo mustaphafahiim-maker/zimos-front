@@ -25,7 +25,7 @@ function rule(css, selector, from = 0) {
 describe("the showcase stylesheet", () => {
   it("is loaded by the storefront's one global stylesheet", () => {
     const imports = [...globals.matchAll(/^@import\s+"([^"]+)";/gm)].map((match) => match[1]);
-    assert.deepEqual(imports, ["tailwindcss", "./store-themes.css", "./store-sections.css"]);
+    assert.deepEqual(imports, ["tailwindcss", "./store-themes.css", "./store-sections.css", "./xs.css"]);
   });
 
   it("is imported before any rule, where an import still counts", () => {

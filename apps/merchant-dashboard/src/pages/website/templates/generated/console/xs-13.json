@@ -1,0 +1,452 @@
+{
+  "globalStyles": {
+    "primaryColor": "#235EE7",
+    "themeSettings": {
+      "xsLook": "13",
+      "header": {
+        "menu": [
+          {
+            "label": "Home",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "Shop",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Contact",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "Shop",
+            "links": [
+              {
+                "label": "Products",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "Cart",
+                "href": "/cart",
+                "kind": "cart"
+              }
+            ]
+          },
+          {
+            "title": "Help",
+            "links": [
+              {
+                "label": "Contact",
+                "href": "/contact",
+                "kind": "page"
+              },
+              {
+                "label": "Track Order",
+                "href": "/track",
+                "kind": "track"
+              }
+            ]
+          }
+        ],
+        "text": "A smartwatch that keeps up with your day: your health, notifications and activity in one place, with a warranty and delivery across Egypt.",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "Home",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs13-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs13-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs13-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs13-p1-s1-e1",
+                        "type": "xs_hero",
+                        "props": {
+                          "look": "13",
+                          "heading": "Smart New Future",
+                          "text": "Now you can feel the Heat",
+                          "image": "/xs/13/header-img.png",
+                          "buttonLabel": "Buy Now",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs13-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs13-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs13-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs13-p1-s2-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "13",
+                          "heading": "We’ve made a life that will change you",
+                          "text": "Your watch tracks your heart rate, sleep and daily activity, and brings notifications and calls straight to your wrist, in an elegant design that suits every look.",
+                          "images": [
+                            "/xs/13/about-img.jpg"
+                          ],
+                          "points": [],
+                          "buttonLabel": "Get Started now",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs13-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs13-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs13-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs13-p1-s3-e1",
+                        "type": "xs_features",
+                        "props": {
+                          "look": "13",
+                          "heading": "Some Features that Made us Unique",
+                          "text": "For everyone looking for smart tech that keeps up with their life.",
+                          "image": "",
+                          "items": [
+                            {
+                              "icon": "support",
+                              "image": "/xs/13/ico-1.svg",
+                              "title": "Expert Technicians",
+                              "text": "Certified technicians set up and service your watch."
+                            },
+                            {
+                              "icon": "bag",
+                              "image": "/xs/13/ico-2.svg",
+                              "title": "Professional Service",
+                              "text": "A dedicated team offering fast service and real support before and after you buy."
+                            },
+                            {
+                              "icon": "truck",
+                              "image": "/xs/13/ico-3.svg",
+                              "title": "Great Support",
+                              "text": "Questions about pairing or settings? We answer quickly."
+                            },
+                            {
+                              "icon": "return",
+                              "image": "/xs/13/ico-4.svg",
+                              "title": "Technical Skills",
+                              "text": "Every watch is tested and updated before it ships."
+                            },
+                            {
+                              "icon": "support",
+                              "image": "/xs/13/ico-5.svg",
+                              "title": "Highly Recomended",
+                              "text": "Chosen again and again by customers across Egypt."
+                            },
+                            {
+                              "icon": "bag",
+                              "image": "/xs/13/ico-6.svg",
+                              "title": "Positive Reviews",
+                              "text": "Our customers' reviews speak for our quality."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs13-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs13-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs13-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs13-p1-s4-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "13",
+                          "heading": "Our Products",
+                          "collection": "",
+                          "limit": 4,
+                          "showDiscount": true,
+                          "showTabs": false,
+                          "showSearch": false,
+                          "layout": "grid",
+                          "quickView": true,
+                          "allLabel": "All Products",
+                          "searchLabel": "Search",
+                          "searchPlaceholder": "Search",
+                          "loadMoreLabel": "Load More",
+                          "viewLabel": "Quick View",
+                          "openLabel": "Pre Order"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs13-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs13-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs13-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs13-p1-s5-e1",
+                        "type": "xs_quotes",
+                        "props": {
+                          "look": "13",
+                          "heading": "What our customers say",
+                          "items": [
+                            {
+                              "quote": "A really great watch! The battery lasts me all day, the screen is clear even in the sun, and my order arrived fast and well packed.",
+                              "name": "Cody Hines",
+                              "image": "/xs/13/user.jpg"
+                            },
+                            {
+                              "quote": "A really great watch! The battery lasts me all day, the screen is clear even in the sun, and my order arrived fast and well packed.",
+                              "name": "Chad Herrera",
+                              "image": "/xs/13/user.jpg"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "Contact",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs13-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs13-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs13-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs13-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "13",
+                          "heading": "Contact Us",
+                          "image": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs13-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs13-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs13-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs13-p2-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "13",
+                          "heading": "Send Message",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "Nasr City, Cairo",
+                              "text": "Open daily from 10 am to 10 pm"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "Call Us",
+                              "text": "Mon to Fri 9am to 6 pm"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "Email Us",
+                              "text": "Send us your query anytime!"
+                            }
+                          ],
+                          "contactPlaceholder": "Enter email address",
+                          "messagePlaceholder": "Enter Message",
+                          "buttonLabel": "Send Message"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

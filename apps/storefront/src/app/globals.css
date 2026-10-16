@@ -7,6 +7,8 @@
    in this one file: without the import their markup is drawn with no styles
    at all — a picture at its own size, plain text under it, a black wave. */
 @import "./store-sections.css";
+/* The imported templates ("xs" looks): their bands, shell and one file per look — all through xs.css. */
+@import "./xs.css";
 
 /* Dark mode is driven by a `.dark` class on <html>, set before first paint by
    an inline script in the root layout and toggled by the theme switch. */

@@ -1,0 +1,123 @@
+{
+  "xsLook": "19",
+  "header": {
+    "menu": [
+      {
+        "label": "Home",
+        "href": "/",
+        "kind": "home"
+      },
+      {
+        "label": "Menu",
+        "href": "/menu",
+        "kind": "page"
+      },
+      {
+        "label": "About",
+        "href": "/about",
+        "kind": "page"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact",
+        "kind": "page"
+      }
+    ],
+    "show": {
+      "theme": false,
+      "trackOrder": false,
+      "language": false
+    },
+    "zones": {
+      "notice": [
+        {
+          "id": "notice",
+          "type": "notice"
+        }
+      ],
+      "links": [],
+      "brand": [
+        {
+          "id": "logo",
+          "type": "logo"
+        }
+      ],
+      "menu": [
+        {
+          "id": "menu",
+          "type": "menu"
+        }
+      ],
+      "icons": [
+        {
+          "id": "search",
+          "type": "search"
+        },
+        {
+          "id": "account",
+          "type": "account"
+        },
+        {
+          "id": "wishlist",
+          "type": "wishlist"
+        },
+        {
+          "id": "cart",
+          "type": "cart"
+        },
+        {
+          "id": "phone",
+          "type": "phone"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "groups": [
+      {
+        "title": "Links",
+        "links": [
+          {
+            "label": "Home",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "About",
+            "href": "/about",
+            "kind": "page"
+          },
+          {
+            "label": "Menu",
+            "href": "/menu",
+            "kind": "page"
+          },
+          {
+            "label": "Contact",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ]
+      },
+      {
+        "title": "Orders",
+        "links": [
+          {
+            "label": "Cart",
+            "href": "/cart",
+            "kind": "cart"
+          },
+          {
+            "label": "Track Order",
+            "href": "/track",
+            "kind": "track"
+          }
+        ]
+      }
+    ],
+    "text": "Specialty coffee and fresh dishes made with love every day. We would love to welcome you at our table or deliver your order to your door.",
+    "show": {
+      "help": false
+    }
+  }
+}

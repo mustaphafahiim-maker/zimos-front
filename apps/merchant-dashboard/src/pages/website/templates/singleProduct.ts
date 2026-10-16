@@ -1,10 +1,11 @@
-import { artUrl } from "./templateArt";
+import { artUrl, drawArt, type ArtSpec } from "./templateArt";
 import { band, col, custom, el, fromPreset, row, type SectionDraft } from "./templateTree";
 
 /**
  * The one-product page, written once and used twice: as the home page of the
- * "one product" store template (storeTemplates.ts), and as the sales page of
- * the funnel starter of the same name (pages/funnels/funnelAdapter.ts).
+ * "one product" store template (no longer offered: the store templates are
+ * now the imported ones, templates/xs), and as the sales page of the funnel
+ * starter of the same name (pages/funnels/funnelAdapter.ts).
  *
  * The two share every section that sells the product — the opening, the idea,
  * the highlights around a picture, the details, the reasons, the reviews, the
@@ -256,4 +257,21 @@ export function singleProductSections(use: SingleProductUse, lang: SingleProduct
     questions,
     fromPreset("cta-band", [{ text: c.closeTitle, level: 2 }, { text: c.closeText }, { label: c.orderNow, href: "", variant: "primary" }]),
   ];
+}
+
+/**
+ * The page's stand-in pictures (public/template-art/, named by artUrl above),
+ * drawn from these. singleProduct.test.ts holds the checked-in files equal to
+ * them; `npm run templates:build` writes them.
+ */
+export const SINGLE_PRODUCT_ART: readonly ArtSpec[] = [
+  { name: "single-hero", theme: "glass", subject: "watch", ground: 0, width: 1200, height: 1200 },
+  { name: "single-story", theme: "glass", subject: "strap", ground: 1, width: 1200, height: 900 },
+  { name: "single-center", theme: "glass", subject: "pulse", ground: 2, width: 900, height: 1200 },
+  { name: "single-detail", theme: "glass", subject: "dial", ground: 3, width: 1200, height: 900 },
+];
+
+/** Each picture's file name and what is in the file. */
+export function singleProductArt(): Array<{ file: string; svg: string }> {
+  return SINGLE_PRODUCT_ART.map((spec) => ({ file: `${spec.name}.svg`, svg: drawArt(spec) }));
 }

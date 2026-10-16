@@ -1,0 +1,792 @@
+{
+  "globalStyles": {
+    "primaryColor": "#EA272D",
+    "themeSettings": {
+      "xsLook": "19",
+      "header": {
+        "menu": [
+          {
+            "label": "الرئيسية",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "المنيو",
+            "href": "/menu",
+            "kind": "page"
+          },
+          {
+            "label": "من نحن",
+            "href": "/about",
+            "kind": "page"
+          },
+          {
+            "label": "تواصل معنا",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "روابط سريعة",
+            "links": [
+              {
+                "label": "الرئيسية",
+                "href": "/",
+                "kind": "home"
+              },
+              {
+                "label": "من نحن",
+                "href": "/about",
+                "kind": "page"
+              },
+              {
+                "label": "المنيو",
+                "href": "/menu",
+                "kind": "page"
+              },
+              {
+                "label": "تواصل معنا",
+                "href": "/contact",
+                "kind": "page"
+              }
+            ]
+          },
+          {
+            "title": "الطلبات",
+            "links": [
+              {
+                "label": "السلة",
+                "href": "/cart",
+                "kind": "cart"
+              },
+              {
+                "label": "تتبّع طلبك",
+                "href": "/track",
+                "kind": "track"
+              }
+            ]
+          }
+        ],
+        "text": "قهوة مختصة وأطباق طازجة تُحضَّر بحب كل يوم. نسعد باستقبالكم على طاولتنا أو بتوصيل طلبكم حتى باب البيت.",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "الرئيسية",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs19-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p1-s1-e1",
+                        "type": "xs_hero",
+                        "props": {
+                          "look": "19",
+                          "heading": "ألذّ قهوة وأشهى أطباق في قلب القاهرة",
+                          "text": "مذاق أصيل يجمعكم على طاولة واحدة",
+                          "image": "/xs/19/hero.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs19-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p1-s2-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "19",
+                          "heading": "مطعمنا",
+                          "text": "بدأت حكايتنا بفنجان قهوة وفكرة بسيطة: أن يجد كل ضيف مكانًا دافئًا يأكل فيه طعامًا طازجًا مصنوعًا بإتقان. نختار مكوّناتنا يوميًا من أفضل الموردين، ونطهو كل طبق كأننا نقدّمه لأهلنا.\n\nسواء جئت لفطار هادئ أو عشاء مع العائلة والأصدقاء، ستجد هنا خدمة ودودة وأجواء تجعلك تعود مرة بعد مرة.",
+                          "images": [
+                            "/xs/19/hero.jpg"
+                          ],
+                          "points": [],
+                          "buttonLabel": "حكايتنا",
+                          "buttonHref": "/about"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs19-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p1-s3-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "19",
+                          "heading": "منيو اليوم",
+                          "collection": "",
+                          "limit": 4,
+                          "showDiscount": true,
+                          "showTabs": false,
+                          "showSearch": false,
+                          "layout": "grid",
+                          "quickView": true,
+                          "allLabel": "كل الأصناف",
+                          "searchLabel": "بحث",
+                          "searchPlaceholder": "بحث",
+                          "loadMoreLabel": "عرض المزيد",
+                          "viewLabel": "نظرة سريعة",
+                          "openLabel": "اعرف المزيد",
+                          "linkLabel": "تصفّح المنيو",
+                          "linkHref": "/menu"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs19-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p1-s4-e1",
+                        "type": "xs_quotes",
+                        "props": {
+                          "look": "19",
+                          "heading": "آراء ضيوفنا",
+                          "items": [
+                            {
+                              "quote": "من أول رشفة قهوة حتى آخر لقمة، كل تفصيلة هنا مصنوعة بعناية. أطباق طازجة وخدمة سريعة وأجواء دافئة جعلت المكان وجهتنا المفضلة كل أسبوع.",
+                              "name": "منى عبد الرحمن",
+                              "image": "/xs/19/person.jpg"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs19-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p1-s5-e1",
+                        "type": "xs_showcase",
+                        "props": {
+                          "look": "19",
+                          "heading": "أطباقنا المميزة",
+                          "text": "تشكيلة مختارة من أشهى أطباقنا، تُحضَّر يوميًا بمكوّنات طازجة ولمسة شيف لا تُنسى.",
+                          "collection": "",
+                          "limit": 3,
+                          "buttonLabel": "اعرف المزيد",
+                          "buttonHref": "/menu"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs19-p1-s6",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p1-s6-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p1-s6-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p1-s6-e1",
+                        "type": "xs_posts",
+                        "props": {
+                          "look": "19",
+                          "heading": "فعالياتنا",
+                          "items": [
+                            {
+                              "image": "/xs/19/gallery-1.jpg",
+                              "meta": "15 فبراير 2026",
+                              "title": "جلسة تصوير لأطباق الموسم",
+                              "text": "لحظة مميزة في رحلتنا مع الطعام الجيد، صنعناها مع ضيوف أصبحوا جزءًا من حكايتنا.",
+                              "linkLabel": "اقرأ المزيد",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/19/gallery-2.jpg",
+                              "meta": "15 فبراير 2026",
+                              "title": "ليلة النكهات الآسيوية",
+                              "text": "لحظة مميزة في رحلتنا مع الطعام الجيد، صنعناها مع ضيوف أصبحوا جزءًا من حكايتنا.",
+                              "linkLabel": "اقرأ المزيد",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/19/gallery-3.jpg",
+                              "meta": "15 فبراير 2026",
+                              "title": "أسبوع المأكولات البحرية",
+                              "text": "لحظة مميزة في رحلتنا مع الطعام الجيد، صنعناها مع ضيوف أصبحوا جزءًا من حكايتنا.",
+                              "linkLabel": "اقرأ المزيد",
+                              "href": ""
+                            }
+                          ],
+                          "text": "أمسيات خاصة وتجارب تذوّق وأيام موضوعية نحتفي فيها بالطعام والصحبة الحلوة. تابع فعالياتنا القادمة واحجز مكانك مبكرًا."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs19-p1-s7",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p1-s7-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p1-s7-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p1-s7-e1",
+                        "type": "xs_slider",
+                        "props": {
+                          "look": "19",
+                          "slides": [
+                            {
+                              "image": "/xs/19/hero.jpg",
+                              "heading": "احجز طاولتك",
+                              "text": "لمّة عائلية أو عشاء رومانسي أو احتفال مع الأصدقاء؟ احجز طاولتك الآن ودع الباقي علينا.",
+                              "buttonLabel": "احجز الآن",
+                              "buttonHref": "/contact"
+                            }
+                          ],
+                          "autoplay": false,
+                          "seconds": 6
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "تواصل معنا",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs19-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "19",
+                          "heading": "تواصل معنا",
+                          "image": "/xs/19/hero.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs19-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p2-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "19",
+                          "heading": "لا تتردد، يسعدنا سماعك.",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "العنوان",
+                              "text": "التجمع الخامس، القاهرة الجديدة"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "الهاتف",
+                              "text": "اتصل بنا يوميًا لحجز طاولتك"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "البريد الإلكتروني",
+                              "text": "أرسل لنا رسالة وسنرد عليك خلال يوم"
+                            }
+                          ],
+                          "contactPlaceholder": "بريدك الإلكتروني",
+                          "messagePlaceholder": "رسالتك",
+                          "buttonLabel": "إرسال"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/about",
+      "title": "من نحن",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs19-p3-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p3-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p3-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p3-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "19",
+                          "heading": "عن مطعمنا",
+                          "image": "/xs/19/hero.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs19-p3-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p3-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p3-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p3-s2-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "19",
+                          "heading": "مطعمنا",
+                          "text": "بدأت حكايتنا بفنجان قهوة وفكرة بسيطة: أن يجد كل ضيف مكانًا دافئًا يأكل فيه طعامًا طازجًا مصنوعًا بإتقان. نختار مكوّناتنا يوميًا من أفضل الموردين، ونطهو كل طبق كأننا نقدّمه لأهلنا.\n\nسواء جئت لفطار هادئ أو عشاء مع العائلة والأصدقاء، ستجد هنا خدمة ودودة وأجواء تجعلك تعود مرة بعد مرة.",
+                          "images": [
+                            "/xs/19/hero.jpg"
+                          ],
+                          "points": []
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs19-p3-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p3-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p3-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p3-s3-e1",
+                        "type": "xs_story",
+                        "props": {
+                          "look": "19",
+                          "items": [
+                            {
+                              "title": "لقاء المؤسسين",
+                              "body": "لحظة مميزة في رحلتنا مع الطعام الجيد، صنعناها مع ضيوف أصبحوا جزءًا من حكايتنا."
+                            },
+                            {
+                              "title": "افتتاح مطعمنا الأول",
+                              "body": "بدأنا بمطبخ صغير وشغف كبير، وكبرنا بثقتكم حتى أصبحنا وجهة لكل من يبحث عن مذاق أصيل."
+                            },
+                            {
+                              "title": "فريق يتجاوز 200 شخص",
+                              "body": "لحظة مميزة في رحلتنا مع الطعام الجيد، صنعناها مع ضيوف أصبحوا جزءًا من حكايتنا."
+                            },
+                            {
+                              "title": "أول فرع لنا خارج مصر",
+                              "body": "بدأنا بمطبخ صغير وشغف كبير، وكبرنا بثقتكم حتى أصبحنا وجهة لكل من يبحث عن مذاق أصيل."
+                            },
+                            {
+                              "title": "إطلاق فروع الامتياز التجاري",
+                              "body": "لحظة مميزة في رحلتنا مع الطعام الجيد، صنعناها مع ضيوف أصبحوا جزءًا من حكايتنا."
+                            },
+                            {
+                              "title": "أكثر من 100 ألف ضيف سعيد",
+                              "body": "بدأنا بمطبخ صغير وشغف كبير، وكبرنا بثقتكم حتى أصبحنا وجهة لكل من يبحث عن مذاق أصيل."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs19-p3-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p3-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p3-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p3-s4-e1",
+                        "type": "xs_gallery",
+                        "props": {
+                          "look": "19",
+                          "heading": "معرض الصور",
+                          "images": [
+                            "/xs/19/gallery-1.jpg",
+                            "/xs/19/gallery-2.jpg",
+                            "/xs/19/gallery-8.jpg",
+                            "/xs/19/gallery-4.jpg",
+                            "/xs/19/gallery-5.jpg",
+                            "/xs/19/gallery-5.jpg",
+                            "/xs/19/gallery-6.jpg",
+                            "/xs/19/gallery-7.jpg",
+                            "/xs/19/gallery-8.jpg",
+                            "/xs/19/gallery-9.jpg"
+                          ],
+                          "text": "لقطات من مطبخنا وصالتنا وأطباقنا المفضلة، ولحظات حلوة جمعتنا بضيوفنا. ألقِ نظرة، وتعالَ لتعيشها بنفسك."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/menu",
+      "title": "المنيو",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs19-p4-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p4-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p4-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p4-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "19",
+                          "heading": "تصفّح المنيو",
+                          "image": "/xs/19/hero.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs19-p4-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs19-p4-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs19-p4-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs19-p4-s2-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "19",
+                          "heading": "منيو أطباقنا الشهية",
+                          "collection": "",
+                          "limit": 8,
+                          "showDiscount": true,
+                          "showTabs": true,
+                          "showSearch": false,
+                          "layout": "grid",
+                          "quickView": true,
+                          "allLabel": "كل الأصناف",
+                          "searchLabel": "بحث",
+                          "searchPlaceholder": "بحث",
+                          "loadMoreLabel": "عرض المزيد",
+                          "viewLabel": "نظرة سريعة",
+                          "openLabel": "اعرف المزيد"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

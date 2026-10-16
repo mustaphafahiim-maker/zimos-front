@@ -1,0 +1,541 @@
+{
+  "globalStyles": {
+    "primaryColor": "#717FE0",
+    "themeSettings": {
+      "xsLook": "01",
+      "header": {
+        "announcement": {
+          "enabled": true,
+          "text": "Free shipping on standard orders over EGP 1,500"
+        },
+        "menu": [
+          {
+            "label": "Home",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "Shop",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "About",
+            "href": "/about",
+            "kind": "page"
+          },
+          {
+            "label": "Contact",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [
+            {
+              "id": "strip-0",
+              "type": "link",
+              "label": "Help & FAQs",
+              "href": "/contact"
+            },
+            {
+              "id": "strip-1",
+              "type": "link",
+              "label": "My Account",
+              "href": "/account"
+            },
+            {
+              "id": "strip-2",
+              "type": "text",
+              "label": "EN"
+            },
+            {
+              "id": "strip-3",
+              "type": "text",
+              "label": "EGP"
+            }
+          ],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "Categories",
+            "links": [
+              {
+                "label": "Women",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "Men",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "Shoes",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "Watches",
+                "href": "/products",
+                "kind": "url"
+              }
+            ]
+          },
+          {
+            "title": "Help",
+            "links": [
+              {
+                "label": "Track Order",
+                "href": "/track",
+                "kind": "track"
+              },
+              {
+                "label": "Contact",
+                "href": "/contact",
+                "kind": "page"
+              },
+              {
+                "label": "About",
+                "href": "/about",
+                "kind": "page"
+              }
+            ]
+          }
+        ],
+        "text": "Any questions? Visit us at our store in New Cairo, or call us any day from 10 am to 10 pm",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "Home",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs01-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs01-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs01-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs01-p1-s1-e1",
+                        "type": "xs_slider",
+                        "props": {
+                          "look": "01",
+                          "slides": [
+                            {
+                              "image": "/xs/01/slide-01.jpg",
+                              "eyebrow": "Women Collection 2018",
+                              "heading": "NEW SEASON",
+                              "buttonLabel": "Shop Now",
+                              "buttonHref": "/products"
+                            },
+                            {
+                              "image": "/xs/01/slide-02.jpg",
+                              "eyebrow": "Men New-Season",
+                              "heading": "Jackets & Coats",
+                              "buttonLabel": "Shop Now",
+                              "buttonHref": "/products"
+                            },
+                            {
+                              "image": "/xs/01/slide-03.jpg",
+                              "eyebrow": "Men Collection 2018",
+                              "heading": "New arrivals",
+                              "buttonLabel": "Shop Now",
+                              "buttonHref": "/products"
+                            }
+                          ],
+                          "autoplay": true,
+                          "seconds": 6
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs01-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs01-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs01-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs01-p1-s2-e1",
+                        "type": "xs_banners",
+                        "props": {
+                          "look": "01",
+                          "items": [
+                            {
+                              "image": "/xs/01/banner-01.jpg",
+                              "title": "Women",
+                              "text": "Spring 2018",
+                              "linkLabel": "Shop Now",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/01/banner-02.jpg",
+                              "title": "Men",
+                              "text": "Spring 2018",
+                              "linkLabel": "Shop Now",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/01/banner-03.jpg",
+                              "title": "Accessories",
+                              "text": "New Trend",
+                              "linkLabel": "Shop Now",
+                              "href": "/products"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs01-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs01-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs01-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs01-p1-s3-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "01",
+                          "heading": "Product Overview",
+                          "collection": "",
+                          "limit": 8,
+                          "showDiscount": true,
+                          "showTabs": true,
+                          "showSearch": true,
+                          "layout": "grid",
+                          "quickView": true,
+                          "allLabel": "All Products",
+                          "searchLabel": "Search",
+                          "searchPlaceholder": "Search",
+                          "loadMoreLabel": "Load More",
+                          "viewLabel": "Quick View",
+                          "openLabel": "Add to cart"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs01-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs01-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs01-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs01-p1-s4-e1",
+                        "type": "xs_newsletter",
+                        "props": {
+                          "look": "01",
+                          "heading": "Newsletter",
+                          "text": "Get the latest collections and offers in your inbox.",
+                          "placeholder": "Your email address",
+                          "buttonLabel": "Subscribe"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/about",
+      "title": "About",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs01-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs01-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs01-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs01-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "01",
+                          "heading": "About",
+                          "image": "/xs/01/bg-01.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs01-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs01-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs01-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs01-p2-s2-e1",
+                        "type": "xs_story",
+                        "props": {
+                          "look": "01",
+                          "items": [
+                            {
+                              "title": "Our Story",
+                              "body": "Our story began with a simple idea: style should be within everyone's reach. From day one we have chosen every piece with care, from the fabric to the cut, to give you a modern look that lasts more than one season.\n\nToday we bring you the latest fashion for women and men, from everyday basics to shoes, watches and accessories, with fast delivery across Egypt.\n\nAny questions? Visit us at our store in New Cairo, or call us any day from 10 am to 10 pm.",
+                              "image": "/xs/01/about-01.jpg"
+                            },
+                            {
+                              "title": "Our Mission",
+                              "body": "To bring you modern fashion with quality you can trust and fair prices, and easy shopping from the first click until your order reaches your door.",
+                              "quote": "Creativity is just connecting things. When you ask creative people how they did something, they feel a little guilty because they didn't really do it, they just saw something. It seemed obvious to them after a while.",
+                              "quoteAuthor": "Steve Job’s",
+                              "image": "/xs/01/about-02.jpg"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "Contact",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs01-p3-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs01-p3-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs01-p3-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs01-p3-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "01",
+                          "heading": "Contact",
+                          "image": "/xs/01/bg-01.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs01-p3-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs01-p3-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs01-p3-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs01-p3-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "01",
+                          "heading": "Send Us A Message",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "Address",
+                              "text": "Coza Store, Fifth Settlement, New Cairo"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "Lets Talk",
+                              "text": "Call us any day from 10 am to 10 pm"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "Sale Support",
+                              "text": "Send us a message and we reply within a day"
+                            }
+                          ],
+                          "contactPlaceholder": "Your Email Address",
+                          "messagePlaceholder": "How Can We Help?",
+                          "buttonLabel": "Submit"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

@@ -512,7 +512,7 @@ export function ProductLanding({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
+    <div className="zt-pdp-info flex min-w-0 flex-col gap-6">
       {/* Title + price */}
       <div className={SHOPPER_ACCOUNTS_ENABLED ? "relative" : undefined}>
         {/* The heart shows once the store is known to have accounts: its corner is kept from the start, so the title never re-wraps around it. */}
@@ -525,13 +525,13 @@ export function ProductLanding({
         <div className={`zt-pdp-price mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1${testPending ? " invisible" : ""}`}>
           <span className="text-3xl font-bold text-ink" data-sale={compareAtUnit ? "" : undefined}>{money(unit)}</span>
           {compareAtUnit && (
-            <span className="text-lg text-ink-soft line-through">
+            <span className="zt-pdp-compare text-lg text-ink-soft line-through">
               <span className="sr-only">{t.product.compareAt} </span>
               {money(compareAtUnit)}
             </span>
           )}
           {pct && (
-            <span className="rounded-full bg-primary-soft px-2.5 py-1 text-sm font-semibold text-primary">
+            <span className="zt-pdp-save rounded-full bg-primary-soft px-2.5 py-1 text-sm font-semibold text-primary">
               {t.common.save(pct)}
             </span>
           )}
@@ -625,7 +625,7 @@ export function ProductLanding({
       )}
 
       {tiers.length === 0 && !bundleChoice && !ps.hide_quantity_selector && (
-        <div className="flex items-center justify-between gap-4">
+        <div className="zt-pdp-qty flex items-center justify-between gap-4">
           <span id="qty-label" className="text-sm font-semibold text-ink">
             {t.product.quantity}
           </span>
@@ -646,7 +646,7 @@ export function ProductLanding({
       )}
       {/* Sold out with no pre-order: the sign-up to hear when it is back takes the buttons' place (STOCK_ALERTS_ENABLED). */}
       <RestockOrButtons product={product} variant={variant}>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="zt-pdp-buy grid gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={ps.inline_checkout ? scrollToForm : () => void buyNow()}
@@ -689,7 +689,7 @@ export function ProductLanding({
         ref={formRef}
         id="order-form"
         aria-labelledby="order-form-title"
-        className={`${card} scroll-mt-24 border-2 border-primary/25 p-5 sm:p-6`}
+        className={`zt-pdp-order ${card} scroll-mt-24 border-2 border-primary/25 p-5 sm:p-6`}
       >
         <h2 id="order-form-title" className="flex items-center gap-2 text-lg font-bold text-ink">
           <CashIcon className="text-primary" />

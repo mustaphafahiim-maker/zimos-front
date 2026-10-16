@@ -1,5 +1,6 @@
 import type { PageElement, PageSection } from "@store-builder/api-client";
-import type { CanvasEdit } from "@/lib/canvasDrag";
+import type { CanvasEdit, ScreenDevice } from "@/lib/canvasDrag";
+import { withDeviceValue } from "@/lib/deviceValue";
 import { moveElement, moveSection, replaceElement } from "./blocks";
 
 /**
@@ -76,6 +77,139 @@ export function setImageWidth(section: PageSection, elementId: string, pct: numb
   if (pct === null) delete nextProps.width;
   else nextProps.width = pct;
   return replaceElement(section, elementId, { ...element, props: nextProps });
+}
+
+type Blob = Record<string, unknown>;
+
+function isBlob(value: unknown): value is Blob {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/** `owner` with `key` set to `value`, or without it when the value is undefined. */
+function withKey(owner: Blob, key: string, value: unknown): Blob {
+  const next = { ...owner };
+  if (value === undefined) delete next[key];
+  else next[key] = value;
+  return next;
+}
+
+/** The same size on one screen, written to one place: `<field>W` / `<field>H` of `owner`. */
+function sizedOwner(owner: Blob, field: string, device: ScreenDevice, width: number | null | undefined, height: number | null | undefined): Blob {
+  let next = owner;
+  if (width !== undefined) next = withKey(next, `${field}W`, withDeviceValue(next[`${field}W`], device, width));
+  if (height !== undefined) next = withKey(next, `${field}H`, withDeviceValue(next[`${field}H`], device, height));
+  return next;
+}
+
+/** A list of sizes kept by place beside a list of picture addresses (`imagesW` beside `images`). */
+function sizedList(list: unknown, at: number, device: ScreenDevice, value: number | null): unknown[] | undefined {
+  const next = Array.isArray(list) ? [...list] : [];
+  while (next.length <= at) next.push(null);
+  next[at] = withDeviceValue(next[at], device, value) ?? null;
+  while (next.length > 0 && next[next.length - 1] === null) next.pop();
+  return next.length > 0 ? next : undefined;
+}
+
+/**
+ * A band's props after one of its pictures is given a size on one screen
+ * (`edit.path`: "image", "items.2.image", "images.1"). With `scope: "band"`,
+ * every picture of the same list takes it. The size goes beside the picture —
+ * `imageW` / `imageH` in the item (or the band) that holds it, `imagesW[i]` /
+ * `imagesH[i]` for a list of addresses — so it moves with its item when items
+ * are reordered. The storefront reads it in components/xs/XsPicture.
+ */
+export function sizedPictureProps(props: Blob, edit: Extract<CanvasEdit, { kind: "picture-size" }>): Blob {
+  const parts = edit.path.split(".");
+  const { device, width, height } = edit;
+  if (parts.length === 1) return sizedOwner(props, parts[0], device, width, height);
+  const [list, place, field] = parts;
+  const at = Number(place);
+  const items = props[list];
+  if (!Array.isArray(items) || !Number.isInteger(at) || at < 0 || at >= items.length) return props;
+  const places = edit.scope === "band" ? items.map((_, i) => i) : [at];
+  if (field) {
+    const nextItems = items.map((item, i) => (places.includes(i) && isBlob(item) ? sizedOwner(item, field, device, width, height) : item));
+    return { ...props, [list]: nextItems };
+  }
+  let next = props;
+  for (const i of places) {
+    if (width !== undefined) next = withKey(next, `${list}W`, sizedList(next[`${list}W`], i, device, width));
+    if (height !== undefined) next = withKey(next, `${list}H`, sizedList(next[`${list}H`], i, device, height));
+  }
+  return next;
+}
+
+/**
+ * The most items each of a band's lists may hold: a duplicate past it is not made.
+ */
+function listMax(type: string, list: string): number {
+  if (list === "images") return type === "xs_gallery" ? 12 : 3;
+  if (list === "slides") return 8;
+  return ["xs_banners", "xs_story", "xs_posts"].includes(type) ? 6 : 8;
+}
+
+/**
+ * One item of a band's list moved, duplicated or deleted on the canvas. A
+ * gallery's or split's pictures carry their sizes in lists beside them
+ * (imagesW, imagesH), which go along. The same section back when nothing changes.
+ */
+export function setBandItem(section: PageSection, edit: Extract<CanvasEdit, { kind: "band-item" }>): PageSection {
+  const element = findElement(section, edit.elementId);
+  if (!element || !element.type.startsWith("xs_")) return section;
+  const props = (element.props ?? {}) as Blob;
+  const items = props[edit.list];
+  if (!Array.isArray(items) || edit.from >= items.length) return section;
+  const beside = [edit.list, `${edit.list}W`, `${edit.list}H`].filter((key) => key === edit.list || Array.isArray(props[key]));
+  const next: Blob = { ...props };
+  for (const key of beside) {
+    const list = [...(props[key] as unknown[])];
+    if (edit.action === "move") {
+      if (edit.to === undefined || edit.to >= items.length || edit.to === edit.from) return section;
+      const [moved] = list.splice(edit.from, 1);
+      list.splice(edit.to, 0, moved);
+    } else if (edit.action === "duplicate") {
+      if (items.length >= listMax(element.type, edit.list)) return section;
+      list.splice(edit.from + 1, 0, structuredClone(list[edit.from]));
+    } else {
+      if (items.length <= 1) return section;
+      list.splice(edit.from, 1);
+    }
+    next[key] = list;
+  }
+  return replaceElement(section, edit.elementId, { ...element, props: next });
+}
+
+/** A band's ground picture centred on a new point: "slides.0.image" → slides[0].imagePosition, "image" → imagePosition. */
+export function setBackgroundPosition(section: PageSection, edit: Extract<CanvasEdit, { kind: "bg-position" }>): PageSection {
+  const element = findElement(section, edit.elementId);
+  if (!element || !element.type.startsWith("xs_")) return section;
+  const props = (element.props ?? {}) as Blob;
+  const value = `${edit.x}% ${edit.y}%`;
+  const parts = edit.path.split(".");
+  const key = `${parts[parts.length - 1]}Position`;
+  let nextProps: Blob;
+  if (parts.length === 1) {
+    if (props[key] === value) return section;
+    nextProps = { ...props, [key]: value };
+  } else {
+    const [list, at] = [parts[0], Number(parts[1])];
+    const items = Array.isArray(props[list]) ? (props[list] as unknown[]) : null;
+    const item = items?.[at];
+    if (!items || !item || typeof item !== "object") return section;
+    if ((item as Blob)[key] === value) return section;
+    nextProps = { ...props, [list]: items.map((it, i) => (i === at ? { ...(it as Blob), [key]: value } : it)) };
+  }
+  return replaceElement(section, edit.elementId, { ...element, props: nextProps });
+}
+
+/** A picture of one band resized on the canvas; the same section back when nothing changes. */
+export function setPictureSize(section: PageSection, edit: Extract<CanvasEdit, { kind: "picture-size" }>): PageSection {
+  const element = findElement(section, edit.elementId);
+  if (!element || !element.type.startsWith("xs_")) return section;
+  const props = (element.props ?? {}) as Blob;
+  const nextProps = sizedPictureProps(props, edit);
+  if (JSON.stringify(nextProps) === JSON.stringify(props)) return section;
+  return replaceElement(section, edit.elementId, { ...element, props: nextProps });
 }
 
 /**
@@ -159,6 +293,16 @@ export function applyCanvasEdit(sections: PageSection[], edit: CanvasEdit): Page
       return updateSection(edit.sectionId, (s) => setColumnSpans(s, edit.rowId, edit.index, edit.spans));
     case "image-width":
       return updateSection(edit.sectionId, (s) => setImageWidth(s, edit.elementId, edit.pct));
+    case "picture-size":
+      return updateSection(edit.sectionId, (s) => setPictureSize(s, edit));
+    case "bg-position":
+      return updateSection(edit.sectionId, (s) => setBackgroundPosition(s, edit));
+    case "band-item":
+      return updateSection(edit.sectionId, (s) => setBandItem(s, edit));
+    case "logo-size":
+    case "shell-move":
+      // The store look's, not the page's: the editor applies it to the header or footer (WebsiteEditorPage).
+      return sections;
   }
 }
 

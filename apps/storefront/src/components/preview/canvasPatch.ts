@@ -1,5 +1,6 @@
 import { safeUrl } from "@/components/page-renderer/props";
 import { HIDDEN_ATTR, elementNode, inlineTextNode, styleBox } from "./canvasGeometry";
+import { OWN_KEYS, ownPatchCss } from "@/components/page-renderer/xs/own";
 
 /**
  * `zimos:patch` — the editor's small edits, applied to the page that is
@@ -12,6 +13,10 @@ import { HIDDEN_ATTR, elementNode, inlineTextNode, styleBox } from "./canvasGeom
  *   imageSrc  its picture (the <img>, or a background image)
  *   hidden    a ghost in the editor: 35% opacity and a "hidden" chip (canvasChrome)
  *   style     CSS property → value, the short list below only
+ *   own       an imported template's band: its own look, every own prop as it now
+ *             stands (page-renderer/xs/own.tsx ownPatchCss, which checks each value)
+ *   words     a band's words: each [was, is] — the text that showed, and what it is now
+ *   pictures  a band's pictures by their place in its props ("items.2.image" → address)
  *
  * Everything arrives in a message, so every value is checked again here: a
  * property outside the list or a value that is not a plain length, keyword or
@@ -24,7 +29,13 @@ export interface PatchOp {
   imageSrc?: string;
   hidden?: boolean;
   style?: Record<string, string>;
+  own?: Record<string, unknown>;
+  words?: Array<[string, string]>;
+  pictures?: Record<string, string>;
 }
+
+const MAX_WORDS = 50;
+const PICTURE_PATH = /^[A-Za-z][A-Za-z0-9]*(?:\.[0-9]{1,2}\.[A-Za-z][A-Za-z0-9]*)?(?:\.[0-9]{1,2})?$/;
 
 const MAX_OPS = 500;
 const MAX_TEXT = 20_000;
@@ -98,6 +109,24 @@ export function readPatch(raw: unknown): PatchOp[] {
       }
       if (Object.keys(style).length > 0) op.style = style;
     }
+    if (o.own && typeof o.own === "object" && !Array.isArray(o.own)) {
+      // Only the own props; their values are checked where the rules are made.
+      op.own = Object.fromEntries(Object.entries(o.own as Record<string, unknown>).filter(([key]) => OWN_KEYS.includes(key)));
+    }
+    if (Array.isArray(o.words)) {
+      const words = (o.words as unknown[])
+        .slice(0, MAX_WORDS)
+        .filter((pair): pair is [string, string] => Array.isArray(pair) && pair.length === 2 && pair.every((part) => typeof part === "string" && part.length <= MAX_TEXT) && pair[0].trim() !== "");
+      if (words.length > 0) op.words = words;
+    }
+    if (o.pictures && typeof o.pictures === "object" && !Array.isArray(o.pictures)) {
+      const pictures: Record<string, string> = {};
+      for (const [path, value] of Object.entries(o.pictures as Record<string, unknown>).slice(0, 40)) {
+        const url = typeof value === "string" && value.length <= MAX_URL ? safeUrl(value) : null;
+        if (url && PICTURE_PATH.test(path)) pictures[path] = url;
+      }
+      if (Object.keys(pictures).length > 0) op.pictures = pictures;
+    }
     ops.push(op);
   }
   return ops;
@@ -134,6 +163,63 @@ function setStyle(marker: HTMLElement, style: Record<string, string>): boolean {
   return true;
 }
 
+/** A band's own look, laid over the page in a stylesheet of its own (replaced by the next patch for that band). */
+function setOwn(elementId: string, own: Record<string, unknown>): boolean {
+  const css = ownPatchCss(elementId, own);
+  let sheet = document.querySelector<HTMLStyleElement>(`style[data-own-patch="${CSS.escape(elementId)}"]`);
+  if (!sheet) {
+    sheet = document.createElement("style");
+    sheet.setAttribute("data-own-patch", elementId);
+    document.head.appendChild(sheet);
+  }
+  if (sheet.textContent === css) return false;
+  sheet.textContent = css;
+  return true;
+}
+
+/** A band's words: every text node that is the old words, whole, becomes the new ones (spaces around kept). */
+function setWords(marker: HTMLElement, words: Array<[string, string]>): boolean {
+  let changed = false;
+  const walker = document.createTreeWalker(marker, NodeFilter.SHOW_TEXT);
+  const nodes: Text[] = [];
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) nodes.push(node as Text);
+  for (const node of nodes) {
+    if (node.parentElement?.isContentEditable) continue;
+    const text = node.data;
+    const trimmed = text.trim();
+    for (const [was, is] of words) {
+      if (trimmed !== was.trim()) continue;
+      node.data = text.replace(trimmed, is.trim());
+      changed = true;
+      break;
+    }
+  }
+  return changed;
+}
+
+/** A band's picture by its place: an <img> takes the new address (its other sizes dropped), a painted ground the new picture. */
+function setPictures(marker: HTMLElement, pictures: Record<string, string>): boolean {
+  let changed = false;
+  for (const [path, url] of Object.entries(pictures)) {
+    for (const node of Array.from(marker.querySelectorAll<HTMLElement>(`[data-xs-pic="${CSS.escape(path)}"]`))) {
+      const img = node instanceof HTMLImageElement ? node : node.querySelector("img");
+      if (!img || img.getAttribute("src") === url) continue;
+      for (const source of Array.from(img.parentElement?.querySelectorAll("source") ?? [])) source.remove();
+      img.removeAttribute("srcset");
+      img.src = url;
+      changed = true;
+    }
+    for (const node of Array.from(marker.querySelectorAll<HTMLElement>(`[data-xs-bg="${CSS.escape(path)}"]`))) {
+      const ground = `url(${JSON.stringify(url)})`;
+      node.style.setProperty("background-image", ground, "important");
+      node.style.setProperty("--xs-bg", ground);
+      node.style.setProperty("--xs-bg-phone", ground);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 /** Applies the ops to the page; true when anything on it changed (the overlay then measures again). */
 export function applyPatch(ops: PatchOp[]): boolean {
   let changed = false;
@@ -155,6 +241,9 @@ export function applyPatch(ops: PatchOp[]): boolean {
       changed = true;
     }
     if (op.style && setStyle(marker, op.style)) changed = true;
+    if (op.own && setOwn(op.elementId, op.own)) changed = true;
+    if (op.words && setWords(marker, op.words)) changed = true;
+    if (op.pictures && setPictures(marker, op.pictures)) changed = true;
   }
   return changed;
 }

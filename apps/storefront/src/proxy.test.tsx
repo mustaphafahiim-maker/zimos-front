@@ -39,6 +39,17 @@ describe("proxy with merchant domains off (the default)", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("passes the editor's view token from the address, never from a header a visitor sends", async () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const token = "5a11fedd-23bc-48a4-b0bf-a543d90f1b45";
+    const viewed = await proxy(request("localhost:3000", `/store/8a890c19-3e54-4ed1-8dca-74e98b638f9b/cart?zimos-view=${token}`));
+    expect(viewed.headers.get("x-middleware-request-x-zimos-view")).toBe(token);
+    const plain = await proxy(new NextRequest("http://localhost:3000/store/8a890c19-3e54-4ed1-8dca-74e98b638f9b/cart", { headers: { host: "localhost:3000", "x-zimos-view": token } }));
+    expect(plain.headers.get("x-middleware-request-x-zimos-view")).toBeNull();
+    const junk = await proxy(request("localhost:3000", "/store/8a890c19-3e54-4ed1-8dca-74e98b638f9b/cart?zimos-view=../x"));
+    expect(junk.headers.get("x-middleware-request-x-zimos-view")).toBeNull();
+  });
+
   it("stays off for any value but exactly \"true\"", async () => {
     vi.stubEnv("CUSTOM_DOMAINS_ENABLED", "1");
     const fetchSpy = vi.fn();
@@ -190,6 +201,12 @@ describe("proxy: CDN caching of public store pages (STOREFRONT_EDGE_CACHE)", () 
     const platform = await proxy(request("zimos.co"));
     expect(platform.status).toBe(307);
     expect(platform.headers.get("cache-control")).toBeNull();
+  });
+
+  it("never marks the website editor's view of a page cacheable (it shows a look that is not saved)", async () => {
+    vi.stubEnv("STOREFRONT_EDGE_CACHE", "true");
+    const viewed = await proxy(request("shop.zimos.co", "/?zimos-view=5a11fedd-23bc-48a4-b0bf-a543d90f1b45"));
+    expect(viewed.headers.get("cache-control")).toBeNull();
   });
 });
 

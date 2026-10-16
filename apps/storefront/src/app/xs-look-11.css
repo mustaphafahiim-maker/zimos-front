@@ -1,0 +1,360 @@
+/*
+ * Look 11 · Swanky (TemplatesJungle, free with attribution) — everything
+ * that is this one template's: its colours and type, how its header and
+ * footer differ from the shared layout in xs-shell.css, and how it draws the
+ * bands it shares with other looks. Deleting this file (and its import, its
+ * pictures under public/xs/11 and its entries in lib/xsShell.ts and the
+ * editor's xsBlocks.ts) removes the template.
+ *
+ * Its faces are served from this app, Latin only (xs-fonts.css); Arabic text
+ * falls through to the store's own face.
+ */
+
+[data-xs-look="11"],
+.brand-theme[data-xs-shell="11"] {
+  --xs-sans: "Lato", "XS Ar Almarai", var(--font-sans), sans-serif;
+  --xs-display: "Syne", "XS Ar Reem Kufi", var(--font-sans), sans-serif;
+  --xs-ink: #040404;
+  --xs-ink-soft: #737373;
+  --xs-muted: #737373;
+  --xs-brand: #ec6c5a;
+  --xs-accent: #ec6c5a;
+  --xs-button: #040404;
+  --xs-highlight: #ec6c5a;
+  --xs-tint: #f1e4e1;
+  --xs-dark: #040404;
+  --xs-line: #e3e3e3;
+  --xs-ground: #fff;
+  --xs-footer-ink: #737373;
+  --xs-badge: #ec6c5a;
+  --xs-btn-radius: 0;
+  --xs-container: 1320px;
+  color: var(--xs-ink-soft);
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+/* --- header: one white bar, upper-case links in the middle ----------------- */
+
+.xs-header[data-xs-look="11"] {
+  padding-bottom: 0;
+}
+.xs-header[data-xs-look="11"] .xs-header__strip {
+  display: none;
+}
+.xs-header[data-xs-look="11"] .xs-header__bar,
+.xs-header[data-xs-look="11"][data-scrolled] .xs-header__bar {
+  position: static;
+  height: 90px;
+  background: #fff;
+  box-shadow: none;
+}
+.xs-header[data-xs-look="11"] .xs-header__logo-name {
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.xs-header[data-xs-look="11"] .xs-header__menu {
+  margin-inline: auto;
+}
+.xs-header[data-xs-look="11"] .xs-header__link {
+  margin-inline: 0;
+  padding: 10px 20px;
+  color: var(--xs-ink);
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.xs-header[data-xs-look="11"] .xs-header__link:hover {
+  color: var(--xs-brand);
+}
+.xs-header[data-xs-look="11"] .xs-header__icons {
+  flex: 0 0 auto;
+}
+.xs-header[data-xs-look="11"] .zt-icon-btn > span {
+  border-radius: 50%;
+  background: var(--xs-brand);
+}
+@media (max-width: 991px) {
+  .xs-header[data-xs-look="11"] .xs-header__icons {
+    flex: 1;
+  }
+}
+
+/* --- footer: white with a rule, the wordmark column first ------------------ */
+
+.xs-footer[data-xs-look="11"] {
+  padding-top: 70px;
+  border-top: 1px solid var(--xs-line);
+  background: #fff;
+  color: var(--xs-ink-soft);
+  font-size: 16px;
+}
+.xs-footer[data-xs-look="11"] .xs-footer__col:last-child {
+  order: -1;
+}
+.xs-footer[data-xs-look="11"] .xs-footer__title {
+  padding-bottom: 20px;
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 20px;
+  font-weight: 700;
+  text-transform: none;
+}
+.xs-footer[data-xs-look="11"] a {
+  color: var(--xs-ink-soft);
+  text-transform: uppercase;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+.xs-footer[data-xs-look="11"] a:hover {
+  color: var(--xs-brand);
+}
+.xs-footer[data-xs-look="11"] .xs-footer__bottom {
+  padding-top: 24px;
+  border-top: 1px solid var(--xs-line);
+}
+.xs-footer[data-xs-look="11"] .xs-footer__bottom a {
+  font-size: inherit;
+  text-transform: none;
+}
+
+/* --- xs_slider: a wide picture with a very large heading on a soft panel --- */
+
+.xs-slider[data-xs-look="11"] {
+  width: 100%;
+  height: 720px;
+  max-height: none;
+}
+.xs-slider[data-xs-look="11"] .xs-slider__inner {
+  padding: 0 60px;
+}
+.xs-slider[data-xs-look="11"] .xs-slider__heading {
+  max-width: 620px;
+  padding: 40px;
+  background: rgba(246, 236, 234, 0.9);
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 80px;
+  font-weight: 700;
+  line-height: 1.05;
+  text-transform: none;
+}
+.xs-slider[data-xs-look="11"] .xs-slider__button {
+  min-width: 0;
+  height: auto;
+  margin-top: 30px;
+  padding: 18px 44px;
+  border-radius: 0;
+  background: var(--xs-dark);
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+}
+.xs-slider[data-xs-look="11"] .xs-slider__button:hover {
+  background: var(--xs-brand);
+}
+@media (max-width: 767px) {
+  .xs-slider[data-xs-look="11"] {
+    height: 520px;
+  }
+  .xs-slider[data-xs-look="11"] .xs-slider__inner {
+    padding: 0 15px;
+  }
+  .xs-slider[data-xs-look="11"] .xs-slider__heading {
+    padding: 24px;
+    font-size: 40px;
+  }
+}
+
+/* --- xs_features: three promises, icon beside the words -------------------- */
+
+.xs-features[data-xs-look="11"] {
+  padding: calc(90px * var(--xs-space, 1)) 15px;
+}
+.xs-features[data-xs-look="11"] .xs-features__inner {
+  grid-template-columns: minmax(0, 1fr);
+}
+.xs-features[data-xs-look="11"] .xs-features__list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+  margin: 0;
+}
+.xs-features[data-xs-look="11"] .xs-features__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 24px;
+  margin: 0;
+}
+.xs-features[data-xs-look="11"] .xs-features__icon {
+  grid-row: span 2;
+  margin: 0;
+}
+.xs-features[data-xs-look="11"] .xs-features__icon::before {
+  display: none;
+}
+.xs-features[data-xs-look="11"] .xs-features__item h3 {
+  margin: 0 0 6px;
+  font-family: var(--xs-display);
+  font-size: 24px;
+  font-weight: 700;
+}
+.xs-features[data-xs-look="11"] .xs-features__item p {
+  font-size: 18px;
+  line-height: 1.6;
+}
+@media (max-width: 991px) {
+  .xs-features[data-xs-look="11"] .xs-features__list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --- xs_products: a large heading with a link across from it --------------- */
+
+.xs-products[data-xs-look="11"] {
+  padding: 0 15px calc(110px * var(--xs-space, 1));
+}
+.xs-products[data-xs-look="11"] .xs-products__heading {
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 54px;
+  font-weight: 700;
+  text-transform: none;
+}
+.xs-products[data-xs-look="11"] .xs-products__all {
+  border-bottom: 1px solid var(--xs-ink);
+  font-size: 16px;
+}
+.xs-products[data-xs-look="11"] .xs-products__grid {
+  margin-top: 30px;
+}
+.xs-products[data-xs-look="11"] .xs-products__media {
+  aspect-ratio: 3 / 4;
+}
+.xs-products[data-xs-look="11"] .xs-products__name {
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+.xs-products[data-xs-look="11"] .xs-products__price {
+  color: var(--xs-ink-soft);
+  font-size: 18px;
+}
+.xs-products[data-xs-look="11"] .xs-products__view,
+.xs-products[data-xs-look="11"] .xs-products__more-btn,
+.xs-products[data-xs-look="11"] .xs-products__badge {
+  border-radius: 0;
+}
+@media (max-width: 767px) {
+  .xs-products[data-xs-look="11"] .xs-products__heading {
+    font-size: 34px;
+  }
+}
+
+/* --- xs_quotes: on the look's blush ground --------------------------------- */
+
+.xs-quotes[data-xs-look="11"] {
+  padding: calc(110px * var(--xs-space, 1)) 15px;
+  background: var(--xs-tint);
+}
+.xs-quotes[data-xs-look="11"] .xs-quotes__item p {
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 30px;
+  line-height: 1.5;
+}
+.xs-quotes[data-xs-look="11"] .xs-quotes__name {
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.xs-quotes[data-xs-look="11"] .xs-quotes__arrow {
+  border-radius: 0;
+  background: none;
+}
+.xs-quotes[data-xs-look="11"] .xs-quotes__dots button[data-active] {
+  background: var(--xs-brand);
+}
+@media (max-width: 767px) {
+  .xs-quotes[data-xs-look="11"] .xs-quotes__item p {
+    font-size: 20px;
+  }
+}
+
+/* --- xs_banners "tile": pictures edge to edge, a boxed label on each ------- */
+
+.xs-banners[data-xs-look="11"] {
+  padding: 0;
+}
+.xs-banners[data-xs-look="11"] .xs-banners__grid {
+  gap: 0;
+  max-width: none;
+}
+.xs-banners[data-xs-look="11"] .xs-banners__item {
+  border: 0;
+  overflow: hidden;
+}
+.xs-banners[data-xs-look="11"] .xs-banners__img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  transition: transform 0.6s;
+}
+.xs-banners[data-xs-look="11"] .xs-banners__item:hover .xs-banners__img {
+  transform: scale(1.06);
+}
+.xs-banners[data-xs-look="11"] .xs-banners__text,
+.xs-banners[data-xs-look="11"] .xs-banners__item:hover .xs-banners__text {
+  inset: auto 30px 30px;
+  gap: 6px;
+  padding: 24px 30px;
+  background: rgba(255, 255, 255, 0.92);
+}
+.xs-banners[data-xs-look="11"] .xs-banners__title,
+.xs-banners[data-xs-look="11"] .xs-banners__item:hover .xs-banners__title {
+  padding: 0;
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 28px;
+  font-weight: 700;
+}
+.xs-banners[data-xs-look="11"] .xs-banners__more {
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  transform: none;
+}
+.xs-banners[data-xs-look="11"] .xs-banners__link {
+  border-bottom: 1px solid var(--xs-ink);
+  color: var(--xs-ink);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  transform: none;
+}
+
+/* --- inner pages ----------------------------------------------------------- */
+
+.xs-title[data-xs-look="11"] {
+  padding: calc(100px * var(--xs-space, 1)) 15px;
+  background-color: var(--xs-tint);
+}
+.xs-title[data-xs-look="11"] .xs-title__heading {
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 60px;
+}
+.xs-contact[data-xs-look="11"] .xs-contact__submit {
+  border-radius: 0;
+  letter-spacing: 0.06em;
+}
+.xs-contact[data-xs-look="11"] .xs-contact__submit:hover:not(:disabled) {
+  background: var(--xs-brand);
+}
+.xs-contact[data-xs-look="11"] .xs-contact__value[data-accent] {
+  color: var(--xs-brand);
+}

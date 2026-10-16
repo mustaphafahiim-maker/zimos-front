@@ -8,6 +8,7 @@ import {
 } from "@store-builder/api-client";
 import { brandVars } from "./brandTheme";
 import { createServerStorefrontApiClient } from "./serverApiClient";
+import { getEditorView, withEditorLook } from "./editorView";
 
 /** What the API tells an unavailable store's page: just enough to name it. */
 export interface UnavailableStore {
@@ -37,7 +38,10 @@ export function isStoreUnavailable(err: unknown): boolean {
 export const getStoreState = cache(async (workspaceId: string): Promise<StoreState> => {
   const client = await createServerStorefrontApiClient();
   try {
-    return { kind: "ok", store: await client.getStorefrontMeta(workspaceId) };
+    const store = await client.getStorefrontMeta(workspaceId);
+    // The website editor showing this page in its frame: its unsaved look over the saved one (lib/editorView).
+    const view = await getEditorView(workspaceId);
+    return { kind: "ok", store: view ? { ...store, themeSettings: withEditorLook(store.themeSettings, view.options) } : store };
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return { kind: "missing" };
     if (isStoreUnavailable(err)) {

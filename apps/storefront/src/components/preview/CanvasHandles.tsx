@@ -12,9 +12,16 @@ import {
   imageFieldOf,
   imageNode,
   isRtl,
+  logoBox,
+  PIC_ATTR,
+  PICTURE_HANDLES,
+  pictureNode,
   sectionBody,
   sectionDividers,
   sectionNode,
+  shellPartNode,
+  shellZones,
+  type PictureHandle,
   type Rect,
 } from "./canvasGeometry";
 import { BLUE, INK, LAYER, RING_OUTSIDE, useCoarsePointer } from "./canvasChrome";
@@ -31,7 +38,10 @@ import { useBadgePoint, type CanvasDrag, type CanvasTarget } from "./useCanvasDr
  *    that moves it, and on a picture a "replace" button and a corner that
  *    resizes it;
  *  - on the element under the pointer (or the one last touched): a light
- *    outline and a grip, so a block can be dragged without picking it first.
+ *    outline and a grip, so a block can be dragged without picking it first;
+ *  - on a picture of a selected template band (the one under the pointer, or
+ *    last touched) and on a selected header's or footer's logo: handles on
+ *    its edges and corners that resize it (PictureHandles, LogoHandles).
  *
  * Every handle is a real button: focus it and the arrow keys do one step
  * (Shift for a fine step where there is one). Esc cancels a drag. With a
@@ -48,6 +58,11 @@ export interface CanvasStrings {
   resizeImage: string;
   /** The button on a selected picture; without it the button is not drawn. */
   replaceImage?: string;
+  /** The handles on a template band's picture and on a template logo; without them they are not drawn. */
+  resizePicture?: string;
+  resizeLogo?: string;
+  /** The toggle that resizes every picture of the band at once. */
+  everyPicture?: string;
 }
 
 /** A hit area wider than the handle itself (canvasChrome's `[data-zc="handle"]::after`). */
@@ -110,6 +125,7 @@ export function CanvasHandles({
   selectedElementId = null,
   elementName,
   onPickImage,
+  resizePictures = false,
 }: {
   /** The selected section; nothing is drawn without one. */
   sectionId: string | null;
@@ -123,6 +139,8 @@ export function CanvasHandles({
   elementName?: (type: string) => string;
   /** "Replace this picture" — present when the editor listens for it. */
   onPickImage?: (elementId: string, field: string) => void;
+  /** A template band's pictures get resize handles (the editor listens for them). */
+  resizePictures?: boolean;
 }) {
   const [hoveredEl, setHoveredEl] = useState<string | null>(null);
   const [activeEl, setActiveEl] = useState<string | null>(null);
@@ -202,6 +220,9 @@ export function CanvasHandles({
       )}
       {sectionId && shownEl && shownEl !== selectedElementId && (
         <ElementHandles sectionId={sectionId} elementId={shownEl} drag={drag} strings={strings} coarse={coarse} />
+      )}
+      {sectionId && selectedElementId && resizePictures && strings.resizePicture && (
+        <PictureHandles sectionId={sectionId} elementId={selectedElementId} drag={drag} strings={strings} coarse={coarse} />
       )}
       <DragPicture drag={drag} />
     </>
@@ -569,7 +590,9 @@ function DragPicture({ drag }: { drag: CanvasDrag }) {
   if (drag.active?.kind === "section") ghost = rectOf(sectionNode(drag.active.sectionId));
 
   const label =
-    fb && (fb.kind === "section-height" || fb.kind === "column-width" || fb.kind === "image-width") ? fb.label : "";
+    fb && (fb.kind === "section-height" || fb.kind === "column-width" || fb.kind === "image-width" || fb.kind === "picture" || fb.kind === "logo")
+      ? fb.label
+      : "";
 
   return (
     <>
@@ -623,6 +646,293 @@ function DragPicture({ drag }: { drag: CanvasDrag }) {
         >
           {label}
         </div>
+      )}
+    </>
+  );
+}
+
+const RESIZE_CURSOR: Record<PictureHandle, string> = {
+  n: "ns-resize",
+  s: "ns-resize",
+  e: "ew-resize",
+  w: "ew-resize",
+  ne: "nesw-resize",
+  sw: "nesw-resize",
+  nw: "nwse-resize",
+  se: "nwse-resize",
+};
+
+/** Where a handle sits on a box: a corner, or the middle of an edge. */
+function handleSpot(rect: Rect, handle: PictureHandle): { x: number; y: number } {
+  const x = handle.includes("w") ? rect.left : handle.includes("e") ? rect.left + rect.width : rect.left + rect.width / 2;
+  const y = handle.includes("n") ? rect.top : handle.includes("s") ? rect.top + rect.height : rect.top + rect.height / 2;
+  return { x, y };
+}
+
+/** Eight handles (or four corners) around a box: a square at each corner, a short bar on each edge. */
+function ResizeFrame({
+  rect,
+  handles,
+  target,
+  drag,
+  label,
+  coarse,
+  name,
+}: {
+  rect: Rect;
+  handles: readonly PictureHandle[];
+  target: (handle: PictureHandle) => CanvasTarget;
+  drag: CanvasDrag;
+  label: string;
+  coarse: boolean;
+  name: (handle: PictureHandle) => string;
+}) {
+  const corner = coarse ? 20 : 10;
+  const long = coarse ? 28 : 18;
+  const thin = coarse ? 10 : 6;
+  return (
+    <>
+      <div
+        aria-hidden
+        style={{
+          position: "fixed",
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+          outline: `1px solid ${BLUE}`,
+          pointerEvents: "none",
+          zIndex: HANDLES - 1,
+        }}
+      />
+      {handles.map((handle) => {
+        const { x, y } = handleSpot(rect, handle);
+        const isCorner = handle.length === 2;
+        const across = handle === "n" || handle === "s";
+        const w = isCorner ? corner : across ? long : thin;
+        const h = isCorner ? corner : across ? thin : long;
+        return (
+          <button
+            key={handle}
+            {...handleProps(drag, target(handle), name(handle), label)}
+            data-zc="handle"
+            style={{
+              ...handleStyle({
+                top: y - h / 2,
+                left: x - w / 2,
+                width: w,
+                height: h,
+                borderRadius: isCorner ? 3 : 999,
+                cursor: RESIZE_CURSOR[handle],
+              }),
+              ...hit(coarse ? "-6px" : "-5px"),
+            }}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * A selected template band's pictures: the one under the pointer (or last
+ * touched) gets handles on its edges and corners. Shift keeps its shape, Alt
+ * resizes from its centre, Ctrl/⌘ — or the "every picture" toggle — gives
+ * every picture of the band (of the same list) the size; Esc cancels; on a
+ * focused handle the arrows step its width or height (lib/canvasDrag.ts).
+ */
+export function PictureHandles({
+  sectionId,
+  elementId,
+  drag,
+  strings,
+  coarse,
+}: {
+  sectionId: string;
+  elementId: string;
+  drag: CanvasDrag;
+  strings: CanvasStrings;
+  coarse: boolean;
+}) {
+  const [path, setPath] = useState<string | null>(null);
+  const [band, setBand] = useState(false);
+
+  // The picture under the pointer inside this band, or the one last touched; frozen while a drag is on.
+  useEffect(() => {
+    const pick = (target: EventTarget | null) => {
+      const node = (target as Element | null)?.closest?.<HTMLElement>(`[${PIC_ATTR}]`);
+      if (!node || node.closest(`[${EL_ATTR}]`)?.getAttribute(EL_ATTR) !== elementId) return null;
+      return node.getAttribute(PIC_ATTR);
+    };
+    function onOver(event: MouseEvent) {
+      if ((event.target as Element | null)?.closest?.("[data-zimos-overlay]")) return;
+      const next = pick(event.target);
+      if (next) setPath(next);
+    }
+    document.addEventListener("mouseover", onOver);
+    document.addEventListener("pointerdown", onOver, true);
+    return () => {
+      document.removeEventListener("mouseover", onOver);
+      document.removeEventListener("pointerdown", onOver, true);
+    };
+  }, [elementId]);
+
+  // Another band: forget the last one's picture.
+  const [lastElement, setLastElement] = useState(elementId);
+  if (lastElement !== elementId) {
+    setLastElement(elementId);
+    setPath(null);
+  }
+
+  const active = drag.active?.kind === "picture" && drag.active.elementId === elementId ? drag.active.path : null;
+  const shown = active ?? path;
+  const rect = shown ? rectOf(pictureNode(elementId, shown)) : null;
+  if (!shown || !rect) return null;
+  const rtl = isRtl(pictureNode(elementId, shown)?.parentElement ?? document.documentElement);
+
+  return (
+    <>
+      <ResizeFrame
+        rect={rect}
+        handles={PICTURE_HANDLES}
+        target={(handle) => ({ kind: "picture", sectionId, elementId, path: shown, handle, band })}
+        drag={drag}
+        label={strings.resizePicture ?? ""}
+        coarse={coarse}
+        name={(handle) => `pic:${elementId}:${shown}:${handle}`}
+      />
+      {strings.everyPicture && shown.includes(".") && (
+        <div
+          style={{
+            position: "fixed",
+            top: Math.max(4, rect.top + 8),
+            left: rect.left,
+            width: rect.width,
+            display: "flex",
+            justifyContent: "flex-end",
+            direction: rtl ? "rtl" : "ltr",
+            paddingInline: 8,
+            pointerEvents: "none",
+            zIndex: HANDLES + 1,
+          }}
+        >
+          <button
+            type="button"
+            data-zc="pill"
+            data-compact={rect.width < 190 ? "" : undefined}
+            aria-pressed={band}
+            title={strings.everyPicture}
+            onClick={() => setBand((on) => !on)}
+            style={band ? { background: BLUE, color: "#fff" } : undefined}
+          >
+            <span>{band ? "✓ " : ""}{strings.everyPicture}</span>
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** A selected template header's or footer's logo: a handle on each corner (it keeps its shape). */
+export function LogoHandles({ part, drag, strings }: { part: "header" | "footer"; drag: CanvasDrag; strings: CanvasStrings }) {
+  const coarse = useCoarsePointer();
+  const rect = rectOf(logoBox(part));
+  if (!rect || !strings.resizeLogo) return null;
+  return (
+    <ResizeFrame
+      rect={rect}
+      handles={["nw", "ne", "se", "sw"]}
+      target={(handle) => ({ kind: "logo", part, handle })}
+      drag={drag}
+      label={strings.resizeLogo}
+      coarse={coarse}
+      name={(handle) => `logo:${part}:${handle}`}
+    />
+  );
+}
+
+/**
+ * The selected template header's parts: the one under the pointer (or last
+ * touched) gets a grip to drag it along its zone or into another — a line
+ * shows where it would land — and, focused, the arrow keys move it the same
+ * way (lib/canvasDrag.ts "shell-part").
+ */
+export function ShellPartHandles({ drag, label }: { drag: CanvasDrag; label: string }) {
+  const coarse = useCoarsePointer();
+  const [shown, setShown] = useState<string | null>(null);
+
+  useEffect(() => {
+    function onOver(event: Event) {
+      const node = (event.target as Element | null)?.closest?.<HTMLElement>('[data-zimos-shell="header"] [data-xs-part]');
+      if (node) setShown(node.getAttribute("data-xs-part"));
+    }
+    document.addEventListener("mouseover", onOver);
+    document.addEventListener("pointerdown", onOver, true);
+    return () => {
+      document.removeEventListener("mouseover", onOver);
+      document.removeEventListener("pointerdown", onOver, true);
+    };
+  }, []);
+
+  const active = drag.active?.kind === "shell-part" ? drag.active.id : null;
+  const id = active ?? shown;
+  const node = id ? shellPartNode(id) : null;
+  const rect = node ? (rectOf(node) ?? elementRect(node)) : null;
+  const size = coarse ? 28 : 18;
+  // On the corner the header reads from.
+  const startsRight = isRtl(document.querySelector('[data-zimos-shell="header"]') ?? document.documentElement);
+
+  // Where the dragged part would land, drawn as a line in its zone.
+  let line: Rect | null = null;
+  const fb = drag.feedback;
+  if (fb?.kind === "shell-part") {
+    const zone = shellZones().find((z) => z.zone === fb.zone);
+    if (zone) {
+      const before = zone.parts[fb.index - 1];
+      const after = zone.parts[fb.index];
+      const rtl = startsRight;
+      const edge = (p: { left: number; width: number }, end: boolean) => (end !== rtl ? p.left + p.width : p.left);
+      const x = after ? edge(after, false) - 3 : before ? edge(before, true) + 3 : rtl ? zone.left + zone.width - 4 : zone.left + 4;
+      line = { top: zone.top - window.scrollY, left: x - window.scrollX - 2, width: 4, height: Math.max(24, zone.height) };
+    }
+  }
+
+  return (
+    <>
+      {rect && id && (
+        <>
+          <div
+            aria-hidden
+            style={{ position: "fixed", ...rect, outline: `1px dashed ${BLUE}`, outlineOffset: 2, pointerEvents: "none", zIndex: HANDLES - 1 }}
+          />
+          <button
+            {...handleProps(drag, { kind: "shell-part", id }, `part:${id}`, label)}
+            data-zc="handle"
+            style={{
+              ...handleStyle({
+                top: rect.top - size / 2,
+                left: (startsRight ? rect.left + rect.width : rect.left) - size / 2,
+                width: size,
+                height: size,
+                borderRadius: 6,
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: active ? "grabbing" : "grab",
+              }),
+              ...hit("-6px"),
+            }}
+          >
+            <DotsSixVerticalIcon size={coarse ? 16 : 12} aria-hidden />
+          </button>
+        </>
+      )}
+      {line && (
+        <div
+          aria-hidden
+          style={{ position: "fixed", ...line, borderRadius: 999, background: BLUE, boxShadow: "0 0 0 2px #fff", pointerEvents: "none", zIndex: HANDLES + 1 }}
+        />
       )}
     </>
   );

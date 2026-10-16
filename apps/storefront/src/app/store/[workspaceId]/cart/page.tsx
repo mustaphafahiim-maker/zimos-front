@@ -20,6 +20,8 @@ import { cartErrorMessage } from "@/lib/placeOrder";
 import { useCatalog } from "@/lib/useCatalog";
 import { LineCustomizations } from "@/components/LineCustomizations";
 import { LineOptions } from "@/components/LineOptions";
+import { XsPageStrip } from "@/components/xs/XsPageStrip";
+import { storePageAttrs, stripHoldsTitle } from "@/lib/xsStorePages";
 
 export default function CartPage() {
   // Still needed for the catalogue lookup — the links go through StoreLink,
@@ -27,6 +29,8 @@ export default function CartPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { cart, isLoading, updateItem, removeItem } = useCart();
   const { t, money, store, locale } = useStore();
+  // On a store that wears a template, its shop's title strip (lib/xsStorePages).
+  const xsPages = store?.xsPages ?? null;
   const { byVariant } = useCatalog(workspaceId);
 
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -49,8 +53,17 @@ export default function CartPage() {
   }
 
   return (
-    <main className={`${container} flex-1 py-8 sm:py-10`}>
-      <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">{t.cart.title}</h1>
+    <main className="flex-1" {...storePageAttrs("cart", xsPages)}>
+      {xsPages && (
+        <XsPageStrip
+          pages={xsPages}
+          title={stripHoldsTitle(xsPages) ? (xsPages.titles.cart ?? t.cart.title) : undefined}
+          label={t.catalog.breadcrumbs}
+          crumbs={[{ label: t.common.home, href: "/" }, { label: xsPages.titles.cart ?? t.cart.title }]}
+        />
+      )}
+      <div className={`${container} py-8 sm:py-10`}>
+      {!stripHoldsTitle(xsPages) && <h1 className="zt-page-title font-display text-2xl font-bold text-ink sm:text-3xl">{t.cart.title}</h1>}
 
       {isLoading && !cart ? (
         // The page's own shape while the cart resolves, so nothing jumps when it lands.
@@ -193,6 +206,7 @@ export default function CartPage() {
           productIds={[...new Set(cart.items.map((line) => byVariant.get(line.variantId)?.id).filter((id): id is string => Boolean(id)))]}
         />
       )}
+      </div>
     </main>
   );
 }

@@ -97,7 +97,8 @@ describe("«—» in a list of choices", () => {
       expect([name, onChange.mock.calls.at(-1)]).toEqual([name, [field.key, field.options[0].value]]);
       cleanup();
     }
-  });
+  // One render per list of choices in the editor: the count grows with every block, so the time does too.
+  }, 60_000);
 
   it("leaves no key behind in the element that is saved", () => {
     const element = { id: "e1", type: "product_rail", props: { heading: "New in", tone: "cool", speed: "fast" } } as unknown as PageElement;

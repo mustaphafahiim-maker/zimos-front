@@ -356,6 +356,9 @@ export interface WebsiteTemplateSummary {
   templateVersionId: string;
   /** The template's accent (its column, else its current version's globalStyles). */
   primaryColor?: string | null;
+  /** A right-to-left (Arabic) template. */
+  rtl?: boolean;
+  tags?: string[];
 }
 
 export interface WebsiteTemplateDetail extends WebsiteTemplateSummary {
@@ -454,6 +457,26 @@ export const PAGE_ELEMENT_TYPES = [
   "product_shelf",
   "product_cards",
   "image_banner",
+  // Bands in the look of an imported template (storefront page-renderer/xs). The
+  // backend's allowlist (src/modules/pages/pageTree.js) has to name them too before
+  // a page holding one can be saved.
+  "xs_slider",
+  "xs_banners",
+  "xs_products",
+  "xs_title",
+  "xs_story",
+  "xs_contact",
+  "xs_hero",
+  "xs_showcase",
+  "xs_features",
+  "xs_split",
+  "xs_minis",
+  "xs_quotes",
+  "xs_gallery",
+  "xs_newsletter",
+  "xs_team",
+  "xs_video",
+  "xs_posts",
 ] as const;
 
 /** The backend's ALLOWED_ELEMENT_TYPES allowlist — anything else is a 422. */

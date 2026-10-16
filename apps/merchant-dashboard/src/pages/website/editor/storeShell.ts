@@ -22,6 +22,8 @@
  * never opens these panels saves exactly the blob they had before.
  */
 
+import type { ScreenDevice } from "@/lib/canvasDrag";
+import { deviceParts, withDeviceValue, type DeviceValue } from "@/lib/deviceValue";
 import type { ShellPart } from "@/lib/previewBridge";
 
 export type { ShellPart };
@@ -74,12 +76,26 @@ export interface HeaderLook {
   menu: ShellLink[] | null;
   logoSize: LogoSize;
   logoAlign: LogoAlign;
+  /** A logo picture for an imported template's header (`logo.image`); empty shows the store's logo, else the template's. */
+  logoImage?: string;
+  /** The store's name in the template's lettering instead of any logo picture (`logo.name`). */
+  logoAsName?: boolean;
+  /** Where each part of an imported template's header stands (xsShellLayout.ts), as saved; absent: the template's. */
+  zones?: unknown;
   showCart: boolean;
   showLanguage: boolean;
   showTheme: boolean;
   showTrackOrder: boolean;
   sticky: boolean;
   layout: NavLayout;
+  /**
+   * The bar's own colours, honoured by an imported template's header
+   * (storefront components/xs): background, text, stripBackground, stripText.
+   * A key is present only while its colour is chosen.
+   */
+  colors?: Record<string, string>;
+  /** Its own sizes in pixels, honoured the same way (HEADER_SIZES / FOOTER_SIZES), each one value or one per screen (lib/deviceValue); a key is present only while set. */
+  sizes?: ShellSizes;
 }
 
 export interface FooterGroupLook {
@@ -98,6 +114,17 @@ export interface FooterLook {
   showBrand: boolean;
   showLinks: boolean;
   showHelp: boolean;
+  /** A logo picture for an imported template's footer (`logo.image`); empty shows the template's, else the name. */
+  logoImage?: string;
+  /** The store's name in the template's lettering instead of any logo picture (`logo.name`). */
+  logoAsName?: boolean;
+  /** An imported template's footer columns and bottom line (xsShellLayout.ts), as saved; absent: the template's. */
+  columns?: unknown;
+  bottom?: unknown;
+  /** The footer's own colours, honoured by an imported template's footer: background, text, heading. */
+  colors?: Record<string, string>;
+  /** Its own sizes in pixels, honoured the same way (HEADER_SIZES / FOOTER_SIZES), each one value or one per screen (lib/deviceValue); a key is present only while set. */
+  sizes?: ShellSizes;
 }
 
 /**
@@ -152,7 +179,7 @@ function restOf(saved: Blob | null, owned: readonly string[]): Blob {
 
 const LINK_KEYS = ["label", "href", "kind"] as const;
 const GROUP_KEYS = ["title", "links"] as const;
-const LOGO_KEYS = ["size", "align"] as const;
+const LOGO_KEYS = ["size", "align", "image", "name"] as const;
 const HEADER_SHOW_KEYS = ["cart", "language", "theme", "trackOrder"] as const;
 const FOOTER_SHOW_KEYS = ["brand", "links", "help"] as const;
 
@@ -226,6 +253,70 @@ function readShow(show: Blob | null, key: string): boolean {
   return show?.[key] !== false;
 }
 
+export const HEADER_COLOR_KEYS = ["background", "text", "stripBackground", "stripText"] as const;
+export const FOOTER_COLOR_KEYS = ["background", "text", "heading"] as const;
+
+/** The sizes a template's header and footer take from the editor, each with its least and most in pixels. */
+export const HEADER_SIZES: Record<string, readonly [number, number]> = { logo: [20, 140], bar: [48, 160], menu: [11, 26], strip: [10, 20] };
+export const FOOTER_SIZES: Record<string, readonly [number, number]> = { title: [12, 32], text: [11, 22], logo: [16, 200] };
+
+/** A header's or footer's sizes: each one number for every screen, or one per screen. */
+export type ShellSizes = Record<string, DeviceValue<number>>;
+
+/** The whole numbers within range among a saved `sizes` object, per screen; undefined when none is set. */
+function readSizes(raw: unknown, ranges: Record<string, readonly [number, number]>): ShellSizes | undefined {
+  const saved = objectOf(raw);
+  if (!saved) return undefined;
+  const sizes: ShellSizes = {};
+  for (const [key, [least, most]] of Object.entries(ranges)) {
+    let value: unknown;
+    for (const [device, part] of Object.entries(deviceParts(saved[key]))) {
+      if (typeof part === "number" && Number.isInteger(part) && part >= least && part <= most) value = withDeviceValue(value, device as ScreenDevice, part);
+    }
+    if (value !== undefined) sizes[key] = value as DeviceValue<number>;
+  }
+  return Object.keys(sizes).length > 0 ? sizes : undefined;
+}
+
+/** `sizes` as it is saved: the chosen ones over whatever else the saved object held; undefined when empty. */
+function writeSizes(existing: unknown, ranges: Record<string, readonly [number, number]>, sizes: ShellSizes | undefined): Blob | undefined {
+  const next: Blob = { ...restOf(objectOf(existing), Object.keys(ranges)), ...(sizes ?? {}) };
+  return Object.keys(next).length > 0 ? next : undefined;
+}
+
+const sameSizes = (a: ShellSizes | undefined, b: ShellSizes | undefined) =>
+  JSON.stringify(Object.entries(a ?? {}).sort()) === JSON.stringify(Object.entries(b ?? {}).sort());
+
+/** One of a header's or footer's sizes on one screen set (null: back to the template's there). */
+export function withShellSize(sizes: ShellSizes | undefined, key: string, device: ScreenDevice, px: number | null): ShellSizes | undefined {
+  const next: ShellSizes = { ...(sizes ?? {}) };
+  const value = withDeviceValue(next[key], device, px);
+  if (value === undefined) delete next[key];
+  else next[key] = value as DeviceValue<number>;
+  return Object.keys(next).length > 0 ? next : undefined;
+}
+
+/** The #rrggbb values among `keys` of a saved `colors` object; undefined when none is set. */
+function readColors(raw: unknown, keys: readonly string[]): Record<string, string> | undefined {
+  const saved = objectOf(raw);
+  if (!saved) return undefined;
+  const colors: Record<string, string> = {};
+  for (const key of keys) {
+    const value = saved[key];
+    if (typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value)) colors[key] = value.toLowerCase();
+  }
+  return Object.keys(colors).length > 0 ? colors : undefined;
+}
+
+/** `colors` as it is saved: the chosen ones over whatever else the saved object held; undefined when empty. */
+function writeColors(existing: unknown, keys: readonly string[], colors: Record<string, string> | undefined): Blob | undefined {
+  const next: Blob = { ...restOf(objectOf(existing), keys), ...(colors ?? {}) };
+  return Object.keys(next).length > 0 ? next : undefined;
+}
+
+const sameColors = (a: Record<string, string> | undefined, b: Record<string, string> | undefined) =>
+  JSON.stringify(Object.entries(a ?? {}).sort()) === JSON.stringify(Object.entries(b ?? {}).sort());
+
 export function readHeaderLook(rawHeader: unknown): HeaderLook {
   const header = objectOf(rawHeader);
   if (!header) return DEFAULT_HEADER_LOOK;
@@ -235,12 +326,17 @@ export function readHeaderLook(rawHeader: unknown): HeaderLook {
     menu: Array.isArray(header.menu) ? readLinks(header.menu, MAX_MENU_LINKS) : null,
     logoSize: logo?.size === "sm" || logo?.size === "lg" ? logo.size : "md",
     logoAlign: logo?.align === "center" ? "center" : "start",
+    ...(typeof logo?.image === "string" && logo.image.trim() ? { logoImage: logo.image.trim() } : {}),
+    ...(logo?.name === true ? { logoAsName: true } : {}),
+    ...(header.zones !== undefined ? { zones: header.zones } : {}),
     showCart: readShow(show, "cart"),
     showLanguage: readShow(show, "language"),
     showTheme: readShow(show, "theme"),
     showTrackOrder: readShow(show, "trackOrder"),
     sticky: header.sticky !== false,
     layout: header.layout === "side" ? "side" : "top",
+    colors: readColors(header.colors, HEADER_COLOR_KEYS),
+    sizes: readSizes(header.sizes, HEADER_SIZES),
   };
 }
 
@@ -271,6 +367,14 @@ export function readFooterLook(rawFooter: unknown): FooterLook {
     showBrand: readShow(show, "brand"),
     showLinks: readShow(show, "links"),
     showHelp: readShow(show, "help"),
+    ...(typeof objectOf(footer.logo)?.image === "string" && String(objectOf(footer.logo)?.image).trim()
+      ? { logoImage: String(objectOf(footer.logo)?.image).trim() }
+      : {}),
+    ...(objectOf(footer.logo)?.name === true ? { logoAsName: true } : {}),
+    ...(footer.columns !== undefined ? { columns: footer.columns } : {}),
+    ...(footer.bottom !== undefined ? { bottom: footer.bottom } : {}),
+    colors: readColors(footer.colors, FOOTER_COLOR_KEYS),
+    sizes: readSizes(footer.sizes, FOOTER_SIZES),
   };
 }
 
@@ -313,12 +417,22 @@ export function writeHeader(existing: unknown, header: HeaderLook, announcement:
   delete next.show;
   delete next.sticky;
   delete next.layout;
+  delete next.colors;
+  const headerColors = writeColors(before?.colors, HEADER_COLOR_KEYS, header.colors);
+  if (headerColors) next.colors = headerColors;
+  delete next.sizes;
+  const headerSizes = writeSizes(before?.sizes, HEADER_SIZES, header.sizes);
+  if (headerSizes) next.sizes = headerSizes;
   next.announcement = announcement;
   if (header.menu !== null) next.menu = saveLinks(header.menu);
   const logo: Blob = restOf(objectOf(before?.logo), LOGO_KEYS);
   if (header.logoSize !== "md") logo.size = header.logoSize;
   if (header.logoAlign !== "start") logo.align = header.logoAlign;
+  if (header.logoImage) logo.image = header.logoImage;
+  if (header.logoAsName) logo.name = true;
   if (Object.keys(logo).length > 0) next.logo = logo;
+  delete next.zones;
+  if (header.zones !== undefined) next.zones = header.zones;
   const show = showPatch(before?.show, HEADER_SHOW_KEYS, [
     ["cart", header.showCart],
     ["language", header.showLanguage],
@@ -341,6 +455,21 @@ export function writeFooter(existing: unknown, footer: FooterLook): Blob | undef
   delete next.groups;
   delete next.text;
   delete next.show;
+  delete next.colors;
+  const footerColors = writeColors(before?.colors, FOOTER_COLOR_KEYS, footer.colors);
+  if (footerColors) next.colors = footerColors;
+  delete next.sizes;
+  const footerSizes = writeSizes(before?.sizes, FOOTER_SIZES, footer.sizes);
+  if (footerSizes) next.sizes = footerSizes;
+  const footerLogo: Blob = restOf(objectOf(before?.logo), ["image", "name"]);
+  delete next.logo;
+  if (footer.logoImage) footerLogo.image = footer.logoImage;
+  if (footer.logoAsName) footerLogo.name = true;
+  if (Object.keys(footerLogo).length > 0) next.logo = footerLogo;
+  delete next.columns;
+  delete next.bottom;
+  if (footer.columns !== undefined) next.columns = footer.columns;
+  if (footer.bottom !== undefined) next.bottom = footer.bottom;
   if (footer.groups !== null) {
     next.groups = footer.groups.map((group) => ({
       ...(group.extra ?? {}),
@@ -380,15 +509,20 @@ function sameExtra(a: Record<string, unknown> | undefined, b: Record<string, unk
 
 export function sameHeader(a: HeaderLook, b: HeaderLook): boolean {
   return (
+    JSON.stringify(a.zones ?? null) === JSON.stringify(b.zones ?? null) &&
     sameLinks(a.menu, b.menu) &&
     a.logoSize === b.logoSize &&
     a.logoAlign === b.logoAlign &&
+    (a.logoImage ?? "") === (b.logoImage ?? "") &&
+    Boolean(a.logoAsName) === Boolean(b.logoAsName) &&
     a.showCart === b.showCart &&
     a.showLanguage === b.showLanguage &&
     a.showTheme === b.showTheme &&
     a.showTrackOrder === b.showTrackOrder &&
     a.sticky === b.sticky &&
-    a.layout === b.layout
+    a.layout === b.layout &&
+    sameColors(a.colors, b.colors) &&
+    sameSizes(a.sizes, b.sizes)
   );
 }
 
@@ -403,12 +537,18 @@ export function sameFooter(a: FooterLook, b: FooterLook): boolean {
             sameLinks(g.links, b.groups![i].links) &&
             sameExtra(g.extra, b.groups![i].extra)
         );
+  const layoutSame = JSON.stringify([a.columns ?? null, a.bottom ?? null]) === JSON.stringify([b.columns ?? null, b.bottom ?? null]);
   return (
+    layoutSame &&
     groupsSame &&
     a.text === b.text &&
     a.showBrand === b.showBrand &&
     a.showLinks === b.showLinks &&
-    a.showHelp === b.showHelp
+    a.showHelp === b.showHelp &&
+    (a.logoImage ?? "") === (b.logoImage ?? "") &&
+    Boolean(a.logoAsName) === Boolean(b.logoAsName) &&
+    sameColors(a.colors, b.colors) &&
+    sameSizes(a.sizes, b.sizes)
   );
 }
 

@@ -82,6 +82,12 @@ export interface StoreLook {
   announcement: StoreAnnouncementLook;
   header: HeaderLook;
   footer: FooterLook;
+  /** An imported template's shop and product pages (StorePagesBlock.tsx), as saved; absent: the template's own. */
+  storePages?: Record<string, unknown>;
+  /** An imported template's Template look — faces, corners, words, spacing (TemplateLookBlock.tsx); absent: the template's own. */
+  xsTokens?: Record<string, unknown>;
+  /** The words on the shop pages, per language (StoreWordsBlock.tsx); absent: the store's own. */
+  storeWords?: Record<string, unknown>;
 }
 
 /** Font pairings, each drawn in its own face in the panel. Only fonts the storefront already loads. */
@@ -150,6 +156,9 @@ export function readStoreLook(workspace: Pick<Workspace, "themeSettings" | "logo
     announcement: readAnnouncement(header.announcement),
     header: readHeaderLook(ts.header),
     footer: readFooterLook(ts.footer),
+    ...(ts.storePages && typeof ts.storePages === "object" && !Array.isArray(ts.storePages) ? { storePages: ts.storePages as Record<string, unknown> } : {}),
+    ...(ts.xsTokens && typeof ts.xsTokens === "object" && !Array.isArray(ts.xsTokens) ? { xsTokens: ts.xsTokens as Record<string, unknown> } : {}),
+    ...(ts.storeWords && typeof ts.storeWords === "object" && !Array.isArray(ts.storeWords) ? { storeWords: ts.storeWords as Record<string, unknown> } : {}),
   };
 }
 
@@ -235,6 +244,12 @@ export function lookToWorkspacePatch(
   const footer = writeFooter(existing?.footer, look.footer);
   if (footer) themeSettings.footer = footer;
   else delete themeSettings.footer;
+  if (look.storePages) themeSettings.storePages = look.storePages;
+  else delete themeSettings.storePages;
+  if (look.xsTokens) themeSettings.xsTokens = look.xsTokens;
+  else delete themeSettings.xsTokens;
+  if (look.storeWords) themeSettings.storeWords = look.storeWords;
+  else delete themeSettings.storeWords;
 
   return { logoUrl: look.logoUrl, themeSettings };
 }
@@ -248,7 +263,8 @@ export function lookToShellPreview(existing: Record<string, unknown> | undefined
   const { themeSettings } = lookToWorkspacePatch(existing, look);
   const header = themeSettings.header as Record<string, unknown>;
   const footer = (themeSettings.footer as Record<string, unknown> | undefined) ?? null;
-  return { header, footer };
+  // The Template look travels with them: the frame lays it over the template's at once (storefront XsTokenStyles).
+  return { header, footer, tokens: look.xsTokens ?? null, storePages: look.storePages ?? null, storeWords: look.storeWords ?? null };
 }
 
 /** How long the saved `themeSettings` JSON would be — the API refuses more than THEME_SETTINGS_MAX_CHARS. */
@@ -305,8 +321,15 @@ export function sameLook(a: StoreLook, b: StoreLook): boolean {
     a.logoUrl === b.logoUrl &&
     sameAnnouncement(a.announcement, b.announcement) &&
     sameHeader(a.header, b.header) &&
-    sameFooter(a.footer, b.footer)
+    sameFooter(a.footer, b.footer) &&
+    JSON.stringify(a.storePages ?? null) === JSON.stringify(b.storePages ?? null) &&
+    JSON.stringify(a.storeWords ?? null) === JSON.stringify(b.storeWords ?? null) &&
+    sameTokens(a, b)
   );
+}
+
+function sameTokens(a: StoreLook, b: StoreLook): boolean {
+  return JSON.stringify(a.xsTokens ?? null) === JSON.stringify(b.xsTokens ?? null);
 }
 
 /** Only the theme, colours, font, corners and logo — what the Store look tab itself edits. */
@@ -317,6 +340,10 @@ export function sameAppearance(a: StoreLook, b: StoreLook): boolean {
 /** Only the announcement bar, header and footer — what the preview's `shell` carries. */
 export function sameShellParts(a: StoreLook, b: StoreLook): boolean {
   return (
-    sameAnnouncement(a.announcement, b.announcement) && sameHeader(a.header, b.header) && sameFooter(a.footer, b.footer)
+    sameAnnouncement(a.announcement, b.announcement) &&
+    sameHeader(a.header, b.header) &&
+    sameFooter(a.footer, b.footer) &&
+    sameTokens(a, b) &&
+    JSON.stringify([a.storePages ?? null, a.storeWords ?? null]) === JSON.stringify([b.storePages ?? null, b.storeWords ?? null])
   );
 }

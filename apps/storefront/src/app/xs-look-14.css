@@ -1,0 +1,853 @@
+/*
+ * Look 14 · Famms (html.design, free with attribution) — everything that is
+ * this one template's: its colours and type, how its header and footer differ
+ * from the shared layout in xs-shell.css, and how it draws the bands it
+ * shares with other looks. Deleting this file (and its import, its pictures
+ * under public/xs/14 and its entries in lib/xsShell.ts and the editor's
+ * xsBlocks.ts) removes the template.
+ *
+ * Its text is Montserrat (xs-fonts.css) and its large headings Playfair
+ * Display Bold — the face look 01 already carries ("XS01 Display",
+ * xs-sections.css). Latin only; Arabic text falls through to the store's own
+ * faces.
+ */
+
+[data-xs-look="14"],
+.brand-theme[data-xs-shell="14"] {
+  --xs-sans: "Montserrat", "XS Ar Cairo", var(--font-sans), sans-serif;
+  --xs-display: "XS01 Display", "XS Ar El Messiri", var(--font-display), serif;
+  --xs-ink: #0c0c0c;
+  --xs-ink-soft: #0c0c0c;
+  --xs-muted: #999998;
+  --xs-brand: #f7444e;
+  --xs-accent: #f7444e;
+  --xs-button: #f7444e;
+  --xs-highlight: #f7444e;
+  --xs-tint: #d4ced0;
+  --xs-dark: #002c3e;
+  --xs-line: #ccc;
+  --xs-ground: #fff;
+  --xs-footer-ink: #0c0c0c;
+  --xs-badge: #f7444e;
+  --xs-btn-radius: 0;
+  --xs-container: 1170px;
+  color: var(--xs-ink-soft);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* --- header: one white bar, heavy capitals on the end side ----------------- */
+
+.xs-header[data-xs-look="14"] {
+  padding-bottom: 0;
+}
+.xs-header[data-xs-look="14"] .xs-header__strip {
+  display: none;
+}
+.xs-header[data-xs-look="14"] .xs-header__bar,
+.xs-header[data-xs-look="14"][data-scrolled] .xs-header__bar {
+  position: static;
+  height: 84px;
+  background: #fff;
+  box-shadow: none;
+}
+.xs-header[data-xs-look="14"] .xs-header__logo-name {
+  color: #000;
+  font-family: var(--xs-display);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.xs-header[data-xs-look="14"] .xs-header__menu {
+  margin-inline-start: auto;
+}
+.xs-header[data-xs-look="14"] .xs-header__link {
+  margin-inline: 0;
+  padding: 5px 20px;
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+/* A list under a link: the template's white box with a black outline and a hard shadow. */
+.xs-header[data-xs-look="14"] .zs-drop__panel {
+  min-width: 190px;
+  padding: 10px 20px;
+  border: 2px solid #000;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: 4px 4px 0 0 #000;
+}
+.xs-header[data-xs-look="14"] .zs-drop__item {
+  padding: 6px 0;
+  color: #212529;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  text-transform: none;
+}
+.xs-header[data-xs-look="14"] .xs-header__icons {
+  flex: 0 0 auto;
+}
+.xs-header[data-xs-look="14"] .zt-icon-btn > span {
+  border-radius: 50%;
+}
+@media (min-width: 992px) {
+  .xs-header[data-xs-look="14"] .xs-header__logo-img {
+    max-width: 250px;
+  }
+}
+@media (max-width: 991px) {
+  .xs-header[data-xs-look="14"] .xs-header__icons {
+    flex: 1;
+  }
+  /* A store's name written out leaves room for the icons beside it. */
+  .xs-header[data-xs-look="14"] .xs-header__logo-name {
+    font-size: 24px;
+  }
+}
+
+/* --- footer: pale grey, black capitals over each column, a dark last line --- */
+
+.xs-footer[data-xs-look="14"] {
+  padding: 90px 15px 0;
+  background: #f8f8f8;
+  color: var(--xs-footer-ink);
+  font-size: 15px;
+  line-height: 25px;
+}
+.xs-footer[data-xs-look="14"] .xs-footer__grid {
+  padding-bottom: 40px;
+}
+.xs-footer[data-xs-look="14"] .xs-footer__col {
+  padding-bottom: 30px;
+}
+.xs-footer[data-xs-look="14"] .xs-footer__col:last-child {
+  order: -1;
+}
+.xs-footer[data-xs-look="14"] .xs-footer__title {
+  padding-bottom: 25px;
+  color: var(--xs-ink);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1.2;
+}
+.xs-footer[data-xs-look="14"] .xs-footer__col:last-child .xs-footer__title {
+  padding-bottom: 30px;
+  font-family: var(--xs-display);
+  font-size: 32px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.xs-footer[data-xs-look="14"] li {
+  padding-bottom: 5px;
+}
+.xs-footer[data-xs-look="14"] a {
+  color: #000;
+}
+.xs-footer[data-xs-look="14"] a:hover {
+  color: var(--xs-brand);
+}
+.xs-footer[data-xs-look="14"] .xs-footer__bottom {
+  max-width: none;
+  margin-inline: -15px;
+  padding: 20px 15px;
+  background: #222;
+  color: #fff;
+}
+.xs-footer[data-xs-look="14"] .xs-footer__bottom a {
+  color: var(--xs-brand);
+  text-decoration: none;
+}
+
+/* --- shared pieces: a serif heading over a short red bar; square red buttons */
+
+[data-xs-look="14"] :is(.xs-heading, .xs-products__heading, .xs-quotes__heading) {
+  margin: 0;
+  padding: 0;
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: none;
+}
+[data-xs-look="14"] :is(.xs-heading, .xs-products__heading, .xs-quotes__heading)::after {
+  content: "";
+  display: block;
+  width: 70px;
+  height: 5px;
+  margin: 10px auto;
+  background: var(--xs-brand);
+}
+[data-xs-look="14"] .xs-btn {
+  padding: 10px 45px;
+  border-width: 1px;
+  font-size: 16px;
+  font-weight: 400;
+}
+[data-xs-look="14"] .xs-btn:is([data-tone="solid"], [data-tone="accent"]) {
+  border-color: var(--xs-brand);
+  background: var(--xs-brand);
+  color: #fff;
+}
+[data-xs-look="14"] .xs-btn:is([data-tone="solid"], [data-tone="accent"]):hover {
+  border-color: var(--xs-brand);
+  background: transparent;
+  color: var(--xs-brand);
+  filter: none;
+}
+
+/* --- xs_slider: a pale photograph, a two-colour serif heading on its start side */
+
+.xs-slider[data-xs-look="14"] {
+  height: calc(100vh - 84px);
+  min-height: 560px;
+}
+.xs-slider[data-xs-look="14"] .xs-slider__slide {
+  background-position: top right;
+}
+.xs-slider[data-xs-look="14"] .xs-slider__inner {
+  padding: 90px 15px 75px;
+}
+/* The template's one heading in two colours: the small line is its red first line. */
+.xs-slider[data-xs-look="14"] :is(.xs-slider__eyebrow, .xs-slider__heading) {
+  padding: 0;
+  font-family: var(--xs-display);
+  font-size: 72px;
+  font-weight: 700;
+  line-height: 70px;
+  text-transform: none;
+}
+.xs-slider[data-xs-look="14"] .xs-slider__eyebrow {
+  color: var(--xs-brand);
+}
+.xs-slider[data-xs-look="14"] .xs-slider__heading {
+  margin-bottom: 15px;
+  color: var(--xs-dark);
+}
+.xs-slider[data-xs-look="14"] .xs-slider__line {
+  max-width: 555px;
+  margin: 5px 0 24px;
+  color: var(--xs-ink);
+  font-size: 16px;
+}
+.xs-slider[data-xs-look="14"] .xs-slider__button {
+  min-width: 0;
+  height: auto;
+  margin-top: 10px;
+  padding: 12px 45px;
+  border: 1px solid var(--xs-brand);
+  border-radius: 0;
+  background: var(--xs-brand);
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: none;
+  transition: background-color 0.3s, color 0.3s;
+}
+.xs-slider[data-xs-look="14"] .xs-slider__button:hover {
+  background: transparent;
+  color: var(--xs-brand);
+}
+
+/* --- xs_features: three navy boxes, a white icon over each title ------------ */
+
+.xs-features[data-xs-look="14"] {
+  padding: calc(70px * var(--xs-space, 1)) 15px;
+}
+.xs-features[data-xs-look="14"] .xs-features__inner {
+  grid-template-columns: minmax(0, 1fr);
+  text-align: center;
+}
+.xs-features[data-xs-look="14"] .xs-features__list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+  margin: 45px 0 0;
+}
+.xs-features[data-xs-look="14"] .xs-features__item {
+  margin: 0;
+  padding: 45px 50px 61px;
+  border-radius: 5px;
+  background: var(--xs-dark);
+}
+.xs-features[data-xs-look="14"] .xs-features__icon {
+  margin-bottom: 15px;
+}
+.xs-features[data-xs-look="14"] .xs-features__icon::before {
+  display: none;
+}
+.xs-features[data-xs-look="14"] .xs-features__icon img {
+  width: 55px;
+  height: 55px;
+}
+.xs-features[data-xs-look="14"] .xs-features__item h3 {
+  color: #fff;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.xs-features[data-xs-look="14"] .xs-features__item p {
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* --- xs_split: a mauve ground, the picture filling its start half ----------- */
+
+.xs-split[data-xs-look="14"] {
+  padding: 0 15px;
+  background: var(--xs-tint);
+}
+.xs-split[data-xs-look="14"] .xs-split__inner {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  align-items: stretch;
+}
+.xs-split[data-xs-look="14"] .xs-split__grid {
+  display: block;
+  min-height: 320px;
+}
+.xs-split[data-xs-look="14"] .xs-split__grid::before {
+  display: none;
+}
+.xs-split[data-xs-look="14"] .xs-split__pic {
+  padding: 0;
+}
+.xs-split[data-xs-look="14"] .xs-split__pic:not([data-slot="1"]) {
+  display: none;
+}
+.xs-split[data-xs-look="14"] .xs-split__pic[data-slot="1"] {
+  position: absolute;
+  inset: 0;
+}
+/* The figure stands at the picture's own left edge, whichever way the page reads. */
+.xs-split[data-xs-look="14"] .xs-split__pic img {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  border-radius: 0;
+  object-fit: cover;
+  object-position: top left;
+}
+.xs-split[data-xs-look="14"] .xs-split__text {
+  padding-block: 120px;
+  padding-inline: 15px 45px;
+  text-align: start;
+}
+.xs-split[data-xs-look="14"] .xs-heading {
+  margin-bottom: 30px;
+  color: var(--xs-dark);
+  text-align: start;
+}
+.xs-split[data-xs-look="14"] .xs-heading::after {
+  display: none;
+}
+.xs-split[data-xs-look="14"] .xs-split__text p {
+  margin-bottom: 30px;
+}
+
+/* --- xs_products: pale cards in a white frame, a veil and a pill on hover --- */
+
+.xs-products[data-xs-look="14"] {
+  display: flex;
+  flex-direction: column;
+  padding: calc(70px * var(--xs-space, 1)) 15px;
+}
+/* The heading stays on top; its link drops under the grid as the template's "view all" button. */
+.xs-products[data-xs-look="14"] .xs-products__head {
+  display: contents;
+}
+.xs-products[data-xs-look="14"] > :is(.xs-products__bar, .xs-products__search, .xs-products__stage) {
+  width: 100%;
+}
+.xs-products[data-xs-look="14"] .xs-products__heading {
+  margin-bottom: 20px;
+}
+.xs-products[data-xs-look="14"] .xs-products__all {
+  order: 9;
+  align-self: center;
+  margin-top: 45px;
+  padding: 10px 40px;
+  border: 1px solid var(--xs-brand);
+  background: var(--xs-brand);
+  color: #fff;
+  font-size: 16px;
+  letter-spacing: 0;
+  text-transform: none;
+  transition: background-color 0.3s, color 0.3s;
+}
+.xs-products[data-xs-look="14"] .xs-products__all:hover {
+  background: transparent;
+  color: var(--xs-brand);
+}
+.xs-products[data-xs-look="14"] .xs-products__bar {
+  justify-content: center;
+  padding-bottom: 0;
+}
+.xs-products[data-xs-look="14"] .xs-products__tab:hover,
+.xs-products[data-xs-look="14"] .xs-products__tab[data-active] {
+  border-bottom-color: var(--xs-brand);
+  color: var(--xs-brand);
+}
+.xs-products[data-xs-look="14"] .xs-products__grid {
+  gap: 25px 30px;
+  margin-top: 25px;
+}
+.xs-products[data-xs-look="14"] .xs-products__grid:not([data-layout="slider"]) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.xs-products[data-xs-look="14"] .xs-products__card {
+  position: relative;
+  overflow: hidden;
+  padding: 35px;
+  border: 10px solid #fff;
+  background: #f7f8f9;
+  box-shadow: 5px 5px 5px -5px rgba(0, 0, 0, 0.2);
+}
+/* The white veil that rises over the whole card; the picture and the name under it stay links. */
+.xs-products[data-xs-look="14"] .xs-products__card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  transform: translateY(100%);
+  background: rgba(255, 255, 255, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.xs-products[data-xs-look="14"] .xs-products__card:hover::before {
+  transform: none;
+  opacity: 1;
+}
+/* Not a positioned box here, so the label and the badge are placed against the card. */
+.xs-products[data-xs-look="14"] .xs-products__media {
+  position: static;
+  overflow: visible;
+  height: 215px;
+  aspect-ratio: auto;
+  background: none;
+}
+.xs-products[data-xs-look="14"] .xs-products__shot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.xs-products[data-xs-look="14"] .xs-products__img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 160px;
+  object-fit: contain;
+  transition: transform 0.3s;
+}
+.xs-products[data-xs-look="14"] .xs-products__card:hover .xs-products__img {
+  transform: scale(1.1);
+}
+.xs-products[data-xs-look="14"] .xs-products__badge {
+  background: var(--xs-badge);
+}
+.xs-products[data-xs-look="14"] .xs-products__card .xs-products__view {
+  top: 50%;
+  bottom: auto;
+  z-index: 4;
+  width: 165px;
+  min-width: 0;
+  height: auto;
+  padding: 8px 15px;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--xs-brand);
+  border-radius: 30px;
+  background: var(--xs-brand);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.5;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, background-color 0.3s, color 0.3s;
+}
+.xs-products[data-xs-look="14"] .xs-products__card:hover .xs-products__view,
+.xs-products[data-xs-look="14"] .xs-products__card .xs-products__view:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.xs-products[data-xs-look="14"] .xs-products__card .xs-products__view:hover {
+  background: transparent;
+  color: var(--xs-brand);
+}
+/* The name on the start side, the price across from it. */
+.xs-products[data-xs-look="14"] .xs-products__meta {
+  flex-flow: row wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding-top: 10px;
+}
+.xs-products[data-xs-look="14"] .xs-products__name {
+  padding: 0;
+  color: var(--xs-ink);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.xs-products[data-xs-look="14"] .xs-products__name:hover {
+  color: var(--xs-brand);
+}
+.xs-products[data-xs-look="14"] .xs-products__price {
+  color: var(--xs-dark);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.xs-products[data-xs-look="14"] .xs-products__more-btn {
+  border-radius: 0;
+  background: #000;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 400;
+  text-transform: none;
+}
+
+/* --- xs_newsletter: the mauve ground again, a white pill over a red pill ---- */
+
+.xs-newsletter[data-xs-look="14"] {
+  padding: calc(75px * var(--xs-space, 1)) 45px;
+}
+.xs-newsletter[data-xs-look="14"] .xs-newsletter__inner {
+  max-width: calc(50% - 15px);
+}
+.xs-newsletter[data-xs-look="14"] .xs-heading {
+  margin-bottom: 15px;
+  color: var(--xs-dark);
+  font-size: 40px;
+}
+.xs-newsletter[data-xs-look="14"] .xs-heading::after {
+  display: none;
+}
+.xs-newsletter[data-xs-look="14"] .xs-newsletter__inner p {
+  margin-bottom: 16px;
+}
+.xs-newsletter[data-xs-look="14"] .xs-newsletter__form {
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+.xs-newsletter[data-xs-look="14"] .xs-newsletter__form input[type="email"] {
+  flex: none;
+  width: 100%;
+  height: 60px;
+  margin-top: 15px;
+  padding: 5px 25px;
+  border-color: transparent;
+  border-radius: 90px;
+  font-size: 14px;
+}
+.xs-newsletter[data-xs-look="14"] .xs-newsletter__form input[type="email"]:focus {
+  border-color: var(--xs-brand);
+}
+.xs-newsletter[data-xs-look="14"] .xs-newsletter__form input[type="email"]::placeholder {
+  color: #171620;
+  opacity: 1;
+}
+.xs-newsletter[data-xs-look="14"] .xs-newsletter__form button {
+  width: 100%;
+  max-width: 285px;
+  height: auto;
+  margin-top: 55px;
+  padding: 10px 45px;
+  border: 1px solid var(--xs-brand);
+  border-radius: 35px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-transform: uppercase;
+  transition: background-color 0.3s, color 0.3s;
+}
+.xs-newsletter[data-xs-look="14"] .xs-newsletter__form button:hover:not(:disabled) {
+  background: transparent;
+  color: var(--xs-brand);
+}
+
+/* --- xs_quotes: a round portrait, the name, then the words; red discs to turn */
+
+.xs-quotes[data-xs-look="14"] {
+  padding: calc(70px * var(--xs-space, 1)) 15px;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__stage {
+  margin-top: 55px;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__item {
+  display: flex;
+  flex-direction: column;
+  max-width: 920px;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__item figcaption {
+  order: -1;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__item blockquote {
+  margin: 0;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__item p {
+  font-size: 16px;
+  line-height: 1.5;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__face {
+  width: 150px;
+  height: 150px;
+  margin-bottom: 25px;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__name {
+  margin-bottom: 8px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__role {
+  margin-bottom: 8px;
+  color: var(--xs-muted);
+  font-size: 15px;
+  line-height: 1.2;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__arrow {
+  top: 43%;
+  width: 50px;
+  height: 50px;
+  background: var(--xs-brand);
+  color: #fff;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__arrow:hover {
+  background: #212121;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__arrow--prev {
+  inset-inline-start: 25%;
+}
+.xs-quotes[data-xs-look="14"] .xs-quotes__arrow--next {
+  inset-inline-end: 25%;
+}
+
+/* --- inner pages: the page's name on red; a plain boxed form, centred ------- */
+
+.xs-title[data-xs-look="14"] {
+  padding: calc(50px * var(--xs-space, 1)) 15px calc(48px * var(--xs-space, 1));
+  background-color: var(--xs-brand);
+}
+.xs-title[data-xs-look="14"] .xs-title__heading {
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.xs-contact[data-xs-look="14"] {
+  padding: calc(70px * var(--xs-space, 1)) 15px;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 50px;
+  max-width: 730px;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__box {
+  padding: 0;
+  border: 0;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__field,
+.xs-contact[data-xs-look="14"] .xs-contact__message {
+  margin-bottom: 20px;
+  border: 1px solid var(--xs-line);
+  border-radius: 0;
+  background: #fff;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__field:focus-within,
+.xs-contact[data-xs-look="14"] .xs-contact__message:focus {
+  border-color: var(--xs-brand);
+}
+.xs-contact[data-xs-look="14"] .xs-contact__field svg {
+  display: none;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__field input,
+.xs-contact[data-xs-look="14"] .xs-contact__message {
+  padding: 15px;
+  font-size: 14px;
+  line-height: normal;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__field input {
+  height: auto;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__message {
+  min-height: 150px;
+}
+.xs-contact[data-xs-look="14"] :is(.xs-contact__field input, .xs-contact__message)::placeholder {
+  text-transform: capitalize;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__submit {
+  width: auto;
+  height: auto;
+  margin-inline: auto;
+  padding: 15px 45px;
+  border-radius: 0;
+  background: #333;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: normal;
+  text-transform: capitalize;
+  transition: background-color 0.1s;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__submit:hover:not(:disabled) {
+  background: var(--xs-brand);
+}
+/* The store's details in a row under the form, each a bold capital label and its line. */
+.xs-contact[data-xs-look="14"] .xs-contact__info {
+  flex-flow: row wrap;
+  justify-content: space-between;
+  gap: 20px 30px;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__row {
+  flex: 1 1 190px;
+  gap: 10px;
+  color: var(--xs-brand);
+}
+.xs-contact[data-xs-look="14"] .xs-contact__row svg {
+  width: 20px;
+  margin-top: 2px;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__label {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 25px;
+  text-transform: uppercase;
+}
+.xs-contact[data-xs-look="14"] .xs-contact__value,
+.xs-contact[data-xs-look="14"] .xs-contact__value[data-accent] {
+  max-width: none;
+  padding-top: 0;
+  color: var(--xs-ink-soft);
+  font-size: 15px;
+  line-height: 25px;
+}
+
+/* --- the menu on a phone: the bar's white drops open, heavy capitals centred  */
+
+.xs-header[data-xs-look="14"] .xs-phone__toggle {
+  width: 37px;
+  height: 42px;
+  gap: 6px;
+  padding: 0 1px;
+}
+.xs-header[data-xs-look="14"] .xs-phone__toggle i {
+  height: 4px;
+  border-radius: 5px;
+}
+.xs-header[data-xs-look="14"] .xs-phone__toggle[aria-expanded="true"] i:nth-child(1) {
+  transform: translateY(10px) rotate(45deg);
+}
+.xs-header[data-xs-look="14"] .xs-phone__toggle[aria-expanded="true"] i:nth-child(3) {
+  transform: translateY(-10px) rotate(-45deg);
+}
+/* The page stays in sight under the open list, behind the veil. */
+.xs-phone__layer[data-xs-look="14"] {
+  background: none;
+}
+.xs-phone__layer[data-xs-look="14"] .xs-phone__panel {
+  --xs-ph-ink: #131313;
+  text-align: center;
+}
+.xs-phone__layer[data-xs-look="14"] .xs-phone__panel .xs-phone__nav {
+  padding: 15px 20px 10px;
+}
+.xs-phone__layer[data-xs-look="14"] .xs-phone__panel .xs-phone__link {
+  margin: 5px 0;
+  padding: 5px 25px;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+.xs-phone__layer[data-xs-look="14"] .xs-phone__panel .xs-phone__sub .xs-phone__link {
+  font-weight: 500;
+  text-transform: none;
+}
+.xs-phone__layer[data-xs-look="14"] .xs-phone__panel .xs-phone__extras {
+  justify-content: center;
+}
+
+/* --- narrow screens ---------------------------------------------------------- */
+
+@media (max-width: 991px) {
+  .xs-slider[data-xs-look="14"] {
+    height: 600px;
+    min-height: 0;
+  }
+  .xs-quotes[data-xs-look="14"] .xs-quotes__arrow--prev {
+    inset-inline-start: 15%;
+  }
+  .xs-quotes[data-xs-look="14"] .xs-quotes__arrow--next {
+    inset-inline-end: 15%;
+  }
+}
+@media (max-width: 767px) {
+  .xs-slider[data-xs-look="14"] .xs-slider__slide {
+    background-position: top center;
+  }
+  .xs-features[data-xs-look="14"] .xs-features__list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 45px;
+  }
+  .xs-split[data-xs-look="14"] .xs-split__inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .xs-split[data-xs-look="14"] .xs-split__text {
+    padding: 75px 25px;
+  }
+  .xs-products[data-xs-look="14"] .xs-products__grid:not([data-layout="slider"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .xs-newsletter[data-xs-look="14"] {
+    padding: calc(75px * var(--xs-space, 1)) 25px;
+  }
+  .xs-newsletter[data-xs-look="14"] .xs-newsletter__inner {
+    max-width: none;
+  }
+  .xs-newsletter[data-xs-look="14"] .xs-newsletter__form button {
+    margin-top: 35px;
+  }
+  .xs-quotes[data-xs-look="14"] .xs-quotes__arrow {
+    display: block;
+  }
+  .xs-quotes[data-xs-look="14"] .xs-quotes__arrow--prev {
+    inset-inline-start: 5%;
+  }
+  .xs-quotes[data-xs-look="14"] .xs-quotes__arrow--next {
+    inset-inline-end: 5%;
+  }
+}
+@media (max-width: 576px) {
+  [data-xs-look="14"] :is(.xs-heading, .xs-products__heading, .xs-quotes__heading) {
+    font-size: 35px;
+  }
+  .xs-slider[data-xs-look="14"] :is(.xs-slider__eyebrow, .xs-slider__heading) {
+    font-size: 48px;
+    line-height: 50px;
+  }
+  .xs-products[data-xs-look="14"] .xs-products__grid:not([data-layout="slider"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  [data-xs-look="14"] :is(.xs-heading, .xs-products__heading, .xs-quotes__heading) {
+    font-size: 32px;
+  }
+  /* The two discs leave the portrait's sides and sit together under the words. */
+  .xs-quotes[data-xs-look="14"] .xs-quotes__arrow {
+    position: static;
+    grid-area: 2 / 1;
+    justify-self: center;
+    margin-top: 25px;
+    transform: none;
+  }
+  .xs-quotes[data-xs-look="14"] .xs-quotes__arrow--prev {
+    margin-inline-end: 60px;
+  }
+  .xs-quotes[data-xs-look="14"] .xs-quotes__arrow--next {
+    margin-inline-start: 60px;
+  }
+}

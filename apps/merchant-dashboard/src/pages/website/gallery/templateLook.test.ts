@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { THEME_SPECS } from "../editor/storeThemes";
-import { buildStoreTemplates } from "../templates/storeTemplates";
-import { takeTemplateLook, templateStoreTheme, withTemplateTheme } from "./templateLook";
+import { buildXsTemplates } from "../templates/xs/xsTemplates";
+import { takeTemplateLook, templateStoreTheme, templateXsLook, withTemplateTheme } from "./templateLook";
 
 describe("the theme a template wears", () => {
   it("is read from its styles", () => {
@@ -14,9 +14,10 @@ describe("the theme a template wears", () => {
     }
   });
 
-  it("is one of the storefront's for every template written here", () => {
-    for (const template of buildStoreTemplates()) {
-      expect(templateStoreTheme(template.version.globalStyles)).toBe(template.version.globalStyles.themeSettings.storeTheme);
+  it("is none for every template written here: each wears its own look instead", () => {
+    for (const template of buildXsTemplates()) {
+      expect(templateStoreTheme(template.version.globalStyles), template.key).toBeNull();
+      expect(templateXsLook(template.version.globalStyles), template.key).toBe(template.key.replace(/^xs-/, "").slice(0, 2));
     }
   });
 });
@@ -38,10 +39,9 @@ describe("the look a template's preview is drawn in", () => {
     expect(withTemplateTheme(null, { primaryColor: "#7C2D12" })).toBeNull();
   });
 
-  it("is drawn in every one of our templates' own themes", () => {
-    for (const template of buildStoreTemplates()) {
-      const theme = template.version.globalStyles.themeSettings.storeTheme;
-      expect(withTemplateTheme(null, template.version.globalStyles)).toMatchObject({ storeTheme: theme, primaryColor: template.primaryColor });
+  it("is the look asked for for every template written here, none of which brings a theme", () => {
+    for (const template of buildXsTemplates()) {
+      expect(withTemplateTheme(asked, template.version.globalStyles), template.key).toBe(asked);
     }
   });
 });

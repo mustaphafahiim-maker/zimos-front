@@ -15,12 +15,14 @@ import { setColorMode } from "@/components/ThemeToggle";
 import { useSetShellOverride } from "@/lib/StoreShellContext";
 import { useIsClient } from "@/lib/useIsClient";
 import { readShellOverride, type ShellOverride } from "@/lib/storeShell";
-import { CanvasHandles, SectionGrip } from "./CanvasHandles";
+import { CanvasHandles, LogoHandles, SectionGrip, ShellPartHandles } from "./CanvasHandles";
+import { BackgroundHandles } from "./BackgroundHandles";
+import { ItemHandles } from "./ItemHandles";
 import { BLUE, LAYER, RING_INSIDE, useCanvasChrome } from "./canvasChrome";
 import { EL_ATTR, TYPE_ATTR, elementNode, elementRect, imageFieldOf, isRtl, sectionHidden } from "./canvasGeometry";
 import { applyPatch, readPatch } from "./canvasPatch";
 import { useCanvasDrag } from "./useCanvasDrag";
-import { useCanvasText } from "./useCanvasText";
+import { deepTextNodes, useCanvasText } from "./useCanvasText";
 
 /**
  * The storefront half of the website editor's canvas. Rendered only by the
@@ -37,16 +39,23 @@ import { useCanvasText } from "./useCanvasText";
  *   { type: "zimos:select-section", sectionId }        a section was clicked
  *   { type: "zimos:select-element", sectionId, elementId, elementType }
  *                                                       an element of the selected section was clicked
- *   { type: "zimos:select-shell", part }                the header, footer or announcement bar was clicked
+ *   { type: "zimos:select-shell", part, xsPart? }       the header, footer or announcement bar was clicked
+ *                                                          (xsPart: the template header's part under the pointer)
  *   { type: "zimos:insert-section", index }             "add a section here"
  *   { type: "zimos:move-section", sectionId, direction } the section grip's arrow keys
  *   { type: "zimos:section-action", sectionId, action }  the selected section's floating bar
  *   { type: "zimos:pick-image", sectionId, elementId, field } "replace this picture"
+ *   { type: "zimos:bg-position", sectionId, elementId, path, x, y } a band's ground picture centred on a new point
+ *   { type: "zimos:item-action", sectionId, elementId, list, action, from, to? } one item of a band moved,
+ *                                                          duplicated or deleted (ItemHandles.tsx)
  *   { type: "zimos:section-rects", sections }            every section's box, while a drag is on
  *   { type: "zimos:canvas-drag", phase, … }               dragging / resizing on the page (useCanvasDrag.ts)
  *   { type: "zimos:canvas-step", step }                   one arrow-key press on a canvas handle
  *   { type: "zimos:color-mode", mode }                    the page went light or dark (the in-page switch, or the OS)
- *   { type: "zimos:edit-text", elementId, text }          a double-click text edit was committed (useCanvasText.ts)
+ *   { type: "zimos:edit-text", elementId, text, was?, nth? } a double-click text edit was committed (useCanvasText.ts);
+ *                                                          `was`/`nth` name one word-run of a many-worded element
+ *   { type: "zimos:key", key }                            an editor key pressed while this page has the focus
+ *                                                          (copy, paste, duplicate, undo, redo, delete)
  *
  * `zimos:preview-ready` also carries `colorMode`, the mode the page opened in.
  *
@@ -57,7 +66,10 @@ import { useCanvasText } from "./useCanvasText";
  *   { type: "zimos:scroll-to-shell", part }
  *   { type: "zimos:drag-state", active, hoverIndex }     a library block is being dragged over us
  *   { type: "zimos:canvas-feedback", feedback, done, committed }  what a canvas drag should draw
- *   { type: "zimos:patch", ops }                         small edits applied to this page's DOM (canvasPatch.ts)
+ *   { type: "zimos:patch", ops, seq? }                   small edits applied to this page's DOM (canvasPatch.ts);
+ *                                                          with `seq`, answered by zimos:patched once they are painted
+ *   { type: "zimos:locate", elementId, text? }           "show me this": the element, or the part of it that shows
+ *                                                          `text` (a word-run, or a picture's address), outlined a moment
  *
  * Edit where you look. A click on a section selects it; a click on an element
  * inside the section that is already selected selects the element (when the
@@ -93,6 +105,61 @@ import { useCanvasText } from "./useCanvasText";
  * is nearest (`zimos:drag-state`) — the actual index math lives on the
  * dashboard side (previewBridge.ts's `nearestGapIndex`).
  */
+
+/** `deepText` as the editor sends it: element id → the words in it, checked before use. */
+function readDeepText(raw: unknown): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [id, words] of Object.entries(raw as Record<string, unknown>).slice(0, 400)) {
+    if (id.length > 200 || !Array.isArray(words)) continue;
+    out[id] = words.filter((word): word is string => typeof word === "string" && word.length > 0 && word.length <= 4000).slice(0, 600);
+  }
+  return out;
+}
+
+const LOCATE_STYLE_ID = "zimos-locate";
+const LOCATE_ATTR = "data-zimos-locate";
+let locateTimer = 0;
+
+/**
+ * "Show me what this changes": outlines the element — or, given `text`, the
+ * part of it that shows that text or that picture — for a moment, and brings
+ * it into view when it is off the screen.
+ */
+function locateOnPage(elementId: string, text: string) {
+  const wrapper = Array.from(document.querySelectorAll<HTMLElement>("[data-zimos-el]")).find((el) => el.getAttribute("data-zimos-el") === elementId);
+  if (!wrapper) return;
+  const drawn = (el: HTMLElement): boolean => el.getClientRects().length > 0;
+  const wanted = text.replace(/\s+/g, " ").trim();
+  let target: HTMLElement | null = null;
+  if (wanted) {
+    target =
+      deepTextNodes(wrapper, new Set([wanted])).find(drawn) ??
+      Array.from(wrapper.querySelectorAll<HTMLElement>("img")).find((img) => img.getAttribute("src") === wanted && drawn(img)) ??
+      Array.from(wrapper.querySelectorAll<HTMLElement>("[style*='background-image']")).find((el) => (el.getAttribute("style") ?? "").includes(wanted) && drawn(el)) ??
+      null;
+  }
+  // The marker itself may take no box of its own: outline what it draws.
+  if (!target) target = drawn(wrapper) ? wrapper : (Array.from(wrapper.querySelectorAll<HTMLElement>("*")).find(drawn) ?? null);
+  if (!target) return;
+
+  if (!document.getElementById(LOCATE_STYLE_ID)) {
+    const style = document.createElement("style");
+    style.id = LOCATE_STYLE_ID;
+    style.textContent = `[${LOCATE_ATTR}]{outline:2px solid #f59e0b!important;outline-offset:3px!important;box-shadow:0 0 0 7px rgba(245,158,11,.28)!important;transition:box-shadow .25s}`;
+    document.head.appendChild(style);
+  }
+  for (const old of Array.from(document.querySelectorAll(`[${LOCATE_ATTR}]`))) old.removeAttribute(LOCATE_ATTR);
+  target.setAttribute(LOCATE_ATTR, "");
+  const box = target.getBoundingClientRect();
+  if (box.bottom < 0 || box.top > window.innerHeight) {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    target.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+  }
+  window.clearTimeout(locateTimer);
+  const marked = target;
+  locateTimer = window.setTimeout(() => marked.removeAttribute(LOCATE_ATTR), 1800);
+}
 
 const SECTION_ATTR = "data-zimos-section";
 const SHELL_ATTR = "data-zimos-shell";
@@ -131,9 +198,11 @@ interface Abilities {
   pickImage: boolean;
   /** Null: the editor did not say — the two move buttons, the old message. */
   sectionActions: SectionAction[] | null;
+  /** A template band's pictures, and a template header's or footer's logo, resize on the page. */
+  resizePicture: boolean;
 }
 
-const LEGACY_ABILITIES: Abilities = { selectElement: false, pickImage: false, sectionActions: null };
+const LEGACY_ABILITIES: Abilities = { selectElement: false, pickImage: false, sectionActions: null, resizePicture: false };
 
 function readAbilities(raw: unknown): Abilities {
   if (!raw || typeof raw !== "object") return LEGACY_ABILITIES;
@@ -144,6 +213,7 @@ function readAbilities(raw: unknown): Abilities {
     sectionActions: Array.isArray(can.sectionActions)
       ? SECTION_ACTIONS.filter((action) => (can.sectionActions as unknown[]).includes(action))
       : [],
+    resizePicture: can.resizePicture === true,
   };
 }
 
@@ -151,6 +221,7 @@ function sameAbilities(a: Abilities, b: Abilities): boolean {
   return (
     a.selectElement === b.selectElement &&
     a.pickImage === b.pickImage &&
+    a.resizePicture === b.resizePicture &&
     (a.sectionActions === null ? b.sectionActions === null : b.sectionActions !== null && a.sectionActions.join() === b.sectionActions.join())
   );
 }
@@ -173,6 +244,14 @@ interface Strings {
   remove: string;
   replaceImage: string;
   hidden: string;
+  resizePicture: string;
+  resizeLogo: string;
+  everyPicture: string;
+  moveShellPart: string;
+  focalPoint: string;
+  moveItem: string;
+  duplicateItem: string;
+  deleteItem: string;
 }
 
 const DEFAULT_STRINGS: Strings = {
@@ -193,6 +272,14 @@ const DEFAULT_STRINGS: Strings = {
   remove: "Delete",
   replaceImage: "Replace picture",
   hidden: "Hidden",
+  resizePicture: "Drag to resize this picture",
+  resizeLogo: "Drag to resize the logo",
+  everyPicture: "Every picture",
+  moveShellPart: "Drag to move this part of the header",
+  focalPoint: "Drag to set what the picture centres on (or use the arrow keys)",
+  moveItem: "Drag to move this item (or Space, then the arrow keys)",
+  duplicateItem: "Duplicate this item",
+  deleteItem: "Delete this item",
 };
 
 /** "product_card" → "Product card", for an element type the editor sent no name for. */
@@ -396,6 +483,7 @@ export function PreviewBridge({
   // X-ray outlines and the texts a double-click edits (useCanvasText.ts), from zimos:editor-state.
   const [xray, setXray] = useState(false);
   const [inlineText, setInlineText] = useState<string[]>([]);
+  const [deepText, setDeepText] = useState<Record<string, string[]>>({});
   // Bumped on scroll/resize so the fixed outlines (and, mid-drag, the section
   // rects the dashboard needs) follow the page.
   const [tick, setTick] = useState(0);
@@ -419,7 +507,7 @@ export function PreviewBridge({
   useCanvasChrome(editable, strings.hidden);
 
   // X-ray outlines and double-click text editing (useCanvasText.ts).
-  useCanvasText({ editable, xray, inlineText, hint: strings.editText, post });
+  useCanvasText({ editable, xray, inlineText, deepText, hint: strings.editText, post });
 
   // Dragging and resizing on the page itself (useCanvasDrag.ts).
   const drag = useCanvasDrag({ post, parentOrigin, focusKey: `zimos-preview-focus:${token}` });
@@ -559,6 +647,10 @@ export function PreviewBridge({
           const ids = data.inlineText.filter((id): id is string => typeof id === "string" && id.length <= 200).slice(0, 2000);
           setInlineText((prev) => (prev.length === ids.length && prev.every((id, i) => id === ids[i]) ? prev : ids));
         }
+        setDeepText((prev) => {
+          const next = readDeepText(data.deepText);
+          return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
+        });
         if ("theme" in data) applyTheme(readPreviewTheme(data.theme));
         const mode = readColorMode(data.colorMode);
         if (mode && mode !== pageColorMode()) setColorMode(mode);
@@ -566,6 +658,11 @@ export function PreviewBridge({
         // Small edits, applied to the page as it stands (canvasPatch.ts); the
         // outlines measure again, since a text or a padding moves things.
         if (applyPatch(readPatch(data.ops))) setTick((n) => n + 1);
+        // When the change is on the screen (the frame after next has painted it): how long an edit takes to show.
+        if (typeof data.seq === "number" && Number.isSafeInteger(data.seq)) {
+          const seq = data.seq;
+          requestAnimationFrame(() => requestAnimationFrame(() => post({ type: "zimos:patched", seq })));
+        }
       } else if (data.type === "zimos:scroll-to-section" && typeof data.sectionId === "string") {
         const el = sectionEl(data.sectionId);
         if (!el) return;
@@ -583,6 +680,8 @@ export function PreviewBridge({
         } else {
           window.scrollTo({ top: 0, behavior });
         }
+      } else if (data.type === "zimos:locate" && typeof data.elementId === "string") {
+        locateOnPage(data.elementId, typeof data.text === "string" ? data.text.slice(0, 4000) : "");
       } else if (data.type === "zimos:drag-state") {
         setDragActive(data.active === true);
         setDragHoverIndex(typeof data.hoverIndex === "number" ? data.hoverIndex : null);
@@ -606,6 +705,37 @@ export function PreviewBridge({
     // what makes this resend on every remeasure while the drag is on.
   }, [dragActive, tick, post]);
 
+  // The editor's keys, pressed while this page has the focus (after a click on it): handed over, since
+  // the editor's own listener never hears them. Typing in place and the page's own fields keep theirs.
+  // Only while the editor offers a template's tools (a store that wears an imported template).
+  const handKeys = editable && abilities.resizePicture;
+  useEffect(() => {
+    if (!handKeys) return;
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (event.defaultPrevented || event.altKey || !target) return;
+      if (target.isContentEditable || target.matches?.("input, textarea, select")) return;
+      let key: string | null = null;
+      if (event.ctrlKey || event.metaKey) {
+        const typed = event.key.toLowerCase();
+        // The physical key when the layout types no Latin letter (an Arabic keyboard).
+        const pressed = (letter: string, code: string) => (/^[a-z]$/.test(typed) ? typed === letter : event.code === code);
+        if (pressed("c", "KeyC")) key = window.getSelection()?.toString() ? null : "copy";
+        else if (pressed("v", "KeyV")) key = "paste";
+        else if (pressed("d", "KeyD")) key = "duplicate";
+        else if (pressed("z", "KeyZ")) key = event.shiftKey ? "redo" : "undo";
+        else if (pressed("y", "KeyY")) key = "redo";
+      } else if (event.key === "Delete") {
+        key = "delete";
+      }
+      if (!key) return;
+      event.preventDefault();
+      post({ type: "zimos:key", key });
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handKeys, post]);
+
   // Clicks select; links and forms stay put so the frame never leaves the preview.
   useEffect(() => {
     if (!editable) return;
@@ -627,14 +757,17 @@ export function PreviewBridge({
       if (target.closest("[contenteditable]")) return;
       // The header, footer and announcement bar: the innermost one wins, so a
       // click on the announcement bar (inside the header) picks the bar.
-      const part = target.closest<HTMLElement>(`[${SHELL_ATTR}]`)?.getAttribute(SHELL_ATTR);
+      // A template strip's links and switches are the header's parts (its layout panel); its notice stays the bar's.
+      const stripPart = target.closest<HTMLElement>('[data-zimos-shell="header"] [data-xs-part]:not([data-xs-part="notice"])');
+      const part = stripPart ? "header" : target.closest<HTMLElement>(`[${SHELL_ATTR}]`)?.getAttribute(SHELL_ATTR);
       if (isShellPart(part)) {
         selectedRef.current = null;
         selectedElementRef.current = null;
         setSelectedShell(part);
         setSelected(null);
         setSelectedElement(null);
-        post({ type: "zimos:select-shell", part });
+        const xsPart = part === "header" ? stripPart?.getAttribute("data-xs-part") : null;
+        post({ type: "zimos:select-shell", part, ...(xsPart ? { xsPart } : {}) });
         return;
       }
       const section = target.closest<HTMLElement>(`[${SECTION_ATTR}]`);
@@ -652,6 +785,15 @@ export function PreviewBridge({
           const field = imageFieldOf(marker);
           if (field) {
             post({ type: "zimos:pick-image", sectionId: id, elementId, field });
+            return;
+          }
+          // A band with many pictures (an imported template's) names no field: the picture is known
+          // by its own address, and by which of the equal ones it is. Any other element goes on as before.
+          const picture = can.resizePicture && marker.querySelector("[data-xs-look]") ? target.closest("img") : null;
+          const src = picture?.getAttribute("src") ?? "";
+          if (picture && src && src.length <= 2000) {
+            const same = Array.from(marker.querySelectorAll("img")).filter((img) => img.getAttribute("src") === src);
+            post({ type: "zimos:pick-image", sectionId: id, elementId, field: "src", src, nth: Math.max(0, same.indexOf(picture)) });
             return;
           }
         }
@@ -763,7 +905,16 @@ export function PreviewBridge({
             ? (elementId, field) => post({ type: "zimos:pick-image", sectionId: selected, elementId, field })
             : undefined
         }
+        resizePictures={abilities.resizePicture}
       />
+      {abilities.resizePicture && (selectedShell === "header" || selectedShell === "footer") && (
+        <LogoHandles part={selectedShell} drag={drag} strings={strings} />
+      )}
+      {abilities.resizePicture && selectedShell === "header" && <ShellPartHandles drag={drag} label={strings.moveShellPart} />}
+      {abilities.resizePicture && abilities.pickImage && selected && pickedElement && (
+        <BackgroundHandles sectionId={selected} elementId={pickedElement} post={post} replaceLabel={strings.replaceImage} focalLabel={strings.focalPoint} />
+      )}
+      {abilities.resizePicture && selected && pickedElement && <ItemHandles sectionId={selected} elementId={pickedElement} post={post} strings={strings} />}
       {/* A section being dragged on the page: the same gap lines as a block
           dragged in from the library, the nearest one as the editor says. */}
       {drag.active?.kind === "section" && drag.feedback?.kind === "section" && (

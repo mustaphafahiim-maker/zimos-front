@@ -38,6 +38,13 @@ import { StoreShellProvider } from "@/lib/StoreShellContext";
 import { getStoreLocale, storePhone } from "@/lib/storeLocale";
 import { brandStyle, getStoreCollections, getStoreState, type UnavailableStore } from "@/lib/storeMeta";
 import { storeThemeOf } from "@/lib/brandTheme";
+import { xsOwnAccent, xsShellOf } from "@/lib/xsShell";
+import { readXsStorePages } from "@/lib/xsStorePages";
+import { readAllStoreWords } from "@/lib/storeWords";
+import { XsFooter } from "@/components/xs/XsFooter";
+import { XsHeader } from "@/components/xs/XsHeader";
+import { XsLookStyles, XsPhoneStyles } from "@/components/xs/XsLookStyles";
+import { XsTokenStyles } from "@/components/xs/XsTokenStyles";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
 import { THEME_FONT_CSS } from "@/app/themeFonts";
 import { ThemeChrome } from "@/components/shell/ThemeChrome";
@@ -50,6 +57,8 @@ function localeSource(store: UnavailableStore) {
 }
 import { getStoreBasePath } from "@/lib/storeRoute";
 import { storeIcons } from "@/lib/storeIcons";
+import { getEditorView } from "@/lib/editorView";
+import { EditorViewBridge } from "@/components/preview/EditorViewBridge";
 
 /**
  * Names the store for search engines and for anything that unfurls a link.
@@ -177,11 +186,19 @@ export default async function StoreLayout({
     delivery: (store as { delivery?: StoreInfo["delivery"] }).delivery ?? null,
     // A store on holiday, as the API names it (lib/storeHoliday reads it only while the feature is on).
     holiday: storefrontHolidayOf(store),
+    // A template's shop pages: the title strip, the product's pictures and tabs (lib/xsStorePages).
+    xsPages: readXsStorePages(store.themeSettings),
+    // The store's own words on its shop pages (lib/storeWords).
+    words: readAllStoreWords(store.themeSettings),
   };
   // GET /store/:workspaceId doesn't name a websiteId yet; read it defensively
   // so events carry it as soon as the API sends one.
   const websiteId = (store as { websiteId?: unknown }).websiteId;
   const theme = storeThemeOf(store.themeSettings);
+  // An imported template whose header and footer stand in for the store's own (lib/xsShell).
+  const xsShell = xsShellOf(store.themeSettings);
+  // The website editor showing this page in its frame, in its unsaved look (lib/editorView).
+  const editorView = await getEditorView(workspaceId);
   // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
   const pixels = storePixelsOf(store);
   const { floatingWhatsapp } = storefrontGeneralMeta(store);
@@ -213,10 +230,22 @@ export default async function StoreLayout({
             className="brand-theme flex min-h-full flex-1 flex-col bg-paper font-sans text-ink"
             style={brandStyle(store.themeSettings)}
             data-store-theme={theme ?? undefined}
+            data-xs-shell={xsShell ?? undefined}
+            data-xs-own-accent={xsOwnAccent(store.themeSettings) ? "" : undefined}
             suppressHydrationWarning
           >
             {theme && <style dangerouslySetInnerHTML={{ __html: THEME_FONT_CSS }} />}
             <DocumentLocale locale={locale} />
+            {editorView && <EditorViewBridge view={editorView} />}
+            {/* The worn template's own stylesheet and its phone header — every page of the store is drawn in it (components/xs/XsLookStyles). */}
+            {xsShell && (
+              <>
+                <XsLookStyles looks={[xsShell]} />
+                <XsPhoneStyles />
+                {/* The store's own Template look over the template's (lib/xsTokens). */}
+                <XsTokenStyles store={store} look={xsShell} />
+              </>
+            )}
             <StoreNavFrame store={store} locale={locale} collections={collections}>
               <PaymentsPreviewBanner workspaceId={workspaceId} />
               {/* The band across the top while the store is on holiday; on funnel pages too (HOLIDAY_MODE_ENABLED). */}
@@ -228,14 +257,19 @@ export default async function StoreLayout({
                 </HideInFunnel>
               )}
               <HideInFunnel>
-                <StoreHeader store={store} locale={locale} />
-                <MobileCategoryStrip collections={collections} t={t} />
+                {xsShell ? <XsHeader store={store} locale={locale} look={xsShell} /> : <StoreHeader store={store} locale={locale} />}
+                {/* The store's own row of collections on a phone; an imported template has none, and its menu is its own. */}
+                {!xsShell && <MobileCategoryStrip collections={collections} t={t} />}
               </HideInFunnel>
               <div className="flex flex-1 flex-col">{children}</div>
               <HideInFunnel>
                 {/* The merchant's sign-up form: a band above the footer, or a popup (Offers → Newsletter). */}
                 <NewsletterSignup workspaceId={store.id} />
-                <StoreFooter store={store} locale={locale} year={new Date().getFullYear()} />
+                {xsShell ? (
+                  <XsFooter store={store} locale={locale} year={new Date().getFullYear()} look={xsShell} />
+                ) : (
+                  <StoreFooter store={store} locale={locale} year={new Date().getFullYear()} />
+                )}
                 {/* The slide-over cart: opened by "add to cart" and the header's
                     cart icon. Funnel pages have no cart, so it steps aside with
                     the rest of the store's chrome. */}

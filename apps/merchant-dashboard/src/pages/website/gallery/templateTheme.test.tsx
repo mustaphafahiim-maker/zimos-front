@@ -5,14 +5,13 @@ import { invalidateCached } from "@/lib/useCachedAsync";
 import { api, fake, workspaceMock, type ListedWorkspace } from "@/test/mocks";
 import { currentPath, renderWithProviders } from "@/test/renderWithProviders";
 import { THEME_SPECS } from "../editor/storeThemes";
-import { buildStoreTemplates } from "../templates/storeTemplates";
 import { WebsitePage } from "../WebsitePage";
 
 /**
  * A template that wears a theme is shown in that theme: on its card in the
  * gallery, in the large preview of its sheet, and — when the store takes it —
- * on the store. The template here is one of ours as it is built, served the
- * way the API serves a template's detail.
+ * on the store. The template here wears the classic theme and the fuller
+ * footer, served the way the API serves a template's detail.
  */
 
 /** jsdom has no IntersectionObserver: every card is on screen as soon as it asks. */
@@ -31,7 +30,35 @@ class OnScreenObserver {
   }
 }
 
-const built = buildStoreTemplates().find((t) => t.key === "home-living")!;
+/** One page with a heading, its ids named by the page. */
+const page = (key: string, path: string, title: string, pageType: "home" | "static") => ({
+  path,
+  title,
+  pageType,
+  builderData: {
+    version: 1,
+    sections: [
+      {
+        id: `${key}-1`,
+        type: "section",
+        settings: {},
+        rows: [{ id: `${key}-1-r`, type: "row", columns: [{ id: `${key}-1-c`, type: "column", span: 12, elements: [{ id: `${key}-1-e`, type: "heading", props: { text: title, level: 1 } }] }] }],
+      },
+    ],
+  },
+  seo: {},
+});
+
+const built = {
+  name: "Home and living",
+  category: "home_decor",
+  primaryColor: "#1F3A5F",
+  version: {
+    globalStyles: { primaryColor: "#1F3A5F", themeSettings: { storeTheme: "classic", footer: { layout: "rich" } } },
+    pages: [page("home", "/", "Home", "home"), page("about", "/about", "About", "static"), page("contact", "/contact", "Contact", "static")],
+    sections: [],
+  },
+};
 
 /** The gallery's card for it. Each test names its own id: a template's detail is fetched once per session. */
 const card = (id: string, primaryColor: string | null = built.primaryColor) =>

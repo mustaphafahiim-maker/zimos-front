@@ -67,12 +67,80 @@ export type DragGeometry =
       gap: number;
       rtl: boolean;
     }
-  | { kind: "image-width"; sectionId: string; elementId: string; width: number; columnWidth: number; rtl: boolean };
+  | { kind: "image-width"; sectionId: string; elementId: string; width: number; columnWidth: number; rtl: boolean }
+  | PictureGeometry
+  | LogoGeometry
+  | ShellPartGeometry;
+
+/** A zone of a template header and its parts in order, in document coordinates. */
+export interface ShellZoneBox {
+  zone: string;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  parts: Array<{ id: string; top: number; left: number; width: number; height: number }>;
+}
+
+/** A part of a template header grabbed by its grip (storefront lib/xsLayout). */
+export interface ShellPartGeometry {
+  kind: "shell-part";
+  sectionId: "header";
+  partId: string;
+  device: ScreenDevice;
+  rtl: boolean;
+  zones: ShellZoneBox[];
+}
+
+/** An edge or a corner of a picture, by compass point on the screen: "e" is the right-hand edge in either direction. */
+export type PictureHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+export const PICTURE_HANDLES: readonly PictureHandle[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
+
+/** The screen a size is set for — the one the preview shows (storefront lib/deviceValue.ts). */
+export type ScreenDevice = "base" | "tablet" | "mobile";
+const SCREEN_DEVICES: readonly ScreenDevice[] = ["base", "tablet", "mobile"];
+
+/**
+ * One picture of an imported template's band, grabbed by an edge or corner.
+ * `path` is where the picture is saved in the band's props ("image",
+ * "items.2.image", "images.1"); `natural*` is the size the look gives it with
+ * no size of its own, which a drag snaps back to; `boxWidth` is the width of
+ * the box it sits in, whose twentieths are the steps a width snaps to.
+ */
+export interface PictureGeometry {
+  kind: "picture";
+  sectionId: string;
+  elementId: string;
+  path: string;
+  handle: PictureHandle;
+  width: number;
+  height: number;
+  naturalWidth: number;
+  naturalHeight: number;
+  boxWidth: number;
+  device: ScreenDevice;
+}
+
+/** A template header's or footer's logo, grabbed by an edge or corner: it keeps its shape, so only its height is saved. */
+export interface LogoGeometry {
+  kind: "logo";
+  /** "header" or "footer" — where the logo is, standing in for the section a page drag names. */
+  sectionId: "header" | "footer";
+  handle: PictureHandle;
+  width: number;
+  height: number;
+  naturalHeight: number;
+  device: ScreenDevice;
+}
 
 export interface DragPointer {
   x: number;
   y: number;
   shift: boolean;
+  /** Resize from the centre (a picture or a logo). */
+  alt?: boolean;
+  /** Resize every picture of the band alike (a picture). */
+  ctrl?: boolean;
 }
 
 /** A drag in progress, as the editor holds it. */
@@ -86,7 +154,31 @@ export type CanvasStep =
   | { kind: "element"; sectionId: string; elementId: string; delta: -1 | 1 }
   | { kind: "section-height"; sectionId: string; delta: -1 | 1; fine: boolean; current: number }
   | { kind: "column-width"; sectionId: string; rowId: string; index: number; spans: number[]; delta: -1 | 1 }
-  | { kind: "image-width"; sectionId: string; elementId: string; delta: -1 | 1; fine: boolean; current: number };
+  | { kind: "image-width"; sectionId: string; elementId: string; delta: -1 | 1; fine: boolean; current: number }
+  /** An arrow on a picture's handle: left/right its width, up/down its height (`axis`), Ctrl/⌘ for every picture of the band. */
+  | {
+      kind: "picture";
+      sectionId: string;
+      elementId: string;
+      path: string;
+      device: ScreenDevice;
+      axis: "w" | "h";
+      delta: -1 | 1;
+      fine: boolean;
+      band: boolean;
+      width: number;
+      height: number;
+      naturalWidth: number;
+      naturalHeight: number;
+      boxWidth: number;
+    }
+  | { kind: "logo"; sectionId: "header" | "footer"; device: ScreenDevice; delta: -1 | 1; fine: boolean; current: number; natural: number }
+  /**
+   * An arrow on a header part's grip, already resolved by the frame (which
+   * sees what shows): along its zone, or to the end of the zone before or
+   * after — where it lands as in "shell-move".
+   */
+  | { kind: "shell-part"; sectionId: "header"; partId: string; device: ScreenDevice; zone: string; before: string | null; after: string | null };
 
 // --- what the editor does with it -------------------------------------------------
 
@@ -100,7 +192,35 @@ export type CanvasEdit =
   | { kind: "section-height"; sectionId: string; px: number | null }
   | { kind: "column-spans"; sectionId: string; rowId: string; index: number; spans: [number, number] }
   /** Null goes back to the full width of the column. */
-  | { kind: "image-width"; sectionId: string; elementId: string; pct: number | null };
+  | { kind: "image-width"; sectionId: string; elementId: string; pct: number | null }
+  /**
+   * A picture's own size on one screen, in pixels; null goes back to the
+   * look's, absent leaves that side as it was. `scope: "band"` gives every
+   * picture of the band (of the same list) the same size.
+   */
+  | {
+      kind: "picture-size";
+      sectionId: string;
+      elementId: string;
+      path: string;
+      device: ScreenDevice;
+      scope: "one" | "band";
+      width?: number | null;
+      height?: number | null;
+    }
+  /** A template logo's height on one screen; null goes back to the look's. Applied to the store look, not the page. */
+  | { kind: "logo-size"; part: "header" | "footer"; device: ScreenDevice; px: number | null }
+  /**
+   * A template header's part moved into `zone`, on one screen: right before
+   * the part `before`, else right after `after`, else (the zone shows
+   * nothing) at its end. Named by the parts that show beside it, not by an
+   * index — a look may hide parts its zone holds. Applied to the store look.
+   */
+  | { kind: "shell-move"; id: string; zone: string; before: string | null; after: string | null; device: ScreenDevice }
+  /** A band's ground picture (`path`, e.g. "slides.0.image") centred on x% y%: saved as its "…Position". */
+  | { kind: "bg-position"; sectionId: string; elementId: string; path: string; x: number; y: number }
+  /** One item of a band's list (its banners, slides, pictures…) moved to `to`, duplicated after itself, or deleted. */
+  | { kind: "band-item"; sectionId: string; elementId: string; list: string; action: "move" | "duplicate" | "delete"; from: number; to?: number };
 
 /** What the frame draws while the pointer moves. */
 export type CanvasFeedback =
@@ -108,7 +228,11 @@ export type CanvasFeedback =
   | { kind: "element"; columnId: string; index: number }
   | { kind: "section-height"; sectionId: string; px: number | null; label: string }
   | { kind: "column-width"; sectionId: string; rowId: string; index: number; spans: [number, number]; label: string }
-  | { kind: "image-width"; elementId: string; pct: number | null; label: string };
+  | { kind: "image-width"; elementId: string; pct: number | null; label: string }
+  /** Null on a side: the look's own size there. */
+  | { kind: "picture"; elementId: string; path: string; scope: "one" | "band"; width: number | null; height: number | null; label: string }
+  | { kind: "logo"; part: "header" | "footer"; px: number | null; label: string }
+  | { kind: "shell-part"; zone: string; index: number };
 
 // --- snapping -----------------------------------------------------------------------
 
@@ -144,6 +268,119 @@ export function snapImagePercent(pct: number, shift = false): number | null {
   if (!Number.isFinite(pct)) return null;
   const snapped = Math.min(100, Math.max(MIN_IMAGE_PCT, snap(pct, IMAGE_STEP_PCT, shift)));
   return snapped >= 100 ? null : snapped;
+}
+
+/** A picture's sides, in pixels: never smaller than this, never wider than its box, never taller than PICTURE_MAX_H. */
+export const PICTURE_MIN_PX = 24;
+export const PICTURE_MAX_H = 2000;
+/** Within this many pixels of the look's own size, a side snaps back to it (and is saved as "the look's"). */
+export const PICTURE_SNAP_PX = 8;
+/** A width snaps to twentieths (5%) of the box the picture sits in. */
+export const PICTURE_STEP_PCT = 5;
+/** A logo's height, by where it is: the same ranges the storefront reads (lib/storeShell.ts). */
+export const LOGO_RANGE: Record<"header" | "footer", readonly [number, number]> = { header: [20, 140], footer: [16, 200] };
+
+const clamp = (value: number, least: number, most: number) => Math.min(most, Math.max(least, value));
+
+/** Which way an edge or corner grows the picture on screen: +1 right/down, -1 left/up, 0 not on that axis. */
+export function handleSigns(handle: PictureHandle): { sx: -1 | 0 | 1; sy: -1 | 0 | 1 } {
+  return {
+    sx: handle.includes("e") ? 1 : handle.includes("w") ? -1 : 0,
+    sy: handle.includes("s") ? 1 : handle.includes("n") ? -1 : 0,
+  };
+}
+
+/**
+ * A picture's size after a drag: each side the handle moves follows the
+ * pointer (twice as far with Alt, resizing from the centre); Shift keeps the
+ * picture's shape. A width snaps to 5% of its box, and either side snaps back
+ * to the look's own size near it — saved then as null, "the look's".
+ */
+export function pictureSizeAt(
+  drag: PictureGeometry,
+  dx: number,
+  dy: number,
+  { shift = false, alt = false }: { shift?: boolean; alt?: boolean } = {}
+): { width: number | null; height: number | null; shown: { width: number; height: number }; touches: { width: boolean; height: boolean } } {
+  const { sx, sy } = handleSigns(drag.handle);
+  const k = alt ? 2 : 1;
+  let w = sx ? drag.width + sx * dx * k : drag.width;
+  let h = sy ? drag.height + sy * dy * k : drag.height;
+  const ratio = drag.height / Math.max(1, drag.width);
+  if (shift) {
+    // The side that moved more, relative to its size, leads.
+    if (sx && (!sy || Math.abs(w - drag.width) / Math.max(1, drag.width) >= Math.abs(h - drag.height) / Math.max(1, drag.height))) h = w * ratio;
+    else w = h / ratio;
+  }
+  const maxW = Math.max(PICTURE_MIN_PX, drag.boxWidth);
+  w = clamp(w, PICTURE_MIN_PX, maxW);
+  h = clamp(h, PICTURE_MIN_PX, PICTURE_MAX_H);
+  const step = (drag.boxWidth * PICTURE_STEP_PCT) / 100;
+  let width: number | null = Math.abs(w - drag.naturalWidth) <= PICTURE_SNAP_PX ? null : step > 0 ? clamp(Math.round(w / step) * step, PICTURE_MIN_PX, maxW) : w;
+  if (shift && width !== null) h = clamp(width * ratio, PICTURE_MIN_PX, PICTURE_MAX_H);
+  let height: number | null = Math.abs(h - drag.naturalHeight) <= PICTURE_SNAP_PX ? null : h;
+  if (width !== null) width = Math.round(width);
+  if (height !== null) height = Math.round(height);
+  const touches = { width: sx !== 0 || (shift && sy !== 0), height: sy !== 0 || (shift && sx !== 0) };
+  return {
+    width,
+    height,
+    shown: { width: width ?? Math.round(drag.naturalWidth), height: height ?? Math.round(drag.naturalHeight) },
+    touches,
+  };
+}
+
+/** A logo's height after a drag: it keeps its shape, so a sideways drag scales it too. Snaps to 2px, and back to the look's. */
+export function logoHeightAt(drag: LogoGeometry, dx: number, dy: number, alt = false): number | null {
+  const { sx, sy } = handleSigns(drag.handle);
+  const k = alt ? 2 : 1;
+  const byWidth = sx ? (drag.width + sx * dx * k) / Math.max(1, drag.width) : 0;
+  const byHeight = sy ? (drag.height + sy * dy * k) / Math.max(1, drag.height) : 0;
+  // From a corner, whichever way the pointer moved more leads.
+  const scale = sx && sy ? (Math.abs(byWidth - 1) >= Math.abs(byHeight - 1) ? byWidth : byHeight) : sx ? byWidth : byHeight;
+  const [least, most] = LOGO_RANGE[drag.sectionId];
+  const px = clamp(Math.round((drag.height * scale) / 2) * 2, least, most);
+  return Math.abs(px - drag.naturalHeight) <= 2 ? null : px;
+}
+
+/** Past this distance from every zone, a header part has nowhere to land. */
+export const SHELL_DROP_REACH_PX = 80;
+
+/**
+ * Where a header part dragged to (x, y) would land: the smallest zone under
+ * the pointer (the bar's own zone holds the menu's and the icons'), else the
+ * nearest within reach; its place there by the parts' middles in the way the
+ * header reads. Null nowhere, or where it already is.
+ */
+export function shellDropTarget(drag: ShellPartGeometry, x: number, y: number): { zone: string; index: number } | null {
+  const pad = 8;
+  const inside = drag.zones.filter((z) => x >= z.left - pad && x <= z.left + z.width + pad && y >= z.top - pad && y <= z.top + z.height + pad);
+  let zone = inside.sort((a, b) => a.width * a.height - b.width * b.height)[0] ?? null;
+  if (!zone) {
+    let best = Number.POSITIVE_INFINITY;
+    for (const z of drag.zones) {
+      const dx = x < z.left ? z.left - x : x > z.left + z.width ? x - z.left - z.width : 0;
+      const dy = y < z.top ? z.top - y : y > z.top + z.height ? y - z.top - z.height : 0;
+      const d = Math.hypot(dx, dy);
+      if (d < best) {
+        best = d;
+        zone = z;
+      }
+    }
+    if (!zone || best > SHELL_DROP_REACH_PX) return null;
+  }
+  const others = zone.parts;
+  let index = others.length;
+  for (let i = 0; i < others.length; i++) {
+    const middle = others[i].left + others[i].width / 2;
+    if (drag.rtl ? x > middle : x < middle) {
+      index = i;
+      break;
+    }
+  }
+  const from = zone.parts.findIndex((p) => p.id === drag.partId);
+  if (from !== -1 && (index === from || index === from + 1)) return null;
+  return { zone: zone.zone, index };
 }
 
 /**
@@ -237,6 +474,10 @@ export function isElementNoop(drag: Extract<DragGeometry, { kind: "element" }>, 
 export interface DragLabels {
   /** The badge for "no minimum height". */
   auto: string;
+  /** The badge's note when a picture or logo is back at the look's own size. */
+  original?: string;
+  /** The badge's note when every picture of the band is being resized. */
+  everyPicture?: string;
 }
 
 /** Where a drag would land right now: what to draw, and the edit a release would make. */
@@ -305,6 +546,53 @@ export function resolveDrag(
         edit: { kind: "image-width", sectionId: drag.sectionId, elementId: drag.elementId, pct },
       };
     }
+    case "picture": {
+      const size = pictureSizeAt(drag, pointer.x - start.x, pointer.y - start.y, pointer);
+      const scope = pointer.ctrl ? "band" : "one";
+      const back = size.width === null && size.height === null && labels.original ? ` · ${labels.original}` : "";
+      const all = scope === "band" && labels.everyPicture ? ` · ${labels.everyPicture}` : "";
+      const unchanged =
+        (!size.touches.width || size.shown.width === Math.round(drag.width)) && (!size.touches.height || size.shown.height === Math.round(drag.height));
+      return {
+        feedback: {
+          kind: "picture",
+          elementId: drag.elementId,
+          path: drag.path,
+          scope,
+          width: size.touches.width ? size.width : null,
+          height: size.touches.height ? size.height : null,
+          label: `${size.shown.width} × ${size.shown.height}${back}${all}`,
+        },
+        edit:
+          unchanged && scope === "one"
+            ? null
+            : {
+                kind: "picture-size",
+                sectionId: drag.sectionId,
+                elementId: drag.elementId,
+                path: drag.path,
+                device: drag.device,
+                scope,
+                ...(size.touches.width ? { width: size.width } : {}),
+                ...(size.touches.height ? { height: size.height } : {}),
+              },
+      };
+    }
+    case "shell-part": {
+      const target = shellDropTarget(drag, pointer.x, pointer.y);
+      if (!target) return { feedback: null, edit: null };
+      const shown = drag.zones.find((z) => z.zone === target.zone)?.parts ?? [];
+      const before = shown[target.index]?.id ?? null;
+      const after = before ? null : (shown[target.index - 1]?.id ?? null);
+      return { feedback: { kind: "shell-part", ...target }, edit: { kind: "shell-move", id: drag.partId, zone: target.zone, before, after, device: drag.device } };
+    }
+    case "logo": {
+      const px = logoHeightAt(drag, pointer.x - start.x, pointer.y - start.y, pointer.alt);
+      return {
+        feedback: { kind: "logo", part: drag.sectionId, px, label: px === null ? (labels.original ?? labels.auto) : `${px}px` },
+        edit: { kind: "logo-size", part: drag.sectionId, device: drag.device, px },
+      };
+    }
   }
 }
 
@@ -347,6 +635,36 @@ export function stepEdit(step: CanvasStep): CanvasEdit | null {
       const next = step.fine ? base + step.delta : nextGridLine(base, IMAGE_STEP_PCT, step.delta);
       return { kind: "image-width", sectionId: step.sectionId, elementId: step.elementId, pct: snapImagePercent(next, true) };
     }
+    case "picture": {
+      // One press: a twentieth of the box sideways or 8px up and down; with Shift, one pixel.
+      const along = step.axis === "w" ? step.width : step.height;
+      const unit = step.fine ? 1 : step.axis === "w" ? (step.boxWidth * PICTURE_STEP_PCT) / 100 : HEIGHT_STEP_PX;
+      const natural = step.axis === "w" ? step.naturalWidth : step.naturalHeight;
+      let next = step.fine ? along + step.delta : nextGridLine(along, Math.max(1, unit), step.delta);
+      // A press that would pass the look's own size stops on it.
+      if ((along > natural && next < natural) || (along < natural && next > natural)) next = natural;
+      const most = step.axis === "w" ? Math.max(PICTURE_MIN_PX, step.boxWidth) : PICTURE_MAX_H;
+      const px = Math.round(clamp(next, PICTURE_MIN_PX, most));
+      const value = Math.abs(px - natural) < 1 ? null : px;
+      return {
+        kind: "picture-size",
+        sectionId: step.sectionId,
+        elementId: step.elementId,
+        path: step.path,
+        device: step.device,
+        scope: step.band ? "band" : "one",
+        ...(step.axis === "w" ? { width: value } : { height: value }),
+      };
+    }
+    case "shell-part":
+      // The editor knows the header's arrangement; it turns this into a move (WebsiteEditorPage).
+      return null;
+    case "logo": {
+      const [least, most] = LOGO_RANGE[step.sectionId];
+      const next = step.fine ? step.current + step.delta : nextGridLine(step.current, 2, step.delta);
+      const px = clamp(next, least, most);
+      return { kind: "logo-size", part: step.sectionId, device: step.device, px: px === step.natural ? null : px };
+    }
   }
 }
 
@@ -366,6 +684,39 @@ function isIndex(value: unknown): value is number {
 
 function isDelta(value: unknown): value is -1 | 1 {
   return value === -1 || value === 1;
+}
+
+/** Where a picture is saved in a band's props: "image", "items.2.image", "images.1". */
+export function isPicturePath(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z]{1,30}(?:\.\d{1,2}(?:\.[A-Za-z]{1,30})?)?$/.test(value);
+}
+
+function isHandle(value: unknown): value is PictureHandle {
+  return PICTURE_HANDLES.includes(value as PictureHandle);
+}
+
+function isScreen(value: unknown): value is ScreenDevice {
+  return SCREEN_DEVICES.includes(value as ScreenDevice);
+}
+
+/** A size in pixels a frame could have measured. */
+function isPx(value: unknown): value is number {
+  return isNum(value) && value >= 0 && value <= 10_000;
+}
+
+/** A header part's id (storefront lib/xsLayout). */
+function isPartId(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{1,40}$/.test(value);
+}
+
+/** A header part's id, or null (no part beside it); undefined when it is neither. */
+function partOrEnd(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  return isPartId(value) ? value : undefined;
+}
+
+function isShellPart(value: unknown): value is "header" | "footer" {
+  return value === "header" || value === "footer";
 }
 
 function readSpans(value: unknown): number[] | null {
@@ -417,6 +768,50 @@ export function readDragGeometry(value: unknown): DragGeometry | null {
   const d = value as Record<string, unknown> | null;
   if (!d || typeof d !== "object" || !isId(d.sectionId)) return null;
   switch (d.kind) {
+    case "picture":
+      return isId(d.elementId) &&
+        isPicturePath(d.path) &&
+        isHandle(d.handle) &&
+        isScreen(d.device) &&
+        isPx(d.width) &&
+        isPx(d.height) &&
+        isPx(d.naturalWidth) &&
+        isPx(d.naturalHeight) &&
+        isPx(d.boxWidth)
+        ? {
+            kind: "picture",
+            sectionId: d.sectionId,
+            elementId: d.elementId,
+            path: d.path,
+            handle: d.handle,
+            width: d.width,
+            height: d.height,
+            naturalWidth: d.naturalWidth,
+            naturalHeight: d.naturalHeight,
+            boxWidth: d.boxWidth,
+            device: d.device,
+          }
+        : null;
+    case "shell-part": {
+      if (d.sectionId !== "header" || !isPartId(d.partId) || !isScreen(d.device) || typeof d.rtl !== "boolean" || !Array.isArray(d.zones) || d.zones.length > 12) return null;
+      const zones: ShellZoneBox[] = [];
+      for (const raw of d.zones) {
+        const z = raw as Record<string, unknown> | null;
+        if (!z || typeof z.zone !== "string" || !/^[a-z]{1,20}$/.test(z.zone) || !isNum(z.top) || !isNum(z.left) || !isPx(z.width) || !isPx(z.height) || !Array.isArray(z.parts) || z.parts.length > 40) return null;
+        const parts: ShellZoneBox["parts"] = [];
+        for (const rawPart of z.parts) {
+          const p = rawPart as Record<string, unknown> | null;
+          if (!p || !isPartId(p.id) || !isNum(p.top) || !isNum(p.left) || !isPx(p.width) || !isPx(p.height)) return null;
+          parts.push({ id: p.id, top: p.top, left: p.left, width: p.width, height: p.height });
+        }
+        zones.push({ zone: z.zone, top: z.top, left: z.left, width: z.width, height: z.height, parts });
+      }
+      return { kind: "shell-part", sectionId: "header", partId: d.partId, device: d.device, rtl: d.rtl, zones };
+    }
+    case "logo":
+      return isShellPart(d.sectionId) && isHandle(d.handle) && isScreen(d.device) && isPx(d.width) && isPx(d.height) && isPx(d.naturalHeight)
+        ? { kind: "logo", sectionId: d.sectionId, handle: d.handle, width: d.width, height: d.height, naturalHeight: d.naturalHeight, device: d.device }
+        : null;
     case "section": {
       const sections = readSectionBoxes(d.sections);
       return sections ? { kind: "section", sectionId: d.sectionId, sections } : null;
@@ -469,7 +864,8 @@ export type CanvasDragMessage =
 export function readCanvasDrag(data: Record<string, unknown>): CanvasDragMessage | null {
   if (data.phase === "cancel") return { type: "zimos:canvas-drag", phase: "cancel" };
   if (!isNum(data.x) || !isNum(data.y)) return null;
-  const pointer: DragPointer = { x: data.x, y: data.y, shift: data.shift === true };
+  // Alt and Ctrl/⌘ only when pressed: a pointer that names neither reads exactly as before them.
+  const pointer: DragPointer = { x: data.x, y: data.y, shift: data.shift === true, ...(data.alt === true ? { alt: true } : {}), ...(data.ctrl === true ? { ctrl: true } : {}) };
   if (data.phase === "move" || data.phase === "end") return { type: "zimos:canvas-drag", phase: data.phase, pointer };
   if (data.phase === "start") {
     const drag = readDragGeometry(data.drag);
@@ -480,7 +876,16 @@ export function readCanvasDrag(data: Record<string, unknown>): CanvasDragMessage
 
 export function readCanvasStep(value: unknown): CanvasStep | null {
   const s = value as Record<string, unknown> | null;
-  if (!s || typeof s !== "object" || !isId(s.sectionId) || !isDelta(s.delta)) return null;
+  if (!s || typeof s !== "object" || !isId(s.sectionId)) return null;
+  // A header part's arrow press comes placed by the frame, with no delta.
+  if (s.kind === "shell-part") {
+    const before = partOrEnd(s.before);
+    const after = partOrEnd(s.after);
+    if (s.sectionId !== "header" || !isPartId(s.partId) || !isScreen(s.device) || typeof s.zone !== "string" || !/^[a-z]{1,20}$/.test(s.zone)) return null;
+    if (before === undefined || after === undefined) return null;
+    return { kind: "shell-part", sectionId: "header", partId: s.partId, device: s.device, zone: s.zone, before, after };
+  }
+  if (!isDelta(s.delta)) return null;
   switch (s.kind) {
     case "element":
       return isId(s.elementId) ? { kind: "element", sectionId: s.sectionId, elementId: s.elementId, delta: s.delta } : null;
@@ -504,6 +909,37 @@ export function readCanvasStep(value: unknown): CanvasStep | null {
             fine: s.fine === true,
             current: s.current,
           }
+        : null;
+    case "picture":
+      return isId(s.elementId) &&
+        isPicturePath(s.path) &&
+        isScreen(s.device) &&
+        (s.axis === "w" || s.axis === "h") &&
+        isPx(s.width) &&
+        isPx(s.height) &&
+        isPx(s.naturalWidth) &&
+        isPx(s.naturalHeight) &&
+        isPx(s.boxWidth)
+        ? {
+            kind: "picture",
+            sectionId: s.sectionId,
+            elementId: s.elementId,
+            path: s.path,
+            device: s.device,
+            axis: s.axis,
+            delta: s.delta,
+            fine: s.fine === true,
+            band: s.band === true,
+            width: s.width,
+            height: s.height,
+            naturalWidth: s.naturalWidth,
+            naturalHeight: s.naturalHeight,
+            boxWidth: s.boxWidth,
+          }
+        : null;
+    case "logo":
+      return isShellPart(s.sectionId) && isScreen(s.device) && isPx(s.current) && isPx(s.natural)
+        ? { kind: "logo", sectionId: s.sectionId, device: s.device, delta: s.delta, fine: s.fine === true, current: s.current, natural: s.natural }
         : null;
     default:
       return null;

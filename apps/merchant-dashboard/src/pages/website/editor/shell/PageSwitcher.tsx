@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { WebsitePage } from "@store-builder/api-client";
 import { cn } from "@store-builder/ui";
 import { IconCaretDown, IconHome, IconPage } from "@/components/icons";
@@ -26,7 +26,13 @@ export function PageSwitcher({
   asSheet,
   caption,
   captionTone = "quiet",
+  extra,
+  title,
 }: {
+  /** Shown under the pages (the store's own pages, StorePageList). */
+  extra?: ReactNode;
+  /** The pill's name while something other than a page shows (a store page). */
+  title?: string;
   pages: WebsitePage[];
   page: WebsitePage | null;
   onSelect: (pageId: string) => void;
@@ -61,12 +67,20 @@ export function PageSwitcher({
       }}
     />
   );
+  const listed = extra ? (
+    <>
+      {list}
+      <div onClickCapture={() => setOpen(false)}>{extra}</div>
+    </>
+  ) : (
+    list
+  );
 
   const pill = (
     <button
       type="button"
       data-slot="editor-page-pill"
-      aria-label={fmt(t.pageSwitcher, { name: page.title })}
+      aria-label={fmt(t.pageSwitcher, { name: title ?? page.title })}
       aria-haspopup="dialog"
       aria-expanded={open}
       onClick={asSheet ? () => setOpen(true) : undefined}
@@ -75,7 +89,7 @@ export function PageSwitcher({
       <PageIcon className="hidden size-4 shrink-0 text-ink-soft md:block" aria-hidden />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[13px] leading-[1.15rem] font-semibold text-ink md:text-sm md:leading-5">
-          {page.title}
+          {title ?? page.title}
         </span>
         {caption && (
           <span
@@ -97,7 +111,7 @@ export function PageSwitcher({
       <>
         {pill}
         <Sheet open={open} onOpenChange={setOpen} title={t.pagesTitle} side="auto" size="sm">
-          {list}
+          {listed}
         </Sheet>
       </>
     );
@@ -113,7 +127,7 @@ export function PageSwitcher({
       label={t.pagesTitle}
       className="max-h-[min(70dvh,32rem)] w-80 overflow-y-auto p-2"
     >
-      {list}
+      {listed}
     </Popover>
   );
 }

@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
 import type { MoneyFormat } from "./moneyFormat";
+import type { XsStorePages } from "./xsStorePages";
+import { withStoreWords, type StoreWords } from "./storeWords";
 import type {
   CheckoutSettings,
   LegalPolicyKey,
@@ -48,6 +50,10 @@ export interface StoreInfo {
   delivery?: StoreDelivery | null;
   /** A store on holiday (GET /store/:ws `holiday`); null or absent while it is open as usual. Read only with HOLIDAY_MODE_ENABLED. */
   holiday?: StorefrontHoliday | null;
+  /** On a store that wears an imported template, how its own pages are drawn (lib/xsStorePages.ts); null or absent otherwise. */
+  xsPages?: XsStorePages | null;
+  /** The store's own words on its shop pages, by language (lib/storeWords.ts). */
+  words?: Record<string, StoreWords>;
 }
 
 /** How a store that delivers itself takes orders (GET /store/:ws `delivery`). */
@@ -99,7 +105,7 @@ function build(locale: Locale, store: StoreInfo | null): StoreContextValue {
     locale,
     dir: dirFor(locale),
     intlLocale: intlLocaleFor(locale),
-    t: getDictionary(locale),
+    t: withStoreWords(getDictionary(locale), store?.words?.[locale]),
     store,
     money: (amount, currency) => formatPrice(amount, currency ?? store?.currency ?? "EGP", locale, store?.currencyFormat ?? null),
   };

@@ -1,0 +1,576 @@
+{
+  "globalStyles": {
+    "primaryColor": "#72AEC8",
+    "themeSettings": {
+      "xsLook": "12",
+      "header": {
+        "menu": [
+          {
+            "label": "Home",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "Products",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Contact",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "Quick Links",
+            "links": [
+              {
+                "label": "Home",
+                "href": "/",
+                "kind": "home"
+              },
+              {
+                "label": "Shop",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "Contact",
+                "href": "/contact",
+                "kind": "page"
+              }
+            ]
+          },
+          {
+            "title": "Help & Info",
+            "links": [
+              {
+                "label": "Track Your Order",
+                "href": "/track",
+                "kind": "track"
+              },
+              {
+                "label": "Cart",
+                "href": "/cart",
+                "kind": "cart"
+              }
+            ]
+          }
+        ],
+        "text": "The latest phones and smartwatches with a real warranty and competitive prices, plus fast delivery across Egypt.",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "Home",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs12-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s1-e1",
+                        "type": "xs_hero",
+                        "props": {
+                          "look": "12",
+                          "heading": "Your Products Are Great.",
+                          "text": "",
+                          "image": "/xs/12/banner-image.png",
+                          "buttonLabel": "Shop Product",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s2-e1",
+                        "type": "xs_features",
+                        "props": {
+                          "look": "12",
+                          "heading": "",
+                          "text": "",
+                          "image": "",
+                          "items": [
+                            {
+                              "icon": "truck",
+                              "image": "/xs/12/ico-1.svg",
+                              "title": "Free delivery",
+                              "text": "Free delivery of your order to your door."
+                            },
+                            {
+                              "icon": "support",
+                              "image": "/xs/12/ico-2.svg",
+                              "title": "Quality guarantee",
+                              "text": "Genuine devices with an official warranty, fully checked before shipping."
+                            },
+                            {
+                              "icon": "return",
+                              "image": "/xs/12/ico-3.svg",
+                              "title": "Daily offers",
+                              "text": "Fresh discounts every day on the best-known brands."
+                            },
+                            {
+                              "icon": "bag",
+                              "image": "/xs/12/ico-4.svg",
+                              "title": "100% secure payment",
+                              "text": "Pay by card or cash on delivery, safely."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s3-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "12",
+                          "heading": "Mobile Products",
+                          "collection": "",
+                          "limit": 8,
+                          "showDiscount": true,
+                          "showTabs": false,
+                          "showSearch": false,
+                          "layout": "slider",
+                          "quickView": true,
+                          "allLabel": "All Products",
+                          "searchLabel": "Search",
+                          "viewLabel": "Quick View",
+                          "searchPlaceholder": "Type and press enter",
+                          "loadMoreLabel": "Go to Shop",
+                          "openLabel": "Add to Cart",
+                          "linkLabel": "Go to Shop",
+                          "linkHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s4-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "12",
+                          "heading": "New year sale",
+                          "text": "10% off",
+                          "images": [
+                            "/xs/12/single-image1.png"
+                          ],
+                          "points": [],
+                          "buttonLabel": "Shop Sale",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s5-e1",
+                        "type": "xs_quotes",
+                        "props": {
+                          "look": "12",
+                          "heading": "",
+                          "items": [
+                            {
+                              "quote": "I bought my phone and smartwatch here; both arrived genuine, carefully packed and ahead of time. Respectful service and truly competitive prices.",
+                              "name": "Emma Chamberlin"
+                            },
+                            {
+                              "quote": "I bought my phone and smartwatch here; both arrived genuine, carefully packed and ahead of time. Respectful service and truly competitive prices.",
+                              "name": "Thomas John"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s6",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s6-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s6-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s6-e1",
+                        "type": "xs_newsletter",
+                        "props": {
+                          "look": "12",
+                          "heading": "Subscribe Us Now",
+                          "text": "Get latest news, updates and deals directly mailed to your inbox.",
+                          "placeholder": "Your email address here",
+                          "buttonLabel": "Subscribe"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s7",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s7-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s7-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s7-e1",
+                        "type": "xs_gallery",
+                        "props": {
+                          "look": "12",
+                          "heading": "Shop our Instagram",
+                          "images": [
+                            "/xs/12/insta-item1.jpg",
+                            "/xs/12/insta-item2.jpg",
+                            "/xs/12/insta-item3.jpg",
+                            "/xs/12/insta-item4.jpg",
+                            "/xs/12/insta-item5.jpg"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s8",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s8-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s8-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s8-e1",
+                        "type": "xs_posts",
+                        "props": {
+                          "look": "12",
+                          "heading": "Latest Posts",
+                          "items": [
+                            {
+                              "image": "/xs/12/post-1.jpg",
+                              "meta": "feb 22, 2023 - Gadgets",
+                              "title": "Get some cool gadgets in 2023",
+                              "text": "",
+                              "linkLabel": "",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/12/post-2.jpg",
+                              "meta": "feb 25, 2023 - Technology",
+                              "title": "Technology Hack You Won't Get",
+                              "text": "",
+                              "linkLabel": "",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/12/post-3.jpg",
+                              "meta": "feb 22, 2023 - Camera",
+                              "title": "Top 10 Small Camera In The World",
+                              "text": "",
+                              "linkLabel": "",
+                              "href": ""
+                            }
+                          ],
+                          "linkLabel": "Read Blog",
+                          "linkHref": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "Contact",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs12-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "12",
+                          "heading": "Contact",
+                          "image": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p2-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "12",
+                          "heading": "Any questions?",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "Office",
+                              "text": "Mohandessin, Giza"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "Phone",
+                              "text": "Call us any day from 10 am to 10 pm"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "Email",
+                              "text": "Send us a message and we reply within a day"
+                            }
+                          ],
+                          "contactPlaceholder": "Write Your Email Here",
+                          "messagePlaceholder": "Write Your Message Here",
+                          "buttonLabel": "Submit"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

@@ -47,8 +47,8 @@ export function ProductTabs({ tabs, defaultTab }: { tabs: ProductTab[]; defaultT
   }
 
   return (
-    <section aria-label={t.shop.tabs}>
-      <div role="tablist" aria-label={t.shop.tabs} className="-mx-4 flex gap-1 overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0">
+    <section aria-label={t.shop.tabs} className="zt-tabs">
+      <div role="tablist" aria-label={t.shop.tabs} className="zt-tablist -mx-4 flex gap-1 overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0">
         {tabs.map((tab, i) => {
           const selected = tab.id === active;
           return (
@@ -66,7 +66,7 @@ export function ProductTabs({ tabs, defaultTab }: { tabs: ProductTab[]; defaultT
               tabIndex={selected ? 0 : -1}
               onClick={() => setActive(tab.id)}
               onKeyDown={(e) => onKeyDown(e, i)}
-              className={`-mb-px inline-flex min-h-12 shrink-0 cursor-pointer items-center border-b-2 px-3 text-sm font-semibold transition-colors ${
+              className={`zt-tab -mb-px inline-flex min-h-12 shrink-0 cursor-pointer items-center border-b-2 px-3 text-sm font-semibold transition-colors ${
                 selected ? "border-primary text-primary" : "border-transparent text-ink-soft hover:text-ink"
               } ${focusRing} rounded-t-lg`}
             >
@@ -83,7 +83,7 @@ export function ProductTabs({ tabs, defaultTab }: { tabs: ProductTab[]; defaultT
           aria-labelledby={`${baseId}-tab-${tab.id}`}
           hidden={tab.id !== active}
           tabIndex={0}
-          className={`pt-5 ${focusRing} rounded-xl`}
+          className={`zt-tabpanel pt-5 ${focusRing} rounded-xl`}
         >
           {tab.content}
         </div>

@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { IconClose, IconSearch } from "@/components/icons";
 import { Button, Input, cn } from "@store-builder/ui";
 import type { PageSection } from "@store-builder/api-client";
 import { Select } from "@/components/Select";
 import { SheetBody, SheetFrame, SheetHeader } from "@/components/Sheet";
 import { ChipRow, ListToolbar, type ChipItem } from "@/components/list";
-import { BLOCK_GROUPS, BLOCK_PRESETS, type BlockPreset } from "./blocks";
+import { BLOCK_GROUPS, type BlockPreset } from "./blocks";
 import { PresetThumbnail } from "./BlockThumbnail";
 import { SavedSectionsGrid, useSavedSections, type SavedSectionsState } from "./SavedSections";
 import { editorUi, groupLabel, presetText, useEditorLocale, type EditorLocale } from "./editorLocale";
@@ -17,9 +17,12 @@ import {
   PURPOSES,
   purposeLabel,
   searchPresets,
+  LIBRARY_PRESETS,
+  offeredPresets,
   type Purpose,
 } from "./library/purposes";
 import { leftUi } from "./library/strings";
+import { XS_ONLY } from "./xsBlocks";
 
 /**
  * The library of sections. Every preset is a card with a schematic of the
@@ -72,6 +75,11 @@ export interface BlockLibraryProps {
   onInsertSaved?: (section: PageSection) => void;
   /** Sheet only, inside a funnel: that funnel's own saved sections too. */
   funnelId?: string;
+  /**
+   * The imported templates' bands are offered too: a store that wears one of
+   * those templates. Always on while XS_ONLY is; off, the library is as it was.
+   */
+  templateBands?: boolean;
 }
 
 export function BlockLibrary(props: BlockLibraryProps) {
@@ -89,11 +97,13 @@ function BlockLibraryPanel({
   onCancelInsert,
   onDragStart,
   onDragEnd,
+  templateBands = false,
 }: BlockLibraryProps) {
   const locale = useEditorLocale();
   const ui = editorUi(locale);
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<GroupFilter>("all");
+  const offered = useMemo(() => offeredPresets(LIBRARY_PRESETS, XS_ONLY || templateBands), [templateBands]);
 
   const searching = query.trim() !== "";
   // The popular row only makes sense as a first read of the full, unfiltered
@@ -103,16 +113,16 @@ function BlockLibraryPanel({
   const showPopular = group === "all" && !searching;
 
   const presets = useMemo(() => {
-    const within = BLOCK_PRESETS.filter((preset) => {
+    const within = offered.filter((preset) => {
       if (group !== "all" && preset.group !== group) return false;
       return !(showPopular && POPULAR_KEY_SET.has(preset.key));
     });
     return searchPresets(query, within);
-  }, [query, group, showPopular]);
+  }, [query, group, showPopular, offered]);
 
   const tabs: Array<{ value: GroupFilter; label: string }> = [
     { value: "all", label: ui.allGroups },
-    ...BLOCK_GROUPS.map((g) => ({ value: g, label: groupLabel(g, locale) })),
+    ...BLOCK_GROUPS.filter((g) => offered.some((preset) => preset.group === g)).map((g) => ({ value: g, label: groupLabel(g, locale) })),
   ];
 
   const grid = "grid grid-cols-2 gap-1.5 @[28rem]:grid-cols-3 @[40rem]:grid-cols-4";
@@ -257,9 +267,10 @@ function BlockLibraryBody({
   onAdd,
   onInsertSaved,
   funnelId,
+  templateBands = false,
 }: BlockLibraryProps) {
   const saved = useSavedSections(funnelId, onInsertSaved !== undefined);
-  return <LibraryBrowser onPick={onAdd} onInsertSaved={onInsertSaved} saved={saved} className="flex h-full min-h-0 flex-col" />;
+  return <LibraryBrowser onPick={onAdd} onInsertSaved={onInsertSaved} saved={saved} templateBands={templateBands} className="flex h-full min-h-0 flex-col" />;
 }
 
 const GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3";
@@ -272,10 +283,13 @@ function LibraryBrowser({
   className,
   bodyClassName,
   inSheet = false,
+  templateBands = false,
 }: {
   onPick: (preset: BlockPreset) => void;
   onInsertSaved?: (section: PageSection) => void;
   saved: SavedSectionsState;
+  /** BlockLibraryProps `templateBands`. */
+  templateBands?: boolean;
   /** Where the search field's wrapper is, so a sheet can start the caret in it. */
   searchRef?: RefObject<HTMLDivElement | null>;
   className?: string;
@@ -296,6 +310,8 @@ function LibraryBrowser({
 
   const searching = query.trim() !== "";
   const savedCount = saved.list.length;
+  const bands = XS_ONLY || templateBands;
+  const offer = useCallback((presets: readonly BlockPreset[]) => offeredPresets(presets, bands), [bands]);
 
   const chips = useMemo(() => {
     const items: ChipItem<View>[] = [{ value: "all", label: t.all }];
@@ -309,8 +325,8 @@ function LibraryBrowser({
 
   const results = useMemo(() => {
     if (!searching || view === "saved") return [];
-    return searchPresets(query, view === "all" ? BLOCK_PRESETS : PRESETS_BY_PURPOSE[view]);
-  }, [query, searching, view]);
+    return searchPresets(query, offer(view === "all" ? LIBRARY_PRESETS : PRESETS_BY_PURPOSE[view]));
+  }, [query, searching, view, offer]);
 
   function changeQuery(next: string) {
     // A search looks everywhere: typing leaves the saved view, and a chip narrows it again if pressed.
@@ -367,7 +383,7 @@ function LibraryBrowser({
           </section>
         )}
         {(everything ? PURPOSES : PURPOSES.slice(0, 1)).map((purpose) => {
-          const presets = PRESETS_BY_PRIMARY[purpose].filter((preset) => !POPULAR_KEY_SET.has(preset.key));
+          const presets = offer(PRESETS_BY_PRIMARY[purpose]).filter((preset) => !POPULAR_KEY_SET.has(preset.key));
           if (presets.length === 0) return null;
           return (
             <section key={purpose}>
@@ -379,7 +395,7 @@ function LibraryBrowser({
       </div>
     );
   } else if (view !== "saved") {
-    body = <ul className={GRID}>{PRESETS_BY_PURPOSE[view].map(card)}</ul>;
+    body = <ul className={GRID}>{offer(PRESETS_BY_PURPOSE[view]).map(card)}</ul>;
   }
 
   const toolbar = (
@@ -453,6 +469,8 @@ export interface BlockLibrarySheetProps {
   /** Inside a funnel: that funnel's own saved sections too. */
   funnelId?: string;
   title?: string;
+  /** BlockLibraryProps `templateBands`: the imported templates' bands too, on a store that wears one. */
+  templateBands?: boolean;
 }
 
 /**
@@ -461,7 +479,7 @@ export interface BlockLibrarySheetProps {
  * on a phone and three on a desktop; one tap adds the section where the "+"
  * pointed (or at the end) and closes the sheet.
  */
-export function BlockLibrarySheet({ open, onOpenChange, onPick, insertIndex = null, onInsertSaved, funnelId, title }: BlockLibrarySheetProps) {
+export function BlockLibrarySheet({ open, onOpenChange, onPick, insertIndex = null, onInsertSaved, funnelId, title, templateBands = false }: BlockLibrarySheetProps) {
   const t = leftUi(useEditorLocale());
   // Read while the sheet is closed too, so «محفوظاتي» is in its place the moment it opens.
   const saved = useSavedSections(funnelId, onInsertSaved !== undefined);
@@ -495,6 +513,7 @@ export function BlockLibrarySheet({ open, onOpenChange, onPick, insertIndex = nu
         inSheet
         searchRef={searchRef}
         saved={saved}
+        templateBands={templateBands}
         onPick={(preset) => {
           onPick(preset);
           onOpenChange(false);
