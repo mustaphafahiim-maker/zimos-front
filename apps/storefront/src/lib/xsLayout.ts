@@ -142,6 +142,52 @@ export function headerZonesByDevice(saved: unknown, fallback: HeaderZones): Reco
 }
 
 /**
+ * The words a template wrote where a language switch would stand, as a plain
+ * word that does nothing — XS 01's "EN", which its Arabic copy says as
+ * "العربية". Saved stores keep them in `header.zones`; the templates in the
+ * console carry them too.
+ */
+const LANGUAGE_WORDS = new Set(["en", "english", "العربية", "عربي"]);
+
+export function isLanguageWord(part: HeaderPart): boolean {
+  return part.type === "text" && LANGUAGE_WORDS.has((part.label ?? "").trim().toLowerCase());
+}
+
+/**
+ * The zones with the store's language button as the merchant set it
+ * (themeSettings.shopperDisplay.localeSwitch, lib/shopperDisplay):
+ *
+ *   on    a template's language word becomes the real switch, in its place; a
+ *         screen with neither that nor a switch of the merchant's gets one at
+ *         the end of the strip's links (on a phone the strip is hidden and the
+ *         phone menu shows it)
+ *   off   the language word is left out, so no word that looks like a button
+ *         stays; a switch the merchant added in the editor stays, as before
+ */
+export function withLanguageSwitch(byDevice: Record<Device, HeaderZones>, on: boolean): Record<Device, HeaderZones> {
+  const out = {} as Record<Device, HeaderZones>;
+  for (const device of ["base", "tablet", "mobile"] as const) {
+    const zones = byDevice[device];
+    const parts = HEADER_ZONES.flatMap((zone) => zones[zone]);
+    // One switch a screen: the merchant's own wins over the template's word.
+    const ownSwitch = parts.some((part) => part.type === "language");
+    let placed = ownSwitch;
+    const next = {} as HeaderZones;
+    for (const zone of HEADER_ZONES) {
+      next[zone] = zones[zone].flatMap((part): HeaderPart[] => {
+        if (!isLanguageWord(part)) return [part];
+        if (!on || placed) return [];
+        placed = true;
+        return [{ id: part.id, type: "language" }];
+      });
+    }
+    if (on && !placed) next.links = [...next.links, { id: "language", type: "language" }];
+    out[device] = next;
+  }
+  return out;
+}
+
+/**
  * A zone's parts as drawn: one list when every screen shows the same, else
  * one list per group of screens that agree (each shown only on its screens).
  */

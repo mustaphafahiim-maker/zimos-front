@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { defaultHeaderZones, headerZonesByDevice, readFooterBottom, readFooterColumns, readHeaderZones, zoneGroups } from "./xsLayout";
+import { defaultHeaderZones, headerZonesByDevice, isLanguageWord, readFooterBottom, readFooterColumns, readHeaderZones, withLanguageSwitch, zoneGroups } from "./xsLayout";
 
 const SHOW = { cart: true, track: false, language: true };
 
@@ -51,6 +51,49 @@ describe("xsLayout: a template header's zones", () => {
     // One list where the screens agree, a group per screen where they do not.
     expect(zoneGroups(byDevice, "brand")).toEqual([{ devices: null, parts: fallback.brand }]);
     expect(zoneGroups(byDevice, "icons").map((g) => g.devices)).toEqual([["base", "tablet"], ["mobile"]]);
+  });
+});
+
+describe("xsLayout: the store's language button", () => {
+  // XS 01 as the console has it: a word "EN" where a language switch would stand.
+  const xs01 = headerZonesByDevice(undefined, defaultHeaderZones("01", { cart: true, track: false, language: false }));
+  const strip = (byDevice: ReturnType<typeof withLanguageSwitch>, device: "base" | "tablet" | "mobile" = "base") =>
+    byDevice[device].links.map((p) => `${p.type}:${p.label ?? p.id}`);
+
+  it("knows the templates' words for it, in both languages, and nothing else", () => {
+    expect(isLanguageWord({ id: "a", type: "text", label: " EN " })).toBe(true);
+    expect(isLanguageWord({ id: "a", type: "text", label: "العربية" })).toBe(true);
+    expect(isLanguageWord({ id: "a", type: "text", label: "EGP" })).toBe(false);
+    expect(isLanguageWord({ id: "a", type: "link", label: "EN", href: "/en" })).toBe(false);
+  });
+
+  it("off: leaves the word out on every screen, and nothing else changes", () => {
+    const off = withLanguageSwitch(xs01, false);
+    expect(strip(off)).toEqual(["link:Help & FAQs", "link:My Account", "text:USD"]);
+    expect(strip(off, "mobile")).toEqual(strip(off));
+    expect(off.base.icons).toEqual(xs01.base.icons);
+  });
+
+  it("on: the switch stands in the word's place", () => {
+    const on = withLanguageSwitch(xs01, true);
+    expect(strip(on)).toEqual(["link:Help & FAQs", "link:My Account", "language:strip-2", "text:USD"]);
+    expect(strip(on, "mobile")).toEqual(strip(on));
+  });
+
+  it("on: a template without the word gets the switch at the end of the strip's links", () => {
+    const xs05 = headerZonesByDevice(undefined, defaultHeaderZones("05", { cart: true, track: false, language: false }));
+    expect(strip(withLanguageSwitch(xs05, true)).at(-1)).toBe("language:language");
+    expect(withLanguageSwitch(xs05, false)).toEqual(xs05);
+  });
+
+  it("keeps a switch the merchant added, on or off, and never shows two", () => {
+    const own = headerZonesByDevice({ ...xs01.base, icons: [...xs01.base.icons, { id: "lang", type: "language" }] }, xs01.base);
+    for (const on of [true, false]) {
+      const zones = withLanguageSwitch(own, on);
+      const switches = Object.values(zones.base).flat().filter((p) => p.type === "language");
+      expect(switches.map((p) => p.id)).toEqual(["lang"]);
+      expect(strip(zones)).toEqual(["link:Help & FAQs", "link:My Account", "text:USD"]);
+    }
   });
 });
 

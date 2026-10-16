@@ -25,6 +25,7 @@ import { Select } from "@/components/Select";
 import { Textarea } from "@/components/Textarea";
 import { useToast } from "@/components/Toast";
 import { ContentTranslationRows } from "./ContentTranslationRows";
+import { ShopperLanguageSection } from "./ShopperLanguageSection";
 
 const STRINGS = {
   en: {
@@ -171,6 +172,8 @@ export function LanguagesTab() {
             </ul>
             <p className="mt-3 text-xs text-ink-soft">{t.interfaceNote}</p>
           </Section>
+
+          <ShopperLanguageSection />
 
           <Section title={t.translate} description={t.translateDescription}>
             {active === "" ? (
