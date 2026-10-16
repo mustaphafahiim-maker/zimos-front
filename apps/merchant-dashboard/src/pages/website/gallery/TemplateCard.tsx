@@ -3,6 +3,7 @@ import type { WebsiteTemplateSummary } from "@store-builder/api-client";
 import { cn } from "@store-builder/ui";
 import { IconCheck } from "@/components/icons";
 import { TemplateLivePreview } from "@/components/TemplateLivePreview";
+import { useMediaQuery } from "@/components/report/useMediaQuery";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useCodeLabel } from "./codes";
@@ -14,16 +15,22 @@ const STRINGS = {
   ar: { previewOf: "معاينة {name}", current: "الحالي" },
 } satisfies Messages;
 
+/** Tailwind's `lg`, where the card's box (its `lg:` class below) turns landscape. */
+const WIDE_CARD_QUERY = "(min-width: 64rem)";
+
 /**
- * A template's picture in a box that is always 3:4, so the grid never moves
- * when a picture arrives. The template's own thumbnail when it has one and it
- * loads (asked for only near the viewport); otherwise the top of its home page
- * as the storefront renders it on a phone — lazily, a couple at a time
- * (TemplateLivePreview) — over a sketch that stays if neither can be had.
+ * A template's picture in a box of a fixed shape, so the grid never moves
+ * when a picture arrives: 3:4 below `lg`, 16:10 from it. The template's own
+ * thumbnail when it has one and it loads (asked for only near the viewport,
+ * cropped from the top to the box); otherwise the top of its home page as the
+ * storefront renders it — on a phone in the 3:4 box, on a desktop in the
+ * 16:10 one — lazily, a couple at a time (TemplateLivePreview), over a sketch
+ * that stays if neither can be had.
  */
 function TemplateThumb({ template }: { template: WebsiteTemplateSummary }) {
   const workspaceId = useWorkspaceId();
   const theme = useTemplatePreviewTheme(template);
+  const wide = useMediaQuery(WIDE_CARD_QUERY);
   const url = template.thumbnailUrl;
   const [image, setImage] = useState<"loading" | "ok" | "broken">(url ? "loading" : "broken");
   const imageRef = useRef<HTMLImageElement>(null);
@@ -35,7 +42,7 @@ function TemplateThumb({ template }: { template: WebsiteTemplateSummary }) {
   }, []);
 
   return (
-    <div className="relative aspect-[3/4] w-full overflow-hidden bg-paper-sunken">
+    <div className="relative aspect-[3/4] w-full overflow-hidden bg-paper-sunken lg:aspect-[16/10]">
       {url && image !== "broken" ? (
         <>
           {image === "loading" && <TemplatePlaceholder color={template.primaryColor} title={template.name} className="absolute inset-0" />}
@@ -61,8 +68,8 @@ function TemplateThumb({ template }: { template: WebsiteTemplateSummary }) {
           theme={theme}
           themeFrom={withTemplateTheme}
           title={template.name}
-          aspect="3/4"
-          cardLayout="mobile"
+          aspect={wide ? "16/10" : "3/4"}
+          cardLayout={wide ? "desktop" : "mobile"}
           fallback={<TemplatePlaceholder color={template.primaryColor} title={template.name} />}
         />
       )}

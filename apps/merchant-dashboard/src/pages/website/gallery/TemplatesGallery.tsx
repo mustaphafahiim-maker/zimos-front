@@ -50,11 +50,15 @@ const STRINGS = {
   },
 } satisfies Messages;
 
-/** How many cards the page shows before «اعرض الكل»: two rows of four on a desktop, four rows of two on a phone. */
+/** How many cards the page shows before «اعرض الكل»: four rows of two on a phone and on a desktop. */
 const FIRST_CARDS = 8;
 
-/** Two columns on a phone — the cards are portraits, so two fit — three from 640px, four from 1024px. */
-const GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4";
+/**
+ * Two columns on a phone — the cards are portraits, so two fit — and three
+ * from 640px. From 1024px the cards are landscape (TemplateCard), so two again:
+ * the page is at most 56rem wide, and four would make them thumbnails.
+ */
+const GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-2";
 
 /** The section while the catalogue loads: the toolbar, the chips and the first cards, in their own shapes. */
 function GallerySkeleton() {
@@ -73,7 +77,7 @@ function GallerySkeleton() {
             data-slot="skeleton-card"
             className={cn("overflow-hidden rounded-[1.25rem] bg-paper-raised ring-1 ring-line", i >= 4 && "max-sm:hidden")}
           >
-            <div className="aspect-[3/4] w-full animate-pulse bg-paper-sunken motion-reduce:animate-none" />
+            <div className="aspect-[3/4] w-full animate-pulse bg-paper-sunken motion-reduce:animate-none lg:aspect-[16/10]" />
             <div className="space-y-2 px-3 pt-3 pb-3.5">
               <SkeletonBar className="w-2/3" />
               <SkeletonBar className="h-2.5 w-1/3" />
