@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState, type CSSProperties, type ReactNode } fro
 import type { StorefrontMeta } from "@store-builder/api-client";
 import { AccountHeaderLink, useAccountMenuLink } from "@/components/account/AccountHeaderLink";
 import { CartIcon } from "@/components/CartIcon";
+import { ColorModeSwitch } from "@/components/ColorModeSwitch";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { SearchBox } from "@/components/SearchBox";
 import { headerMenuOf } from "@/components/shell/headerMenu";
@@ -16,7 +17,8 @@ import type { ResolvedShellLink } from "@/lib/storeShell";
 import { useStoreShell } from "@/lib/StoreShellContext";
 import { XS_LOGOS } from "@/lib/xsShell";
 import { readShopperDisplay } from "@/lib/shopperDisplay";
-import { defaultHeaderZones, headerZonesByDevice, withLanguageSwitch, zoneGroups, type HeaderPart, type HeaderZone } from "@/lib/xsLayout";
+import type { ColorMode } from "@/lib/storeColorMode";
+import { defaultHeaderZones, headerZonesByDevice, withColorModeSwitch, withLanguageSwitch, zoneGroups, type HeaderPart, type HeaderZone } from "@/lib/xsLayout";
 import { storefrontGeneralMeta } from "@store-builder/api-client";
 import { SocialLinks } from "@/components/SocialLinks";
 import { XsPhoneMenu } from "./XsPhoneMenu";
@@ -48,7 +50,20 @@ import { headerSizeCss } from "./shellSizes";
  * the phone menu is the template's own (XsPhoneMenu), since no two templates
  * open theirs alike. `data-zimos-shell` keeps the editor's click-to-select.
  */
-export function XsHeader({ store, locale, look }: { store: StorefrontMeta; locale: Locale; look: string }) {
+export function XsHeader({
+  store,
+  locale,
+  look,
+  colorMode = "light",
+  colorModeButton = false,
+}: {
+  store: StorefrontMeta;
+  locale: Locale;
+  look: string;
+  /** How the server drew the store, and whether it shows the light/dark button (lib/storeColorMode). */
+  colorMode?: ColorMode;
+  colorModeButton?: boolean;
+}) {
   const t = getDictionary(locale);
   const { header, announcement } = useStoreShell(store);
   const [scrolled, setScrolled] = useState(false);
@@ -65,13 +80,17 @@ export function XsHeader({ store, locale, look }: { store: StorefrontMeta; local
   const accountLink = useAccountMenuLink();
   const social = storefrontGeneralMeta(store).social;
   // Where every part stands on each screen: the merchant's arrangement, else the template's — with the
-  // store's language button where the template wrote a word for it, if the store shows one (lib/xsLayout).
-  const zones = withLanguageSwitch(
-    headerZonesByDevice(
-      header.zones,
-      defaultHeaderZones(look, { cart: header.showCart, track: header.showTrackOrder, language: header.showLanguage })
+  // store's language button where the template wrote a word for it, if the store shows one, and its
+  // light/dark button beside it (lib/xsLayout).
+  const zones = withColorModeSwitch(
+    withLanguageSwitch(
+      headerZonesByDevice(
+        header.zones,
+        defaultHeaderZones(look, { cart: header.showCart, track: header.showTrackOrder, language: header.showLanguage })
+      ),
+      readShopperDisplay(store.themeSettings).localeSwitch
     ),
-    readShopperDisplay(store.themeSettings).localeSwitch
+    colorModeButton
   );
   const onPhone = Object.values(zones.mobile).flat();
   const has = (type: HeaderPart["type"]) => onPhone.some((part) => part.type === type);
@@ -147,6 +166,8 @@ export function XsHeader({ store, locale, look }: { store: StorefrontMeta; local
         );
       case "language":
         return <LanguageSwitch key={item.id} partId={item.id} />;
+      case "mode":
+        return colorModeButton ? <ColorModeSwitch key={item.id} mode={colorMode} partId={item.id} /> : null;
       case "logo":
         return (
           <StoreLink key={item.id} href="/" className="xs-header__logo" data-store-logo="" data-xs-part={item.id}>
@@ -207,6 +228,7 @@ export function XsHeader({ store, locale, look }: { store: StorefrontMeta; local
               notice={message}
               noticeHref={announcement?.href}
               showLanguage={has("language")}
+              colorMode={colorModeButton && has("mode") ? colorMode : null}
               labels={{ open: t.shop.openMenu, close: t.shop.closeMenu, menu: t.common.menu }}
               own={own}
             />

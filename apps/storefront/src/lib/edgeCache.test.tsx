@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { COLOR_MODE_COOKIE } from "./colorModeCookie";
 import { EDGE_CACHE_CONTROL, edgeCacheControl, storePathOf } from "./edgeCache";
 import { LOCALE_COOKIE } from "./i18n";
 import { STORE_PREVIEW_COOKIE } from "./storePreview";
@@ -44,6 +45,8 @@ describe("edgeCacheControl", () => {
 
   it("stays private for a chosen language, a preview, a redirect or a non-GET", () => {
     expect(page("/", { cookieNames: [LOCALE_COOKIE] })).toBeNull();
+    // A light or dark pick changes the page's HTML too (lib/storeColorMode).
+    expect(page("/", { cookieNames: [COLOR_MODE_COOKIE] })).toBeNull();
     expect(page("/", { cookieNames: ["other", STORE_PREVIEW_COOKIE] })).toBeNull();
     expect(page("/", { cookieNames: ["zimos_touch"] })).toBe(EDGE_CACHE_CONTROL);
     expect(page("/", { previewLink: true })).toBeNull();

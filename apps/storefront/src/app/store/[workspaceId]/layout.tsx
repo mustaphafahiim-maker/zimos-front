@@ -43,7 +43,9 @@ import { readXsStorePages } from "@/lib/xsStorePages";
 import { readAllStoreWords } from "@/lib/storeWords";
 import { XsFooter } from "@/components/xs/XsFooter";
 import { XsHeader } from "@/components/xs/XsHeader";
-import { XsLookStyles, XsPhoneStyles } from "@/components/xs/XsLookStyles";
+import { XsDarkStyles, XsLookStyles, XsPhoneStyles } from "@/components/xs/XsLookStyles";
+import { getStoreColorMode, storeColorModeOptions } from "@/lib/storeColorMode";
+import { lightenToRead } from "@/lib/xsDarkPalette.mjs";
 import { XsTokenStyles } from "@/components/xs/XsTokenStyles";
 import { StoreUnavailable } from "@/components/StoreUnavailable";
 import { THEME_FONT_CSS } from "@/app/themeFonts";
@@ -126,6 +128,10 @@ export async function generateMetadata({
  *  - the store language: `lang`/`dir` on this wrapper, mirrored onto <html> by
  *    <DocumentLocale> because the root layout can't know which store a request
  *    is for;
+ *  - for a store that wears an imported template, its light or dark look:
+ *    `data-color-mode="dark"` on this wrapper from the shopper's cookie or the
+ *    merchant's default (lib/storeColorMode), so the first paint is already
+ *    right; the dark stylesheet is linked only by a store that may be dark;
  *  - the shared header/footer, so every page of the store — including one the
  *    merchant built in the website editor — sits under the same branding.
  *    Funnel pages (`/f/…`) are the exception: they draw their own masthead,
@@ -197,6 +203,13 @@ export default async function StoreLayout({
   const theme = storeThemeOf(store.themeSettings);
   // An imported template whose header and footer stand in for the store's own (lib/xsShell).
   const xsShell = xsShellOf(store.themeSettings);
+  // Its light or dark look for this shopper, drawn by the server (lib/storeColorMode); always light for any other store.
+  const colorOptions = storeColorModeOptions(store.themeSettings);
+  const colorMode = await getStoreColorMode(store);
+  const dark = Boolean(xsShell) && colorMode === "dark";
+  // The store's own brand colour as words on the dark ground (scripts/xs-dark.mjs reads it).
+  const ownAccentText =
+    dark && xsOwnAccent(store.themeSettings) ? lightenToRead(String(store.themeSettings?.primaryColor ?? "")) : null;
   // The website editor showing this page in its frame, in its unsaved look (lib/editorView).
   const editorView = await getEditorView(workspaceId);
   // The merchant's ad pixels (dashboard → Marketing), loaded only when one is set.
@@ -228,10 +241,11 @@ export default async function StoreLayout({
             lang={intlLocaleFor(locale)}
             dir={dirFor(locale)}
             className="brand-theme flex min-h-full flex-1 flex-col bg-paper font-sans text-ink"
-            style={brandStyle(store.themeSettings)}
+            style={ownAccentText ? ({ ...brandStyle(store.themeSettings), "--xs-own-accent-text": ownAccentText } as React.CSSProperties) : brandStyle(store.themeSettings)}
             data-store-theme={theme ?? undefined}
             data-xs-shell={xsShell ?? undefined}
             data-xs-own-accent={xsOwnAccent(store.themeSettings) ? "" : undefined}
+            data-color-mode={dark ? "dark" : undefined}
             suppressHydrationWarning
           >
             {theme && <style dangerouslySetInnerHTML={{ __html: THEME_FONT_CSS }} />}
@@ -244,6 +258,8 @@ export default async function StoreLayout({
                 <XsPhoneStyles />
                 {/* The store's own Template look over the template's (lib/xsTokens). */}
                 <XsTokenStyles store={store} look={xsShell} />
+                {/* Its dark mode, for a store that may be drawn dark: after the looks (components/xs/XsLookStyles). */}
+                {colorOptions.capable && <XsDarkStyles />}
               </>
             )}
             <StoreNavFrame store={store} locale={locale} collections={collections}>
@@ -257,7 +273,11 @@ export default async function StoreLayout({
                 </HideInFunnel>
               )}
               <HideInFunnel>
-                {xsShell ? <XsHeader store={store} locale={locale} look={xsShell} /> : <StoreHeader store={store} locale={locale} />}
+                {xsShell ? (
+                  <XsHeader store={store} locale={locale} look={xsShell} colorMode={colorMode} colorModeButton={colorOptions.button} />
+                ) : (
+                  <StoreHeader store={store} locale={locale} />
+                )}
                 {/* The store's own row of collections on a phone; an imported template has none, and its menu is its own. */}
                 {!xsShell && <MobileCategoryStrip collections={collections} t={t} />}
               </HideInFunnel>

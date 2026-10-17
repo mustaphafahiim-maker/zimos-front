@@ -31,7 +31,8 @@ import { XS_STRIP_LINKS } from "./xsShell";
 export const HEADER_ZONES = ["notice", "links", "brand", "menu", "icons"] as const;
 export type HeaderZone = (typeof HEADER_ZONES)[number];
 
-export const HEADER_PART_TYPES = ["logo", "menu", "search", "account", "wishlist", "cart", "phone", "notice", "link", "text", "social", "track", "language"] as const;
+/** "mode" (the light/dark button) is placed from the store's settings (withColorModeSwitch), never saved in an arrangement. */
+export const HEADER_PART_TYPES = ["logo", "menu", "search", "account", "wishlist", "cart", "phone", "notice", "link", "text", "social", "track", "language", "mode"] as const;
 export type HeaderPartType = (typeof HEADER_PART_TYPES)[number];
 
 /** The parts there is at most one of; a link or a word may be added many times. */
@@ -104,7 +105,7 @@ export function readHeaderZones(raw: unknown): HeaderZones | null {
       const part = objectOf(item);
       const type = part?.type as HeaderPartType;
       const id = typeof part?.id === "string" ? part.id : "";
-      if (!part || !HEADER_PART_TYPES.includes(type) || !SAFE_ID.test(id) || seen.has(id)) continue;
+      if (!part || !HEADER_PART_TYPES.includes(type) || type === "mode" || !SAFE_ID.test(id) || seen.has(id)) continue;
       if (SINGLE_PARTS.has(type) && seen.has(`type:${type}`)) continue;
       const read: HeaderPart = { id, type };
       if (type === "link" || type === "text") {
@@ -182,6 +183,35 @@ export function withLanguageSwitch(byDevice: Record<Device, HeaderZones>, on: bo
       });
     }
     if (on && !placed) next.links = [...next.links, { id: "language", type: "language" }];
+    out[device] = next;
+  }
+  return out;
+}
+
+/**
+ * The zones with the store's light/dark button when it shows one
+ * (themeSettings.shopperDisplay.colorModeSwitch, lib/storeColorMode): right
+ * after the language switch on a screen that has one, else at the end of the
+ * strip's links (on a phone the strip is hidden and the phone menu shows it).
+ * Off, the zones are as they were.
+ */
+export function withColorModeSwitch(byDevice: Record<Device, HeaderZones>, on: boolean): Record<Device, HeaderZones> {
+  if (!on) return byDevice;
+  const button: HeaderPart = { id: "color-mode", type: "mode" };
+  const out = {} as Record<Device, HeaderZones>;
+  for (const device of ["base", "tablet", "mobile"] as const) {
+    const zones = byDevice[device];
+    const next = {} as HeaderZones;
+    let placed = false;
+    for (const zone of HEADER_ZONES) {
+      next[zone] = zones[zone].flatMap((part) => {
+        if (part.type === "mode") return [];
+        if (part.type !== "language" || placed) return [part];
+        placed = true;
+        return [part, button];
+      });
+    }
+    if (!placed) next.links = [...next.links, button];
     out[device] = next;
   }
   return out;

@@ -17,7 +17,7 @@ import files from "@/lib/xsLookCss.json";
  * narrow-screen answers it is.
  */
 
-const FILES = files as { looks: Record<string, string>; phone: string };
+const FILES = files as { looks: Record<string, string>; phone: string; dark: string };
 
 export function XsLookStyles({ looks }: { looks: readonly string[] }) {
   return (
@@ -32,4 +32,13 @@ export function XsLookStyles({ looks }: { looks: readonly string[] }) {
 /** The header's phone menu of every look (app/xs-phone.css); only a store that wears a look's header needs it. */
 export function XsPhoneStyles() {
   return <link rel="stylesheet" href={FILES.phone} precedence="xs-phone" />;
+}
+
+/**
+ * The dark mode of every look (scripts/xs-dark.mjs): linked only by a store
+ * that may be drawn dark (lib/storeColorMode), after the looks, whose rules
+ * its copies follow. Inert until the store wrapper says data-color-mode="dark".
+ */
+export function XsDarkStyles() {
+  return <link rel="stylesheet" href={FILES.dark} precedence="xs-dark" />;
 }

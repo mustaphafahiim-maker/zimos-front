@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { defaultHeaderZones, headerZonesByDevice, isLanguageWord, readFooterBottom, readFooterColumns, readHeaderZones, withLanguageSwitch, zoneGroups } from "./xsLayout";
+import { defaultHeaderZones, headerZonesByDevice, isLanguageWord, readFooterBottom, readFooterColumns, readHeaderZones, withColorModeSwitch, withLanguageSwitch, zoneGroups } from "./xsLayout";
 
 const SHOW = { cart: true, track: false, language: true };
 
@@ -94,6 +94,33 @@ describe("xsLayout: the store's language button", () => {
       expect(switches.map((p) => p.id)).toEqual(["lang"]);
       expect(strip(zones)).toEqual(["link:Help & FAQs", "link:My Account", "text:USD"]);
     }
+  });
+});
+
+describe("xsLayout: the store's light/dark button", () => {
+  const xs01 = headerZonesByDevice(undefined, defaultHeaderZones("01", { cart: true, track: false, language: false }));
+  const strip = (byDevice: ReturnType<typeof withColorModeSwitch>, device: "base" | "tablet" | "mobile" = "base") =>
+    byDevice[device].links.map((p) => `${p.type}:${p.id}`);
+
+  it("off: the zones are as they were", () => {
+    expect(withColorModeSwitch(xs01, false)).toBe(xs01);
+  });
+
+  it("on: right after the language switch, on every screen", () => {
+    const zones = withColorModeSwitch(withLanguageSwitch(xs01, true), true);
+    expect(strip(zones)).toEqual(["link:strip-0", "link:strip-1", "language:strip-2", "mode:color-mode", "text:strip-3"]);
+    expect(strip(zones, "mobile")).toEqual(strip(zones));
+  });
+
+  it("on, with no language switch: at the end of the strip's links", () => {
+    const zones = withColorModeSwitch(withLanguageSwitch(xs01, false), true);
+    expect(strip(zones).at(-1)).toBe("mode:color-mode");
+    expect(Object.values(zones.base).flat().filter((p) => p.type === "mode")).toHaveLength(1);
+  });
+
+  it("is never read from a saved arrangement: only the store's settings place it", () => {
+    const zones = readHeaderZones({ links: [{ id: "m", type: "mode" }], icons: [{ id: "cart", type: "cart" }] });
+    expect(zones?.links).toEqual([]);
   });
 });
 

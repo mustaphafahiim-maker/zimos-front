@@ -1,3 +1,4 @@
+import { COLOR_MODE_COOKIE } from "./colorModeCookie";
 import { LOCALE_COOKIE } from "./localeCookie";
 import { STORE_PREVIEW_COOKIE } from "./storePreview";
 
@@ -16,15 +17,16 @@ import { STORE_PREVIEW_COOKIE } from "./storePreview";
  * the full URL (query string included) never serves one in place of another
  * or of the page itself.
  *
- * Two cookies change what a page renders: the shopper's chosen language and
- * a staff preview. A request carrying either (or a preview link) stays
- * private. The CDN must be told the same (skip the cache when either cookie
- * is present), because a cached copy is served without asking this server.
+ * Three cookies change what a page renders: the shopper's chosen language,
+ * their light or dark pick, and a staff preview. A request carrying any of
+ * them (or a preview link) stays private. The CDN must be told the same (skip
+ * the cache when any of these cookies is present), because a cached copy is
+ * served without asking this server.
  */
 export const EDGE_CACHE_CONTROL = "public, max-age=0, s-maxage=60, stale-while-revalidate=300";
 
 /** The cookies that change a page's HTML; a request with one is never cached. */
-export const PERSONAL_COOKIES = [LOCALE_COOKIE, STORE_PREVIEW_COOKIE] as const;
+export const PERSONAL_COOKIES = [LOCALE_COOKIE, COLOR_MODE_COOKIE, STORE_PREVIEW_COOKIE] as const;
 
 /** Store-relative paths that render the same for every visitor. */
 const PUBLIC_PAGE = /^\/(?:products(?:\/[^/]+)?|policies\/[^/]+|learn(?:\/[^/]+)?|looks\/[^/]+)?\/?$/;
