@@ -12,8 +12,10 @@ class FakeIntersectionObserver {
   static instances: FakeIntersectionObserver[] = [];
   readonly elements = new Set<Element>();
   readonly callback: IntersectionObserverCallback;
-  constructor(callback: IntersectionObserverCallback) {
+  readonly options: IntersectionObserverInit | undefined;
+  constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
     this.callback = callback;
+    this.options = options;
     FakeIntersectionObserver.instances.push(this);
   }
   observe(el: Element) {
@@ -27,6 +29,14 @@ class FakeIntersectionObserver {
   }
   takeRecords() {
     return [];
+  }
+  /** One element scrolls in (or out) of view. */
+  static report(target: Element, isIntersecting: boolean) {
+    for (const observer of FakeIntersectionObserver.instances) {
+      if (observer.elements.has(target)) {
+        observer.callback([{ target, isIntersecting } as IntersectionObserverEntry], observer as unknown as IntersectionObserver);
+      }
+    }
   }
   static scrollAllIntoView() {
     for (const observer of FakeIntersectionObserver.instances) {
@@ -280,6 +290,84 @@ describe("WebsitePage template languages", () => {
     expect(cardNames()).toEqual(["Dir Right", "Dir Left"]);
     // No design comes in both languages here, so there is nothing to switch.
     expect(screen.queryByRole("radiogroup", { name: "Template language" })).toBeNull();
+  });
+});
+
+describe("WebsitePage template previews while scrolling", () => {
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  /** The box a card's live preview is drawn in (TemplateLivePreview's root), by the card's name. */
+  const previewBox = (name: string) => screen.getByRole("button", { name: `Preview ${name}` }).closest("li")!.querySelector<HTMLElement>('[class*="aspect-"] > div')!;
+
+  it("starts only a little before a card scrolls in", async () => {
+    api.listWebsiteTemplates.mockResolvedValue([template("perf_margin", "Perf Margin", "general")]);
+    renderWithProviders(<WebsitePage />, { route: "/website" });
+    await screen.findByRole("button", { name: "Preview Perf Margin" });
+    const observer = FakeIntersectionObserver.instances.find((o) => o.elements.has(previewBox("Perf Margin")));
+    expect(observer?.options?.rootMargin).toBe("48px 0px");
+  });
+
+  it("loads nothing for a card scrolled past before it settles, and loads it once it stays", async () => {
+    api.listWebsiteTemplates.mockResolvedValue([template("perf_pass", "Perf Pass", "general")]);
+    renderWithProviders(<WebsitePage />, { route: "/website" });
+    await screen.findByRole("button", { name: "Preview Perf Pass" });
+    const box = previewBox("Perf Pass");
+
+    act(() => FakeIntersectionObserver.report(box, true));
+    await wait(100);
+    act(() => FakeIntersectionObserver.report(box, false));
+    await wait(400);
+    expect(api.getWebsiteTemplate).not.toHaveBeenCalled();
+    expect(box.querySelector("iframe")).toBeNull();
+
+    act(() => FakeIntersectionObserver.report(box, true));
+    await waitFor(() => expect(box.querySelector("iframe")).not.toBeNull());
+    expect(api.getWebsiteTemplate).toHaveBeenCalledWith("perf_pass");
+  });
+
+  it("loads the cards nearest the middle of the screen first, a couple at a time", async () => {
+    api.listWebsiteTemplates.mockResolvedValue([
+      template("perf_far", "Perf Far", "general"),
+      template("perf_mid", "Perf Mid", "general"),
+      template("perf_near", "Perf Near", "general"),
+    ]);
+    // Where each card is on a 768px-tall screen: Far well below it, Near in its middle.
+    const centres: Record<string, number> = { "Perf Far": 1500, "Perf Mid": 650, "Perf Near": 384 };
+    const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      const name = this.closest("li")?.querySelector("button")?.textContent ?? "";
+      const centre = centres[name] ?? 0;
+      return { top: centre - 100, bottom: centre + 100, left: 0, right: 200, width: 200, height: 200, x: 0, y: centre - 100, toJSON: () => ({}) } as DOMRect;
+    });
+    renderWithProviders(<WebsitePage />, { route: "/website" });
+    await screen.findByRole("button", { name: "Preview Perf Far" });
+
+    act(() => FakeIntersectionObserver.scrollAllIntoView());
+    await waitFor(() => expect(document.querySelectorAll("iframe")).toHaveLength(MAX_LOADING_PREVIEWS));
+    const loading = Array.from(document.querySelectorAll("iframe")).map((frame) => frame.closest("li")!.querySelector("button")!.textContent);
+    expect(loading.sort()).toEqual(["Perf Mid", "Perf Near"]);
+    rect.mockRestore();
+  });
+
+  it("keeps the template's sketch until its frame has loaded, then fades the frame in", async () => {
+    api.listWebsiteTemplates.mockResolvedValue([fake<WebsiteTemplateSummary>({ ...template("perf_fade", "Perf Fade", "general"), primaryColor: "#E53637" })]);
+    renderWithProviders(<WebsitePage />, { route: "/website" });
+    await screen.findByRole("button", { name: "Preview Perf Fade" });
+    const box = previewBox("Perf Fade");
+    act(() => FakeIntersectionObserver.report(box, true));
+    const frame = await waitFor(() => {
+      const found = box.querySelector("iframe");
+      expect(found).not.toBeNull();
+      return found!;
+    });
+
+    // Posted, not yet loaded: the frame is invisible and the sketch, in the template's colour, fills the box.
+    await waitFor(() => expect(submit).toHaveBeenCalled());
+    expect(frame).toHaveClass("opacity-0");
+    expect(box.querySelector('[style*="--tpl"]')).toHaveAttribute("style", expect.stringContaining("#E53637"));
+
+    Object.defineProperty(frame, "contentWindow", { configurable: true, value: { location: { href: `${STOREFRONT_URL}/store/ws_1/preview/t` } } });
+    fireEvent.load(frame);
+    await waitFor(() => expect(frame).toHaveClass("opacity-100"), { timeout: 2000 });
+    expect(box.querySelector('[style*="--tpl"]')).toBeNull();
   });
 });
 

@@ -13,6 +13,8 @@ import { apiClient } from "@/lib/apiClient";
 import type { ColorMode, PreviewTheme } from "@/lib/previewBridge";
 import { STOREFRONT_URL } from "@/lib/storefrontUrl";
 import {
+  CARD_MARGIN,
+  SETTLE_MS,
   ensureFreshSession,
   loadTemplatePreview,
   previewQueue,
@@ -25,6 +27,12 @@ const DESKTOP_WIDTH = 1280;
 const MOBILE_WIDTH = 390;
 /** A render that hasn't loaded by then gives its slot up and shows the placeholder. */
 const LOAD_TIMEOUT_MS = 25_000;
+/** How far a card is from the middle of the screen, for the order the waiting cards load in (nearest first). */
+function distanceFromView(el: HTMLElement | null): number {
+  if (!el) return Number.POSITIVE_INFINITY;
+  const rect = el.getBoundingClientRect();
+  return Math.abs((rect.top + rect.bottom) / 2 - window.innerHeight / 2);
+}
 
 function useElementSize(ref: RefObject<HTMLElement | null>) {
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -50,9 +58,12 @@ type Outcome = "ready" | "failed";
  * scaled down to fit the box.
  *
  * `variant="card"` is the gallery thumbnail: nothing is fetched or posted until
- * the card scrolls near the viewport, renders wait their turn in
- * `previewQueue` so only a couple load at once, and the frame takes no
- * pointer or keyboard input. `variant="full"` is the large preview in the
+ * the card has been on the screen (or within CARD_MARGIN of it) for
+ * SETTLE_MS — a card scrolled past quickly is never loaded — renders wait
+ * their turn in `previewQueue` so only a couple load at once, nearest the
+ * middle of the screen first, and the frame takes no pointer or keyboard
+ * input. Until its frame has loaded the card shows `fallback`, in the box's
+ * own shape, and the frame fades in over it only then. `variant="full"` is the large preview in the
  * modal: it loads straight away, can be scrolled, and switches between a
  * desktop and a phone-width layout without re-posting.
  *
@@ -134,17 +145,25 @@ export function TemplateLivePreview({
   const slot = card ? granted : tree !== null;
   const phase = page === null ? "failed" : (outcome ?? (slot ? "loading" : "idle"));
 
-  // Cards wake up a little before they scroll into view.
+  // A card counts as in view once it has stayed on the screen (or just off it) for SETTLE_MS; leaving it counts at once.
   useEffect(() => {
     if (!card) return;
     const el = rootRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
+    let settle: number | undefined;
     const observer = new IntersectionObserver(
-      (entries) => setInView(entries.some((e) => e.isIntersecting)),
-      { rootMargin: "200px 0px" }
+      (entries) => {
+        window.clearTimeout(settle);
+        if (entries.some((e) => e.isIntersecting)) settle = window.setTimeout(() => setInView(true), SETTLE_MS);
+        else setInView(false);
+      },
+      { rootMargin: CARD_MARGIN }
     );
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      window.clearTimeout(settle);
+      observer.disconnect();
+    };
   }, [card]);
 
   useEffect(() => {
@@ -166,13 +185,17 @@ export function TemplateLivePreview({
   }, [page, inView, loaded, outcome, templateId]);
 
   // Wait for a render slot. A card that scrolls away before its turn leaves
-  // the queue, so the ones on screen go first; once started, it finishes.
+  // the queue, so the ones on screen go first, the nearest the middle of the
+  // screen before the rest; once started, it finishes.
   useEffect(() => {
     if (!card || !tree || granted || !inView) return;
-    const cancel = previewQueue.request((release) => {
-      releaseRef.current = release;
-      setGranted(true);
-    });
+    const cancel = previewQueue.request(
+      (release) => {
+        releaseRef.current = release;
+        setGranted(true);
+      },
+      () => distanceFromView(rootRef.current)
+    );
     return () => {
       if (!releaseRef.current) cancel();
     };
