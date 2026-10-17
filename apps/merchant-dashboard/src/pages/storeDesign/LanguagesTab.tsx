@@ -17,6 +17,7 @@ import { useErrorMessage } from "@/lib/errorMessages";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { AI_ENABLED } from "@/lib/features";
 import { AiTranslateButton } from "./AiTranslateButton";
+import { TemplateFillButton } from "./TemplateFillButton";
 import { useT, type Messages } from "@/i18n/LocaleContext";
 import { DataState } from "@/components/DataState";
 import { FilterTabs } from "@/components/FilterTabs";
@@ -49,6 +50,7 @@ const STRINGS = {
     collections: "Collections",
     pages: "Pages",
     funnels: "Funnels",
+    shell: "Header and footer",
     kind: "What to translate",
     original: "Original",
     name: "Name",
@@ -80,6 +82,7 @@ const STRINGS = {
     collections: "التصنيفات",
     pages: "الصفحات",
     funnels: "الفانلز",
+    shell: "الرأس والتذييل",
     kind: "ما الذي تترجمه",
     original: "الأصل",
     name: "الاسم",
@@ -97,7 +100,10 @@ export function LanguagesTab() {
   const workspaceId = useWorkspaceId();
   const toast = useToast();
   const errorMessage = useErrorMessage();
-  const { refresh } = useWorkspace();
+  const { refresh, currentWorkspace } = useWorkspace();
+  // A store that wears an imported template can fill its English from the template's own (TemplateFillButton).
+  const xsLook = (currentWorkspace?.themeSettings as Record<string, unknown> | undefined)?.xsLook;
+  const templateStore = typeof xsLook === "string" && xsLook.trim() !== "";
   const overview = useAsync(() => translationsOverview(apiClient, workspaceId), [workspaceId]);
   const [busy, setBusy] = useState(false);
   const [locale, setLocale] = useState<StoreLocale | "">("");
@@ -202,9 +208,10 @@ export function LanguagesTab() {
                       { value: "collection", label: t.collections },
                       { value: "page", label: t.pages },
                       { value: "funnel", label: t.funnels },
+                      { value: "shell", label: t.shell },
                     ]}
                   />
-                  {AI_ENABLED && (
+                  {AI_ENABLED && kind !== "shell" && (
                     <AiTranslateButton
                       locale={active}
                       kind={kind}
@@ -215,7 +222,16 @@ export function LanguagesTab() {
                     />
                   )}
                 </div>
-                {kind === "page" || kind === "funnel" ? (
+                {templateStore && active === "en" && (
+                  <TemplateFillButton
+                    locale={active}
+                    onDone={() => {
+                      setVersion((v) => v + 1);
+                      void overview.refresh({ silent: true });
+                    }}
+                  />
+                )}
+                {kind === "page" || kind === "funnel" || kind === "shell" ? (
                   <ContentTranslationRows
                     key={`${active}:${kind}:${version}`}
                     locale={active}

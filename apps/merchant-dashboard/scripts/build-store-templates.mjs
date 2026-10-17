@@ -4,7 +4,8 @@
 // alone under generated/console/ (what the platform console's "add version"
 // takes) with INDEX.md beside them, and the one-product funnel page's
 // stand-in pictures under the storefront's public/template-art/
-// (src/pages/website/templates/singleProduct.ts).
+// (src/pages/website/templates/singleProduct.ts), and the imported templates'
+// Arabic → English dictionary (src/pages/website/templates/xs/xsDictionary.json).
 //
 // The definitions import the editor's own blocks, which need the app's module
 // aliases, so the work is done by their test files run in their writing mode.
@@ -19,7 +20,7 @@ const vitest = join(dirname(createRequire(import.meta.url).resolve("vitest/packa
 
 const result = spawnSync(
   process.execPath,
-  [vitest, "run", "src/pages/website/templates/xs/xsTemplates.test.ts", "src/pages/website/templates/singleProduct.test.ts"],
+  [vitest, "run", "src/pages/website/templates/xs/xsTemplates.test.ts", "src/pages/website/templates/singleProduct.test.ts", "src/pages/website/templates/xs/xsDictionary.test.ts"],
   {
     cwd: root,
     stdio: "inherit",

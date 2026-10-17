@@ -15,6 +15,8 @@ const STRINGS = {
   en: {
     nothingPages: "No published pages yet. Publish your website to translate its pages.",
     nothingFunnels: "No published funnels yet.",
+    nothingShell: "Your header and footer have no words of their own yet.",
+    shell: "Header and footer",
     progress: "{done} of {total} translated",
     original: "Original",
     save: "Save",
@@ -25,6 +27,8 @@ const STRINGS = {
   ar: {
     nothingPages: "مفيش صفحات منشورة لسه. انشر موقعك عشان تترجم صفحاته.",
     nothingFunnels: "مفيش فانلز منشورة لسه.",
+    nothingShell: "رأس متجرك وتذييله ليس فيهما كلام خاص بهما بعد.",
+    shell: "الرأس والتذييل",
     progress: "اتترجم {done} من {total}",
     original: "الأصل",
     save: "حفظ",
@@ -35,9 +39,9 @@ const STRINGS = {
 } satisfies Messages;
 
 /**
- * The text of the live pages or funnels, one card each: every sentence a
- * shopper reads, with a box for it in the chosen language. An empty box keeps
- * the original.
+ * The text of the live pages or funnels, or of the header and footer, one
+ * card each: every sentence a shopper reads, with a box for it in the chosen
+ * language. An empty box keeps the original.
  */
 export function ContentTranslationRows({ locale, kind, onSaved }: { locale: StoreLocale; kind: ContentEntity; onSaved: () => void }) {
   const t = useT(STRINGS);
@@ -50,7 +54,7 @@ export function ContentTranslationRows({ locale, kind, onSaved }: { locale: Stor
       loading={items.loading}
       error={items.error}
       empty={(items.data ?? []).length === 0}
-      emptyMessage={kind === "page" ? t.nothingPages : t.nothingFunnels}
+      emptyMessage={kind === "page" ? t.nothingPages : kind === "shell" ? t.nothingShell : t.nothingFunnels}
       onRetry={() => void items.refresh()}
     >
       <ul className="divide-y divide-line">
@@ -62,7 +66,7 @@ export function ContentTranslationRows({ locale, kind, onSaved }: { locale: Stor
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-ink" dir="auto">
-                    {item.label}
+                    {item.entityType === "shell" ? t.shell : item.label}
                     {item.sub && (
                       <span className="ms-2 text-xs font-normal text-ink-soft" dir="ltr">
                         {item.sub}

@@ -1,13 +1,17 @@
 import type { ApiClient } from "../client";
 import type { StoreLocale } from "./storeDesign";
 
-/** The live pages and funnels whose text is translated (translations/contentTranslations.js). */
-export type ContentEntity = "page" | "funnel";
+/**
+ * What text is translated from (translations/contentTranslations.js): the live
+ * pages and funnels, and the store's header and footer ("shell": its themeSettings,
+ * one item under the workspace's own id).
+ */
+export type ContentEntity = "page" | "funnel" | "shell";
 
 export interface ContentTranslationItem {
   entityType: ContentEntity;
   entityId: string;
-  /** The page's title or the funnel's name; `sub` is the page's path. */
+  /** The page's title or the funnel's name ("Header and footer" for the shell); `sub` is the page's path. */
   label: string;
   sub: string | null;
   /** Each text once, in reading order. `key` is a hash of the original: an edited text is untranslated again. */
