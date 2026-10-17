@@ -98,27 +98,47 @@ export interface SlotQueue {
    * the function that frees the slot again. The returned function cancels a
    * job still waiting, or frees its slot if it already started — calling it
    * more than once (or after `release`) is harmless.
+   *
+   * `priority` is asked each time a slot frees up: the waiting job with the
+   * lowest goes next (a card's distance from the middle of the screen, as it
+   * is then), ties in the order they asked. Without it a job ranks 0.
    */
-  request(start: (release: () => void) => void): () => void;
+  request(start: (release: () => void) => void, priority?: () => number): () => void;
   readonly active: number;
   readonly waiting: number;
 }
 
-/** First come, first served; each storefront render holds a slot until its frame loads. */
-export function createSlotQueue(limit: number): SlotQueue {
+/**
+ * Nearest first (by `priority`), else first come, first served; each
+ * storefront render holds a slot until its frame loads.
+ *
+ * `schedule` runs the hand-out after a request: at once by default; the
+ * gallery's queue waits a microtask, so the cards that ask in the same
+ * render are all compared before any of them starts.
+ */
+export function createSlotQueue(limit: number, schedule: (pump: () => void) => void = (pump) => pump()): SlotQueue {
   let active = 0;
-  const queue: Array<{ run: () => void }> = [];
+  const queue: Array<{ run: () => void; priority: () => number }> = [];
 
   function pump() {
     while (active < limit && queue.length > 0) {
-      const job = queue.shift()!;
+      let next = 0;
+      let best = queue[0].priority();
+      for (let i = 1; i < queue.length; i++) {
+        const rank = queue[i].priority();
+        if (rank < best) {
+          best = rank;
+          next = i;
+        }
+      }
+      const [job] = queue.splice(next, 1);
       active++;
       job.run();
     }
   }
 
   return {
-    request(start) {
+    request(start, priority = () => 0) {
       let state: "waiting" | "running" | "done" = "waiting";
       const release = () => {
         if (state === "running") {
@@ -136,9 +156,10 @@ export function createSlotQueue(limit: number): SlotQueue {
           state = "running";
           start(release);
         },
+        priority,
       };
       queue.push(job);
-      pump();
+      schedule(pump);
       return release;
     },
     get active() {
@@ -153,7 +174,13 @@ export function createSlotQueue(limit: number): SlotQueue {
 /**
  * Every card preview is a full server render of the storefront (plus two API
  * calls to verify the session), so only this many load at a time; the rest
- * wait their turn. Frames that have loaded stay, so scrolling back is free.
+ * wait their turn, the one nearest the middle of the screen first. Frames that
+ * have loaded stay, so scrolling back is free: one let go would load again.
  */
 export const MAX_LOADING_PREVIEWS = 2;
-export const previewQueue = createSlotQueue(MAX_LOADING_PREVIEWS);
+
+/** How far outside the screen a gallery card already counts as on it: a little, so it starts just before it scrolls in. */
+export const CARD_MARGIN = "48px 0px";
+/** A gallery card asks for its render only once it has stayed on screen this long: one scrolled past is never loaded. */
+export const SETTLE_MS = 300;
+export const previewQueue = createSlotQueue(MAX_LOADING_PREVIEWS, (pump) => queueMicrotask(pump));

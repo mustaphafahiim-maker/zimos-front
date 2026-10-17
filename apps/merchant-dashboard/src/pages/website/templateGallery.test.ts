@@ -162,3 +162,51 @@ describe("createSlotQueue", () => {
     expect(queue.waiting).toBe(0);
   });
 });
+
+describe("createSlotQueue: nearest first", () => {
+  it("hands a freed slot to the waiting job with the lowest priority, ties in the order they asked", () => {
+    const queue = createSlotQueue(1);
+    const started: string[] = [];
+    const releases: Record<string, () => void> = {};
+    const ask = (name: string, rank: number) =>
+      queue.request((release) => {
+        started.push(name);
+        releases[name] = release;
+      }, () => rank);
+    ask("first", 0);
+    ask("far", 900);
+    ask("near", 10);
+    ask("also-near", 10);
+    expect(started).toEqual(["first"]);
+    releases.first();
+    releases.near();
+    releases["also-near"]();
+    expect(started).toEqual(["first", "near", "also-near", "far"]);
+  });
+
+  it("asks each job's priority as the slot frees, not when it asked", () => {
+    const queue = createSlotQueue(1);
+    const started: string[] = [];
+    let release = () => {};
+    const where = { a: 100, b: 50 };
+    queue.request((r) => {
+      release = r;
+    });
+    queue.request(() => started.push("a"), () => where.a);
+    queue.request(() => started.push("b"), () => where.b);
+    // The page scrolled: a is now the nearer.
+    where.a = 5;
+    release();
+    expect(started).toEqual(["a"]);
+  });
+
+  it("with a scheduled hand-out, compares every job that asked in the same moment", async () => {
+    const queue = createSlotQueue(1, (pump) => queueMicrotask(pump));
+    const started: string[] = [];
+    queue.request(() => started.push("far"), () => 900);
+    queue.request(() => started.push("near"), () => 10);
+    expect(started).toEqual([]);
+    await Promise.resolve();
+    expect(started).toEqual(["near"]);
+  });
+});
