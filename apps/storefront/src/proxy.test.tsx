@@ -99,12 +99,13 @@ describe("proxy with merchant domains on", () => {
   });
 });
 
-describe("behind the Cloudflare Worker (X-Forwarded-Host + X-Zimos-Edge)", () => {
+describe("behind the Cloudflare Worker (X-Zimos-Host + X-Zimos-Edge)", () => {
   const SECRET = "edge-secret-for-tests-0123456789abcdef";
   const ORIGIN = "storefront-production.up.railway.app";
   const resolved = (body: object) => vi.fn().mockResolvedValue(new Response(JSON.stringify({ store: body }), { status: 200 }));
+  // As the request reaches the app: Railway's edge has put its own host in X-Forwarded-Host.
   function viaWorker(visitor: string, path = "/", edge: string | null = SECRET) {
-    const headers: Record<string, string> = { host: ORIGIN, "x-forwarded-host": visitor, "x-forwarded-proto": "https" };
+    const headers: Record<string, string> = { host: ORIGIN, "x-zimos-host": visitor, "x-forwarded-host": ORIGIN, "x-forwarded-proto": "https" };
     if (edge !== null) headers["x-zimos-edge"] = edge;
     return new NextRequest(`https://${ORIGIN}${path}`, { headers });
   }
@@ -120,7 +121,20 @@ describe("behind the Cloudflare Worker (X-Forwarded-Host + X-Zimos-Edge)", () =>
     expect(new URL(rewriteOf(res)!).pathname).toBe("/store/shop/products/x");
   });
 
-  it("ignores X-Forwarded-Host with a wrong, missing or unset secret", async () => {
+  it("falls back to X-Forwarded-Host from a Worker that does not send X-Zimos-Host", async () => {
+    vi.stubEnv("CUSTOM_DOMAINS_ENABLED", "true");
+    vi.stubEnv("CUSTOM_DOMAIN_EDGE_SECRET", SECRET);
+    const fetchSpy = resolved({ slug: "shop", homeFunnel: null, primaryHost: null });
+    vi.stubGlobal("fetch", fetchSpy);
+    const older = new NextRequest(`https://${ORIGIN}/cart`, {
+      headers: { host: ORIGIN, "x-forwarded-host": "shop.example.net", "x-zimos-edge": SECRET },
+    });
+    const res = await proxy(older);
+    expect(lookedUp(fetchSpy)).toBe("shop.example.net");
+    expect(new URL(rewriteOf(res)!).pathname).toBe("/store/shop/cart");
+  });
+
+  it("ignores the forwarded host with a wrong, missing or unset secret", async () => {
     vi.stubEnv("CUSTOM_DOMAINS_ENABLED", "true");
     vi.stubEnv("CUSTOM_DOMAIN_EDGE_SECRET", SECRET);
     // One spy for every attempt: lib/customDomains caches a host's answer,
@@ -157,13 +171,14 @@ describe("behind the Cloudflare Worker (X-Forwarded-Host + X-Zimos-Edge)", () =>
     expect(res.headers.get("location")).toBe("https://www.example.com/products/x?ref=1");
   });
 
-  it("does not pass the secret on to the app", async () => {
+  it("does not pass the Worker's headers on to the app", async () => {
     vi.stubEnv("CUSTOM_DOMAINS_ENABLED", "true");
     vi.stubEnv("CUSTOM_DOMAIN_EDGE_SECRET", SECRET);
     vi.stubGlobal("fetch", resolved({ slug: "shop", homeFunnel: null, primaryHost: null }));
     const res = await proxy(viaWorker("www.example.com", "/"));
     expect(res.headers.get("x-middleware-request-x-zimos-edge")).toBeNull();
     expect(res.headers.get("x-middleware-override-headers") ?? "").not.toContain("x-zimos-edge");
+    expect(res.headers.get("x-middleware-override-headers") ?? "").not.toContain("x-zimos-host");
   });
 
   it("passes the shopper's IP from the Worker as x-real-ip, only with the secret", async () => {

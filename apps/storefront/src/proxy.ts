@@ -18,7 +18,7 @@ import {
 import { resolveCustomHost, type ResolvedHost } from "@/lib/customDomains";
 import { STORE_REF_HEADER } from "@/lib/documentLocale";
 import { EDITOR_VIEW_HEADER, EDITOR_VIEW_PARAM, isViewToken } from "@/lib/editorView";
-import { EDGE_CLIENT_IP_HEADER, EDGE_SECRET_HEADER, visitorHost, type VisitorHost } from "@/lib/edgeHost";
+import { EDGE_CLIENT_IP_HEADER, EDGE_HOST_HEADER, EDGE_SECRET_HEADER, visitorHost, type VisitorHost } from "@/lib/edgeHost";
 import { edgeCacheControl } from "@/lib/edgeCache";
 
 /**
@@ -30,7 +30,7 @@ import { edgeCacheControl } from "@/lib/edgeCache";
  * answered with an error because the API was slow or down.
  *
  * On, a merchant domain arrives through the Cloudflare Worker with the
- * visitor's host in X-Forwarded-Host, trusted only with the Worker's secret
+ * visitor's host in X-Zimos-Host, trusted only with the Worker's secret
  * (lib/edgeHost). Off, that header is never read.
  */
 export async function proxy(request: NextRequest) {
@@ -84,6 +84,7 @@ function passEditorView(headers: Headers, request: NextRequest) {
  */
 function passEdgeHeaders(headers: Headers, visitor: VisitorHost) {
   headers.delete(EDGE_SECRET_HEADER);
+  headers.delete(EDGE_HOST_HEADER);
   headers.delete(EDGE_CLIENT_IP_HEADER);
   if (visitor.forwarded && visitor.clientIp) headers.set("x-real-ip", visitor.clientIp);
 }

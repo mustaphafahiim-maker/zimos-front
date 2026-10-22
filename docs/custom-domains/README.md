@@ -7,10 +7,16 @@ shopper → www.merchant-shop.com   (merchant's CNAME → customers.zimos.co)
         → Cloudflare, zone zimos.co   (custom hostname + DV certificate)
         → Worker worker/custom-domains-worker.js
               calls ORIGIN_HOST (the storefront's Railway host) with
-              X-Forwarded-Host: www.merchant-shop.com
+              X-Zimos-Host: www.merchant-shop.com
               X-Zimos-Edge: <EDGE_SECRET>
         → storefront proxy (apps/storefront/src/proxy.ts) → /store/<slug>
 ```
+
+The host travels in `X-Zimos-Host`, not `X-Forwarded-Host`: Railway's edge
+replaces `X-Forwarded-Host` with the Railway host, so a storefront reading it
+sees its own host and shows the generic "Storefront" page on every merchant
+domain. After changing the Worker's code, paste it again in Cloudflare and
+deploy: nothing deploys it from the repository.
 
 Nothing in the repository deploys any of this. Every step below is done by
 hand, on staging first. Keep all the flags off until the staging test at the
