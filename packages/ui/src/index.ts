@@ -16,7 +16,8 @@ export {
   CardFooter,
 } from "./components/card";
 export { Alert, AlertTitle, AlertDescription, AlertAction } from "./components/alert";
-export { Spinner } from "./components/spinner";
+export { ZLoader, ZLoaderHold, type ZLoaderHoldProps, type ZLoaderProps, type ZLoaderSize } from "./z-loader";
+export { SkeletonBar, ListSkeleton, type ListSkeletonProps } from "./components/skeleton";
 
 export { Badge, badgeVariants } from "./components/badge";
 export { Textarea } from "./components/textarea";
@@ -84,21 +85,10 @@ export {
   SheetDescription,
 } from "./components/sheet";
 
+// The two dashboards' own controls (not shadcn): the Mac segmented control and a slider.
+export { Segmented, type SegmentedOption, type SegmentedPress, type SegmentedProps } from "./components/segmented";
+export { RangeInput, type RangeInputProps } from "./components/range-input";
+
 export { cn } from "cn";
 
-// ZIMOS brand primitives (RTL-safe, token-styled).
-export {
-  Skeleton,
-  SkeletonRows,
-  Avatar,
-  Progress,
-  SegmentedControl,
-  Kbd,
-  Stepper,
-  Chip,
-  type SegmentOption,
-  type StepperStep,
-} from "./components/zimos-extras";
-
-// ZIMOS brand — official logo renderers + approved phrases.
-export { ZimosLogo, ZimosMark, ZIMOS_PHRASES, type ZimosLogoSurface } from "./brand/ZimosLogo";
+export { GlassPanel, GlassButton, GlassDialogContent, GlassDropdownMenuContent } from "./components/glass";

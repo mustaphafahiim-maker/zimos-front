@@ -1,413 +1,242 @@
-import { useState, type FormEvent, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, LayoutTemplate, Pencil, Trash2 } from "lucide-react";
-import { Alert, Button, Spinner } from "@store-builder/ui";
-import type { CreateWebsitePayload, Website, WebsiteTemplateSummary } from "@store-builder/api-client";
-import { apiClient } from "@/lib/apiClient";
-import { useWorkspace } from "@/context/WorkspaceContext";
-import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { useAsync } from "@/lib/useAsync";
-import { getErrorMessage, getFieldErrors } from "@/lib/errors";
-import { humanize } from "@/lib/format";
+import { XS_ONLY } from "./editor/xsBlocks";
+import { useState } from "react";
+import { DirectionProvider } from "@base-ui/react/direction-provider";
+import type { Website } from "@store-builder/api-client";
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@store-builder/ui";
+import {
+  IconMoreActions,
+  IconRefresh,
+  IconStoreSettings,
+  IconTheme,
+  IconWarning,
+  type IconComponent,
+} from "@/components/icons";
+import { DataState, SkeletonBar } from "@/components/DataState";
 import { PageHeader } from "@/components/PageHeader";
-import { DataState } from "@/components/DataState";
-import { Modal } from "@/components/Modal";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { TextField } from "@/components/Field";
-import { useToast } from "@/components/Toast";
-import { fmt, useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { apiClient } from "@/lib/apiClient";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { isPermissionError } from "@/lib/errors";
+import { invalidateCached, useCachedAsync } from "@/lib/useCachedAsync";
+import { useViewNavigate } from "@/lib/viewTransition";
+import { useWorkspaceId } from "@/lib/useWorkspaceId";
+import { DeleteSiteDialog } from "./gallery/DeleteSiteDialog";
+import { OtherSites } from "./gallery/OtherSites";
+import { SiteHero } from "./gallery/SiteHero";
+import { currentSiteOf, loadSiteFacts, type SiteFacts } from "./gallery/siteFacts";
+import { StartSteps } from "./gallery/StartSteps";
+import { StoreThemeRow, StoreThemeSheet } from "./gallery/StoreThemeRow";
+import { TemplatesGallery } from "./gallery/TemplatesGallery";
 
 const STRINGS = {
   en: {
-    title: "Website",
-    description:
-      "Pick a template to start your store's website. You can rename it now and customise it later.",
-    templatesHeading: "Templates",
-    noTemplates: "No website templates are available right now. Check back soon.",
-    modalDescription: "Preview what this template ships with, then name your site.",
-    preview: "Preview",
-    loadingTemplate: "Loading template details…",
-    templateError: "Couldn't load the template preview, but you can still create your site.",
-    templatePagesOne: "This template includes 1 page that will be copied to your site:",
-    templatePagesMany: "This template includes {n} pages that will be copied to your site:",
-    siteName: "Site name",
-    siteNameHint: "A temporary subdomain is generated from it — you can change it later.",
-    siteNamePlaceholder: "My store",
-    creating: "Creating…",
-    useTemplate: "Use this template",
-    siteCreated: 'Site "{name}" created.',
-    siteDeleted: 'Site "{name}" deleted.',
-    yourSites: "Your sites",
-    deleteSiteAria: "Delete {name}",
-    deleteSiteTitle: "Delete this site?",
-    deleteSiteConfirm: "Delete site",
-    deleteSiteBody:
-      "{name} and all of its pages, published revisions and any domain bound to it will be deleted permanently. This cannot be undone.",
-    deleteLiveWarning:
-      "This site is live right now. Deleting it takes it offline immediately — anyone visiting {subdomain} will stop seeing your store.",
+    title: "Store editor",
+    loading: "Loading…",
+    sitesError: "We couldn't load your site.",
+    retry: "Try again",
+    tools: "More",
+    settings: "Store settings",
+    look: "Store look",
   },
   ar: {
     title: "الموقع",
-    description: "اختر قالبًا لبدء موقع متجرك. يمكنك تسميته الآن وتخصيصه لاحقًا.",
-    templatesHeading: "القوالب",
-    noTemplates: "لا تتوفر قوالب مواقع حاليًا. يُرجى المحاولة لاحقًا.",
-    modalDescription: "اطّلع على محتوى هذا القالب، ثم اختر اسمًا لموقعك.",
-    preview: "معاينة",
-    loadingTemplate: "جارٍ تحميل تفاصيل القالب…",
-    templateError: "تعذّر تحميل معاينة القالب، ولكن يمكنك متابعة إنشاء موقعك.",
-    templatePagesOne: "يتضمن هذا القالب صفحة واحدة ستُنسخ إلى موقعك:",
-    templatePagesMany: "عدد صفحات هذا القالب: {n}، وستُنسخ جميعها إلى موقعك:",
-    siteName: "اسم الموقع",
-    siteNameHint: "سيُنشأ منه نطاق فرعي (subdomain) مؤقت، ويمكنك تغييره لاحقًا.",
-    siteNamePlaceholder: "متجري",
-    creating: "جارٍ الإنشاء…",
-    useTemplate: "استخدام هذا القالب",
-    siteCreated: "تم إنشاء موقع «{name}».",
-    siteDeleted: "تم حذف موقع «{name}».",
-    yourSites: "مواقعك",
-    deleteSiteAria: "حذف {name}",
-    deleteSiteTitle: "حذف هذا الموقع؟",
-    deleteSiteConfirm: "حذف الموقع",
-    deleteSiteBody:
-      "سيتم حذف {name} وكل صفحاته وإصداراته المنشورة وأي نطاق مرتبط به نهائيًا. لا يمكن التراجع عن ذلك.",
-    deleteLiveWarning:
-      "هذا الموقع منشور حاليًا. حذفه سيوقفه فورًا — ولن يتمكن زوّار {subdomain} من رؤية متجرك بعد ذلك.",
+    loading: "جارٍ التحميل…",
+    sitesError: "تعذّر تحميل موقعك.",
+    retry: "إعادة المحاولة",
+    tools: "المزيد",
+    settings: "إعدادات المتجر",
+    look: "مظهر المتجر",
   },
 } satisfies Messages;
 
+/** What the page keeps of the site's one extra call, with the site it belongs to. */
+interface FactsOf {
+  siteId: string;
+  facts: SiteFacts | null;
+}
+
+// The row of the list kit's menus: 36px under a mouse, 44px under a thumb.
+const MENU_ITEM = "min-h-9 cursor-pointer items-center gap-3 rounded-[0.625rem] px-2.5 py-2 pointer-coarse:min-h-11 pointer-coarse:py-3";
+
 /**
- * Splits a "{key}" template around one placeholder so a React node (bold name,
- * LTR hostname) can sit wherever each language's word order puts it.
+ * «…» in the page header, while the page has no hero. First run keeps the page
+ * to its three steps; what the hero offers a store that has a site — its
+ * settings, its look — waits here, one tap away, so none of it is
+ * lost before the first template is chosen (or while the sites cannot be loaded).
  */
-function withNode(template: string, key: string, node: ReactNode): ReactNode {
-  const token = `{${key}}`;
-  const at = template.indexOf(token);
-  if (at === -1) return template;
+function HeaderTools({ onLook }: { onLook: () => void }) {
+  const t = useT(STRINGS);
+  const { dir } = useLocale();
+  const navigate = useViewNavigate();
+  const rows: Array<{ id: string; label: string; icon: IconComponent; onSelect: () => void }> = [
+    { id: "settings", label: t.settings, icon: IconStoreSettings, onSelect: () => navigate("/store-settings") },
+    { id: "look", label: t.look, icon: IconTheme, onSelect: onLook },
+  ];
   return (
-    <>
-      {template.slice(0, at)}
-      {node}
-      {template.slice(at + token.length)}
-    </>
+    <DirectionProvider direction={dir}>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <button
+              type="button"
+              aria-label={t.tools}
+              title={t.tools}
+              className="zimos-site-tool inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-paper-raised text-ink-soft ring-1 ring-line transition-[color,background-color,scale] duration-[var(--dur-fade)] ease-[var(--ease-out)] hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:scale-[0.97] aria-expanded:text-ink motion-reduce:transition-none motion-reduce:active:scale-100"
+            />
+          }
+        >
+          <IconMoreActions className="size-5" aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="bottom" align="end" sideOffset={8} className="w-auto min-w-52 rounded-[1.125rem] p-1.5">
+          {rows.map((row) => {
+            const RowIcon = row.icon;
+            return (
+              <DropdownMenuItem key={row.id} onClick={row.onSelect} className={MENU_ITEM}>
+                <RowIcon className="size-[18px]" aria-hidden />
+                <span className="min-w-0 flex-1">{row.label}</span>
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </DirectionProvider>
   );
 }
 
-/** Square-ish preview for a template card — the thumbnail, or a placeholder. */
-function TemplateThumb({ url, name }: { url: string | null; name: string }) {
-  const [broken, setBroken] = useState(false);
-  if (url && !broken) {
-    return (
-      <img
-        src={url}
-        alt={name}
-        loading="lazy"
-        onError={() => setBroken(true)}
-        className="aspect-[4/3] w-full object-cover"
-      />
-    );
-  }
+/** The hero while the store's sites are on their way: the same box, so nothing jumps when it arrives. */
+function HeroSkeleton({ label }: { label: string }) {
   return (
-    <div className="flex aspect-[4/3] w-full items-center justify-center bg-zimos-ice text-primary">
-      <LayoutTemplate className="size-8" aria-hidden />
+    <div role="status" aria-live="polite" aria-busy="true">
+      <span className="sr-only">{label}</span>
+      <div
+        aria-hidden
+        data-slot="skeleton-card"
+        className="rounded-[var(--radius-card)] bg-paper-raised p-4 shadow-[var(--shadow-card)] ring-1 ring-line sm:p-5"
+      >
+        <div className="flex gap-3.5 sm:gap-5">
+          <div className="aspect-[3/4] w-24 shrink-0 animate-pulse rounded-2xl bg-paper-sunken motion-reduce:animate-none sm:w-36" />
+          <div className="flex min-w-0 flex-1 flex-col gap-3 pt-1">
+            <SkeletonBar className="h-5 w-2/3" />
+            <SkeletonBar className="h-4 w-20" />
+            <SkeletonBar className="h-9 w-full sm:max-w-sm" />
+          </div>
+        </div>
+        <div className="mt-3.5 flex h-[3.375rem] items-center gap-4 border-t border-line pt-2.5 sm:mt-5">
+          <SkeletonBar className="w-20" />
+          <SkeletonBar className="w-24" />
+          <SkeletonBar className="w-16" />
+        </div>
+      </div>
     </div>
   );
 }
 
-function TemplateCard({
-  template,
-  onSelect,
-}: {
-  template: WebsiteTemplateSummary;
-  onSelect: () => void;
-}) {
-  const t = useT(STRINGS);
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="group cursor-pointer flex flex-col overflow-hidden rounded-2xl border border-line bg-paper-raised text-start shadow-card transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-    >
-      <TemplateThumb url={template.thumbnailUrl} name={template.name} />
-      <div className="flex flex-1 flex-col gap-1 p-4">
-        <span dir="auto" className="font-semibold text-ink">
-          {template.name}
-        </span>
-        {template.category && (
-          <span className="text-xs text-ink-soft">{humanize(template.category)}</span>
-        )}
-        <span className="mt-auto inline-flex items-center gap-1 pt-2 text-sm font-medium text-primary">
-          {t.preview}
-          <ArrowRight
-            className="size-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5"
-            aria-hidden
-          />
-        </span>
-      </div>
-    </button>
-  );
-}
-
 /**
- * Modal body: previews the picked template (pages it ships with) and takes a
- * site name, then calls createWebsite and drops the merchant straight into the
- * editor for the new site. The template detail fetch is purely informational —
- * a failure shows an inline notice but never blocks creation, because the
- * summary already carries the `templateVersionId` the API needs.
+ * /website answers one question first: where is my store, and how do I edit
+ * it? For a store with a site the first screen is the hero (SiteHero) — its
+ * name, whether shoppers see it, its address, a picture of it and the one main
+ * button, «عدّل المتجر» — then the store's look as one row, any other sites
+ * folded into one row, and the templates as a short grid.
+ *
+ * A store with no site yet gets only the way in: three steps and the
+ * templates. Choosing one makes the site and opens the editor on its
+ * "brand it → publish" guide (`?start=1`).
+ *
+ * The sites and the templates load on their own: a failure of one never
+ * hides the other, so a template can always be picked.
  */
-function UseTemplateForm({
-  template,
-  onCancel,
-}: {
-  template: WebsiteTemplateSummary;
-  onCancel: () => void;
-}) {
+export function WebsitePage() {
   const t = useT(STRINGS);
-  const c = useCommon();
+  const errorMessage = useErrorMessage();
   const workspaceId = useWorkspaceId();
-  const { currentWorkspace } = useWorkspace();
-  const toast = useToast();
-  const navigate = useNavigate();
-
-  const detail = useAsync(() => apiClient.getWebsiteTemplate(template.id), [template.id]);
-
-  const [name, setName] = useState(currentWorkspace?.name ?? "");
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setFormError(null);
-    setFieldErrors({});
-    const payload: CreateWebsitePayload = {
-      name: name.trim(),
-      templateVersionId: template.templateVersionId,
-    };
-    try {
-      const result = await apiClient.createWebsite(workspaceId, payload);
-      toast.success(fmt(t.siteCreated, { name: result.website.name }));
-      navigate(`/website/${result.website.id}/edit`);
-    } catch (err) {
-      const fields = getFieldErrors(err);
-      setFieldErrors(fields);
-      if (Object.keys(fields).length === 0) setFormError(getErrorMessage(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const pages = detail.data?.pages ?? [];
-
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      {formError && <Alert variant="danger">{formError}</Alert>}
-
-      <div className="rounded-xl border border-line bg-zimos-ice/50 px-4 py-3 text-sm">
-        {detail.loading ? (
-          <span className="flex items-center gap-2 text-ink-soft">
-            <Spinner className="size-4" /> {t.loadingTemplate}
-          </span>
-        ) : detail.error ? (
-          <span className="flex flex-wrap items-center gap-2 text-ink-soft">
-            {t.templateError}
-            <button
-              type="button"
-              onClick={() => detail.refresh()}
-              className="cursor-pointer font-medium text-primary hover:underline"
-            >
-              {c.retry}
-            </button>
-          </span>
-        ) : (
-          <>
-            <p className="text-ink-soft">
-              {pages.length === 1
-                ? t.templatePagesOne
-                : fmt(t.templatePagesMany, { n: pages.length })}
-            </p>
-            {pages.length > 0 && (
-              <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                {pages.map((p) => (
-                  <li
-                    key={p.path}
-                    dir="auto"
-                    className="rounded-full border border-line bg-paper-raised px-2 py-0.5 text-xs text-ink-soft"
-                  >
-                    {p.title || p.path}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-      </div>
-
-      <TextField
-        label={t.siteName}
-        required
-        dir="auto"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        error={fieldErrors.name}
-        hint={t.siteNameHint}
-        placeholder={t.siteNamePlaceholder}
-      />
-
-      <div className="flex flex-wrap justify-end gap-3">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          {c.cancel}
-        </Button>
-        <Button type="submit" disabled={saving || name.trim().length === 0}>
-          {saving ? t.creating : t.useTemplate}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-/**
- * Sites the workspace already has. Without this the editor is only reachable
- * in the moments right after creating a site — a reload would strand it.
- */
-function ExistingSites() {
-  const t = useT(STRINGS);
-  const c = useCommon();
-  const workspaceId = useWorkspaceId();
-  const toast = useToast();
-  const sites = useAsync(() => apiClient.listWebsites(workspaceId), [workspaceId]);
-  const [pendingDelete, setPendingDelete] = useState<Website | null>(null);
+  // Remembered for the session: coming back from the editor shows the page at once and refreshes behind.
+  const sites = useCachedAsync<Website[]>(`website:sites:${workspaceId}`, () => apiClient.listWebsites(workspaceId), [workspaceId]);
   const list = sites.data ?? [];
+  const current = currentSiteOf(list);
+  const currentId = current?.id ?? null;
+  // One more call for the current site — its pages, whether it has edits waiting, its home page to draw.
+  // Never in the way: the hero stands on the list row until this arrives, and without it if it fails.
+  const details = useCachedAsync<FactsOf | null>(
+    currentId ? `website:facts:${workspaceId}:${currentId}` : null,
+    () =>
+      currentId
+        ? loadSiteFacts(workspaceId, currentId).then(
+            (facts): FactsOf => ({ siteId: currentId, facts }),
+            (): FactsOf => ({ siteId: currentId, facts: null })
+          )
+        : Promise.resolve(null),
+    [workspaceId, currentId]
+  );
+  const facts = details.data && details.data.siteId === currentId ? details.data.facts : null;
 
-  // A workspace with no site yet is the normal first-run case, and the template
-  // gallery below already tells that story — stay quiet rather than showing an
-  // empty state. Same for an error: it must not block picking a template.
-  if (sites.loading || sites.error || list.length === 0) return null;
+  const [pendingDelete, setPendingDelete] = useState<Website | null>(null);
+  const [lookOpen, setLookOpen] = useState(false);
 
-  // Throwing keeps ConfirmDialog open with the error inline; resolving lets it
-  // close. Refetching (rather than filtering locally) also catches sites deleted
-  // from another tab.
-  async function confirmDelete() {
-    const site = pendingDelete;
-    if (!site) return;
-    await apiClient.deleteWebsite(workspaceId, site.id);
+  // A remembered list stays on screen through a failed refresh; only a first load that failed has nothing to show.
+  const failed = Boolean(sites.error) && sites.data === null;
+  const firstRun = !sites.loading && !failed && list.length === 0;
+  const others = current ? list.filter((site) => site.id !== current.id) : [];
+  // No hero on the page (first run, or the sites could not be loaded): its ways out wait behind «…» in the header.
+  const bare = firstRun || failed;
+
+  // Resolving lets the confirmation close. Refetching (rather than filtering locally) also catches sites
+  // deleted from another tab.
+  async function afterDelete() {
     setPendingDelete(null);
-    toast.success(fmt(t.siteDeleted, { name: site.name }));
+    invalidateCached(`website:sites:${workspaceId}`);
+    invalidateCached(`website:facts:${workspaceId}`);
     await sites.refresh({ silent: true });
   }
 
   return (
-    <section className="mb-8">
-      <h2 className="mb-2 font-display text-base font-semibold text-ink">{t.yourSites}</h2>
-      <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-paper-raised shadow-card">
-        {list.map((site) => (
-          <li key={site.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <div className="min-w-0">
-              <p dir="auto" className="truncate text-sm font-semibold text-ink">
-                {site.name}
-              </p>
-              <p className="truncate text-xs text-ink-soft">
-                <bdi dir="ltr">{site.subdomain}</bdi> · {humanize(site.status)}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="outline">
-                <Link to={`/website/${site.id}/edit`}>
-                  <Pencil className="size-4" aria-hidden />
-                  {c.edit}
-                </Link>
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                aria-label={fmt(t.deleteSiteAria, { name: site.name })}
-                title={c.delete}
-                className="text-danger hover:bg-danger-soft hover:text-danger"
-                onClick={() => setPendingDelete(site)}
-              >
-                <Trash2 className="size-4" aria-hidden />
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title={t.deleteSiteTitle}
-        confirmLabel={t.deleteSiteConfirm}
-        destructive
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={confirmDelete}
-      >
-        <div className="space-y-3 text-sm text-ink-soft">
-          <p>
-            {withNode(
-              t.deleteSiteBody,
-              "name",
-              <bdi className="font-semibold text-ink">{pendingDelete?.name}</bdi>
-            )}
-          </p>
-          {pendingDelete?.status === "published" && (
-            <Alert variant="danger">
-              {withNode(
-                t.deleteLiveWarning,
-                "subdomain",
-                <bdi dir="ltr" className="font-medium">
-                  {pendingDelete.subdomain}
-                </bdi>
-              )}
-            </Alert>
-          )}
-        </div>
-      </ConfirmDialog>
-    </section>
-  );
-}
-
-export function WebsitePage() {
-  const t = useT(STRINGS);
-  const templates = useAsync(() => apiClient.listWebsiteTemplates(), []);
-
-  const [selected, setSelected] = useState<WebsiteTemplateSummary | null>(null);
-
-  const list = templates.data ?? [];
-
-  return (
     <div className="max-w-4xl">
-      <PageHeader title={t.title} description={t.description} />
+      <PageHeader
+        title={t.title}
+        actions={bare ? <HeaderTools onLook={() => setLookOpen(true)} /> : undefined}
+      />
 
-      <ExistingSites />
+      {failed && isPermissionError(sites.error) ? (
+        // Not this role's page: who can open it, and nothing to retry.
+        <DataState loading={false} error={sites.error}>
+          {null}
+        </DataState>
+      ) : (
+        <div className="flex min-w-0 flex-col gap-[var(--bento-gap)]">
+          {sites.loading ? (
+            <HeroSkeleton label={t.loading} />
+          ) : failed ? (
+            <div
+              role="alert"
+              data-slot="site-error"
+              className="flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] bg-paper-raised p-4 shadow-[var(--shadow-card)] ring-1 ring-line"
+            >
+              <IconWarning className="size-5 shrink-0 text-danger" aria-hidden />
+              <p className="min-w-0 flex-1 basis-48 text-sm leading-6 text-ink">
+                <span className="font-semibold">{t.sitesError}</span>{" "}
+                <span className="text-ink-soft">{errorMessage(sites.error)}</span>
+              </p>
+              <Button type="button" variant="outline" className="min-h-11 rounded-full px-4" onClick={() => void sites.refresh()}>
+                <IconRefresh className="size-4" aria-hidden />
+                {t.retry}
+              </Button>
+            </div>
+          ) : current ? (
+            <>
+              <SiteHero site={current} facts={facts} onDelete={() => setPendingDelete(current)} />
+              {/* Zimos's own store looks: not offered while only the imported templates are (XS_ONLY). */}
+              {!XS_ONLY && <StoreThemeRow />}
+              <OtherSites sites={others} onDelete={setPendingDelete} />
+            </>
+          ) : (
+            <StartSteps />
+          )}
 
-      <h2 className="mb-3 font-display text-base font-semibold text-ink">{t.templatesHeading}</h2>
-      <DataState
-        loading={templates.loading}
-        error={templates.error}
-        empty={list.length === 0}
-        emptyMessage={t.noTemplates}
-        onRetry={() => templates.refresh()}
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {list.map((template) => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              onSelect={() => setSelected(template)}
-            />
-          ))}
+          <TemplatesGallery currentSite={current} headingHidden={firstRun} className={firstRun ? undefined : "mt-3"} />
         </div>
-      </DataState>
+      )}
 
-      <Modal
-        open={selected !== null}
-        onClose={() => setSelected(null)}
-        title={selected ? selected.name : ""}
-        description={t.modalDescription}
-      >
-        {selected && (
-          <UseTemplateForm template={selected} onCancel={() => setSelected(null)} />
-        )}
-      </Modal>
+      {bare && <StoreThemeSheet open={lookOpen} onOpenChange={setLookOpen} />}
+      <DeleteSiteDialog site={pendingDelete} onClose={() => setPendingDelete(null)} onDeleted={afterDelete} />
     </div>
   );
 }

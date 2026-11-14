@@ -10,10 +10,16 @@ import { Mono, Panel } from "@/components/Panel";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Toggle } from "@/components/Toggle";
 import { useToast } from "@/components/Toast";
+import { useAuth } from "@/context/AuthContext";
+import { P } from "@/lib/permissions";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
-import { adminApi } from "@/mock/adminApi";
-import type { AdminWorkspace, FeatureFlag, FeatureFlagInput } from "@/mock/types";
+import * as adminApi from "@/lib/adminApi";
+import type { AdminWorkspaceRow } from "@/lib/adminApi";
+import type {
+  AdminFeatureFlag as FeatureFlag,
+  AdminFeatureFlagInput as FeatureFlagInput,
+} from "@store-builder/api-client";
 import { formatRelative } from "@/lib/format";
 
 function toInput(flag: FeatureFlag): FeatureFlagInput {
@@ -22,8 +28,12 @@ function toInput(flag: FeatureFlag): FeatureFlagInput {
 
 export function FeatureFlagsPage() {
   const toast = useToast();
+  const { can } = useAuth();
+  const canManage = can(P.FEATURE_FLAGS_MANAGE);
+  // Targeting picks from the store list, which is its own permission.
+  const canTarget = canManage && can(P.WORKSPACES_VIEW);
   const { data, loading, error, refresh, setData } = useAsync(
-    () => Promise.all([adminApi.listFlags(), adminApi.listWorkspaces({ force: false })]),
+    () => Promise.all([adminApi.listFlags(), canTarget ? adminApi.listWorkspaceRows(can) : Promise.resolve([] as AdminWorkspaceRow[])]),
     []
   );
   const [query, setQuery] = useState("");
@@ -32,7 +42,7 @@ export function FeatureFlagsPage() {
   const [deleting, setDeleting] = useState<FeatureFlag | null>(null);
 
   const flags = useMemo(() => data?.[0] ?? [], [data]);
-  const workspaces = data?.[1].rows ?? [];
+  const workspaces = data?.[1] ?? [];
 
   const upsert = (flag: FeatureFlag) =>
     setData((prev) => {
@@ -52,9 +62,11 @@ export function FeatureFlagsPage() {
         title="Feature flags"
         description="Gradual rollouts and per-workspace targeting."
         actions={
-          <Button onClick={() => setCreating(true)} disabled={!data}>
-            <Plus /> New flag
-          </Button>
+          canManage && (
+            <Button onClick={() => setCreating(true)} disabled={!data}>
+              <Plus /> New flag
+            </Button>
+          )
         }
       />
       <DataState loading={loading} error={error} onRetry={() => void refresh()}>
@@ -73,8 +85,9 @@ export function FeatureFlagsPage() {
                 <FlagRow
                   key={flag.id}
                   flag={flag}
+                  canManage={canManage}
                   onSaved={upsert}
-                  onTargets={() => setTargeting(flag)}
+                  onTargets={canTarget ? () => setTargeting(flag) : undefined}
                   onDelete={() => setDeleting(flag)}
                 />
               ))}
@@ -129,13 +142,15 @@ export function FeatureFlagsPage() {
 
 function FlagRow({
   flag,
+  canManage,
   onSaved,
   onTargets,
   onDelete,
 }: {
   flag: FeatureFlag;
+  canManage: boolean;
   onSaved: (f: FeatureFlag) => void;
-  onTargets: () => void;
+  onTargets?: () => void;
   onDelete: () => void;
 }) {
   const toast = useToast();
@@ -164,7 +179,7 @@ function FlagRow({
   };
 
   return (
-    <li className="grid grid-cols-1 items-center gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_16rem_auto]">
+    <li className="grid grid-cols-1 items-center gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_16rem_auto]">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <Mono className="text-sm">{flag.key}</Mono>
@@ -178,49 +193,61 @@ function FlagRow({
           )}
         </div>
         <p className="mt-1 text-sm text-ink-soft">{flag.description || "No description."}</p>
-        <p className="mt-0.5 text-xs text-ink-muted">Updated {formatRelative(flag.updatedAt)}</p>
+        <p className="mt-0.5 text-xs text-ink-soft">Updated {formatRelative(flag.updatedAt)}</p>
       </div>
 
       <div>
         <div className="flex items-center justify-between text-xs">
-          <label htmlFor={`rollout-${flag.id}`} className="font-medium text-ink-soft">
-            Rollout
-          </label>
+          {canManage ? (
+            <label htmlFor={`rollout-${flag.id}`} className="font-medium text-ink-soft">
+              Rollout
+            </label>
+          ) : (
+            <span className="font-medium text-ink-soft">Rollout</span>
+          )}
           <span className="tabular font-semibold text-ink">{rollout}%</span>
         </div>
-        <input
-          id={`rollout-${flag.id}`}
-          type="range"
-          min={0}
-          max={100}
-          step={5}
-          value={rollout}
-          disabled={!flag.enabled || saving}
-          onChange={(e) => setRollout(Number(e.target.value))}
-          onPointerUp={commitRollout}
-          onKeyUp={(e) => {
-            if (e.key.startsWith("Arrow") || e.key === "Home" || e.key === "End" || e.key.startsWith("Page")) commitRollout();
-          }}
-          className="zimos-range mt-1 w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        <p className="text-xs text-ink-muted">{flag.enabled ? "Targeted workspaces always receive the flag." : "Enable the flag to roll out."}</p>
+        {canManage && (
+          <>
+            <input
+              id={`rollout-${flag.id}`}
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={rollout}
+              disabled={!flag.enabled || saving}
+              onChange={(e) => setRollout(Number(e.target.value))}
+              onPointerUp={commitRollout}
+              onKeyUp={(e) => {
+                if (e.key.startsWith("Arrow") || e.key === "Home" || e.key === "End" || e.key.startsWith("Page")) commitRollout();
+              }}
+              className="range-primary mt-1 w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            />
+            <p className="text-xs text-ink-soft">{flag.enabled ? "Targeted workspaces always receive the flag." : "Enable the flag to roll out."}</p>
+          </>
+        )}
       </div>
 
-      <div className="flex items-center gap-2 lg:justify-end">
-        <Toggle
-          label={`${flag.key} enabled`}
-          hideLabel
-          checked={flag.enabled}
-          disabled={saving}
-          onChange={(v) => void persist({ enabled: v }, `${flag.key} turned ${v ? "on" : "off"}.`)}
-        />
-        <Button size="sm" variant="outline" onClick={onTargets}>
-          <Target /> Targets
-        </Button>
-        <Button size="icon-sm" variant="ghost" aria-label={`Delete ${flag.key}`} onClick={onDelete}>
-          <Trash2 className="text-danger" />
-        </Button>
-      </div>
+      {canManage && (
+        <div className="flex items-center gap-2 lg:justify-end">
+          <Toggle
+            label={`${flag.key} enabled`}
+            hideLabel
+            checked={flag.enabled}
+            disabled={saving}
+            onChange={(v) => void persist({ enabled: v }, `${flag.key} turned ${v ? "on" : "off"}.`)}
+          />
+          {onTargets && (
+            <Button size="sm" variant="outline" onClick={onTargets}>
+              <Target /> Targets
+            </Button>
+          )}
+          <Button size="icon-sm" variant="ghost" aria-label={`Delete ${flag.key}`} onClick={onDelete}>
+            <Trash2 className="text-danger" />
+          </Button>
+        </div>
+      )}
     </li>
   );
 }
@@ -283,7 +310,7 @@ function TargetsModal({
   onSaved,
 }: {
   flag: FeatureFlag;
-  workspaces: AdminWorkspace[];
+  workspaces: AdminWorkspaceRow[];
   onClose: () => void;
   onSaved: (f: FeatureFlag) => void;
 }) {
@@ -292,11 +319,11 @@ function TargetsModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const known = new Set(workspaces.map((w) => w.id));
+  const known = new Set(workspaces.map((w) => w.workspace.id));
   const unknownIds = flag.targetWorkspaceIds.filter((id) => !known.has(id));
-  const visible = workspaces.filter((w) => {
+  const visible = workspaces.filter(({ workspace }) => {
     const q = query.trim().toLowerCase();
-    return !q || w.name.toLowerCase().includes(q) || w.slug.includes(q);
+    return !q || workspace.name.toLowerCase().includes(q) || workspace.slug.includes(q);
   });
 
   function toggle(id: string) {
@@ -345,16 +372,21 @@ function TargetsModal({
             {unknownIds.length} targeted id{unknownIds.length === 1 ? " is" : "s are"} not in the current workspace list and will be kept.
           </p>
         )}
-        <ul className="scroll-thin max-h-72 divide-y divide-line overflow-y-auto rounded-[10px] border border-line">
+        <ul className="scroll-thin max-h-72 divide-y divide-line overflow-y-auto rounded-[0.875rem] border border-line">
           {visible.length === 0 ? (
             <li className="px-3 py-4 text-center text-sm text-ink-soft">No workspaces match.</li>
           ) : (
-            visible.map((w) => (
-              <li key={w.id}>
+            visible.map(({ workspace, subscription }) => (
+              <li key={workspace.id}>
                 <label className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-primary-soft/50">
-                  <input type="checkbox" className="size-4 accent-[var(--color-primary)]" checked={selected.has(w.id)} onChange={() => toggle(w.id)} />
-                  <span className="min-w-0 flex-1 truncate text-ink">{w.name}</span>
-                  <span className="text-xs text-ink-soft">{w.plan?.name ?? ""}</span>
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-[var(--color-primary)]"
+                    checked={selected.has(workspace.id)}
+                    onChange={() => toggle(workspace.id)}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-ink">{workspace.name}</span>
+                  <span className="text-xs text-ink-soft">{subscription?.planName ?? ""}</span>
                 </label>
               </li>
             ))

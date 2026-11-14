@@ -4,21 +4,22 @@ import { cn } from "@store-builder/ui";
 export type Tone = "success" | "warning" | "danger" | "info" | "neutral" | "primary";
 
 const TONE_CLASS: Record<Tone, string> = {
-  success: "bg-success-soft text-success border-success/20",
-  warning: "bg-warning-soft text-warning border-warning/20",
-  danger: "bg-danger-soft text-danger border-danger/20",
-  info: "bg-info-soft text-info border-info/20",
-  primary: "bg-primary-soft text-primary border-primary/20",
+  success: "bg-success-soft text-success border-success/30",
+  warning: "bg-accent-soft text-accent-dark border-accent/40",
+  danger: "bg-danger-soft text-danger border-danger/30",
+  // Dark primary-dark reads ~3:1 on primary-soft; the lifted primary holds 4.5:1.
+  info: "bg-primary-soft text-primary-dark dark:text-primary border-primary/30",
+  primary: "bg-primary-soft text-primary border-primary/30",
   neutral: "bg-paper text-ink-soft border-line",
 };
 
 const DOT_CLASS: Record<Tone, string> = {
   success: "bg-success",
-  warning: "bg-warning",
+  warning: "bg-accent",
   danger: "bg-danger",
-  info: "bg-info",
+  info: "bg-primary",
   primary: "bg-primary",
-  neutral: "bg-ink-muted",
+  neutral: "bg-ink-soft",
 };
 
 export function StatusBadge({
@@ -35,7 +36,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex h-6 w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 text-xs font-medium",
+        "inline-flex w-fit shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap",
         TONE_CLASS[tone],
         className
       )}
@@ -55,6 +56,8 @@ export function humanize(value: string): string {
 const STATUS_TONES: Record<string, Tone> = {
   // subscriptions
   trialing: "info",
+  // A store made while subscriptions are required, not subscribed yet.
+  draft: "info",
   active: "success",
   past_due: "warning",
   canceled: "neutral",
@@ -64,10 +67,16 @@ const STATUS_TONES: Record<string, Tone> = {
   degraded: "warning",
   down: "danger",
   unknown: "neutral",
+  // Deliberately switched off, not broken — neutral, never a warning colour.
+  // It shares the fallback's tone, but must be listed: an unmapped status is
+  // indistinguishable from a typo'd one, and this lookup fails silently.
+  not_configured: "neutral",
   // moderation
   pending: "warning",
   approved: "success",
   rejected: "danger",
+  // A move's charge that no longer asks for money.
+  void: "neutral",
   // apps
   live: "success",
   beta: "info",
@@ -91,6 +100,17 @@ const STATUS_TONES: Record<string, Tone> = {
   // admin users
   invited: "warning",
   disabled: "neutral",
+  // subscription charges (`pending` is shared with moderation above)
+  paid: "success",
+  failed: "danger",
+  // online payments of a charge (`open`, `pending`, `expired`, `paid` and
+  // `failed` are shared above). paid_duplicate is money to refund by hand;
+  // mismatch is a payment that settled nothing.
+  created: "info",
+  paid_duplicate: "danger",
+  mismatch: "danger",
+  superseded: "neutral",
+  error: "neutral",
 };
 
 /** Status pill with the tone looked up from a shared status vocabulary. */
@@ -98,6 +118,16 @@ export function Status({ value, label, className }: { value: string; label?: str
   return (
     <StatusBadge tone={STATUS_TONES[value] ?? "neutral"} dot className={className}>
       {label ?? humanize(value)}
+    </StatusBadge>
+  );
+}
+
+/** Free / Discounted next to a subscription's status; nothing for one at the plan price. */
+export function PricingBadge({ kind, label, className }: { kind?: string | null; label?: string; className?: string }) {
+  if (!kind || kind === "paid") return null;
+  return (
+    <StatusBadge tone={kind === "free" ? "info" : "warning"} className={cn("ms-2", className)}>
+      {label ?? (kind === "free" ? "Free" : "Discounted")}
     </StatusBadge>
   );
 }

@@ -1,20 +1,40 @@
 "use client";
 
+import { CrossSellStrip } from "@/components/offers/StoreOffers";
 import { useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { BoxIcon, CartGlyph } from "@/components/Icons";
+import { QuantityStepper } from "@/components/QuantityStepper";
+import { StoreImage } from "@/components/StoreImage";
+import { CartBodyBones, SkeletonStatus } from "@/components/Skeleton";
+import { StoreLink } from "@/components/StoreRoute";
 import { TrustStrip } from "@/components/TrustStrip";
+import { storeCards } from "@/lib/storePromises";
+import { CartPageMoney } from "@/components/cart/CartPageSummary";
+import { HolidayCheckoutGate } from "@/components/holiday/HolidayCheckoutGate";
+import { CartConsentBox } from "@/components/emailSignup/CartConsentBox";
 import { btnPrimaryLg, btnSecondary, card, container } from "@/components/ui";
 import { useCart } from "@/lib/CartProvider";
-import { firstImage, variantLabel } from "@/lib/product";
+import { variantLabel } from "@/lib/product";
+import { lineImage } from "@/lib/variantImage";
 import { useStore } from "@/lib/StoreContext";
+import { cartErrorMessage } from "@/lib/placeOrder";
 import { useCatalog } from "@/lib/useCatalog";
+import { LineCustomizations } from "@/components/LineCustomizations";
+import { LineOptions } from "@/components/LineOptions";
+import { XsPageStrip } from "@/components/xs/XsPageStrip";
+import { storePageAttrs, stripHoldsTitle } from "@/lib/xsStorePages";
+import { ComboLineFullTotal, ComboLineInfo, ComboLineThumb } from "@/components/combos/ComboLine";
+import { cartProductIds, comboLineImages, isComboLine } from "@/lib/combos";
 
 export default function CartPage() {
+  // Still needed for the catalogue lookup — the links go through StoreLink,
+  // which resolves this store’s own prefix.
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { cart, isLoading, updateItem, removeItem } = useCart();
-  const { t, money } = useStore();
+  const { t, money, store, locale } = useStore();
+  // On a store that wears a template, its shop's title strip (lib/xsStorePages).
+  const xsPages = store?.xsPages ?? null;
   const { byVariant } = useCatalog(workspaceId);
 
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -30,20 +50,30 @@ export default function CartPage() {
     try {
       await action();
     } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : fallback);
+      setError(cartErrorMessage(err, t.form.errors, fallback));
     } finally {
       setPendingId(null);
     }
   }
 
   return (
-    <main className={`${container} flex-1 py-8 sm:py-10`}>
-      <h1 className="text-2xl font-bold text-ink sm:text-3xl">{t.cart.title}</h1>
+    <main className="flex-1" {...storePageAttrs("cart", xsPages)}>
+      {xsPages && (
+        <XsPageStrip
+          pages={xsPages}
+          title={stripHoldsTitle(xsPages) ? (xsPages.titles.cart ?? t.cart.title) : undefined}
+          label={t.catalog.breadcrumbs}
+          crumbs={[{ label: t.common.home, href: "/" }, { label: xsPages.titles.cart ?? t.cart.title }]}
+        />
+      )}
+      <div className={`${container} py-8 sm:py-10`}>
+      {!stripHoldsTitle(xsPages) && <h1 className="zt-page-title font-display text-2xl font-bold text-ink sm:text-3xl">{t.cart.title}</h1>}
 
       {isLoading && !cart ? (
-        <p className="mt-10 text-sm text-ink-soft" role="status">
-          {t.cart.loading}
-        </p>
+        // The page's own shape while the cart resolves, so nothing jumps when it lands (the same bones a navigation here shows).
+        <SkeletonStatus label={t.cart.loading}>
+          <CartBodyBones />
+        </SkeletonStatus>
       ) : isEmpty ? (
         <div className={`${card} mt-8 flex flex-col items-center px-6 py-16 text-center`}>
           <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary">
@@ -51,13 +81,19 @@ export default function CartPage() {
           </span>
           <p className="mt-4 text-lg font-semibold text-ink">{t.cart.empty}</p>
           <p className="mt-1 text-sm text-ink-soft">{t.cart.emptyHint}</p>
-          <Link href={`/store/${workspaceId}`} className={`${btnSecondary} mt-6`}>
+          <StoreLink href="/" className={`${btnSecondary} mt-6`}>
             {t.common.continueShopping}
-          </Link>
+          </StoreLink>
         </div>
       ) : (
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem]">
+        // minmax(0, …): a long name or a wide price row must not widen the
+        // column past the screen (a bare `1fr` grows to its content).
+        <CartPageMoney workspaceId={workspaceId} cart={cart}>
+          {({ bar, summary }) => (
+        <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div>
+            {/* The rewards bar (a store with cart rewards on), at the top of the cart, above the lines. */}
+            {bar}
             <div aria-live="polite" className="empty:hidden">
               {error && <p className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}
             </div>
@@ -66,14 +102,19 @@ export default function CartPage() {
               {cart.items.map((line) => {
                 const rowBusy = pendingId === line.id;
                 const product = byVariant.get(line.variantId);
-                const image = product ? firstImage(product) : null;
+                // A whole combo on one line (lib/combos): its name and products, not its first product's.
+                const combo = isComboLine(line);
+                const comboImages = combo ? comboLineImages(line, byVariant) : [];
+                // The variant's own picture, else the product's (lib/variantImage).
+                const image = product ? lineImage(product, line.variantId) : null;
                 const options = variantLabel(line.variant);
                 return (
                   <li key={line.id} className={`flex gap-4 p-4 sm:p-5 ${rowBusy ? "opacity-60" : ""}`}>
-                    <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-line bg-zimos-cloud dark:bg-primary-soft">
-                      {image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={image} alt="" width={80} height={80} loading="lazy" className="h-full w-full object-cover" />
+                    <div className={`h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-line bg-paper ${line.unavailable ? "opacity-50" : ""}`}>
+                      {combo && comboImages.length > 0 ? (
+                        <ComboLineThumb images={comboImages} />
+                      ) : !combo && image ? (
+                        <StoreImage src={image} alt="" width={80} height={80} sizes="80px" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-primary/40">
                           <BoxIcon size={28} />
@@ -84,55 +125,53 @@ export default function CartPage() {
                     <div className="flex min-w-0 flex-1 flex-col">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          {product ? (
-                            <Link
-                              href={`/store/${workspaceId}/products/${product.slug}`}
+                          {combo ? (
+                            <ComboLineInfo line={line} />
+                          ) : product ? (
+                            <StoreLink
+                              href={`/products/${product.slug}`}
                               className="line-clamp-2 text-sm font-semibold text-ink hover:text-primary"
                             >
                               {product.name}
-                            </Link>
+                            </StoreLink>
                           ) : (
                             <span className="text-sm font-semibold text-ink">{options || t.cart.item}</span>
                           )}
-                          {product && options && <p className="mt-0.5 text-xs text-ink-soft">{options}</p>}
+                          {!combo && product && options && <p className="mt-0.5 text-xs text-ink-soft">{options}</p>}
+                          <LineOptions options={line.options} />
+                          <LineCustomizations customizations={line.customizations} />
                         </div>
                         <button
                           type="button"
                           onClick={() => run(line.id, () => removeItem(line.id), t.cart.removeFailed)}
                           disabled={rowBusy}
-                          className="-me-2 -mt-2 inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-lg px-2 text-xs font-medium text-danger hover:underline disabled:opacity-50"
+                          className="-me-2 -mt-2 inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg px-2 text-xs font-medium text-danger hover:underline disabled:opacity-50"
                         >
                           {t.cart.remove}
                         </button>
                       </div>
 
-                      <span className="text-xs text-ink-soft">{t.cart.perUnit(money(line.currentUnitPrice, currency))}</span>
-                      {line.priceChanged && <span className="mt-1 text-xs text-warning">{t.cart.priceChanged}</span>}
+                      {/* A combo that can no longer be bought counts nothing: only the way to remove it. */}
+                      {!line.unavailable && (
+                        <>
+                          <span className="text-xs text-ink-soft">{t.cart.perUnit(money(line.currentUnitPrice, currency))}</span>
+                          {line.priceChanged && <span className="mt-1 text-xs text-accent-dark">{t.cart.priceChanged}</span>}
 
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <div className="inline-flex items-center rounded-xl border border-line-strong">
-                          <button
-                            type="button"
-                            aria-label={t.product.decrease}
-                            onClick={() => run(line.id, () => updateItem(line.id, line.quantity - 1), t.cart.updateFailed)}
-                            disabled={rowBusy || line.quantity <= 1}
-                            className="h-11 w-11 cursor-pointer text-lg text-ink disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            −
-                          </button>
-                          <span className="min-w-8 text-center text-sm font-semibold tabular-nums text-ink">{line.quantity}</span>
-                          <button
-                            type="button"
-                            aria-label={t.product.increase}
-                            onClick={() => run(line.id, () => updateItem(line.id, line.quantity + 1), t.cart.updateFailed)}
-                            disabled={rowBusy}
-                            className="h-11 w-11 cursor-pointer text-lg text-ink disabled:opacity-40"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <span className="text-base font-bold text-ink">{money(line.lineTotal, currency)}</span>
-                      </div>
+                          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                            {/* The same stepper the drawer and the product page use. */}
+                            <QuantityStepper
+                              size="sm"
+                              value={line.quantity}
+                              disabled={rowBusy}
+                              onChange={(next) => run(line.id, () => updateItem(line.id, next), t.cart.updateFailed)}
+                            />
+                            <span className="flex flex-wrap items-baseline justify-end gap-x-2">
+                              <ComboLineFullTotal line={line} currency={currency} />
+                              <span className="text-base font-bold text-ink">{money(line.lineTotal, currency)}</span>
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </li>
                 );
@@ -143,30 +182,40 @@ export default function CartPage() {
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
             <div className={`${card} p-5`}>
               <h2 className="text-base font-semibold text-ink">{t.cart.summary}</h2>
-              <dl className="mt-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-ink-soft">{t.cart.subtotal}</dt>
-                  <dd className="font-semibold text-ink">{money(cart.subtotal, currency)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-ink-soft">{t.checkout.shippingFee}</dt>
-                  <dd className="text-ink-soft">{t.cart.shippingAtCheckout}</dd>
-                </div>
-              </dl>
-              <Link href={`/store/${workspaceId}/checkout`} className={`${btnPrimaryLg} mt-5`}>
-                {t.cart.checkout}
-              </Link>
-              <Link
-                href={`/store/${workspaceId}`}
+              {/* Shipping comes from the same quote the order is charged by,
+                  once the shopper picks a governorate here or at checkout. */}
+              <div className="mt-4">{summary}</div>
+              {/* "Email me offers", when the merchant put it in the cart (lib/emailSignup). */}
+              <CartConsentBox className="mt-5" />
+              {/* On holiday: the same link under its ship date, or a button that is off while orders are paused. */}
+              <HolidayCheckoutGate buttonClassName={`${btnPrimaryLg} mt-5`} noteClassName="mt-4">
+                <StoreLink href="/checkout" className={`${btnPrimaryLg} mt-5`}>
+                  {t.cart.checkout}
+                </StoreLink>
+              </HolidayCheckoutGate>
+              <StoreLink
+                href="/"
                 className="mt-2 flex min-h-11 items-center justify-center text-sm font-medium text-primary hover:underline"
               >
                 {t.common.continueShopping}
-              </Link>
+              </StoreLink>
             </div>
-            <TrustStrip t={t} compact />
+            <TrustStrip cards={storeCards(store)} locale={locale} compact />
           </aside>
         </div>
+          )}
+        </CartPageMoney>
       )}
+
+      {/* What goes with the cart: the merchant's cross-sell rule, or what was bought together. */}
+      {!isEmpty && cart && (
+        <CrossSellStrip
+          workspaceId={workspaceId}
+          placement="cart"
+          productIds={cartProductIds(cart.items, byVariant)}
+        />
+      )}
+      </div>
     </main>
   );
 }

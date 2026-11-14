@@ -1,0 +1,274 @@
+{
+  "look": "01",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Women",
+      "nameAr": "نسائي",
+      "slug": "women"
+    },
+    {
+      "name": "Men",
+      "nameAr": "رجالي",
+      "slug": "men"
+    },
+    {
+      "name": "Shoes",
+      "nameAr": "أحذية",
+      "slug": "shoes"
+    },
+    {
+      "name": "Watches",
+      "nameAr": "ساعات",
+      "slug": "watches"
+    }
+  ],
+  "products": [
+    {
+      "name": "Essential Cotton Crew Tee",
+      "nameAr": "تيشيرت قطن أبيض رقبة مدورة",
+      "description": "A clean white crew-neck tee in soft cotton. The everyday basic that goes with everything.",
+      "descriptionAr": "تيشيرت أبيض أساسي من القطن الناعم برقبة مدورة، قطعة يومية تليق مع كل إطلالاتك.",
+      "price": 450,
+      "image": "/xs/01/products/p01.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Fitted Stretch Poplin Shirt",
+      "nameAr": "قميص بوبلين أبيض فيتد",
+      "description": "A crisp white poplin shirt with a touch of stretch and a tailored fit, made for office days and beyond.",
+      "descriptionAr": "قميص أبيض من البوبلين المرن بقصّة فيتد أنيقة، مثالي للشغل وللخروجات الرسمية.",
+      "price": 950,
+      "image": "/xs/01/products/p02.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Slim-Fit Gingham Shirt",
+      "nameAr": "قميص كاروه سماوي سليم فيت",
+      "description": "A light-blue gingham shirt with long sleeves and a slim fit. Smart enough for work, easy for weekends.",
+      "descriptionAr": "قميص كاروه سماوي بكم طويل وقصّة سليم فيت، شيك للشغل ومريح للويك إند.",
+      "price": 900,
+      "image": "/xs/01/products/p11.jpg",
+      "collections": [
+        "men"
+      ]
+    },
+    {
+      "name": "Brown Leather Belt",
+      "nameAr": "حزام جلد طبيعي بني",
+      "description": "A grained brown leather belt with a brushed silver buckle. Built to last for years.",
+      "descriptionAr": "حزام بني من الجلد الطبيعي المحبّب بتوكة فضي مطفي، معمول عشان يعيش معاك سنين.",
+      "price": 650,
+      "image": "/xs/01/products/p12.jpg",
+      "collections": [
+        "men"
+      ]
+    },
+    {
+      "name": "Short-Sleeve Gingham Shirt",
+      "nameAr": "قميص كاروه أزرق نص كم",
+      "description": "A blue gingham button-down with short sleeves and an embroidered logo. Breathable cotton for warm days.",
+      "descriptionAr": "قميص كاروه أزرق نص كم بياقة بزراير، من القطن الخفيف اللي بيهوّي في أيام الصيف.",
+      "price": 850,
+      "image": "/xs/01/products/p03.jpg",
+      "collections": [
+        "men"
+      ]
+    },
+    {
+      "name": "Belted Coat with Faux-Fur Collar",
+      "nameAr": "بالطو بحزام وياقة فرو",
+      "description": "An olive wrap coat with a tie belt and a plush faux-fur collar. Warm, polished and made for winter.",
+      "descriptionAr": "بالطو زيتي بحزام على الوسط وياقة فرو صناعي فاخرة، دفء وأناقة طول الشتاء.",
+      "price": 3400,
+      "compareAt": 4300,
+      "image": "/xs/01/products/p04.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Washed Grey Denim Shirt",
+      "nameAr": "قميص جينز رمادي مغسول",
+      "description": "An oversized denim shirt in washed grey with two chest pockets. Wear it buttoned or open as a light layer.",
+      "descriptionAr": "قميص جينز رمادي واسع بجيبين على الصدر، يتلبس مقفول أو مفتوح فوق أي تيشيرت.",
+      "price": 1150,
+      "image": "/xs/01/products/p05.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Matte Black Minimalist Watch",
+      "nameAr": "ساعة سوداء مطفية بعقارب روز جولد",
+      "description": "A matte black watch with a clean dial, rose-gold hands and a soft black strap. Quartz movement.",
+      "descriptionAr": "ساعة سوداء مطفية بتصميم بسيط وعقارب روز جولد وسير أسود ناعم، بماكينة كوارتز دقيقة.",
+      "price": 1650,
+      "image": "/xs/01/products/p06.jpg",
+      "collections": [
+        "watches"
+      ]
+    },
+    {
+      "name": "Houndstooth Tailored Blazer",
+      "nameAr": "بليزر هاوندستوث نسائي",
+      "description": "A single-button blazer in a grey houndstooth weave. Sharp over jeans or tailored trousers.",
+      "descriptionAr": "بليزر بزرار واحد بنقشة هاوندستوث رمادية، يدي شياكة فوق الجينز أو البنطلون القماش.",
+      "price": 2300,
+      "compareAt": 2900,
+      "image": "/xs/01/products/p07.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Cactus Print Graphic Tee",
+      "nameAr": "تيشيرت مطبوع صبّار",
+      "description": "A relaxed white tee with a playful cactus print. Soft cotton for laid-back days.",
+      "descriptionAr": "تيشيرت أبيض مريح بطبعة صبّار مبهجة، من القطن الناعم لأيامك الكاجوال.",
+      "price": 420,
+      "image": "/xs/01/products/p08.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Black High-Top Canvas Sneakers",
+      "nameAr": "كوتشي كانفاس أسود عالي",
+      "description": "Classic black canvas high-tops with a white rubber sole and toe cap. A timeless street staple.",
+      "descriptionAr": "كوتشي كانفاس أسود برقبة عالية ونعل كاوتش أبيض، كلاسيكية الشارع اللي مبتقدمش.",
+      "price": 1450,
+      "compareAt": 1850,
+      "image": "/xs/01/products/p09.jpg",
+      "collections": [
+        "shoes"
+      ]
+    },
+    {
+      "name": "Fitted Black Crop Tee",
+      "nameAr": "تيشيرت كروب أسود",
+      "description": "A close-fitting black crop tee in stretch jersey. Pairs perfectly with high-waist jeans.",
+      "descriptionAr": "تيشيرت كروب أسود ضيق من الجيرسيه المرن، تنسيقه مثالي مع الجينز الهاي ويست.",
+      "price": 380,
+      "image": "/xs/01/products/p10.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Relaxed Roll-Sleeve Tee",
+      "nameAr": "تيشيرت أبيض بكم مثني",
+      "description": "A relaxed white scoop-neck tee with rolled sleeves. Effortless with denim.",
+      "descriptionAr": "تيشيرت أبيض واسع برقبة مفتوحة وكم مثني، إطلالة سهلة وأنيقة مع الجينز.",
+      "price": 400,
+      "image": "/xs/01/products/p13.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Rose Embroidered Cut-Out Crop Top",
+      "nameAr": "توب كروب أسود بتطريز وردة",
+      "description": "A black crop top with cut-out shoulder straps and an embroidered red rose. Made to stand out.",
+      "descriptionAr": "توب كروب أسود بفتحات عند الكتف وتطريز وردة حمراء، لإطلالة لافتة ومختلفة.",
+      "price": 480,
+      "compareAt": 620,
+      "image": "/xs/01/products/p14.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Gunmetal Mesh Strap Watch",
+      "nameAr": "ساعة جن ميتال بسير شبك",
+      "description": "A gunmetal watch with a fine mesh bracelet and a black dial. Sleek, modern and easy to adjust.",
+      "descriptionAr": "ساعة بلون الجن ميتال بسير معدن شبك وميناء أسود، تصميم عصري وأنيق وسهل الضبط.",
+      "price": 1850,
+      "compareAt": 2350,
+      "image": "/xs/01/products/p15.jpg",
+      "collections": [
+        "watches"
+      ]
+    },
+    {
+      "name": "Charcoal Scoop-Neck Tee",
+      "nameAr": "تيشيرت فحمي رقبة واسعة",
+      "description": "A soft charcoal tee with a wide scoop neck and a relaxed drape. Your new lounge favourite.",
+      "descriptionAr": "تيشيرت فحمي ناعم برقبة واسعة وقصّة منسدلة، هيبقى المفضل عندك في البيت والخروج.",
+      "price": 390,
+      "image": "/xs/01/products/p16.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Navy Lightweight Overshirt Jacket",
+      "nameAr": "جاكيت أوفر شيرت كحلي خفيف",
+      "description": "A navy overshirt jacket in a light technical fabric with snap buttons. Layer it all year round.",
+      "descriptionAr": "جاكيت أوفر شيرت كحلي من قماش خفيف بزراير كبس، تلبسه فوق أي حاجة طول السنة.",
+      "price": 1750,
+      "image": "/xs/01/products/p17.jpg",
+      "images": [
+        "/xs/01/products/p17.jpg",
+        "/xs/01/products/p17b.jpg",
+        "/xs/01/products/p17c.jpg"
+      ],
+      "collections": [
+        "men"
+      ]
+    },
+    {
+      "name": "Check Wool-Blend Blazer",
+      "nameAr": "بليزر كاروه صوف رجالي",
+      "description": "A grey check blazer in a warm wool blend. Throw it over a white shirt for a sharp smart-casual look.",
+      "descriptionAr": "بليزر كاروه رمادي من خليط الصوف الدافئ، فوق قميص أبيض يديك لوك سمارت كاجوال.",
+      "price": 2800,
+      "image": "/xs/01/products/p18.jpg",
+      "collections": [
+        "men"
+      ]
+    },
+    {
+      "name": "White Zip-Up Harrington Jacket",
+      "nameAr": "جاكيت هارينجتون أبيض بسوستة",
+      "description": "A clean white harrington jacket with a full zip and stand collar. Light enough for spring evenings.",
+      "descriptionAr": "جاكيت هارينجتون أبيض بسوستة كاملة وياقة واقفة، خفيف ومناسب لليالي الربيع.",
+      "price": 1650,
+      "image": "/xs/01/products/p19.jpg",
+      "collections": [
+        "men"
+      ]
+    },
+    {
+      "name": "Black Funnel-Neck Coat",
+      "nameAr": "بالطو أسود برقبة عالية",
+      "description": "A black wool-blend coat with a high funnel neck. Minimal, warm and endlessly versatile.",
+      "descriptionAr": "بالطو أسود من خليط الصوف برقبة عالية، تصميم بسيط ودافئ يتنسق مع كل حاجة.",
+      "price": 3200,
+      "image": "/xs/01/products/p20.jpg",
+      "collections": [
+        "men"
+      ]
+    }
+  ],
+  "wording": {
+    "allLabel": "All Products",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search",
+    "loadMoreLabel": "Load More",
+    "viewLabel": "Quick View",
+    "openLabel": "Add to cart"
+  },
+  "wordingAr": {
+    "allLabel": "كل المنتجات",
+    "searchLabel": "بحث",
+    "searchPlaceholder": "ابحث عن منتج...",
+    "loadMoreLabel": "عرض المزيد",
+    "viewLabel": "نظرة سريعة",
+    "openLabel": "أضف للسلة"
+  }
+}

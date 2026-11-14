@@ -1,0 +1,59 @@
+/**
+ * Features that ship switched off and are turned on per deploy with a build
+ * variable. Anything but the exact string "true" leaves a feature off, and
+ * off means the console shows nothing of it.
+ */
+
+/**
+ * Two-step sign-in: the code step at console sign-in, and support's reset on
+ * a person's page. Pairs with the API's TWO_FACTOR_ENABLED (and NEW_DEVICE_CODE).
+ */
+export const TWO_FACTOR_ENABLED = import.meta.env.VITE_TWO_FACTOR_ENABLED === "true";
+
+/**
+ * Store traffic: every store's storefront visitors (where from, governorate,
+ * device, time per page, the funnel, campaigns, outcomes per governorate) and
+ * what the API's events guard kept out. Pairs with the API's
+ * TRAFFIC_DETAILS_ENABLED and TRAFFIC_GUARD_ENABLED, which fill it.
+ */
+export const STORE_TRAFFIC_ENABLED = import.meta.env.VITE_STORE_TRAFFIC_ENABLED === "true";
+
+/**
+ * Site traffic in detail: zimos.co visits laid out as Store traffic (filters,
+ * each visit in order with its account, campaigns, what the beacon's guard
+ * kept out). Pairs with the API's SITE_TRAFFIC_DETAILS_ENABLED, which fills
+ * it; off, the page is the summary it was.
+ */
+export const SITE_TRAFFIC_DETAILS_ENABLED = import.meta.env.VITE_SITE_TRAFFIC_DETAILS_ENABLED === "true";
+
+/**
+ * The bell on the API's live updates (its REALTIME_ENABLED): a sign-up, a paid
+ * subscription or a new support ticket updates the count at once, for the
+ * accounts whose permissions open those pages. While connected the count is
+ * also read when the tab comes back and every 5 minutes (the other kinds of
+ * notification are not sent live); while the connection is down, every 30
+ * seconds. Off: the count is read every 60 seconds, as before.
+ */
+export const CONSOLE_REALTIME_ENABLED = import.meta.env.VITE_CONSOLE_REALTIME_ENABLED === "true";
+
+/**
+ * Live in Site traffic: who is on zimos.co now (the last 5 minutes, read again
+ * every 15 seconds) — place, source and UTM, device and system, the page they
+ * are on and their last sign-up / sign-in click. Pairs with the API's
+ * SITE_LIVE_ENABLED (it answers 404 without it). A tab of the detailed page
+ * with SITE_TRAFFIC_DETAILS_ENABLED above; without it, a Summary / Live switch
+ * on the summary page (and no governorate, browser or link kind, which only
+ * the details keep).
+ */
+export const SITE_LIVE_ENABLED = import.meta.env.VITE_SITE_LIVE_ENABLED === "true";
+
+/**
+ * Device notifications on phones and computers: what the bell says, also sent
+ * to the browsers where each account turned them on (an offer on its first
+ * page, "Notifications on this device" on the Notifications page, and a
+ * "Devices" choice per type in its settings). Pairs with the API's
+ * PUSH_ENABLED and VAPID keys (the console's notifications go out on the same
+ * service as the dashboard's): a 404 from /me/push/config hides all of it. Off:
+ * none of it, and a notifications worker kept from an earlier build is removed.
+ */
+export const CONSOLE_PUSH_ENABLED = import.meta.env.VITE_CONSOLE_PUSH_ENABLED === "true";

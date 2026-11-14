@@ -1,0 +1,529 @@
+{
+  "key": "xs-06-ar",
+  "name": "XS 06 عربي",
+  "category": "fashion",
+  "kind": "store",
+  "tags": [
+    "xs",
+    "ar"
+  ],
+  "rtl": true,
+  "primaryColor": "#D19C97",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#D19C97",
+      "themeSettings": {
+        "xsLook": "06",
+        "header": {
+          "announcement": {
+            "enabled": true,
+            "text": "الأسئلة الشائعة · المساعدة · الدعم"
+          },
+          "menu": [
+            {
+              "label": "الرئيسية",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "المتجر",
+              "href": "/products",
+              "kind": "url"
+            },
+            {
+              "label": "تواصل معنا",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [
+              {
+                "id": "social",
+                "type": "social"
+              }
+            ],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "روابط سريعة",
+              "links": [
+                {
+                  "label": "الرئيسية",
+                  "href": "/",
+                  "kind": "home"
+                },
+                {
+                  "label": "متجرنا",
+                  "href": "/products",
+                  "kind": "url"
+                },
+                {
+                  "label": "سلة التسوق",
+                  "href": "/cart",
+                  "kind": "cart"
+                },
+                {
+                  "label": "تواصل معنا",
+                  "href": "/contact",
+                  "kind": "page"
+                }
+              ]
+            },
+            {
+              "title": "المساعدة",
+              "links": [
+                {
+                  "label": "تتبّع طلبك",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            }
+          ],
+          "text": "أزياء عصرية لكل أفراد العائلة بخامات مختارة بعناية وأسعار مناسبة، ونوصّل طلبك إلى باب بيتك في جميع محافظات مصر.",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "الرئيسية",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs06-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs06-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs06-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs06-p1-s1-e1",
+                          "type": "xs_slider",
+                          "props": {
+                            "look": "06",
+                            "slides": [
+                              {
+                                "image": "/xs/06/carousel-1.jpg",
+                                "eyebrow": "خصم 10% على أول طلب",
+                                "heading": "فساتين تواكب الموضة",
+                                "buttonLabel": "تسوّق الآن",
+                                "buttonHref": "/products"
+                              },
+                              {
+                                "image": "/xs/06/carousel-2.jpg",
+                                "eyebrow": "خصم 10% على أول طلب",
+                                "heading": "أناقة بسعر مناسب",
+                                "buttonLabel": "تسوّق الآن",
+                                "buttonHref": "/products"
+                              }
+                            ],
+                            "autoplay": true,
+                            "seconds": 6
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs06-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs06-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs06-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs06-p1-s2-e1",
+                          "type": "xs_features",
+                          "props": {
+                            "look": "06",
+                            "heading": "",
+                            "text": "",
+                            "image": "",
+                            "items": [
+                              {
+                                "icon": "support",
+                                "image": "/xs/06/ico-1.svg",
+                                "title": "جودة مضمونة",
+                                "text": ""
+                              },
+                              {
+                                "icon": "truck",
+                                "image": "/xs/06/ico-2.svg",
+                                "title": "شحن مجاني",
+                                "text": ""
+                              },
+                              {
+                                "icon": "return",
+                                "image": "/xs/06/ico-3.svg",
+                                "title": "استرجاع خلال 14 يومًا",
+                                "text": ""
+                              },
+                              {
+                                "icon": "bag",
+                                "image": "/xs/06/ico-4.svg",
+                                "title": "دعم على مدار الساعة",
+                                "text": ""
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs06-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs06-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs06-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs06-p1-s3-e1",
+                          "type": "xs_banners",
+                          "props": {
+                            "look": "06",
+                            "items": [
+                              {
+                                "image": "/xs/06/cat-1.jpg",
+                                "title": "ملابس رجالي",
+                                "text": "15 منتجًا",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/xs/06/cat-2.jpg",
+                                "title": "ملابس حريمي",
+                                "text": "15 منتجًا",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/xs/06/cat-3.jpg",
+                                "title": "ملابس أطفال",
+                                "text": "15 منتجًا",
+                                "href": "/products"
+                              }
+                            ],
+                            "variant": "card"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs06-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs06-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs06-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs06-p1-s4-e1",
+                          "type": "xs_banners",
+                          "props": {
+                            "look": "06",
+                            "items": [
+                              {
+                                "image": "/xs/06/offer-1.png",
+                                "title": "تشكيلة الربيع",
+                                "text": "خصم 20% على الطلب بالكامل",
+                                "linkLabel": "تسوّق الآن",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/xs/06/offer-2.png",
+                                "title": "تشكيلة الشتاء",
+                                "text": "خصم 20% على الطلب بالكامل",
+                                "linkLabel": "تسوّق الآن",
+                                "href": "/products"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs06-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs06-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs06-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs06-p1-s5-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "06",
+                            "heading": "الأكثر رواجًا",
+                            "collection": "",
+                            "limit": 8,
+                            "showDiscount": true,
+                            "showTabs": false,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "allLabel": "كل المنتجات",
+                            "searchLabel": "بحث",
+                            "loadMoreLabel": "عرض المزيد",
+                            "searchPlaceholder": "ابحث بالاسم",
+                            "viewLabel": "عرض التفاصيل",
+                            "openLabel": "أضف للسلة"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs06-p1-s6",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs06-p1-s6-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs06-p1-s6-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs06-p1-s6-e1",
+                          "type": "xs_newsletter",
+                          "props": {
+                            "look": "06",
+                            "heading": "كن أول من يعرف",
+                            "text": "اشترك في نشرتنا البريدية لتصلك أحدث التشكيلات والعروض الحصرية قبل الجميع.",
+                            "placeholder": "اكتب بريدك الإلكتروني",
+                            "buttonLabel": "اشترك"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "تواصل معنا",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs06-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs06-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs06-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs06-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "06",
+                            "heading": "تواصل معنا",
+                            "image": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs06-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs06-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs06-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs06-p2-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "06",
+                            "heading": "نسعد بالرد على استفساراتك",
+                            "info": [
+                              {
+                                "icon": "address",
+                                "title": "المتجر",
+                                "text": "الدقي، الجيزة"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "البريد الإلكتروني",
+                                "text": "أرسل لنا رسالة وسنرد عليك خلال يوم"
+                              },
+                              {
+                                "icon": "phone",
+                                "title": "الهاتف",
+                                "text": "اتصل بنا يوميًا من 10 صباحًا حتى 10 مساءً"
+                              }
+                            ],
+                            "contactPlaceholder": "بريدك الإلكتروني",
+                            "messagePlaceholder": "رسالتك",
+                            "buttonLabel": "أرسل الرسالة"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

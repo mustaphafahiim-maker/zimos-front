@@ -9,10 +9,18 @@ import { FilterChips, SelectField, TextAreaField, TextField } from "@/components
 import { Status, StatusBadge } from "@/components/StatusBadge";
 import { Toggle } from "@/components/Toggle";
 import { useToast } from "@/components/Toast";
+import { useAuth } from "@/context/AuthContext";
+import { P } from "@/lib/permissions";
 import { useAsync } from "@/lib/useAsync";
 import { getErrorMessage } from "@/lib/errors";
-import { adminApi } from "@/mock/adminApi";
-import type { AdminWorkspace, Announcement, AnnouncementAudience, AnnouncementSeverity, Plan } from "@/mock/types";
+import * as adminApi from "@/lib/adminApi";
+import type { AdminWorkspaceRow } from "@/lib/adminApi";
+import type {
+  AdminAnnouncement as Announcement,
+  AdminPlan as Plan,
+  AnnouncementAudience,
+  AnnouncementSeverity,
+} from "@store-builder/api-client";
 import { formatDateTime, toDateTimeInput } from "@/lib/format";
 
 type Filter = "all" | "live" | "scheduled" | "ended";
@@ -41,11 +49,11 @@ export function AnnouncementBanner({ title, body, severity, dismissible }: { tit
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-[12px] border px-4 py-3 text-sm",
-        severity === "warning" ? "border-warning/30 bg-warning-soft" : "border-info/20 bg-info-soft"
+        "flex items-start gap-3 rounded-[0.875rem] border px-4 py-3 text-sm",
+        severity === "warning" ? "border-accent/30 bg-accent-soft" : "border-primary/20 bg-primary-soft"
       )}
     >
-      <Icon className={cn("mt-0.5 size-4 shrink-0", severity === "warning" ? "text-warning" : "text-info")} aria-hidden />
+      <Icon className={cn("mt-0.5 size-4 shrink-0", severity === "warning" ? "text-accent-dark" : "text-primary-dark dark:text-primary")} aria-hidden />
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-ink">{title || "Announcement title"}</p>
         <p className="text-ink-soft">{body || "Message shown to merchants at the top of their dashboard."}</p>
@@ -57,8 +65,18 @@ export function AnnouncementBanner({ title, body, severity, dismissible }: { tit
 
 export function AnnouncementsPage() {
   const toast = useToast();
+  const { can } = useAuth();
+  const canManage = can(P.ANNOUNCEMENTS_MANAGE);
+  // Naming a plan or a store takes the permission that reads them.
+  const canReadPlans = can(P.PLANS_VIEW);
+  const canReadStores = can(P.WORKSPACES_VIEW);
   const { data, loading, error, refresh, setData } = useAsync(
-    () => Promise.all([adminApi.listAnnouncements(), adminApi.listPlans(), adminApi.listWorkspaces({ force: false })]),
+    () =>
+      Promise.all([
+        adminApi.listAnnouncements(),
+        canReadPlans ? adminApi.listPlans() : Promise.resolve([] as Plan[]),
+        canReadStores ? adminApi.listWorkspaceRows(can) : Promise.resolve([] as AdminWorkspaceRow[]),
+      ]),
     []
   );
   const [filter, setFilter] = useState<Filter>("all");
@@ -67,7 +85,7 @@ export function AnnouncementsPage() {
 
   const announcements = useMemo(() => data?.[0] ?? [], [data]);
   const plans = data?.[1] ?? [];
-  const workspaces = data?.[2].rows ?? [];
+  const workspaces = data?.[2] ?? [];
 
   const setAnnouncements = (fn: (list: Announcement[]) => Announcement[]) =>
     setData((prev) => {
@@ -90,7 +108,7 @@ export function AnnouncementsPage() {
   }));
 
   function audienceLabel(a: Announcement) {
-    if (a.audience === "plan") return `Plan: ${plans.find((p) => p.id === a.planId)?.name ?? "Unknown plan"}`;
+    if (a.audience === "plan") return canReadPlans ? `Plan: ${plans.find((p) => p.id === a.planId)?.name ?? "Unknown plan"}` : "One plan";
     if (a.audience === "workspace") return `Workspace: ${a.workspaceName ?? a.workspaceId}`;
     return "All merchants";
   }
@@ -101,9 +119,11 @@ export function AnnouncementsPage() {
         title="Announcements"
         description="Banner messages shown in merchant dashboards."
         actions={
-          <Button onClick={() => setEditing(emptyForm())} disabled={!data}>
-            <Plus /> New announcement
-          </Button>
+          canManage && (
+            <Button onClick={() => setEditing(emptyForm())} disabled={!data}>
+              <Plus /> New announcement
+            </Button>
+          )
         }
       />
       <DataState loading={loading} error={error} onRetry={() => void refresh()}>
@@ -113,7 +133,7 @@ export function AnnouncementsPage() {
         ) : (
           <ul className="space-y-3">
             {filtered.map((a) => (
-              <li key={a.id} className="rounded-[var(--radius-card)] border border-line bg-paper-raised p-4 shadow-[var(--shadow-card)]">
+              <li key={a.id} className="rounded-[var(--radius-card)] bg-paper-raised shadow-[var(--shadow-card)] ring-1 ring-line p-4">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <Status value={adminApi.announcementStatus(a)} />
                   <StatusBadge tone={a.severity === "warning" ? "warning" : "info"}>{a.severity}</StatusBadge>
@@ -121,32 +141,34 @@ export function AnnouncementsPage() {
                   <span className="text-xs text-ink-soft">
                     {formatDateTime(a.startsAt)} → {a.endsAt ? formatDateTime(a.endsAt) : "no end"}
                   </span>
-                  <div className="ms-auto flex gap-1">
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label={`Edit ${a.title}`}
-                      onClick={() =>
-                        setEditing({
-                          id: a.id,
-                          title: a.title,
-                          body: a.body,
-                          severity: a.severity,
-                          audience: a.audience,
-                          planId: a.planId ?? "",
-                          workspaceId: a.workspaceId ?? "",
-                          startsAt: toDateTimeInput(a.startsAt),
-                          endsAt: toDateTimeInput(a.endsAt),
-                          dismissible: a.dismissible,
-                        })
-                      }
-                    >
-                      <Pencil />
-                    </Button>
-                    <Button size="icon-sm" variant="ghost" aria-label={`Delete ${a.title}`} onClick={() => setDeleting(a)}>
-                      <Trash2 className="text-danger" />
-                    </Button>
-                  </div>
+                  {canManage && (
+                    <div className="ms-auto flex gap-1">
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label={`Edit ${a.title}`}
+                        onClick={() =>
+                          setEditing({
+                            id: a.id,
+                            title: a.title,
+                            body: a.body,
+                            severity: a.severity,
+                            audience: a.audience,
+                            planId: a.planId ?? "",
+                            workspaceId: a.workspaceId ?? "",
+                            startsAt: toDateTimeInput(a.startsAt),
+                            endsAt: toDateTimeInput(a.endsAt),
+                            dismissible: a.dismissible,
+                          })
+                        }
+                      >
+                        <Pencil />
+                      </Button>
+                      <Button size="icon-sm" variant="ghost" aria-label={`Delete ${a.title}`} onClick={() => setDeleting(a)}>
+                        <Trash2 className="text-danger" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <AnnouncementBanner title={a.title} body={a.body} severity={a.severity} dismissible={a.dismissible} />
                 <p className="mt-2 text-xs text-ink-soft">Created by {a.createdBy}</p>
@@ -161,6 +183,8 @@ export function AnnouncementsPage() {
           initial={editing}
           plans={plans}
           workspaces={workspaces}
+          canReadPlans={canReadPlans}
+          canReadStores={canReadStores}
           onClose={() => setEditing(null)}
           onSaved={(a) => {
             setAnnouncements((list) => (list.some((x) => x.id === a.id) ? list.map((x) => (x.id === a.id ? a : x)) : [a, ...list]));
@@ -193,12 +217,16 @@ function AnnouncementEditor({
   initial,
   plans,
   workspaces,
+  canReadPlans,
+  canReadStores,
   onClose,
   onSaved,
 }: {
   initial: AnnouncementForm;
   plans: Plan[];
-  workspaces: AdminWorkspace[];
+  workspaces: AdminWorkspaceRow[];
+  canReadPlans: boolean;
+  canReadStores: boolean;
   onClose: () => void;
   onSaved: (a: Announcement) => void;
 }) {
@@ -216,7 +244,6 @@ function AnnouncementEditor({
     setBusy(true);
     setError(null);
     try {
-      const ws = workspaces.find((w) => w.id === form.workspaceId);
       onSaved(
         await adminApi.saveAnnouncement({
           id: form.id,
@@ -226,7 +253,6 @@ function AnnouncementEditor({
           audience: form.audience,
           planId: form.planId || null,
           workspaceId: form.workspaceId || null,
-          workspaceName: ws?.name ?? null,
           startsAt: new Date(form.startsAt).toISOString(),
           endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
           dismissible: form.dismissible,
@@ -266,10 +292,10 @@ function AnnouncementEditor({
           </SelectField>
           <SelectField label="Audience" value={form.audience} onChange={(e) => set("audience", e.target.value as AnnouncementAudience)}>
             <option value="all">All merchants</option>
-            <option value="plan">Workspaces on a plan</option>
-            <option value="workspace">A single workspace</option>
+            {(canReadPlans || form.audience === "plan") && <option value="plan">Workspaces on a plan</option>}
+            {(canReadStores || form.audience === "workspace") && <option value="workspace">A single workspace</option>}
           </SelectField>
-          {form.audience === "plan" && (
+          {form.audience === "plan" && canReadPlans && (
             <SelectField label="Plan" required value={form.planId} onChange={(e) => set("planId", e.target.value)}>
               <option value="">Choose a plan…</option>
               {plans.map((p) => (
@@ -279,12 +305,12 @@ function AnnouncementEditor({
               ))}
             </SelectField>
           )}
-          {form.audience === "workspace" && (
+          {form.audience === "workspace" && canReadStores && (
             <SelectField label="Workspace" required value={form.workspaceId} onChange={(e) => set("workspaceId", e.target.value)}>
               <option value="">Choose a workspace…</option>
-              {workspaces.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
+              {workspaces.map(({ workspace }) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name}
                 </option>
               ))}
             </SelectField>
@@ -297,7 +323,7 @@ function AnnouncementEditor({
         <Toggle label="Dismissible" description="Merchants can close the banner." checked={form.dismissible} onChange={(v) => set("dismissible", v)} />
         <div>
           <p className="mb-2 text-sm font-medium text-ink">Preview</p>
-          <div className="rounded-[12px] border border-dashed border-line-strong bg-paper p-3">
+          <div className="rounded-[0.875rem] border border-dashed border-line bg-paper-sunken p-3">
             <AnnouncementBanner title={form.title} body={form.body} severity={form.severity} dismissible={form.dismissible} />
           </div>
         </div>

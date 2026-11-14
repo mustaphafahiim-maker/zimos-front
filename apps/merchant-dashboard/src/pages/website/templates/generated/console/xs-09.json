@@ -1,0 +1,539 @@
+{
+  "globalStyles": {
+    "primaryColor": "#B08EAD",
+    "themeSettings": {
+      "xsLook": "09",
+      "header": {
+        "menu": [
+          {
+            "label": "Home",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "Shop",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "About",
+            "href": "/about",
+            "kind": "page"
+          },
+          {
+            "label": "Contact",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "Category",
+            "links": [
+              {
+                "label": "All products",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "Cart",
+                "href": "/cart",
+                "kind": "cart"
+              }
+            ]
+          },
+          {
+            "title": "Company",
+            "links": [
+              {
+                "label": "About",
+                "href": "/about",
+                "kind": "page"
+              },
+              {
+                "label": "Contact",
+                "href": "/contact",
+                "kind": "page"
+              },
+              {
+                "label": "Track Order",
+                "href": "/track",
+                "kind": "track"
+              }
+            ]
+          }
+        ],
+        "text": "Comfortable pillows and bedding that add a warm touch to your home, in carefully chosen materials and modern designs.",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "Home",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs09-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs09-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs09-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs09-p1-s1-e1",
+                        "type": "xs_hero",
+                        "props": {
+                          "look": "09",
+                          "heading": "Best quality pillow",
+                          "text": "Deeper sleep and lasting comfort with pillows designed to support your neck and back.",
+                          "image": "/xs/09/banner_img.png",
+                          "buttonLabel": "Shop Now",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs09-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs09-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs09-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs09-p1-s2-e1",
+                        "type": "xs_story",
+                        "props": {
+                          "look": "09",
+                          "items": [
+                            {
+                              "title": "Printed memory foam brief modern throw pillow case",
+                              "body": "Starting from EGP 380",
+                              "image": "/xs/09/single_product_1.png"
+                            },
+                            {
+                              "title": "Printed memory foam brief modern throw pillow case",
+                              "body": "Starting from EGP 380",
+                              "image": "/xs/09/single_product_2.png"
+                            },
+                            {
+                              "title": "Printed memory foam brief modern throw pillow case",
+                              "body": "Starting from EGP 380",
+                              "image": "/xs/09/single_product_3.png"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs09-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs09-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs09-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs09-p1-s3-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "09",
+                          "heading": "Trending Items",
+                          "collection": "",
+                          "limit": 8,
+                          "showDiscount": true,
+                          "showTabs": false,
+                          "showSearch": false,
+                          "layout": "grid",
+                          "quickView": true,
+                          "allLabel": "All Products",
+                          "searchLabel": "Search",
+                          "viewLabel": "Quick View",
+                          "openLabel": "Add to cart",
+                          "searchPlaceholder": "Search keyword",
+                          "loadMoreLabel": "Load More"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs09-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs09-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs09-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs09-p1-s4-e1",
+                        "type": "xs_quotes",
+                        "props": {
+                          "look": "09",
+                          "heading": "",
+                          "items": [
+                            {
+                              "quote": "I tried the neck pillow on my last trip and it was so comfortable that I ordered one for everyone in the family.",
+                              "name": "Ahmed El Sherif",
+                              "image": "/xs/09/client.png"
+                            },
+                            {
+                              "quote": "I tried the neck pillow on my last trip and it was so comfortable that I ordered one for everyone in the family.",
+                              "name": "Ahmed El Sherif",
+                              "image": "/xs/09/client_1.png"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs09-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs09-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs09-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs09-p1-s5-e1",
+                        "type": "xs_features",
+                        "props": {
+                          "look": "09",
+                          "heading": "Your comfort deserves materials without compromise",
+                          "text": "Our pillows are made of high-density memory foam and soft washable fabrics for ideal support and comfort that lasts for years. Every piece passes a careful quality check before it reaches your home.",
+                          "image": "",
+                          "items": [
+                            {
+                              "icon": "bag",
+                              "image": "/xs/09/ico-1.svg",
+                              "title": "Credit Card Support",
+                              "text": ""
+                            },
+                            {
+                              "icon": "support",
+                              "image": "/xs/09/ico-2.svg",
+                              "title": "Online Order",
+                              "text": ""
+                            },
+                            {
+                              "icon": "truck",
+                              "image": "/xs/09/ico-3.svg",
+                              "title": "Free Delivery",
+                              "text": ""
+                            },
+                            {
+                              "icon": "return",
+                              "image": "/xs/09/ico-4.svg",
+                              "title": "Product with Gift",
+                              "text": ""
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/about",
+      "title": "About",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs09-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs09-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs09-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs09-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "09",
+                          "heading": "About",
+                          "image": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs09-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs09-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs09-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs09-p2-s2-e1",
+                        "type": "xs_story",
+                        "props": {
+                          "look": "09",
+                          "items": [
+                            {
+                              "title": "Our Mission",
+                              "body": "Our mission is simple: a calm, comfortable night's sleep in every Egyptian home. That is why we choose our materials with care and keep refining our designs for the needs of the neck, back and joints.\n\nFrom travel pillows to modern pillow covers, we believe small details make a big difference to your day, and we stand by consistent quality and service worthy of your trust.",
+                              "image": "/xs/09/about_us_video.png"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "Contact",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs09-p3-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs09-p3-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs09-p3-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs09-p3-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "09",
+                          "heading": "Contact us",
+                          "image": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs09-p3-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs09-p3-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs09-p3-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs09-p3-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "09",
+                          "heading": "Get in Touch",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "Nasr City, Cairo",
+                              "text": "Open daily from 10 am to 10 pm"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "Call Us",
+                              "text": "Mon to Fri 9am to 6pm"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "Email Us",
+                              "text": "Send us your query anytime!"
+                            }
+                          ],
+                          "contactPlaceholder": "Enter email address",
+                          "messagePlaceholder": "Enter Message",
+                          "buttonLabel": "Send Message"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

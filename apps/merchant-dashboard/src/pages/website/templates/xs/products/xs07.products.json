@@ -1,0 +1,278 @@
+{
+  "look": "07",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Vegetables",
+      "slug": "vegetables",
+      "nameAr": "خضروات"
+    },
+    {
+      "name": "Fruits",
+      "slug": "fruits",
+      "nameAr": "فواكه"
+    },
+    {
+      "name": "Bread",
+      "slug": "bread",
+      "nameAr": "مخبوزات"
+    },
+    {
+      "name": "Meat",
+      "slug": "meat",
+      "nameAr": "لحوم"
+    }
+  ],
+  "products": [
+    {
+      "name": "Rosé Table Grapes (1 kg)",
+      "nameAr": "عنب روز (1 كجم)",
+      "description": "Sweet, juicy rosé grapes picked at peak ripeness.",
+      "descriptionAr": "عنب روز حلو وعصيري، مقطوف في أوج نضجه.",
+      "price": 70,
+      "image": "/xs/07/products/p01.jpg",
+      "collections": [
+        "fruits",
+        "bread"
+      ]
+    },
+    {
+      "name": "Fresh Raspberries (250 g)",
+      "nameAr": "توت أحمر طازج (250 جم)",
+      "description": "Plump red raspberries, perfect for breakfast bowls and desserts.",
+      "descriptionAr": "توت أحمر ممتلئ وطازج، مثالي للفطار والحلويات.",
+      "price": 160,
+      "image": "/xs/07/products/p02.jpg",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Fresh Apricots (1 kg)",
+      "nameAr": "مشمش طازج (1 كجم)",
+      "description": "Sweet seasonal apricots with soft, fragrant flesh.",
+      "descriptionAr": "مشمش موسمي حلو بلبّ طري ورائحة مميزة.",
+      "price": 85,
+      "image": "/xs/07/products/p03.jpg",
+      "collections": [
+        "fruits",
+        "bread"
+      ]
+    },
+    {
+      "name": "Bananas (1 kg)",
+      "nameAr": "موز (1 كجم)",
+      "description": "Naturally ripened bananas, a quick and healthy snack for the whole family.",
+      "descriptionAr": "موز ناضج طبيعيًا، وجبة خفيفة وصحية لكل أفراد الأسرة.",
+      "price": 40,
+      "image": "/xs/07/products/p04.jpg",
+      "images": [
+        "/xs/07/products/p04.jpg",
+        "/xs/07/products/p04b.png"
+      ],
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Navel Oranges (1 kg)",
+      "nameAr": "برتقال بسرة (1 كجم)",
+      "description": "Seedless navel oranges, sweet and easy to peel.",
+      "descriptionAr": "برتقال بسرة بدون بذر، حلو وسهل التقشير.",
+      "price": 35,
+      "image": "/xs/07/products/p05.jpg",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Red Apples (1 kg)",
+      "nameAr": "تفاح أحمر (1 كجم)",
+      "description": "Crisp, juicy red apples with a sweet-tart bite.",
+      "descriptionAr": "تفاح أحمر مقرمش وغني بالعصارة، بطعم يجمع بين الحلاوة والحموضة.",
+      "price": 110,
+      "image": "/xs/07/products/p06.jpg",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Fresh Parsley (3 bunches)",
+      "nameAr": "بقدونس طازج (3 حزم)",
+      "description": "Bright green flat-leaf parsley, cut fresh every morning.",
+      "descriptionAr": "بقدونس أخضر طازج، يُقطف كل صباح.",
+      "price": 15,
+      "image": "/xs/07/products/p07.jpg",
+      "images": [
+        "/xs/07/products/p07.jpg",
+        "/xs/07/products/p07b.jpg"
+      ],
+      "collections": [
+        "vegetables",
+        "meat"
+      ]
+    },
+    {
+      "name": "Red Bell Peppers (1 kg)",
+      "nameAr": "فلفل رومي أحمر (1 كجم)",
+      "description": "Sweet red bell peppers, great for salads, grills and stuffing.",
+      "descriptionAr": "فلفل رومي أحمر حلو، مثالي للسلطات والشوي والمحشي.",
+      "price": 60,
+      "image": "/xs/07/products/p08.jpg",
+      "collections": [
+        "vegetables",
+        "meat"
+      ]
+    },
+    {
+      "name": "Potatoes (1 kg)",
+      "nameAr": "بطاطس (1 كجم)",
+      "description": "Farm-fresh potatoes for frying, baking and everyday cooking.",
+      "descriptionAr": "بطاطس طازجة من المزرعة، للقلي والفرن والطبخ اليومي.",
+      "price": 22,
+      "image": "/xs/07/products/p09.jpg",
+      "collections": [
+        "vegetables",
+        "meat"
+      ]
+    },
+    {
+      "name": "Juicing Oranges Box (3 kg)",
+      "nameAr": "صندوق برتقال عصير (3 كجم)",
+      "description": "A family box of juicy oranges, ideal for fresh morning juice.",
+      "descriptionAr": "صندوق عائلي من البرتقال الغني بالعصير، مثالي لعصير الصباح الطازج.",
+      "price": 95,
+      "image": "/xs/07/products/p10.jpg",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Raspberries Family Pack (500 g)",
+      "nameAr": "توت أحمر عبوة عائلية (500 جم)",
+      "description": "A generous pack of hand-picked raspberries for smoothies and baking.",
+      "descriptionAr": "عبوة كبيرة من التوت الأحمر المنتقى، للسموزي والمخبوزات.",
+      "price": 290,
+      "compareAt": 360,
+      "image": "/xs/07/products/p10b.jpg",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Banana Bunch Value Pack (2 kg)",
+      "nameAr": "موز عبوة توفير (2 كجم)",
+      "description": "Two kilos of sweet bananas at a better price for the whole week.",
+      "descriptionAr": "2 كيلو من الموز الحلو بسعر أوفر يكفي الأسبوع كله.",
+      "price": 75,
+      "image": "/xs/07/products/p10c.jpg",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Apricots for Jam (2 kg)",
+      "nameAr": "مشمش للمربى (2 كجم)",
+      "description": "Ripe, aromatic apricots selected for homemade jam.",
+      "descriptionAr": "مشمش ناضج وعطري، منتقى خصيصًا لمربى البيت.",
+      "price": 150,
+      "compareAt": 190,
+      "image": "/xs/07/products/p10d.jpg",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Rosé Grapes Family Box (2 kg)",
+      "nameAr": "عنب روز صندوق عائلي (2 كجم)",
+      "description": "A family box of sweet rosé grapes, washed and ready to share.",
+      "descriptionAr": "صندوق عائلي من العنب الروز الحلو، جاهز للتقديم والمشاركة.",
+      "price": 130,
+      "image": "/xs/07/products/p10e.jpg",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Gala Apples (2 kg)",
+      "nameAr": "تفاح جالا (2 كجم)",
+      "description": "Sweet, crunchy Gala apples, a lunchbox favourite.",
+      "descriptionAr": "تفاح جالا حلو ومقرمش، الاختيار المفضل في علبة غداء الأطفال.",
+      "price": 210,
+      "compareAt": 260,
+      "image": "/xs/07/products/p10f.jpg",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Apple Gift Basket (3 kg)",
+      "nameAr": "سلة تفاح هدايا (3 كجم)",
+      "description": "A wicker basket filled with fresh red apples, a lovely gift for any visit.",
+      "descriptionAr": "سلة خوص مليئة بالتفاح الأحمر الطازج، هدية لطيفة في أي زيارة.",
+      "price": 320,
+      "compareAt": 400,
+      "image": "/xs/07/products/p11.jpg",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Fresh Strawberries (1 kg)",
+      "nameAr": "فراولة طازجة (1 كجم)",
+      "description": "Bright red, sweet strawberries from local farms.",
+      "descriptionAr": "فراولة حمراء حلوة من مزارع محلية.",
+      "price": 70,
+      "compareAt": 90,
+      "image": "/xs/07/products/p11b.jpg",
+      "collections": [
+        "fruits"
+      ]
+    },
+    {
+      "name": "Broccoli Twin Pack (1 kg)",
+      "nameAr": "بروكلي عبوة ثنائية (1 كجم)",
+      "description": "Two fresh broccoli heads, packed with vitamins and great steamed or stir-fried.",
+      "descriptionAr": "رأسان من البروكلي الطازج، غنيّان بالفيتامينات ومثاليّان على البخار أو سوتيه.",
+      "price": 80,
+      "image": "/xs/07/products/p11c.jpg",
+      "collections": [
+        "vegetables"
+      ]
+    },
+    {
+      "name": "Single Broccoli Head (approx. 500 g)",
+      "nameAr": "رأس بروكلي (حوالي 500 جم)",
+      "description": "A firm, deep-green broccoli head with tight florets.",
+      "descriptionAr": "رأس بروكلي متماسك بلون أخضر غامق وزهيرات كثيفة.",
+      "price": 42,
+      "image": "/xs/07/products/p12.jpg",
+      "collections": [
+        "vegetables"
+      ]
+    },
+    {
+      "name": "Organic Broccoli (1 kg)",
+      "nameAr": "بروكلي أورجانيك (1 كجم)",
+      "description": "Certified organic broccoli grown without pesticides.",
+      "descriptionAr": "بروكلي عضوي معتمد، مزروع بدون مبيدات.",
+      "price": 95,
+      "image": "/xs/07/products/p13.jpg",
+      "collections": [
+        "vegetables"
+      ]
+    }
+  ],
+  "wording": {
+    "allLabel": "All Products",
+    "searchPlaceholder": "keywords",
+    "loadMoreLabel": "View More",
+    "openLabel": "Add to cart"
+  },
+  "wordingAr": {
+    "allLabel": "كل المنتجات",
+    "searchPlaceholder": "كلمات البحث",
+    "loadMoreLabel": "عرض المزيد",
+    "openLabel": "أضف للسلة"
+  }
+}

@@ -10,8 +10,12 @@ import {
   type ReactNode,
 } from "react";
 import { useParams } from "next/navigation";
-import { ApiError, type Cart } from "@store-builder/api-client";
+import { ApiError, parseMoney, type Cart, type ComboSelection, type CustomizationInput } from "@store-builder/api-client";
+import { getVisitorId } from "@/lib/visitorId";
 import { createStorefrontApiClient } from "@/lib/apiClient";
+import { track } from "@/lib/track";
+import { contentIdOf } from "@/lib/contentId";
+import { takeAddSource, takenAddSourceId } from "./addSource";
 
 /**
  * Guest cart identity lives in localStorage, keyed per workspace so two store
@@ -51,17 +55,60 @@ function clearStoredToken(workspaceId: string) {
   }
 }
 
+/** A whole combo on one cart line (lib/combos): the combo and the variant picked for each product that lets the shopper choose. */
+export interface CartComboTarget {
+  comboId: string;
+  comboSelection: ComboSelection;
+}
+
+/** The same picks, whatever their order (the server keeps them in the combo's order). */
+function sameSelection(a: ComboSelection | undefined, b: ComboSelection): boolean {
+  const key = (list: ComboSelection) => list.map((s) => `${s.itemId}:${s.variantId}`).sort().join(",");
+  return key(a ?? []) === key(b);
+}
+
 export interface CartContextValue {
   cart: Cart | null;
   isLoading: boolean;
+  /** True while an `addItem` is on its way (the drawer starts reading the catalogue then). */
+  isAdding: boolean;
   /** Sum of every line's quantity. */
   itemCount: number;
-  addItem: (variantId: string, offerId?: string, quantity?: number) => Promise<void>;
+  /**
+   * A variant, or a whole combo (`{ comboId, comboSelection }`, which takes no
+   * offer, custom fields or menu options). `customizations` answers the
+   * product's custom fields (photos by upload id).
+   */
+  addItem: (
+    variantId: string | CartComboTarget,
+    offerId?: string,
+    quantity?: number,
+    customizations?: CustomizationInput,
+    /** Menu options picked; the server checks and prices them. */
+    options?: import("@store-builder/api-client").MenuOptionsInput
+  ) => Promise<void>;
   updateItem: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   refreshCart: () => Promise<void>;
   /** Drop the local cart + token, e.g. right after a successful checkout. */
   clearCart: () => void;
+  /**
+   * The cart sheet (components/cart/CartSheet). Its open/closed state
+   * lives here — next to the one cart it shows — so "add to cart" anywhere in
+   * the store can open it without a second context. Nothing about the cart's
+   * contents is duplicated: the drawer reads `cart` like every other consumer.
+   */
+  isDrawerOpen: boolean;
+  openDrawer: () => void;
+  closeDrawer: () => void;
+  /**
+   * What the open sheet shows (components/cart/CartSheet): the cart, or a
+   * product page's quick order — that product, its totals and the quick order
+   * form, which the page draws into the sheet (lib/cartSheet). openDrawer
+   * shows the cart; openQuickOrder the quick order.
+   */
+  sheetView: "cart" | "quick";
+  openQuickOrder: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -70,6 +117,11 @@ export function useCart(): CartContextValue {
   const ctx = useContext(CartContext);
   if (!ctx) throw new Error("useCart() must be used inside <CartProvider>");
   return ctx;
+}
+
+/** The cart where there is one, else null: for a part that can also be drawn outside a store page (a page rendered on its own). */
+export function useOptionalCart(): CartContextValue | null {
+  return useContext(CartContext);
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -82,6 +134,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [client] = useState(() => createStorefrontApiClient());
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [adding, setAdding] = useState(0);
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [sheetView, setSheetView] = useState<"cart" | "quick">("cart");
+  const openDrawer = useCallback(() => {
+    setSheetView("cart");
+    setDrawerOpen(true);
+  }, []);
+  const openQuickOrder = useCallback(() => {
+    setSheetView("quick");
+    setDrawerOpen(true);
+  }, []);
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   // Resolve the cart once per workspace: reuse a saved token when it still
   // points at a live cart, otherwise create a fresh one and remember its token.
@@ -134,10 +198,48 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [workspaceId, client]);
 
   const addItem = useCallback(
-    async (variantId: string, offerId?: string, quantity = 1) => {
+    async (target: string | CartComboTarget, offerId?: string, quantity = 1, customizations?: CustomizationInput, options?: import("@store-builder/api-client").MenuOptionsInput) => {
       if (!workspaceId) return;
-      const token = await ensureToken();
-      setCart(await client.addCartItem(workspaceId, token, { variantId, offerId, quantity }));
+      const combo = typeof target === "string" ? null : target;
+      const variantId = typeof target === "string" ? target : "";
+      setAdding((n) => n + 1);
+      let next: Cart;
+      try {
+        const token = await ensureToken();
+        next = await client.addCartItem(
+          workspaceId,
+          token,
+          // A combo is one line the server prices as a combo; it names no variant of its own.
+          combo
+            ? { comboId: combo.comboId, comboSelection: combo.comboSelection, quantity }
+            : { variantId, offerId, quantity, ...(customizations ? { customizations } : {}), ...(options && options.length ? { options } : {}) },
+          // The visitor owns any photo among the answers.
+          { visitorId: getVisitorId(workspaceId) }
+        );
+      } finally {
+        setAdding((n) => n - 1);
+      }
+      setCart(next);
+      // AddToCart for the store's own analytics: the line just added, valued at
+      // its unit price × the quantity added (not the whole line, which may have
+      // held the variant already).
+      try {
+        const line = combo
+          ? (next.items.find((l) => l.comboId === combo.comboId && sameSelection(l.comboSelection, combo.comboSelection)) ??
+            next.items.find((l) => l.comboId === combo.comboId))
+          : next.items.find((l) => l.variantId === variantId && (l.offerId ?? undefined) === offerId && !l.comboId);
+        const unit = line ? parseMoney(line.unitPriceSnapshot) : 0;
+        track("AddToCart", {
+          contentIds: [contentIdOf(line?.variant) ?? (combo ? combo.comboId : variantId)],
+          valueMinor: Math.round(unit * quantity),
+          currency: next.currency,
+          numItems: quantity,
+          source: takeAddSource(),
+          sourceId: takenAddSourceId(),
+        });
+      } catch {
+        /* tracking never breaks the cart */
+      }
     },
     [workspaceId, client, ensureToken]
   );
@@ -195,14 +297,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     () => ({
       cart,
       isLoading,
+      isAdding: adding > 0,
       itemCount,
       addItem,
       updateItem,
       removeItem,
       refreshCart,
       clearCart,
+      isDrawerOpen,
+      openDrawer,
+      closeDrawer,
+      sheetView,
+      openQuickOrder,
     }),
-    [cart, isLoading, itemCount, addItem, updateItem, removeItem, refreshCart, clearCart]
+    [cart, isLoading, adding, itemCount, addItem, updateItem, removeItem, refreshCart, clearCart, isDrawerOpen, openDrawer, closeDrawer, sheetView, openQuickOrder]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

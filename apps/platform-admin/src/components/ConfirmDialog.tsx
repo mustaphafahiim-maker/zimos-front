@@ -1,5 +1,6 @@
+import { commonText } from "@/lib/commonStrings";
 import { useState, type ReactNode } from "react";
-import { Button, Alert } from "@store-builder/ui";
+import { Button, Alert, ZLoaderHold } from "@store-builder/ui";
 import { Modal } from "./Modal";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -8,6 +9,9 @@ interface ConfirmDialogProps {
   title: string;
   description?: string;
   confirmLabel?: string;
+  /** The page's own words for the other buttons (a translated page); English by default. */
+  cancelLabel?: string;
+  busyLabel?: string;
   destructive?: boolean;
   /** Disable the confirm button (e.g. until a required reason is typed). */
   confirmDisabled?: boolean;
@@ -21,7 +25,9 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "Confirm",
+  confirmLabel = commonText().confirm,
+  cancelLabel = commonText().cancel,
+  busyLabel = commonText().working,
   destructive = false,
   confirmDisabled = false,
   onCancel,
@@ -59,14 +65,14 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="outline" onClick={handleCancel} disabled={busy}>
-            Cancel
+            {cancelLabel}
           </Button>
           <Button
             variant={destructive ? "destructive" : "default"}
             onClick={handleConfirm}
             disabled={busy || confirmDisabled}
           >
-            {busy ? "Working…" : confirmLabel}
+            {busy ? <ZLoaderHold label={busyLabel}>{confirmLabel}</ZLoaderHold> : confirmLabel}
           </Button>
         </>
       }

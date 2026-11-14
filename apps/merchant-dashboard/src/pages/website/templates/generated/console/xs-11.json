@@ -1,0 +1,595 @@
+{
+  "globalStyles": {
+    "primaryColor": "#EC6C5A",
+    "themeSettings": {
+      "xsLook": "11",
+      "header": {
+        "menu": [
+          {
+            "label": "Home",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "Shop",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Contact",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "Quick Links",
+            "links": [
+              {
+                "label": "Home",
+                "href": "/",
+                "kind": "home"
+              },
+              {
+                "label": "Shop",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "Contact",
+                "href": "/contact",
+                "kind": "page"
+              }
+            ]
+          },
+          {
+            "title": "Help & Info",
+            "links": [
+              {
+                "label": "Track Your Order",
+                "href": "/track",
+                "kind": "track"
+              },
+              {
+                "label": "Cart",
+                "href": "/cart",
+                "kind": "cart"
+              }
+            ]
+          }
+        ],
+        "text": "Modern looks that express you, in comfortable fabrics and thoughtful cuts for every day, with fast delivery to your door.",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "Home",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs11-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs11-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs11-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs11-p1-s1-e1",
+                        "type": "xs_slider",
+                        "props": {
+                          "look": "11",
+                          "slides": [
+                            {
+                              "image": "/xs/11/banner-image.jpg",
+                              "heading": "Make your fashion look swanky.",
+                              "buttonLabel": "Shop Now",
+                              "buttonHref": "/products"
+                            }
+                          ],
+                          "autoplay": false,
+                          "seconds": 6
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs11-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs11-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs11-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs11-p1-s2-e1",
+                        "type": "xs_features",
+                        "props": {
+                          "look": "11",
+                          "heading": "",
+                          "text": "",
+                          "image": "",
+                          "items": [
+                            {
+                              "icon": "truck",
+                              "image": "/xs/11/ico-1.svg",
+                              "title": "Quick delivery",
+                              "text": "Inside City delivery within 5 days"
+                            },
+                            {
+                              "icon": "bag",
+                              "image": "/xs/11/ico-2.svg",
+                              "title": "Pick up in store",
+                              "text": "We have option of pick up in store."
+                            },
+                            {
+                              "icon": "support",
+                              "image": "/xs/11/ico-3.svg",
+                              "title": "Special packaging",
+                              "text": "Our packaging is best for products."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs11-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs11-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs11-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs11-p1-s3-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "11",
+                          "heading": "What’s trending",
+                          "collection": "",
+                          "limit": 8,
+                          "showDiscount": true,
+                          "showTabs": false,
+                          "showSearch": false,
+                          "layout": "slider",
+                          "quickView": true,
+                          "allLabel": "All Products",
+                          "searchLabel": "Search",
+                          "viewLabel": "Quick View",
+                          "searchPlaceholder": "SEARCH..",
+                          "loadMoreLabel": "Shop All",
+                          "openLabel": "Add to Cart",
+                          "linkLabel": "View all products",
+                          "linkHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs11-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs11-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs11-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs11-p1-s4-e1",
+                        "type": "xs_quotes",
+                        "props": {
+                          "look": "11",
+                          "heading": "",
+                          "items": [
+                            {
+                              "quote": "A great range and fabrics worth every pound! My pieces arrived on time, beautifully wrapped, and the sizes were spot on. It is now my go-to shop for every occasion.",
+                              "name": "Emma Chamberlin",
+                              "image": "/xs/11/author-image.jpg"
+                            },
+                            {
+                              "quote": "A great range and fabrics worth every pound! My pieces arrived on time, beautifully wrapped, and the sizes were spot on. It is now my go-to shop for every occasion.",
+                              "name": "Emma Chamberlin",
+                              "image": "/xs/11/author-image.jpg"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs11-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs11-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs11-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs11-p1-s5-e1",
+                        "type": "xs_banners",
+                        "props": {
+                          "look": "11",
+                          "items": [
+                            {
+                              "image": "/xs/11/category-item1.jpg",
+                              "title": "Summer Outfits",
+                              "linkLabel": "Shop Collections",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/11/category-item2.jpg",
+                              "title": "Guggles",
+                              "linkLabel": "Shop it now",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/11/category-item3.jpg",
+                              "title": "Accessories",
+                              "linkLabel": "Shop it now",
+                              "href": "/products"
+                            }
+                          ],
+                          "variant": "tile"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs11-p1-s6",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs11-p1-s6-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs11-p1-s6-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs11-p1-s6-e1",
+                        "type": "xs_gallery",
+                        "props": {
+                          "look": "11",
+                          "heading": "",
+                          "images": [
+                            "/xs/11/brand-item1.svg",
+                            "/xs/11/brand-item2.svg",
+                            "/xs/11/brand-item3.svg",
+                            "/xs/11/brand-item4.svg",
+                            "/xs/11/brand-item5.svg"
+                          ],
+                          "variant": "logos"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs11-p1-s7",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs11-p1-s7-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs11-p1-s7-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs11-p1-s7-e1",
+                        "type": "xs_gallery",
+                        "props": {
+                          "look": "11",
+                          "heading": "Shop our Instagram",
+                          "images": [
+                            "/xs/11/insta-item1.jpg",
+                            "/xs/11/insta-item2.jpg",
+                            "/xs/11/insta-item3.jpg",
+                            "/xs/11/insta-item4.jpg",
+                            "/xs/11/insta-item5.jpg"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs11-p1-s8",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs11-p1-s8-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs11-p1-s8-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs11-p1-s8-e1",
+                        "type": "xs_posts",
+                        "props": {
+                          "look": "11",
+                          "heading": "Read Our News & articles about updates",
+                          "items": [
+                            {
+                              "image": "/xs/11/post-1.jpg",
+                              "meta": "",
+                              "title": "Best Comfortable Clothes Ideas",
+                              "text": "Practical tips for styling your clothes your own way.",
+                              "linkLabel": "",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/11/post-2.jpg",
+                              "meta": "",
+                              "title": "Casual Denim Clothing for women",
+                              "text": "Practical tips for styling your clothes your own way.",
+                              "linkLabel": "",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/11/post-3.jpg",
+                              "meta": "",
+                              "title": "Best Poses for fashion photo",
+                              "text": "Practical tips for styling your clothes your own way.",
+                              "linkLabel": "",
+                              "href": ""
+                            }
+                          ],
+                          "linkLabel": "Read All",
+                          "linkHref": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "Contact",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs11-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs11-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs11-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs11-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "11",
+                          "heading": "Contact",
+                          "image": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs11-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs11-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs11-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs11-p2-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "11",
+                          "heading": "Any questions?",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "Office",
+                              "text": "Mohandessin, Giza"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "Phone",
+                              "text": "Call us any day from 10 am to 10 pm"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "Email",
+                              "text": "Send us a message and we reply within a day"
+                            }
+                          ],
+                          "contactPlaceholder": "Write Your Email Here",
+                          "messagePlaceholder": "Write Your Message Here",
+                          "buttonLabel": "Submit"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

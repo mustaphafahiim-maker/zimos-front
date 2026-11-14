@@ -1,30 +1,13 @@
 import { useRef, useState } from "react";
-import { Image as ImageIcon, Trash2, Upload, X } from "lucide-react";
-import { Alert, Button, Label, Spinner } from "@store-builder/ui";
+import { IconClose, IconDelete, IconImage, IconMedia, IconUpload } from "@/components/icons";
+import { Alert, Button, Label, ZLoader, cn } from "@store-builder/ui";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { getErrorMessage } from "@/lib/errors";
-import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, validateImageFile } from "@/lib/media";
-import { useT, type Messages } from "@/i18n/LocaleContext";
-
-const STRINGS = {
-  en: {
-    prepareFailed: "Could not prepare the selected image.",
-    removeImage: "Remove image",
-    replace: "Replace",
-    upload: "Upload",
-    addImages: "Add images",
-    clear: "Clear",
-  },
-  ar: {
-    prepareFailed: "تعذّر تجهيز الصورة المحددة.",
-    removeImage: "إزالة الصورة",
-    replace: "استبدال",
-    upload: "رفع صورة",
-    addImages: "إضافة صور",
-    clear: "مسح الكل",
-  },
-} satisfies Messages;
+import { ACCEPTED_IMAGE_ACCEPT, compressImageIfNeeded, storePictureSrc, validateImageFile } from "@/lib/media";
+import { editorUi, useEditorLocale } from "./editorLocale";
+import { useInspectorEnv, type RequestImage } from "./inspector/env";
+import { inspectorNumber, inspectorUi } from "./inspector/strings";
 
 /**
  * Image picker for a page element's props. Uploads through the same R2 flow the
@@ -32,11 +15,41 @@ const STRINGS = {
  * the returned **absolute** `url` in the tree: unlike the dashboard's product
  * images, a page tree is rendered by the public storefront on a different host,
  * where a host-relative path would not resolve.
+ *
+ * Inside the store editor the field also offers «اختار من المكتبة»: it asks
+ * the editor for a picture already in the media library (`onRequestImage`,
+ * or the inspector's own request when the prop is left out). Anywhere else
+ * nothing provides it and the field is the upload-only one it always was.
  */
+
+/**
+ * How to open the media library for this field, or null when nobody offers
+ * one. The answer is applied through the field's latest `onChange`, so a
+ * picture chosen a while after the sheet opened never writes over what
+ * changed in between.
+ */
+function useLibraryRequest(explicit: RequestImage | undefined, onUrl: (url: string) => void): (() => void) | null {
+  const env = useInspectorEnv();
+  const request = explicit ?? env.requestImage;
+  const latest = useRef(onUrl);
+  latest.current = onUrl;
+  if (!request) return null;
+  return () => request((url) => latest.current(url));
+}
+
+function LibraryButton({ onClick }: { onClick: () => void }) {
+  const t = inspectorUi(useEditorLocale());
+  return (
+    <Button type="button" size="sm" variant="outline" onClick={onClick}>
+      <IconMedia className="size-4" aria-hidden />
+      {t.fromLibrary}
+    </Button>
+  );
+}
 
 function useUpload() {
   const workspaceId = useWorkspaceId();
-  const t = useT(STRINGS);
+  const ui = editorUi(useEditorLocale());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +64,7 @@ function useUpload() {
       for (const file of files) prepared.push(await compressImageIfNeeded(file));
     } catch {
       setBusy(false);
-      setError(t.prepareFailed);
+      setError(ui.prepareFailed);
       return [];
     }
 
@@ -85,26 +98,69 @@ function useUpload() {
   return { upload, busy, error };
 }
 
-function Thumb({ src, onRemove }: { src: string; onRemove: () => void }) {
-  const t = useT(STRINGS);
-  const [broken, setBroken] = useState(false);
+/** The empty field's square: drawn only when there is no picture at all. */
+function EmptyThumb() {
   return (
-    <div className="group relative size-20 shrink-0 overflow-hidden rounded-lg border border-line bg-paper">
-      {broken ? (
-        <div className="flex size-full items-center justify-center text-ink-muted">
-          <ImageIcon className="size-5" aria-hidden />
+    <div
+      data-slot="image-placeholder"
+      className="flex size-20 shrink-0 items-center justify-center rounded-[0.5rem] border border-dashed border-line text-ink-soft"
+    >
+      <IconImage className="size-5" aria-hidden />
+    </div>
+  );
+}
+
+/**
+ * The stored picture itself. A host-relative address (a template's own art)
+ * is asked of the storefront that serves it (storePictureSrc). A skeleton
+ * holds the square while it loads; one that will not load falls back to the
+ * empty field's icon, and its remove button stays so a dead address can be
+ * cleared.
+ */
+function Thumb({ src, alt, onRemove }: { src: string; alt: string; onRemove: () => void }) {
+  const ui = editorUi(useEditorLocale());
+  const shown = storePictureSrc(src);
+  // The outcome belongs to one address: a new picture in the same box loads afresh.
+  const [settled, setSettled] = useState<{ src: string; ok: boolean } | null>(null);
+  const status = !shown ? "error" : settled?.src === shown ? (settled.ok ? "ready" : "error") : "loading";
+  return (
+    <div
+      className={cn(
+        "group relative size-20 shrink-0 overflow-hidden rounded-[0.5rem] border border-line",
+        status === "error" ? "border-dashed" : "bg-paper"
+      )}
+    >
+      {status === "error" || !shown ? (
+        <div data-slot="image-placeholder" className="flex size-full items-center justify-center text-ink-soft">
+          <IconImage className="size-5" aria-hidden />
         </div>
       ) : (
-        <img src={src} alt="" className="size-full object-cover" onError={() => setBroken(true)} />
+        <>
+          {status === "loading" && (
+            <span
+              aria-hidden
+              data-slot="image-skeleton"
+              className="absolute inset-0 animate-pulse bg-paper-sunken motion-reduce:animate-none"
+            />
+          )}
+          <img
+            src={shown}
+            alt={alt}
+            decoding="async"
+            className={cn("relative size-full object-cover", status === "loading" && "opacity-0")}
+            onLoad={() => setSettled({ src: shown, ok: true })}
+            onError={() => setSettled({ src: shown, ok: false })}
+          />
+        </>
       )}
       <button
         type="button"
         onClick={onRemove}
-        aria-label={t.removeImage}
-        title={t.removeImage}
-        className="cursor-pointer absolute end-1 top-1 rounded-full bg-zimos-navy/75 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        aria-label={ui.removeImage}
+        // Nothing hovers on a touch screen: there the button stays on, at a thumb's size.
+        className="cursor-pointer absolute inset-e-1 top-1 flex size-9 items-center justify-center rounded-full bg-ink/70 text-paper transition-opacity pointer-fine:size-auto pointer-fine:p-1 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
       >
-        <X className="size-3" aria-hidden />
+        <IconClose className="size-4 pointer-fine:size-3" aria-hidden />
       </button>
     </div>
   );
@@ -116,15 +172,30 @@ export function ImageField({
   value,
   hint,
   onChange,
+  onRequestImage,
+  labelHidden = false,
 }: {
   label: string;
   value: string;
   hint?: string;
   onChange: (url: string) => void;
+  /** Opens the media library and applies the chosen picture. Absent: upload only, as before. */
+  onRequestImage?: RequestImage;
+  /** Keeps the label for screen readers only — where a heading right above already names the picture. */
+  labelHidden?: boolean;
 }) {
-  const t = useT(STRINGS);
   const inputRef = useRef<HTMLInputElement>(null);
   const { upload, busy, error } = useUpload();
+  const ui = editorUi(useEditorLocale());
+  const openLibrary = useLibraryRequest(onRequestImage, onChange);
+  // Blank is empty: the storefront draws nothing for it either.
+  const filled = value.trim() !== "";
+  const uploadButton = (
+    <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => inputRef.current?.click()}>
+      {busy ? <ZLoader size="sm" /> : <IconUpload className="size-4" aria-hidden />}
+      {filled ? ui.replace : ui.upload}
+    </Button>
+  );
 
   async function pick(list: FileList | null) {
     if (!list || list.length === 0) return;
@@ -134,26 +205,18 @@ export function ImageField({
 
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
+      <Label className={labelHidden ? "sr-only" : undefined}>{label}</Label>
       <div className="flex items-center gap-3">
-        {value ? (
-          <Thumb src={value} onRemove={() => onChange("")} />
-        ) : (
-          <div className="flex size-20 shrink-0 items-center justify-center rounded-lg border border-dashed border-line bg-zimos-ice/40 text-ink-muted">
-            <ImageIcon className="size-5" aria-hidden />
-          </div>
-        )}
+        {filled ? <Thumb src={value} alt={label} onRemove={() => onChange("")} /> : <EmptyThumb />}
         <div className="min-w-0 space-y-1">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => inputRef.current?.click()}
-          >
-            {busy ? <Spinner className="size-4" /> : <Upload className="size-4" aria-hidden />}
-            {value ? t.replace : t.upload}
-          </Button>
+          {openLibrary ? (
+            <div className="flex flex-wrap gap-2">
+              {uploadButton}
+              <LibraryButton onClick={openLibrary} />
+            </div>
+          ) : (
+            uploadButton
+          )}
           {hint && <p className="text-xs text-ink-soft">{hint}</p>}
         </div>
       </div>
@@ -178,15 +241,20 @@ export function ImageListField({
   value,
   hint,
   onChange,
+  onRequestImage,
 }: {
   label: string;
   value: string[];
   hint?: string;
   onChange: (urls: string[]) => void;
+  /** Opens the media library; the chosen picture is added to the end. Absent: upload only, as before. */
+  onRequestImage?: RequestImage;
 }) {
-  const t = useT(STRINGS);
   const inputRef = useRef<HTMLInputElement>(null);
   const { upload, busy, error } = useUpload();
+  const locale = useEditorLocale();
+  const ui = editorUi(locale);
+  const openLibrary = useLibraryRequest(onRequestImage, (url) => onChange([...value, url]));
 
   async function add(list: FileList | null) {
     if (!list || list.length === 0) return;
@@ -203,12 +271,13 @@ export function ImageListField({
             <Thumb
               key={`${src}-${i}`}
               src={src}
+              alt={`${label} ${inspectorNumber(i + 1, locale)}`}
               onRemove={() => onChange(value.filter((_, j) => j !== i))}
             />
           ))}
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className={openLibrary ? "flex flex-wrap items-center gap-2" : "flex items-center gap-2"}>
         <Button
           type="button"
           size="sm"
@@ -216,13 +285,14 @@ export function ImageListField({
           disabled={busy}
           onClick={() => inputRef.current?.click()}
         >
-          {busy ? <Spinner className="size-4" /> : <Upload className="size-4" aria-hidden />}
-          {t.addImages}
+          {busy ? <ZLoader size="sm" /> : <IconUpload className="size-4" aria-hidden />}
+          {ui.addImages}
         </Button>
+        {openLibrary && <LibraryButton onClick={openLibrary} />}
         {value.length > 0 && (
           <Button type="button" size="sm" variant="ghost" onClick={() => onChange([])}>
-            <Trash2 className="size-4" aria-hidden />
-            {t.clear}
+            <IconDelete className="size-4" aria-hidden />
+            {ui.clear}
           </Button>
         )}
       </div>

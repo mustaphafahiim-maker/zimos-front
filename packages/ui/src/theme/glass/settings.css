@@ -1,0 +1,273 @@
+/* The System Settings layout: section list, pane, rows — components/settings/*.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   Nothing here is blurred: the list pane, the group cards and the rows all lie in the
+   page flow, over the still backdrop. The selectors are the kit's own hooks (zimos-settings-*
+   classes) and do not lean on `.glass-app main`, so a group of rows drawn in a sheet —
+   which is portalled outside it — is the same glass.
+
+   Text: var(--color-ink) and var(--lg-ink-soft) on the panes, var(--lg-on-brand) on the
+   selection fill; the glyph on an icon tile is always white, and every tile colour holds
+   it at 3:1 or better at both ends of its gradient (worked out from the values: orange,
+   the weakest, is 3.4:1 at its light end; the brand is 5.2:1). The tiles do not change
+   with the theme, so the same holds in the dark one. */
+:root:not([data-glass="off"]) {
+  /* A row of the list under the pointer: a lighter pane on the pane (the side menu's recipe). */
+  --settings-row-hover: color-mix(in srgb, var(--color-paper-raised) 62%, transparent);
+  --settings-row-press: color-mix(in srgb, var(--color-paper-raised) 84%, transparent);
+  --settings-chip: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 1px 2px rgb(18 44 110 / 0.06);
+  /* The bead at a row's end (a count, «جديد»), and the same on the selection fill. */
+  --settings-badge: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  --settings-badge-on-brand: rgb(8 16 48 / 0.24);
+  --settings-badge-on-brand-rim: inset 0 0 0 1px rgb(255 255 255 / 0.24);
+  /* An icon tile: light caught on its top edge, a shade along the bottom, a short shadow under it. */
+  --settings-tile-rim: inset 0 1px 0 0 rgb(255 255 255 / 0.34), inset 0 -1px 0 0 rgb(0 0 0 / 0.1), 0 1px 2px rgb(18 44 110 / 0.2);
+  /* The switch: the grey well when off, the glow under it when on, the thumb's shadow. */
+  --settings-track-off: color-mix(in srgb, var(--color-line-strong) 60%, transparent);
+  --settings-track-well: inset 0 1px 2px 0 rgb(18 44 110 / 0.16), inset 0 0 0 1px var(--lg-edge);
+  --settings-track-glow: 0 4px 10px -4px color-mix(in srgb, var(--lg-brand-solid) 60%, transparent);
+  --settings-thumb-shadow: 0 1px 1px rgb(8 16 48 / 0.14), 0 2px 5px rgb(8 16 48 / 0.24);
+
+  &.dark {
+    --settings-row-hover: rgb(255 255 255 / 0.07);
+    --settings-row-press: rgb(255 255 255 / 0.11);
+    --settings-chip: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+    --settings-badge: rgb(255 255 255 / 0.1);
+    /* The selection fill is light in the dark theme and its text dark: the bead lifts instead of sinking. */
+    --settings-badge-on-brand: rgb(255 255 255 / 0.34);
+    --settings-badge-on-brand-rim: inset 0 0 0 1px rgb(255 255 255 / 0.3);
+    --settings-tile-rim: inset 0 1px 0 0 rgb(255 255 255 / 0.26), inset 0 -1px 0 0 rgb(0 0 0 / 0.18), 0 1px 2px rgb(0 0 0 / 0.4);
+    --settings-track-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4), inset 0 0 0 1px var(--lg-edge);
+    --settings-thumb-shadow: 0 1px 1px rgb(0 0 0 / 0.3), 0 2px 5px rgb(0 0 0 / 0.45);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Icon tiles. Eight colours, each a gradient of two close stops: the
+   * colour itself and a deeper one. Blue is the store's own colour, so
+   * a product with another brand gets its own tile; the other seven are
+   * fixed hues. The glyph on them is white.
+   * ---------------------------------------------------------------- */
+  .zimos-settings-tile {
+    --settings-tone-a: var(--brand);
+    --settings-tone-b: color-mix(in srgb, var(--brand) 80%, black);
+    background-image: linear-gradient(160deg, var(--settings-tone-a) 0%, var(--settings-tone-b) 100%);
+    box-shadow: var(--settings-tile-rim);
+  }
+  .zimos-settings-tile[data-tone="green"] {
+    --settings-tone-a: #1f9d51;
+    --settings-tone-b: #147f3d;
+  }
+  .zimos-settings-tile[data-tone="orange"] {
+    --settings-tone-a: #e8620e;
+    --settings-tone-b: #cc4b06;
+  }
+  .zimos-settings-tile[data-tone="red"] {
+    --settings-tone-a: #e5443f;
+    --settings-tone-b: #c92a2a;
+  }
+  .zimos-settings-tile[data-tone="purple"] {
+    --settings-tone-a: #8b4ff0;
+    --settings-tone-b: #7034d4;
+  }
+  .zimos-settings-tile[data-tone="gray"] {
+    --settings-tone-a: #767d8a;
+    --settings-tone-b: #5f6673;
+  }
+  .zimos-settings-tile[data-tone="teal"] {
+    --settings-tone-a: #0e9597;
+    --settings-tone-b: #0a777e;
+  }
+  .zimos-settings-tile[data-tone="pink"] {
+    --settings-tone-a: #e6468e;
+    --settings-tone-b: #c92a73;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The search field over the list: a small pane in the page flow, the
+   * same recipe as the search of a list page (glass/list.css). The one
+   * being typed in turns solid and glows in the brand colour; the focus
+   * outline is the component's own and stays.
+   * ---------------------------------------------------------------- */
+  .zimos-settings-search {
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge);
+  }
+  @media (hover: hover) {
+    .zimos-settings-search:hover {
+      background-color: var(--lg-control-lit);
+    }
+  }
+  .zimos-settings-search:focus-within {
+    background-color: var(--color-paper-raised);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 0 0 4px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  }
+  .zimos-settings-search > svg,
+  .zimos-settings-search input::placeholder,
+  .zimos-settings-heading {
+    color: var(--lg-ink-soft);
+  }
+
+  /* The bead at a row's end. */
+  .zimos-settings-badge {
+    background-color: var(--settings-badge);
+    color: var(--lg-ink-soft);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * From lg: the list is a pane beside the section — the side menu's
+   * glass (the nav fill, the big rim, a hairline, the card shadow). It
+   * lies in the page flow, so it is translucent and not blurred.
+   * ---------------------------------------------------------------- */
+  @media (min-width: 64rem) {
+    .zimos-settings-list {
+      border-radius: 1.5rem;
+      background-color: var(--lg-nav);
+      background-image: var(--lg-sheen);
+      box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-edge), var(--shadow-card);
+    }
+
+    /* A row under the pointer becomes a small lit pane; pressed, a brighter one. */
+    @media (hover: hover) {
+      .zimos-settings-item:not([aria-current]):hover {
+        background-color: var(--settings-row-hover);
+        box-shadow: var(--settings-chip);
+      }
+    }
+    .zimos-settings-item:not([aria-current]):active {
+      background-color: var(--settings-row-press);
+      box-shadow: var(--settings-chip);
+    }
+
+    /* Where you are: the shared selection fill — the one the main button, the
+       current side-menu row and the chosen segment have. */
+    .zimos-settings-item[aria-current] {
+      background-color: var(--lg-brand-solid);
+      background-image: var(--lg-brand-grad);
+      color: var(--lg-on-brand);
+      box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28), var(--lg-brand-glow);
+    }
+    /* Its tile keeps its own colour; a light rim sets it off the fill (a blue tile on the blue pill). */
+    .zimos-settings-item[aria-current] .zimos-settings-tile {
+      box-shadow: var(--settings-tile-rim), 0 0 0 1px rgb(255 255 255 / 0.42);
+    }
+    .zimos-settings-item[aria-current] .zimos-settings-badge {
+      background-color: var(--settings-badge-on-brand);
+      color: var(--lg-on-brand);
+      box-shadow: var(--settings-badge-on-brand-rim);
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Below lg: the list is the page, and each group of sections is a
+   * card of rows — a sheet pane, like the cards of the section itself.
+   * ---------------------------------------------------------------- */
+  @media (max-width: 63.99rem) {
+    .zimos-settings-list-group {
+      background-color: var(--lg-fill);
+      background-image: var(--lg-sheen);
+      box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-edge), var(--shadow-card);
+    }
+    .zimos-settings-list-group > li::before {
+      background-color: var(--lg-hairline);
+    }
+    @media (hover: hover) {
+      .zimos-settings-item:hover {
+        background-color: var(--lg-row-lit);
+      }
+    }
+    .zimos-settings-item:active {
+      background-color: var(--lg-control-lit);
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * A group of rows (SettingsGroup): one sheet pane. Inside the app
+   * shell liquid-glass.css already makes every card glass; said again
+   * here so a group in a sheet or a dialog is the same. The hairlines
+   * between its rows take the pane's own line colour.
+   * ---------------------------------------------------------------- */
+  .zimos-settings-card {
+    background-color: var(--lg-fill);
+    background-image: var(--lg-sheen);
+    --tw-ring-color: var(--lg-edge);
+    --tw-inset-shadow: var(--lg-rim);
+  }
+  .zimos-settings-row::before {
+    background-color: var(--lg-hairline);
+  }
+  /* A row that is pressed as a whole (a link, a switch) lights up under the pointer. */
+  @media (hover: hover) {
+    :is(a, button).zimos-settings-row:hover:not(:disabled, [aria-busy="true"]) {
+      background-color: var(--lg-row-lit);
+    }
+  }
+  :is(a, button).zimos-settings-row:active:not(:disabled, [aria-busy="true"]) {
+    background-color: var(--lg-control-lit);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The switch. Off: a grey well cut into the pane. On: the selection
+   * fill, with a short glow of the same colour under it. The fill is a
+   * layer of its own that fades in, because a gradient cannot be
+   * transitioned; the thumb is drawn over it and is white in both themes.
+   * ---------------------------------------------------------------- */
+  .zimos-settings-switch-track {
+    background-color: var(--settings-track-off);
+    box-shadow: var(--settings-track-well);
+  }
+  .zimos-settings-switch-track::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28);
+    opacity: 0;
+    transition: opacity var(--dur-fade) var(--ease-out);
+  }
+  [aria-checked="true"] > .zimos-settings-switch-track {
+    background-color: var(--settings-track-off);
+    box-shadow: var(--settings-track-glow);
+  }
+  [aria-checked="true"] > .zimos-settings-switch-track::before {
+    opacity: 1;
+  }
+  .zimos-settings-switch-thumb {
+    background-color: #fff;
+    background-image: linear-gradient(180deg, #fff 0%, #eef1f7 100%);
+    box-shadow: var(--settings-thumb-shadow);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .zimos-settings-switch-track::before {
+      transition: none;
+    }
+  }
+}
+
+/* The two slides of the phone layout, and the quiet change of section beside the list.
+   --settings-dir is 1, or -1 on a right-to-left page (SettingsLayout sets it), so the pane
+   always arrives from the end side and the list comes back from the start side.
+   `from` only, played `backwards`: once a slide is over the element has no transform left,
+   so a bar fixed inside the pane (a save bar, a page action) is placed against the screen
+   again, not against the pane. The classes that play them are `motion-safe` only. */
+@keyframes settings-pane-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--settings-dir, 1) * 1.75rem));
+  }
+}
+@keyframes settings-list-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--settings-dir, 1) * -1.75rem));
+  }
+}
+@keyframes settings-pane-swap {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}

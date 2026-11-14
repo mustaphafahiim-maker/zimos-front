@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore, type MouseEvent } from "react";
+import { animateThemeChange } from "@store-builder/ui/theme-reveal";
 import { useI18n } from "@/i18n/provider";
-import { MoonIcon, SunIcon } from "./icons";
+import { Moon, Sun } from "./duo-icons";
 
 type Theme = "light" | "dark";
 
@@ -53,7 +54,19 @@ function subscribe(onStoreChange: () => void): () => void {
   };
 }
 
-export function ThemeToggle({ className = "" }: { className?: string }) {
+/**
+ * Put the theme back on <html>. Switching the language mounts the other
+ * language's root layout, and React rebuilds <html>'s attributes from its
+ * props — the class the pre-paint script set is gone. Same choice as that
+ * script: the stored one, else the system's.
+ */
+export function restoreTheme(): void {
+  apply(storedTheme() ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+  emit();
+}
+
+/** The round light/dark switch of the header (`lz-top__icon` in landing.css). */
+export function ThemeToggle({ className = "lz-top__icon" }: { className?: string }) {
   const { dict } = useI18n();
 
   // The server snapshot is a stable "light" so SSR and the first client render
@@ -71,19 +84,14 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     emit();
   }, []);
 
+  // The new theme grows over the old one as a circle from where the button was pressed (@store-builder/ui/theme-reveal).
+  const onClick = useCallback((event: MouseEvent<HTMLButtonElement>) => animateThemeChange(event, toggle), [toggle]);
+
   const label = theme === "dark" ? dict.nav.switchToLight : dict.nav.switchToDark;
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={label}
-      title={label}
-      className={`cursor-pointer inline-flex size-9 items-center justify-center rounded-lg border border-line bg-paper-raised text-ink-soft transition-colors hover:border-line-strong hover:text-ink ${className}`}
-    >
-      <span className="text-[1.05rem]" suppressHydrationWarning>
-        {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-      </span>
+    <button type="button" onClick={onClick} aria-label={label} title={label} className={className}>
+      <span suppressHydrationWarning>{theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}</span>
     </button>
   );
 }

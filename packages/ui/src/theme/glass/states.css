@@ -1,0 +1,306 @@
+/* Empty, error, no-permission and loading states; call / WhatsApp pills — components/EmptyState.tsx, DataState.tsx, ContactActions.tsx.
+   Also the small pieces that ride along with them: the access banner, the store-link chip and its copy button, keycaps
+   (AccessBanner.tsx, StoreLinkBar.tsx, CopyButton.tsx, KeyboardShortcuts.tsx).
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables.
+
+   Nothing here is blurred: every piece sits in the page flow, on a pane that already has
+   the still backdrop behind it. The selectors are the components' own data-slot hooks and
+   never lean on `.glass-app main`, because the same components are drawn in dialogs and
+   popovers, which are portalled outside it. */
+:root:not([data-glass="off"]) {
+  /* How much of a tinted fill is the tint; the rest lets the pane beneath through.
+     One number per kind, so the block at the end of this file can turn them all solid. */
+  --st-pill-alpha: 90%;
+  --st-banner-alpha: 84%;
+  --st-tile-alpha: 72%;
+  /* A skeleton bar and the band of light that crosses it. */
+  --st-bone: color-mix(in srgb, var(--color-primary-dark) 10%, transparent);
+  --st-bone-light: rgb(255 255 255 / 0.8);
+
+  &.dark {
+    --st-bone: rgb(255 255 255 / 0.08);
+    --st-bone-light: rgb(255 255 255 / 0.12);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Empty state. The pane is glass and loses its dashes (those are for
+   * the solid look only). No drop shadow: it usually lies inside a card
+   * that already has one.
+   * ---------------------------------------------------------------- */
+  [data-slot="empty-state"],
+  [data-slot="data-empty"] {
+    border-style: solid;
+    border-color: var(--lg-edge);
+    background-color: var(--lg-fill);
+    background-image: var(--lg-sheen);
+    box-shadow: var(--lg-rim);
+  }
+  [data-slot="data-empty"],
+  [data-slot="empty-state-description"],
+  [data-slot="state-description"] {
+    color: var(--lg-ink-soft);
+  }
+
+  /* The icon tile: a small lit pane washed with the tone, running from the
+     tone itself to its neighbour (brand to violet, like the main action),
+     with a glow of the same colour under it. The icon takes the deeper text
+     shade, so it reads on the tint in both themes. */
+  [data-slot="empty-state-tile"] {
+    --st-tone: var(--color-primary);
+    --st-tone-far: color-mix(in srgb, var(--color-primary) 62%, #7c3aed);
+    --st-ink: var(--lg-text-primary);
+    color: var(--st-ink);
+    background-color: color-mix(in srgb, var(--color-paper-raised) var(--st-tile-alpha), transparent);
+    background-image: linear-gradient(145deg, color-mix(in srgb, var(--st-tone) 22%, transparent) 0%, color-mix(in srgb, var(--st-tone-far) 9%, transparent) 100%);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.9),
+      inset 0 0 0 1px color-mix(in srgb, var(--st-tone) 16%, transparent),
+      0 14px 26px -16px color-mix(in srgb, var(--st-tone) 60%, transparent);
+  }
+  [data-slot="empty-state-tile"][data-tone="success"] {
+    --st-tone: var(--color-success);
+    --st-tone-far: color-mix(in srgb, var(--color-success) 62%, #0891b2);
+    --st-ink: var(--lg-text-success);
+  }
+  [data-slot="empty-state-tile"][data-tone="attention"] {
+    --st-tone: var(--color-accent);
+    --st-tone-far: color-mix(in srgb, var(--color-accent) 62%, #ea580c);
+    --st-ink: var(--color-accent-dark);
+  }
+  &.dark [data-slot="empty-state-tile"] {
+    background-color: color-mix(in srgb, var(--color-paper-sunken) var(--st-tile-alpha), transparent);
+    background-image: linear-gradient(145deg, color-mix(in srgb, var(--st-tone) 30%, transparent) 0%, color-mix(in srgb, var(--st-tone-far) 12%, transparent) 100%);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+      inset 0 0 0 1px color-mix(in srgb, var(--st-tone) 26%, transparent),
+      0 14px 28px -16px color-mix(in srgb, var(--st-tone) 50%, transparent);
+  }
+  /* The tile swells into place a beat after its pane has settled. */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-slot="empty-state-tile"] {
+      animation: states-tile-in var(--dur-pop) var(--ease-pop) 80ms backwards;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Could not load / not allowed / crashed: one pane (DataState's
+   * StateMessage). Inside a page the shared sheet rule of
+   * liquid-glass.css already makes it glass; this is the same recipe for
+   * the places outside `main` — the notifications panel, an editor.
+   * ---------------------------------------------------------------- */
+  [data-slot="data-state"],
+  [data-slot="skeleton-card"] {
+    background-color: var(--lg-fill);
+    background-image: var(--lg-sheen);
+    box-shadow: var(--lg-rim), 0 0 0 1px var(--lg-edge), var(--shadow-card);
+  }
+  /* The icon stands in a soft pool of its own colour instead of a tile. */
+  [data-slot="state-icon"]::before {
+    content: "";
+    position: absolute;
+    inset: -1.125rem;
+    z-index: -1;
+    border-radius: 9999px;
+    background-image: radial-gradient(closest-side, color-mix(in srgb, currentColor 16%, transparent) 0%, color-mix(in srgb, currentColor 6%, transparent) 62%, transparent 100%);
+    pointer-events: none;
+  }
+  [data-slot="state-icon"][data-tone="danger"] {
+    color: var(--lg-text-danger);
+  }
+  [data-slot="state-icon"][data-tone="attention"] {
+    color: var(--color-accent-dark);
+  }
+  [data-slot="state-icon"][data-tone="neutral"] {
+    color: var(--lg-ink-soft);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Skeleton bars. The flat pulse gives way to a band of light that
+   * crosses each bar in the reading direction: a pseudo-element moved
+   * by transform alone, so the compositor does the work and a page of
+   * them costs nothing to lay out or paint. The tint is the pane's own
+   * cool shade, so a bar reads on glass in both themes.
+   * ---------------------------------------------------------------- */
+  .zimos-skeleton {
+    animation: none;
+    background-color: var(--st-bone);
+  }
+  .zimos-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(100deg, transparent 12%, var(--st-bone-light) 50%, transparent 88%);
+    transform: translateX(-100%);
+    animation: states-shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  /* Right to left in Arabic. The first rule is for <html dir="rtl">; the second
+     for a right-to-left island inside a left-to-right page. */
+  &[dir="rtl"] .zimos-skeleton::after {
+    animation-direction: reverse;
+  }
+  [dir="rtl"] .zimos-skeleton::after {
+    animation-direction: reverse;
+  }
+  [dir="ltr"] .zimos-skeleton::after {
+    animation-direction: normal;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .zimos-skeleton::after {
+      content: none;
+      animation: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Call and WhatsApp. Soft tints over the pane, nearly solid, with
+   * the deeper text shades. Worked out from the token values against
+   * the worst the backdrop can put beneath a pill (the page pane over
+   * its violet in light, over its sky blue in dark), ink on tint is:
+   *   call      light 5.3 at rest, 4.9 under the pointer; dark 5.6, 4.9
+   *   WhatsApp  light 5.4, 5.0; dark 6.1, 5.2
+   * all above 4.5:1. These are sums, not readings from rendered
+   * pixels: change --st-mix or the alpha only together with that check.
+   * ---------------------------------------------------------------- */
+  [data-slot="contact-call"],
+  [data-slot="contact-whatsapp"] {
+    --st-tone: var(--color-primary);
+    --st-ink: var(--lg-text-primary);
+    --st-mix: 14%;
+    color: var(--st-ink);
+    background-color: color-mix(in srgb, color-mix(in srgb, var(--st-tone) var(--st-mix), var(--color-paper-raised)) var(--st-pill-alpha), transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.72),
+      inset 0 0 0 1px color-mix(in srgb, var(--st-tone) 16%, transparent);
+  }
+  [data-slot="contact-whatsapp"] {
+    --st-tone: var(--color-success);
+    --st-ink: var(--lg-text-success);
+  }
+  &.dark [data-slot="contact-call"],
+  &.dark [data-slot="contact-whatsapp"] {
+    --st-mix: 18%;
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.1),
+      inset 0 0 0 1px color-mix(in srgb, var(--st-tone) 28%, transparent);
+  }
+  @media (hover: hover) {
+    [data-slot="contact-call"]:hover,
+    [data-slot="contact-whatsapp"]:hover {
+      --st-mix: 20%;
+      color: var(--st-ink);
+    }
+    &.dark [data-slot="contact-call"]:hover,
+    &.dark [data-slot="contact-whatsapp"]:hover {
+      --st-mix: 26%;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The access banner: a tinted pane in the colour of what it says
+   * (amber: a date is coming; red: something stopped; brand: a draft).
+   * The sentence is plain ink on it; only the icon carries the colour.
+   * ---------------------------------------------------------------- */
+  [data-slot="access-banner"] {
+    --st-tone: var(--color-accent);
+    --st-soft: var(--color-accent-soft);
+    --st-ink: var(--color-accent-dark);
+    border-color: color-mix(in srgb, var(--st-tone) 32%, transparent);
+    background-color: color-mix(in srgb, var(--st-soft) var(--st-banner-alpha), transparent);
+    background-image: var(--lg-sheen);
+    box-shadow: var(--lg-rim-line), var(--shadow-card);
+  }
+  [data-slot="access-banner"][data-tone="danger"] {
+    --st-tone: var(--color-danger);
+    --st-soft: var(--color-danger-soft);
+    --st-ink: var(--lg-text-danger);
+  }
+  [data-slot="access-banner"][data-tone="draft"] {
+    --st-tone: var(--color-primary);
+    --st-soft: var(--color-primary-soft);
+    --st-ink: var(--lg-text-primary);
+  }
+  [data-slot="access-banner-icon"] {
+    color: var(--st-ink);
+  }
+  /* What to do about it: a lit pill on the tint. */
+  [data-slot="access-banner-link"] {
+    background-color: var(--lg-control-lit);
+    box-shadow: var(--lg-rim-line), 0 0 0 1px var(--lg-edge), 0 1px 2px rgb(20 22 26 / 0.06);
+  }
+  /* A wash of ink under the pointer: a shade darker in light, a shade lighter in dark. */
+  @media (hover: hover) {
+    [data-slot="access-banner-link"]:hover {
+      background-color: color-mix(in srgb, var(--color-ink) 6%, var(--color-paper-raised));
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The store-link chip in the toolbar and the side menu: a small pane
+   * (the same fill as a secondary button), its two round buttons
+   * lighting up in the brand colour under the pointer.
+   * ---------------------------------------------------------------- */
+  [data-slot="store-link"] {
+    border-color: var(--lg-edge);
+    background-color: var(--lg-control);
+    box-shadow: var(--lg-rim-line), 0 1px 2px rgb(20 22 26 / 0.05);
+  }
+  @media (hover: hover) {
+    [data-slot="copy-button"]:hover {
+      background-color: var(--lg-control-lit);
+    }
+    [data-slot="store-link"] a:hover [data-slot="store-link-open"],
+    [data-slot="store-link"] [data-slot="copy-button"]:hover {
+      background-color: color-mix(in srgb, var(--color-primary) 12%, transparent);
+      color: var(--lg-text-primary);
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Keycaps (the shortcuts list): a lit key with a hairline edge that
+   * is heavier along the bottom, where a real key casts its shadow.
+   * ---------------------------------------------------------------- */
+  .zimos-keycap {
+    border-color: var(--lg-edge);
+    border-bottom-color: color-mix(in srgb, var(--color-primary-dark) 26%, transparent);
+    background-color: var(--lg-control-lit);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.9), 0 1px 1px rgb(18 44 110 / 0.06);
+  }
+  &.dark .zimos-keycap {
+    border-color: rgb(255 255 255 / 0.12);
+    border-bottom-color: rgb(0 0 0 / 0.55);
+    background-color: rgb(255 255 255 / 0.07);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.14);
+  }
+}
+
+/* The same preferences the off switch follows (see the end of liquid-glass.css):
+   if the attribute was not set, the tints of this file turn solid too. */
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root:not([data-glass="off"]),
+  :root:not([data-glass="off"]).dark {
+    --st-pill-alpha: 100%;
+    --st-banner-alpha: 100%;
+    --st-tile-alpha: 100%;
+    --st-bone: var(--color-paper-sunken);
+  }
+}
+
+/* The band of light crosses in the first half of the cycle and rests for the second. */
+@keyframes states-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  55%,
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes states-tile-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+}

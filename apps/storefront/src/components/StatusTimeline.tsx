@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrderStage } from "@/lib/mockCommerce";
+import type { TrackStage } from "@store-builder/api-client";
 import { useStore } from "@/lib/StoreContext";
 import { CheckIcon } from "./Icons";
 
@@ -8,7 +8,7 @@ import { CheckIcon } from "./Icons";
  * Placed → Confirmation → Shipped → Delivered. `stage` is the step currently in
  * progress; earlier steps render as done. The last step at stage 3 is done too.
  */
-export function StatusTimeline({ stage }: { stage: OrderStage }) {
+export function StatusTimeline({ stage }: { stage: TrackStage }) {
   const { t } = useStore();
   const steps = [
     { title: t.timeline.placed, hint: t.timeline.placedHint },
@@ -36,16 +36,16 @@ export function StatusTimeline({ stage }: { stage: OrderStage }) {
             <span
               className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${
                 done
-                  ? "border-primary bg-primary text-white"
+                  ? "border-primary bg-primary text-on-primary"
                   : current
                     ? "border-primary bg-primary-soft text-primary"
-                    : "border-line bg-paper-raised text-ink-muted"
+                    : "border-line bg-paper-raised text-ink-soft"
               }`}
             >
               {done ? <CheckIcon size={18} /> : i + 1}
             </span>
             <div className="pt-1.5">
-              <p className={`text-sm font-semibold ${done || current ? "text-ink" : "text-ink-muted"}`}>
+              <p className={`text-sm font-semibold ${done || current ? "text-ink" : "text-ink-soft"}`}>
                 {step.title}
                 {current && (
                   <span className="ms-2 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">

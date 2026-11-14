@@ -2,6 +2,9 @@ import { ApiClient } from "@store-builder/api-client";
 
 export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
+/** A request was refused with a 403: AuthContext reads the account again. */
+export const FORBIDDEN_EVENT = "zimos:forbidden";
+
 export const apiClient = new ApiClient({
   baseUrl: API_BASE_URL,
   onSessionExpired: () => {
@@ -10,6 +13,9 @@ export const apiClient = new ApiClient({
       window.location.href = "/login";
     }
   },
+  onForbidden: () => {
+    window.dispatchEvent(new Event(FORBIDDEN_EVENT));
+  },
 });
 
 /**
@@ -17,6 +23,5 @@ export const apiClient = new ApiClient({
  * endpoints live at the root, e.g. `/health` and `/health/ready`.
  */
 export function backendRootUrl(): string {
-  const stripped = API_BASE_URL.replace(/\/+$/, "").replace(/\/api(\/v\d+)?$/, "");
-  return stripped;
+  return API_BASE_URL.replace(/\/+$/, "").replace(/\/api(\/v\d+)?$/, "");
 }

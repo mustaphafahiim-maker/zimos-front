@@ -1,9 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // No workspace packages are consumed yet (the marketing site is standalone
-  // and has no dynamic data). If a follow-up wires in `@store-builder/ui`,
-  // add it to `transpilePackages` here — mirroring apps/storefront.
+  // The site imports `@store-builder/ui` subpaths only — the footer's and
+  // the contact page's social links, shared with the dashboard, and the
+  // theme switch's circle (theme-reveal), shared with the storefront. The
+  // package ships TypeScript source, so Next compiles it, as apps/storefront does.
+  transpilePackages: ["@store-builder/ui"],
 };
 
 export default nextConfig;

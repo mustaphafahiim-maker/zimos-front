@@ -1,0 +1,158 @@
+{
+  "look": "14",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Clothing",
+      "nameAr": "ملابس",
+      "slug": "clothing"
+    }
+  ],
+  "products": [
+    {
+      "name": "Grey Micro-Check Shirt with Flap Pocket",
+      "nameAr": "قميص رجالي كاروه صغير رمادي بجيب",
+      "description": "Slim-fit cotton shirt in a fine grey-blue micro check with a buttoned flap pocket. Smart for the office, easy for weekends.",
+      "descriptionAr": "قميص قطن بقصّة سليم بنقشة كاروه دقيقة رمادي مائل للأزرق وجيب بغطاء وزرار. أنيق للشغل ومريح للخروج.",
+      "price": 650,
+      "image": "/xs/14/products/p01.png",
+      "collections": [
+        "clothing"
+      ]
+    },
+    {
+      "name": "Women's Black Tailored Office Shirt",
+      "nameAr": "قميص حريمي أسود كلاسيك",
+      "description": "Fitted black shirt with a shaped waist and buttoned cuffs. A polished staple for workwear and formal looks.",
+      "descriptionAr": "قميص أسود بقصّة محدّدة عند الخصر وأساور بزراير، قطعة أساسية لإطلالات الشغل والمناسبات الرسمية.",
+      "price": 590,
+      "image": "/xs/14/products/p02.png",
+      "collections": [
+        "clothing"
+      ]
+    },
+    {
+      "name": "Purple Strapless Ball Gown",
+      "nameAr": "فستان سواريه موف بدون أكتاف",
+      "description": "Strapless satin ball gown in rich purple with a draped waist and jewelled brooch. Made for engagements and weddings.",
+      "descriptionAr": "فستان سواريه ساتان موف بدون أكتاف، بخصر مكسّر وبروش لامع. مثالي للخطوبة والأفراح.",
+      "price": 3200,
+      "compareAt": 3950,
+      "image": "/xs/14/products/p03.png",
+      "collections": [
+        "clothing"
+      ]
+    },
+    {
+      "name": "Red Ruched Mini Party Dress",
+      "nameAr": "فستان سهرة قصير أحمر مكشكش",
+      "description": "Ruched red chiffon dress with a tiered ruffle hem and satin bow detail. A playful pick for birthdays and parties.",
+      "descriptionAr": "فستان شيفون أحمر مكشكش بطبقات كشكش عند الذيل وفيونكة ساتان. اختيار مبهج لأعياد الميلاد والحفلات.",
+      "price": 1150,
+      "image": "/xs/14/products/p04.png",
+      "collections": [
+        "clothing"
+      ]
+    },
+    {
+      "name": "Navy Belted Sheath Dress",
+      "nameAr": "فستان كحلي ضيق بحزام",
+      "description": "Short-sleeve navy sheath dress with a slim belt and gold zip pockets. Sharp, comfortable and office-ready.",
+      "descriptionAr": "فستان كحلي ضيق بنص كم وحزام رفيع وجيوب بسوستة ذهبية. أنيق ومريح وجاهز للشغل.",
+      "price": 1350,
+      "compareAt": 1690,
+      "image": "/xs/14/products/p05.png",
+      "collections": [
+        "clothing"
+      ]
+    },
+    {
+      "name": "Summer Day Dress Duo",
+      "nameAr": "طقم فستانين صيفي (مشجّر وشيفون)",
+      "description": "Two easy summer dresses in one bundle: a confetti-print tea dress and a grey tiered chiffon dress with a bow.",
+      "descriptionAr": "فستانان صيفيان في عرض واحد: فستان مشجّر بألوان مبهجة وفستان شيفون رمادي بطبقات وفيونكة.",
+      "price": 1490,
+      "image": "/xs/14/products/p06.png",
+      "collections": [
+        "clothing"
+      ]
+    },
+    {
+      "name": "Black Mermaid Evening Gown",
+      "nameAr": "فستان سواريه أسود موديل حورية",
+      "description": "Strapless black mermaid gown with a sculpted bodice and a dramatic ruffled train for unforgettable evenings.",
+      "descriptionAr": "فستان سواريه أسود بدون أكتاف بقصّة حورية، وصدر محدّد وذيل منفوش بكشكش لسهرات لا تُنسى.",
+      "price": 3600,
+      "image": "/xs/14/products/p07.png",
+      "collections": [
+        "clothing"
+      ]
+    },
+    {
+      "name": "Blue Cotton Shirt with Patch Pocket",
+      "nameAr": "قميص قطن أزرق بجيب مميز",
+      "description": "Everyday blue cotton shirt finished with a contrast leather-look patch pocket. Pairs easily with chinos or jeans.",
+      "descriptionAr": "قميص قطن أزرق للاستخدام اليومي بجيب بلون مختلف بلمسة جلد، يتنسّق بسهولة مع الجينز أو الشينو.",
+      "price": 520,
+      "image": "/xs/14/products/p08.png",
+      "collections": [
+        "clothing"
+      ]
+    },
+    {
+      "name": "Navy Double-Collar Shirt with Paisley Trim",
+      "nameAr": "قميص كحلي بياقة دبل وتفاصيل بيزلي",
+      "description": "Slim navy shirt with a layered double collar, contrast stitching and paisley trim inside the placket and cuffs.",
+      "descriptionAr": "قميص كحلي بقصّة سليم وياقة دبل، بخياطة بارزة وتفاصيل بيزلي داخل المرد والأساور.",
+      "price": 850,
+      "compareAt": 1050,
+      "image": "/xs/14/products/p09.png",
+      "collections": [
+        "clothing"
+      ]
+    },
+    {
+      "name": "Emerald Double-Collar Shirt",
+      "nameAr": "قميص أخضر زمردي بياقة دبل",
+      "description": "Emerald green slim-fit shirt with a black-trimmed double collar and printed inner placket. Made to stand out.",
+      "descriptionAr": "قميص أخضر زمردي بقصّة سليم وياقة دبل بحواف سوداء ومرد داخلي مطبوع. لإطلالة لافتة.",
+      "price": 850,
+      "image": "/xs/14/products/p10.png",
+      "collections": [
+        "clothing"
+      ]
+    },
+    {
+      "name": "Red & Navy Gingham Short-Sleeve Shirt",
+      "nameAr": "قميص كاروه نص كم أحمر وكحلي",
+      "description": "Breezy short-sleeve gingham shirt in red and navy with twin chest pockets. Ideal for hot summer days.",
+      "descriptionAr": "قميص كاروه نص كم بالأحمر والكحلي بجيبين على الصدر، خفيف ومثالي لأيام الصيف الحارة.",
+      "price": 480,
+      "image": "/xs/14/products/p11.png",
+      "collections": [
+        "clothing"
+      ]
+    },
+    {
+      "name": "Galaxy Sparkle Ball Gown",
+      "nameAr": "فستان سواريه موف بلمعة النجوم",
+      "description": "Sweetheart ball gown in a shimmering galaxy print with a crystal-studded bodice. Your star moment for weddings.",
+      "descriptionAr": "فستان سواريه بقصّة قلب وطبعة مجرّة لامعة، وصدر مرصّع بالكريستال. لتكوني نجمة الفرح.",
+      "price": 4200,
+      "image": "/xs/14/products/p12.png",
+      "collections": [
+        "clothing"
+      ]
+    }
+  ],
+  "wording": {
+    "loadMoreLabel": "View All products",
+    "viewLabel": "Buy Now",
+    "openLabel": "Add To Cart"
+  },
+  "wordingAr": {
+    "loadMoreLabel": "عرض كل المنتجات",
+    "viewLabel": "اشترِ الآن",
+    "openLabel": "أضف للسلة"
+  }
+}

@@ -9,10 +9,12 @@
  * (not localStorage). `builderData` is deep-validated as a page tree, so it is
  * never used for editor metadata.
  *
- * STEP CONTENT: the page builder for step content is out of scope. New steps are
- * created with the smallest tree the publish check accepts (one section with one
- * text element). Updates never send `builderData`, so an existing tree is never
- * overwritten.
+ * STEP CONTENT: each step's `builderData` is a page tree, edited in the funnel
+ * editor's page view with the website editor's block library and inspector.
+ * It is carried on `UiStep.tree` (normalised; the rest of the tree is kept
+ * verbatim) and sent on update only when it actually changed, so a save that
+ * only moves a card never rewrites a page. New steps start from their step
+ * type's starting page (funnelPages.ts), which always passes the publish check.
  */
 import {
   ApiError,
@@ -32,10 +34,16 @@ import {
   type FunnelStatus,
   type FunnelStepTypeDto,
   type FunnelStepUpdatePayload,
+  type PageTree,
 } from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { getErrorMessage } from "@/lib/errors";
+import { useErrorMessage } from "@/lib/errorMessages";
+import { draftRefusal } from "@/lib/goLive";
 import { useT, type Locale, type Messages } from "@/i18n/LocaleContext";
+import { normalizeTree } from "../website/editor/blocks";
+import { layoutFlow } from "./funnelFlow";
+import { stepPageTree, type StepPageVariant } from "./funnelPages";
 
 // ---------------------------------------------------------------- UI types --
 
@@ -51,9 +59,13 @@ export interface UiStep {
   name: string;
   type: UiStepType;
   offerId: string | null;
+  /** Checkout steps: the order bump offered on the step's form. */
+  bumpOfferId: string | null;
   experimentId: string | null;
   /** Server seo object minus our canvas metadata. Round-tripped untouched. */
   seo: Record<string, unknown>;
+  /** The step's page (`builderData`), normalised to a tree with a sections array. */
+  tree: PageTree;
   x: number;
   y: number;
 }
@@ -65,6 +77,8 @@ export interface UiEdge {
   fromStepKey: string;
   toStepKey: string;
   condition: UiEdgeCondition;
+  /** clicked_through only: the button the path follows (funnelRouting.js); null = any. */
+  sourceElementId?: string | null;
   priority: number;
 }
 
@@ -81,7 +95,7 @@ export interface UiFunnel {
   updatedAt: string;
 }
 
-export const CARD_GAP_X = 280;
+export const CARD_GAP_X = 340;
 const CANVAS_KEY = "zimosCanvas";
 
 interface CanvasMeta {
@@ -146,8 +160,10 @@ export function toUiFunnel(dto: FunnelDetailDto): UiFunnel {
           name: s.name,
           type: s.stepType,
           offerId: s.offerId,
+          bumpOfferId: s.bumpOfferId ?? null,
           experimentId: s.abTestExperimentId,
           seo: stripCanvas(s.seo),
+          tree: normalizeTree(s.builderData),
           x: canvas?.x ?? 40 + i * CARD_GAP_X,
           y: canvas?.y ?? 120,
         } satisfies UiStep,
@@ -167,6 +183,7 @@ export function toUiFunnel(dto: FunnelDetailDto): UiFunnel {
       toStepKey: e.toStepKey,
       // The runtime treats a null condition as "always".
       condition: e.condition?.type ?? "always",
+      sourceElementId: typeof e.condition?.sourceElementId === "string" ? e.condition.sourceElementId : null,
       priority: e.priority,
     })),
   };
@@ -245,8 +262,9 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
           key: s.key,
           stepType: s.type,
           name: s.name.trim() || s.key,
-          builderData: starterTree(s.name.trim() || s.key),
+          builderData: s.tree.sections.length > 0 ? s.tree : starterTree(s.name.trim() || s.key),
           ...(s.offerId ? { offerId: s.offerId } : {}),
+          ...(s.type === "checkout" && s.bumpOfferId ? { bumpOfferId: s.bumpOfferId } : {}),
           seo: withCanvas(s, order),
         })
       );
@@ -258,7 +276,14 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
     if (s.name !== before.name) patch.name = s.name.trim() || s.key;
     if (s.type !== before.type) patch.stepType = s.type;
     if (s.offerId !== before.offerId) patch.offerId = s.offerId;
-    if (s.x !== before.x || s.y !== before.y || order !== baseOrder.get(s.key)) patch.seo = withCanvas(s, order);
+    // A step that stops being a checkout loses its bump on the server by itself.
+    if (s.bumpOfferId !== before.bumpOfferId && (s.type === "checkout" || s.bumpOfferId === null)) {
+      patch.bumpOfferId = s.bumpOfferId;
+    }
+    if (JSON.stringify(s.tree) !== JSON.stringify(before.tree)) patch.builderData = s.tree;
+    if (s.x !== before.x || s.y !== before.y || order !== baseOrder.get(s.key) || JSON.stringify(s.seo) !== JSON.stringify(before.seo)) {
+      patch.seo = withCanvas(s, order);
+    }
     if (Object.keys(patch).length > 0) {
       const id = s.id;
       ops.push(() => funnelsUpdateStep(apiClient, workspaceId, fid, id, patch));
@@ -285,7 +310,7 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
         funnelsCreateEdge(apiClient, workspaceId, fid, {
           fromStepKey: e.fromStepKey,
           toStepKey: e.toStepKey,
-          condition: { type: e.condition },
+          condition: { type: e.condition, ...(e.sourceElementId ? { sourceElementId: e.sourceElementId } : {}) },
           priority: e.priority,
         })
       );
@@ -296,7 +321,9 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
     const patch: FunnelEdgeUpdatePayload = {};
     if (e.fromStepKey !== before.fromStepKey) patch.fromStepKey = e.fromStepKey;
     if (e.toStepKey !== before.toStepKey) patch.toStepKey = e.toStepKey;
-    if (e.condition !== before.condition) patch.condition = { type: e.condition };
+    if (e.condition !== before.condition || (e.sourceElementId ?? null) !== (before.sourceElementId ?? null)) {
+      patch.condition = { type: e.condition, ...(e.sourceElementId ? { sourceElementId: e.sourceElementId } : {}) };
+    }
     if (e.priority !== before.priority) patch.priority = e.priority;
     if (Object.keys(patch).length > 0) {
       const id = e.serverId;
@@ -323,12 +350,16 @@ export async function saveFunnelDiff(workspaceId: string, baseline: UiFunnel, dr
 
 // ------------------------------------------------- create / duplicate flows --
 
-export type StarterTemplateId = "blank" | "cod-single" | "upsell-downsell" | "lead-magnet";
+export type StarterTemplateId = "blank" | "cod-single" | "single-product" | "cod-upsell" | "cod-bundle" | "upsell-downsell" | "lead-magnet";
+
+export const STARTER_TEMPLATE_IDS: StarterTemplateId[] = ["blank", "cod-single", "single-product", "cod-upsell", "cod-bundle", "upsell-downsell", "lead-magnet"];
 
 interface StarterStep {
   key: string;
   type: UiStepType;
   name: Record<Locale, string>;
+  /** A different starting page than the step type's default (funnelPages.ts). */
+  page?: StepPageVariant;
 }
 
 interface StarterEdge {
@@ -345,7 +376,7 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
     steps: [
       { key: "landing", type: "landing", name: N("Landing page", "صفحة الهبوط") },
       { key: "checkout", type: "checkout", name: N("Checkout", "الدفع") },
-      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكراً لطلبك") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
     ],
     edges: [
       { from: "landing", to: "checkout", condition: "always" },
@@ -356,10 +387,56 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
     steps: [
       { key: "sales", type: "sales", name: N("Sales page", "صفحة البيع") },
       { key: "checkout", type: "checkout", name: N("Cash on delivery checkout", "الدفع عند الاستلام") },
-      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكراً لطلبك") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
     ],
     edges: [
       { from: "sales", to: "checkout", condition: "always" },
+      { from: "checkout", to: "thank-you", condition: "completed_checkout" },
+    ],
+  },
+  // One product sold on a full page: the one-product page of the store template
+  // of the same name, with the order form on the page itself. An order placed
+  // there goes straight to the thank-you page; the page's buttons, which carry
+  // no link, lead to the checkout step, where the same form stands alone.
+  "single-product": {
+    steps: [
+      { key: "sales", type: "sales", name: N("Sales page", "صفحة البيع"), page: "single-product" },
+      { key: "checkout", type: "checkout", name: N("Cash on delivery checkout", "الدفع عند الاستلام") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
+    ],
+    edges: [
+      { from: "sales", to: "thank-you", condition: "completed_checkout", priority: 1 },
+      { from: "sales", to: "checkout", condition: "always" },
+      { from: "checkout", to: "thank-you", condition: "completed_checkout" },
+    ],
+  },
+  // Egyptian COD: one product, a cash-on-delivery checkout, then a one-click
+  // extra offer. Accepting and declining both end on the thank-you page. The
+  // upsell's offer is picked in the editor — publish is blocked until it is.
+  "cod-upsell": {
+    steps: [
+      { key: "product", type: "landing", name: N("Product page", "صفحة المنتج") },
+      { key: "checkout", type: "checkout", name: N("Cash on delivery checkout", "الدفع عند الاستلام") },
+      { key: "upsell", type: "upsell", name: N("One-click extra offer", "عرض إضافي بنقرة") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
+    ],
+    edges: [
+      { from: "product", to: "checkout", condition: "always" },
+      { from: "checkout", to: "upsell", condition: "completed_checkout" },
+      { from: "upsell", to: "thank-you", condition: "accepted_offer", priority: 1 },
+      { from: "upsell", to: "thank-you", condition: "declined_offer" },
+    ],
+  },
+  // Egyptian COD bundle: a landing page that sells a bundle (a product grid the
+  // merchant points at the bundle's products), then checkout and thank-you.
+  "cod-bundle": {
+    steps: [
+      { key: "bundle", type: "landing", name: N("Bundle page", "صفحة الباقة"), page: "bundle" },
+      { key: "checkout", type: "checkout", name: N("Cash on delivery checkout", "الدفع عند الاستلام") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
+    ],
+    edges: [
+      { from: "bundle", to: "checkout", condition: "always" },
       { from: "checkout", to: "thank-you", condition: "completed_checkout" },
     ],
   },
@@ -369,7 +446,7 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
       { key: "checkout", type: "checkout", name: N("Checkout", "الدفع") },
       { key: "upsell", type: "upsell", name: N("Upsell", "عرض بعد الشراء") },
       { key: "downsell", type: "downsell", name: N("Downsell", "عرض بديل") },
-      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكراً لطلبك") },
+      { key: "thank-you", type: "thank_you", name: N("Thank you", "شكرًا لطلبك") },
     ],
     edges: [
       { from: "landing", to: "checkout", condition: "always" },
@@ -388,27 +465,63 @@ const STARTERS: Record<StarterTemplateId, { steps: StarterStep[]; edges: Starter
   },
 };
 
-/** Create a funnel, then its starter steps and edges (sequential). Returns the funnel even if a later call fails? No: throws, but the funnel id is attached. */
-export async function createFunnelFromStarter(workspaceId: string, name: string, templateId: StarterTemplateId, locale: Locale): Promise<FunnelDto> {
-  const funnel = await funnelsCreate(apiClient, workspaceId, { name });
+export interface StarterPlan {
+  steps: Array<{ key: string; type: UiStepType; name: string; tree: PageTree; x: number; y: number }>;
+  edges: Array<{ from: string; to: string; condition: UiEdgeCondition; priority: number }>;
+}
+
+/**
+ * A starter as plain data: the steps it creates (with their starting pages and
+ * a tidy canvas position) and its edges. Used by create-from-starter, by the
+ * editor's "start from a template" on an empty funnel, and by the tests that
+ * hold every starter to the backend's publish rules.
+ */
+export function starterPlan(templateId: StarterTemplateId, locale: Locale): StarterPlan {
   const starter = STARTERS[templateId];
+  const edges = starter.edges.map((e) => ({ from: e.from, to: e.to, condition: e.condition, priority: e.priority ?? 0 }));
+  const positions = layoutFlow(
+    starter.steps.map((s) => s.key),
+    edges.map((e) => ({ fromStepKey: e.from, toStepKey: e.to, condition: e.condition, priority: e.priority }))
+  );
+  return {
+    steps: starter.steps.map((s, i) => ({
+      key: s.key,
+      type: s.type,
+      name: s.name[locale],
+      tree: stepPageTree(s.type, locale, s.page),
+      ...(positions.get(s.key) ?? { x: 40 + i * CARD_GAP_X, y: 120 }),
+    })),
+    edges,
+  };
+}
+
+/** Create a funnel, then its starter steps and edges (sequential). If a later call fails it throws with `partialFunnelId` attached. */
+export async function createFunnelFromStarter(
+  workspaceId: string,
+  name: string,
+  templateId: StarterTemplateId,
+  locale: Locale,
+  /** The funnel's link, when the merchant chose one (otherwise made from the name). */
+  subdomain?: string
+): Promise<FunnelDto> {
+  const funnel = await funnelsCreate(apiClient, workspaceId, subdomain ? { name, subdomain } : { name });
+  const plan = starterPlan(templateId, locale);
   try {
-    for (const [i, s] of starter.steps.entries()) {
-      const label = s.name[locale];
+    for (const [i, s] of plan.steps.entries()) {
       await funnelsCreateStep(apiClient, workspaceId, funnel.id, {
         key: s.key,
         stepType: s.type,
-        name: label,
-        builderData: starterTree(label),
-        seo: { [CANVAS_KEY]: { x: 40 + i * CARD_GAP_X, y: 120, order: i } },
+        name: s.name,
+        builderData: s.tree,
+        seo: { [CANVAS_KEY]: { x: s.x, y: s.y, order: i } },
       });
     }
-    for (const e of starter.edges) {
+    for (const e of plan.edges) {
       await funnelsCreateEdge(apiClient, workspaceId, funnel.id, {
         fromStepKey: e.from,
         toStepKey: e.to,
         condition: { type: e.condition },
-        priority: e.priority ?? 0,
+        priority: e.priority,
       });
     }
   } catch (err) {
@@ -428,10 +541,14 @@ export async function duplicateFunnel(workspaceId: string, sourceId: string, cop
   try {
     for (const s of src.steps) {
       const payload = { key: s.key, stepType: s.stepType, name: s.name, builderData: s.builderData, seo: s.seo ?? {} };
+      const offers = {
+        ...(s.offerId ? { offerId: s.offerId } : {}),
+        ...(s.bumpOfferId ? { bumpOfferId: s.bumpOfferId } : {}),
+      };
       try {
-        await funnelsCreateStep(apiClient, workspaceId, copy.id, s.offerId ? { ...payload, offerId: s.offerId } : payload);
+        await funnelsCreateStep(apiClient, workspaceId, copy.id, { ...payload, ...offers });
       } catch (err) {
-        if (s.offerId && err instanceof ApiError && err.status === 422) {
+        if ((s.offerId || s.bumpOfferId) && err instanceof ApiError && err.status === 422) {
           await funnelsCreateStep(apiClient, workspaceId, copy.id, payload);
         } else {
           throw err;
@@ -458,13 +575,17 @@ export async function duplicateFunnel(workspaceId: string, sourceId: string, cop
 const ERROR_STRINGS = {
   en: {
     permission: "You don't have permission to manage or publish funnels. Ask a workspace owner to update your role.",
-    subscription: "This workspace needs an active subscription to create or publish funnels. Update your plan in Billing.",
+    subscription:
+      "Your subscription has expired, so new funnels can't be created until it's renewed. Existing funnels keep working — see Settings → Plan and referral code.",
+    suspended: "This store has been suspended by Zimos, so new funnels can't be created. Contact Zimos support.",
     notPublished: "Publish this funnel before pausing or resuming it.",
     keyTaken: "A step with this key already exists in the funnel. Reload and try again.",
   },
   ar: {
     permission: "ليست لديك صلاحية لإدارة مسارات البيع أو نشرها. اطلب من مالك مساحة العمل تحديث دورك.",
-    subscription: "تحتاج مساحة العمل إلى اشتراك نشط لإنشاء مسارات البيع أو نشرها. حدّث خطتك من صفحة الفواتير.",
+    subscription:
+      "انتهى اشتراكك، لذلك لا يمكن إنشاء مسارات بيع جديدة حتى يُجدَّد. مسارات البيع الحالية تعمل كالمعتاد — راجع قسم خطتي.",
+    suspended: "أوقفت Zimos هذا المتجر، لذلك لا يمكن إنشاء مسارات بيع جديدة. تواصل مع دعم Zimos.",
     notPublished: "انشر مسار البيع أولًا قبل إيقافه مؤقتًا أو استئنافه.",
     keyTaken: "توجد خطوة بنفس المعرّف في مسار البيع. أعد التحميل وحاول مرة أخرى.",
   },
@@ -474,12 +595,18 @@ export function isSubscriptionError(err: unknown): boolean {
   return err instanceof ApiError && (err.code === "SUBSCRIPTION_REQUIRED" || err.status === 402);
 }
 
-/** Bilingual message for funnel API errors (403 permission, 402 subscription, known 409s). */
+/** Bilingual message for funnel API errors (403 permission or suspension, 402 subscription, known 409s). */
 export function useFunnelErrorMessage(): (err: unknown) => string {
   const t = useT(ERROR_STRINGS);
+  const shared = useErrorMessage();
   return (err: unknown) => {
+    // A draft store's refusal and the plan's monthly funnel limit have their
+    // own sentences (lib/errorMessages); neither is an expired subscription
+    // or a missing permission.
+    if (draftRefusal(err) || (err instanceof ApiError && err.code === "PLAN_LIMIT_REACHED")) return shared(err);
     if (isSubscriptionError(err)) return t.subscription;
     if (err instanceof ApiError) {
+      if (err.code === "STORE_SUSPENDED") return t.suspended;
       if (err.status === 403) return t.permission;
       if (err.code === "FUNNEL_NOT_PUBLISHED") return t.notPublished;
       if (err.code === "FUNNEL_STEP_KEY_TAKEN") return t.keyTaken;

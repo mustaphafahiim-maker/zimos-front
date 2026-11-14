@@ -1,0 +1,118 @@
+"use client";
+
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
+import { useDialog, useSheetPresence } from "@/lib/useDialog";
+import { useStore } from "@/lib/StoreContext";
+import type { ResolvedShellLink } from "@/lib/storeShell";
+import { CrossIcon, MenuIcon } from "./Icons";
+import { ShellLink } from "./ShellLink";
+import { LanguageSwitch } from "./LanguageSwitch";
+import { ThemeToggle } from "./ThemeToggle";
+import { backdrop, focusRing, iconBtn, modalLayer, sheet } from "./ui";
+
+/**
+ * The header's navigation on a phone: a sheet that slides in from the
+ * inline-end edge with the links the desktop header shows inline, plus the
+ * theme toggle the narrow header has no room for. Focus stays inside while
+ * it is open (lib/useDialog), Escape and the backdrop close it, and a link
+ * that changes the route closes it too.
+ *
+ * Rendered only below `sm` — or `md` when the merchant has a menu of their
+ * own, which the header shows inline only from `md`. The links come from the
+ * header (StoreHeader), which knows the merchant's menu and which of the cart
+ * and order-tracking links they chose to show.
+ */
+export function MobileMenu({
+  storeName,
+  links,
+  showTheme = true,
+  showLanguage = false,
+  until = "sm",
+}: {
+  storeName: string;
+  links: ResolvedShellLink[];
+  showTheme?: boolean;
+  /** The ع / EN switch, which the narrow header leaves out beside the search button. */
+  showLanguage?: boolean;
+  until?: "sm" | "md";
+}) {
+  const { t } = useStore();
+  const pathname = usePathname();
+  // The sheet remembers the path it was opened on, so a link that changes the
+  // route closes it by itself — no effect, and the destination never renders
+  // under an open sheet.
+  const [openAt, setOpenAt] = useState<string | null>(null);
+  const open = openAt === pathname;
+  const setOpen = (next: boolean) => setOpenAt(next ? pathname : null);
+  const dialogRef = useDialog<HTMLDivElement>({ open, onClose: () => setOpen(false) });
+  // In the DOM only while open or sliding out (lib/useDialog).
+  const { present, shown } = useSheetPresence(open);
+
+  const link = `flex min-h-12 items-center rounded-xl px-3 text-base font-medium text-ink transition-colors hover:bg-primary-soft hover:text-primary ${focusRing}`;
+
+  return (
+    <div className={`zt-menu-toggle ${until === "md" ? "md:hidden" : "sm:hidden"}`}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={t.shop.openMenu}
+        aria-expanded={open}
+        aria-controls="store-mobile-menu"
+        className={iconBtn}
+      >
+        <MenuIcon />
+      </button>
+
+      {/* Portalled out of the header: its backdrop-blur would otherwise be the
+          containing block of this fixed layer, confining the sheet to the
+          header's own 4rem. The store wrapper (.brand-theme, the layout's div)
+          is the host rather than <body> so the merchant's colours still apply
+          inside. Only ever rendered after a tap, so `document` is there. */}
+      {present && createPortal(
+      <div className={modalLayer}>
+      <div className={backdrop(shown)} aria-hidden onClick={() => setOpen(false)} />
+
+      <div
+        ref={dialogRef}
+        id="store-mobile-menu"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t.common.menu}
+        aria-hidden={!open}
+        // `inert` keeps a sliding-out sheet out of the tab order and the accessibility tree.
+        inert={!open}
+        className={`${sheet(shown)} max-w-xs`}
+      >
+        <div className="flex h-16 items-center justify-between gap-3 border-b border-line px-4">
+          <span className="truncate font-display text-lg font-bold text-ink">{storeName}</span>
+          <button type="button" onClick={() => setOpen(false)} aria-label={t.shop.closeMenu} className={iconBtn}>
+            <CrossIcon />
+          </button>
+        </div>
+
+        <nav aria-label={t.common.menu} className="flex-1 overflow-y-auto p-3">
+          <ul className="space-y-1">
+            {links.map((item) => (
+              <li key={item.key}>
+                <ShellLink link={item} className={link} />
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* The controls the narrow header leaves out; each labels itself. */}
+        {(showTheme || showLanguage) && (
+          <div className="flex items-center justify-end gap-2 border-t border-line px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            {showLanguage && <LanguageSwitch />}
+            {showTheme && <ThemeToggle />}
+          </div>
+        )}
+      </div>
+      </div>,
+      document.querySelector<HTMLElement>(".brand-theme") ?? document.body
+      )}
+    </div>
+  );
+}

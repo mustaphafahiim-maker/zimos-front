@@ -1,0 +1,139 @@
+{
+  "look": "10",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "New",
+      "nameAr": "وصل حديثًا",
+      "slug": "new"
+    },
+    {
+      "name": "Featured",
+      "nameAr": "مختارات مميزة",
+      "slug": "featured"
+    },
+    {
+      "name": "Offer",
+      "nameAr": "عروض",
+      "slug": "offer"
+    }
+  ],
+  "products": [
+    {
+      "name": "Plaid Drawstring Cotton Shorts",
+      "nameAr": "شورت قطن كاروهات برباط",
+      "description": "Soft cotton shorts in a bold multicolour plaid, with an elastic drawstring waist and side pockets.",
+      "descriptionAr": "شورت قطن ناعم بنقشة كاروهات ملوّنة، بوسط أستك برباط وجيوب جانبية.",
+      "price": 549,
+      "image": "/xs/10/products/p01.png",
+      "collections": [
+        "new"
+      ]
+    },
+    {
+      "name": "Too Cool Cropped Sweatshirt – Green",
+      "nameAr": "سويتشيرت كروب Too Cool أخضر",
+      "description": "Cropped forest-green sweatshirt with a varsity \"Too Cool for Mondays\" print and ribbed cuffs.",
+      "descriptionAr": "سويتشيرت كروب أخضر غامق بطبعة \"Too Cool for Mondays\" وأساور مضلّعة.",
+      "price": 799,
+      "compareAt": 999,
+      "image": "/xs/10/products/p02.png",
+      "collections": [
+        "new",
+        "offer"
+      ]
+    },
+    {
+      "name": "Mustard Chunky Knit Balloon-Sleeve Sweater",
+      "nameAr": "بلوفر تريكو تقيل خردلي بأكمام منفوخة",
+      "description": "Cosy chunky-knit sweater in mustard yellow with relaxed balloon sleeves and a ribbed hem.",
+      "descriptionAr": "بلوفر تريكو تقيل باللون الخردلي بأكمام منفوخة وحردة مريحة، دفا وشياكة في قطعة واحدة.",
+      "price": 899,
+      "compareAt": 1199,
+      "image": "/xs/10/products/p03.png",
+      "collections": [
+        "featured",
+        "offer"
+      ]
+    },
+    {
+      "name": "Sage Open-Knit Crew Sweater",
+      "nameAr": "بلوفر تريكو شبك أخضر زيتي",
+      "description": "Lightweight crew-neck sweater in sage green with an airy open-knit mesh texture. Perfect for layering.",
+      "descriptionAr": "بلوفر رقبة دائرية خفيف بلون أخضر زيتي ونسيج تريكو شبك، مثالي للتنسيق فوق التيشيرت.",
+      "price": 849,
+      "image": "/xs/10/products/p04.png",
+      "collections": [
+        "new"
+      ]
+    },
+    {
+      "name": "Navy Relaxed Drawstring Trousers",
+      "nameAr": "بنطلون واسع كحلي برباط",
+      "description": "Relaxed-fit trousers in deep navy with an elastic drawstring waist and slanted pockets.",
+      "descriptionAr": "بنطلون مريح بقصة واسعة باللون الكحلي الغامق، بوسط أستك برباط وجيوب جانبية.",
+      "price": 749,
+      "image": "/xs/10/products/p05.png",
+      "collections": [
+        "featured"
+      ]
+    },
+    {
+      "name": "Light-Wash Denim Blazer",
+      "nameAr": "بليزر جينز فاتح",
+      "description": "Tailored two-button blazer in light-wash denim with notch lapels and flap pockets.",
+      "descriptionAr": "بليزر جينز فاتح بزرارين وياقة كلاسيك وجيوب بغطاء، لإطلالة سمارت كاجوال.",
+      "price": 1499,
+      "compareAt": 1899,
+      "image": "/xs/10/products/p06.png",
+      "collections": [
+        "featured",
+        "offer"
+      ]
+    },
+    {
+      "name": "Peach Art-Print Graphic T-Shirt",
+      "nameAr": "تيشيرت مشمشي بطبعة فنية",
+      "description": "Relaxed cotton tee in soft peach with a framed art-print graphic on the chest.",
+      "descriptionAr": "تيشيرت قطن بقصة مريحة باللون المشمشي وطبعة فنية مميزة على الصدر.",
+      "price": 449,
+      "image": "/xs/10/products/p07.png",
+      "collections": [
+        "new"
+      ]
+    },
+    {
+      "name": "Distressed Light-Wash Jeans",
+      "nameAr": "بنطلون جينز فاتح مقطّع",
+      "description": "Light-wash slim jeans with distressed details and rolled cuffs for an easy, worn-in look.",
+      "descriptionAr": "جينز سليم فاتح بتفاصيل مقطّعة وثنية عند الرجل، لإطلالة كاجوال عملية.",
+      "price": 1099,
+      "image": "/xs/10/products/p08.png",
+      "collections": [
+        "new",
+        "featured"
+      ]
+    },
+    {
+      "name": "Camo Hooded Overshirt",
+      "nameAr": "أوفر شيرت كاموفلاج بكابيشون",
+      "description": "Warm camo-print overshirt with a grey jersey hood and twin chest pockets. Built for winter layering.",
+      "descriptionAr": "أوفر شيرت دافي بنقشة كاموفلاج وكابيشون رمادي وجيبين على الصدر، مثالي للشتاء.",
+      "price": 1349,
+      "image": "/xs/10/products/p09.png",
+      "collections": [
+        "featured"
+      ]
+    }
+  ],
+  "wording": {
+    "allLabel": "All",
+    "searchPlaceholder": "Search keyword",
+    "loadMoreLabel": "Load More"
+  },
+  "wordingAr": {
+    "allLabel": "الكل",
+    "searchPlaceholder": "ابحث عن منتج",
+    "loadMoreLabel": "عرض المزيد"
+  }
+}

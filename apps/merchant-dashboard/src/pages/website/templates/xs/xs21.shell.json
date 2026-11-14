@@ -1,0 +1,118 @@
+{
+  "xsLook": "21",
+  "header": {
+    "menu": [
+      {
+        "label": "Welcome",
+        "href": "/",
+        "kind": "home"
+      },
+      {
+        "label": "Pricing",
+        "href": "/menu",
+        "kind": "page"
+      },
+      {
+        "label": "Featured",
+        "href": "/products",
+        "kind": "url"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact",
+        "kind": "page"
+      }
+    ],
+    "show": {
+      "theme": false,
+      "trackOrder": false,
+      "language": false
+    },
+    "zones": {
+      "notice": [
+        {
+          "id": "notice",
+          "type": "notice"
+        }
+      ],
+      "links": [],
+      "brand": [
+        {
+          "id": "logo",
+          "type": "logo"
+        }
+      ],
+      "menu": [
+        {
+          "id": "menu",
+          "type": "menu"
+        }
+      ],
+      "icons": [
+        {
+          "id": "search",
+          "type": "search"
+        },
+        {
+          "id": "account",
+          "type": "account"
+        },
+        {
+          "id": "wishlist",
+          "type": "wishlist"
+        },
+        {
+          "id": "cart",
+          "type": "cart"
+        },
+        {
+          "id": "phone",
+          "type": "phone"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "groups": [
+      {
+        "title": "Menu",
+        "links": [
+          {
+            "label": "Pricing",
+            "href": "/menu",
+            "kind": "page"
+          },
+          {
+            "label": "Featured",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Cart",
+            "href": "/cart",
+            "kind": "cart"
+          }
+        ]
+      },
+      {
+        "title": "Reservation",
+        "links": [
+          {
+            "label": "Contact",
+            "href": "/contact",
+            "kind": "page"
+          },
+          {
+            "label": "Track Order",
+            "href": "/track",
+            "kind": "track"
+          }
+        ]
+      }
+    ],
+    "text": "Or call us any day during our opening hours",
+    "show": {
+      "help": false
+    }
+  }
+}

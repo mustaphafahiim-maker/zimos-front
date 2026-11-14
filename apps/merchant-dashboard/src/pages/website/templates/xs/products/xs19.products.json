@@ -1,0 +1,123 @@
+{
+  "look": "19",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Today's Menu",
+      "nameAr": "منيو اليوم",
+      "slug": "todays-menu"
+    },
+    {
+      "name": "Our Best & Unique Menu",
+      "nameAr": "أطباقنا المميزة",
+      "slug": "our-best-unique-menu"
+    }
+  ],
+  "products": [
+    {
+      "name": "Mozzarella Chicken with Herb Potatoes",
+      "nameAr": "فراخ بالموتزاريلا مع بطاطس بالأعشاب",
+      "description": "Golden chicken fillet topped with rich tomato sauce and melted mozzarella, served with herb-roasted potatoes and a fresh green salad.",
+      "descriptionAr": "صدور فراخ ذهبية مغطاة بصلصة طماطم غنية وموتزاريلا ذائبة، تُقدَّم مع بطاطس محمّرة بالأعشاب وسلطة خضراء طازجة.",
+      "price": 265,
+      "compareAt": 320,
+      "image": "/xs/19/products/p01.jpeg",
+      "images": [
+        "/xs/19/products/p01.jpeg",
+        "/xs/19/products/p02.jpeg",
+        "/xs/19/products/p03.jpeg",
+        "/xs/19/products/p04.jpeg",
+        "/xs/19/products/p05.jpeg",
+        "/xs/19/products/p06.jpeg"
+      ],
+      "collections": [
+        "todays-menu"
+      ]
+    },
+    {
+      "name": "Brunch Sharing Platter",
+      "nameAr": "بلاتر برانش للمشاركة",
+      "description": "Fluffy scrambled eggs, seasoned potato wedges, tortilla chips with salsa and guacamole, toast and fresh tomato.",
+      "descriptionAr": "بيض أومليت طري وبطاطس ودجز متبّلة وتورتيلا تشيبس مع الصالصا والجواكامولي، مع توست وشرائح طماطم طازجة.",
+      "price": 245,
+      "image": "/xs/19/products/p06.jpeg",
+      "images": [
+        "/xs/19/products/p06.jpeg",
+        "/xs/19/products/p05.jpeg"
+      ],
+      "collections": [
+        "todays-menu"
+      ]
+    },
+    {
+      "name": "Berry Waffle with Cream",
+      "nameAr": "وافل بالتوت والكريمة",
+      "description": "Crisp golden waffle loaded with fresh berries and a generous scoop of whipped cream.",
+      "descriptionAr": "وافل ذهبي مقرمش مع التوت الطازج وطبقة سخية من الكريمة المخفوقة.",
+      "price": 135,
+      "image": "/xs/19/products/p04.jpeg",
+      "images": [
+        "/xs/19/products/p04.jpeg",
+        "/xs/19/products/p07.jpeg"
+      ],
+      "collections": [
+        "todays-menu"
+      ]
+    },
+    {
+      "name": "Smoked Beef Burger with Fries",
+      "nameAr": "برجر باللحم المدخن مع بطاطس",
+      "description": "Char-grilled beef patty with smoked beef slices, cheddar sauce and crisp lettuce, served with golden fries.",
+      "descriptionAr": "قطعة لحم بقري مشوية على الفحم مع شرائح لحم مدخن وصوص شيدر وخس مقرمش، تُقدَّم مع بطاطس ذهبية.",
+      "price": 215,
+      "compareAt": 260,
+      "image": "/xs/19/products/p05.jpeg",
+      "images": [
+        "/xs/19/products/p05.jpeg",
+        "/xs/19/products/p04.jpeg"
+      ],
+      "collections": [
+        "todays-menu"
+      ]
+    },
+    {
+      "name": "Skillet Shakshuka",
+      "nameAr": "شكشوكة في الطاسة",
+      "description": "Eggs gently baked in a spiced tomato and pepper sauce, served bubbling hot in a cast-iron skillet.",
+      "descriptionAr": "بيض مطهو على مهل في صلصة طماطم وفلفل متبّلة، يصلك ساخنًا في طاسة حديد.",
+      "price": 110,
+      "image": "/xs/19/products/p04.jpeg",
+      "collections": [
+        "our-best-unique-menu"
+      ]
+    },
+    {
+      "name": "Golden French Fries",
+      "nameAr": "بطاطس فرايز ذهبية",
+      "description": "Thick-cut fries, crispy outside and fluffy inside, with our house dipping sauce.",
+      "descriptionAr": "أصابع بطاطس سميكة مقرمشة من الخارج وطرية من الداخل، مع صوص البيت الخاص.",
+      "price": 90,
+      "image": "/xs/19/products/p05.jpeg",
+      "collections": [
+        "our-best-unique-menu"
+      ]
+    },
+    {
+      "name": "Chicken Shish Tawook Skewers",
+      "nameAr": "أسياخ شيش طاووق بالخضار",
+      "description": "Marinated chicken skewers grilled with mushrooms, zucchini and sweet red pepper.",
+      "descriptionAr": "أسياخ فراخ متبّلة مشوية مع المشروم والكوسة والفلفل الأحمر الحلو.",
+      "price": 285,
+      "image": "/xs/19/products/p07.jpeg",
+      "collections": [
+        "our-best-unique-menu"
+      ]
+    }
+  ],
+  "wording": {
+    "openLabel": "Learn More"
+  },
+  "wordingAr": {
+    "openLabel": "اعرف المزيد"
+  }
+}

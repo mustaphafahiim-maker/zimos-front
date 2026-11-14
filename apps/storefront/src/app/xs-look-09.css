@@ -1,0 +1,367 @@
+/*
+ * Look 09 · Pillowmart (Colorlib, CC BY 3.0) — everything that is this one
+ * template's: its colours and type, how its header and footer differ from the
+ * shared layout in xs-shell.css, and how it draws the bands it shares with
+ * other looks. Deleting this file (and its import, its pictures under
+ * public/xs/09 and its entries in lib/xsShell.ts and the editor's
+ * xsBlocks.ts) removes the template.
+ *
+ * Its faces are served from this app, Latin only (xs-fonts.css); Arabic text
+ * falls through to the store's own face.
+ */
+
+[data-xs-look="09"],
+.brand-theme[data-xs-shell="09"] {
+  --xs-sans: "Rubik", "XS Ar Readex Pro", var(--font-sans), sans-serif;
+  --xs-display: "Rubik", "XS Ar Readex Pro", var(--font-sans), sans-serif;
+  --xs-ink: #4b3049;
+  --xs-ink-soft: #795376;
+  --xs-muted: #795376;
+  --xs-brand: #b08ead;
+  --xs-accent: #b08ead;
+  --xs-button: #b08ead;
+  --xs-highlight: #b08ead;
+  --xs-tint: #f4edf2;
+  --xs-dark: #4b3049;
+  --xs-line: #eadfe8;
+  --xs-ground: #fff;
+  --xs-footer-ink: #795376;
+  --xs-badge: #4b3049;
+  --xs-btn-radius: 5px;
+  --xs-container: 1140px;
+  color: var(--xs-ink-soft);
+  font-size: 14px;
+  line-height: 1.929;
+}
+
+/* --- header: one bar on the look's pale ground ----------------------------- */
+
+.xs-header[data-xs-look="09"] {
+  padding-bottom: 0;
+  background: var(--xs-tint);
+}
+.xs-header[data-xs-look="09"] .xs-header__strip {
+  display: none;
+}
+.xs-header[data-xs-look="09"] .xs-header__bar,
+.xs-header[data-xs-look="09"][data-scrolled] .xs-header__bar {
+  position: static;
+  height: 90px;
+  background: var(--xs-tint);
+  box-shadow: none;
+}
+.xs-header[data-xs-look="09"] .xs-header__logo-name {
+  color: var(--xs-ink);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.xs-header[data-xs-look="09"] .xs-header__menu {
+  margin-inline: auto;
+}
+.xs-header[data-xs-look="09"] .xs-header__link {
+  margin-inline: 0;
+  padding: 10px 20px;
+  color: var(--xs-ink);
+  font-size: 16px;
+  font-weight: 400;
+  text-transform: capitalize;
+}
+.xs-header[data-xs-look="09"] .xs-header__link:hover {
+  color: var(--xs-brand);
+}
+.xs-header[data-xs-look="09"] .xs-header__icons {
+  flex: 0 0 auto;
+}
+.xs-header[data-xs-look="09"] .zt-icon-btn {
+  color: var(--xs-ink);
+}
+.xs-header[data-xs-look="09"] .zt-icon-btn > span {
+  border-radius: 50%;
+}
+@media (max-width: 991px) {
+  .xs-header[data-xs-look="09"] .xs-header__icons {
+    flex: 1;
+  }
+}
+
+/* --- footer: the pale ground again, plum words ----------------------------- */
+
+.xs-footer[data-xs-look="09"] {
+  padding-top: 90px;
+  background: var(--xs-tint);
+  color: var(--xs-ink-soft);
+  font-size: 14px;
+}
+.xs-footer[data-xs-look="09"] .xs-footer__col:last-child {
+  order: -1;
+}
+.xs-footer[data-xs-look="09"] .xs-footer__title {
+  padding-bottom: 20px;
+  color: var(--xs-ink);
+  font-size: 20px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.xs-footer[data-xs-look="09"] a {
+  color: var(--xs-ink-soft);
+}
+.xs-footer[data-xs-look="09"] a:hover {
+  color: var(--xs-brand);
+}
+.xs-footer[data-xs-look="09"] .xs-footer__bottom {
+  padding-top: 26px;
+  border-top: 1px solid var(--xs-line);
+}
+
+/* --- xs_hero: tall and pale, the product standing on the end side ---------- */
+
+.xs-hero[data-xs-look="09"] {
+  display: flex;
+  align-items: center;
+  min-height: 692px;
+  padding: calc(40px * var(--xs-space, 1)) 15px;
+  background: var(--xs-tint);
+}
+.xs-hero[data-xs-look="09"] .xs-hero__inner {
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+}
+.xs-hero[data-xs-look="09"] .xs-hero__heading {
+  margin-bottom: 10px;
+  color: var(--xs-ink);
+  font-size: 68px;
+  font-weight: 500;
+  line-height: 78px;
+}
+.xs-hero[data-xs-look="09"] .xs-hero__line {
+  margin-bottom: 40px;
+  color: var(--xs-ink-soft);
+  font-size: 20px;
+  line-height: 1.5;
+}
+.xs-hero[data-xs-look="09"] .xs-hero__art img {
+  position: static;
+  width: 100%;
+  max-width: none;
+}
+.xs-hero[data-xs-look="09"] .xs-hero__art::after {
+  display: none;
+}
+[data-xs-look="09"] .xs-btn {
+  padding: 17px 50px;
+  font-size: 15px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+[data-xs-look="09"] .xs-btn[data-tone="accent"],
+[data-xs-look="09"] .xs-btn[data-tone="solid"] {
+  border-color: var(--xs-brand);
+  background: var(--xs-brand);
+  color: #fff;
+}
+[data-xs-look="09"] .xs-btn[data-tone="accent"]:hover,
+[data-xs-look="09"] .xs-btn[data-tone="solid"]:hover {
+  border-color: var(--xs-dark);
+  background: var(--xs-dark);
+  filter: none;
+}
+@media (max-width: 991px) {
+  .xs-hero[data-xs-look="09"] {
+    min-height: 0;
+  }
+  .xs-hero[data-xs-look="09"] .xs-hero__inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .xs-hero[data-xs-look="09"] .xs-hero__heading {
+    font-size: 40px;
+    line-height: 1.25;
+  }
+}
+
+/* --- xs_story: a product picture and a few words, side to side ------------- */
+
+.xs-story[data-xs-look="09"] {
+  padding: calc(130px * var(--xs-space, 1)) 15px;
+}
+.xs-story[data-xs-look="09"] .xs-story__part,
+.xs-story[data-xs-look="09"] .xs-story__part[data-flip] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+}
+.xs-story[data-xs-look="09"] .xs-story__part + .xs-story__part {
+  margin-top: 100px;
+}
+.xs-story[data-xs-look="09"] .xs-story__text {
+  display: flex;
+  flex-direction: column;
+  order: 2;
+}
+.xs-story[data-xs-look="09"] .xs-story__part[data-flip] .xs-story__text {
+  order: 0;
+}
+.xs-story[data-xs-look="09"] .xs-story__body {
+  order: -1;
+  padding: 0;
+  color: var(--xs-ink-soft);
+  font-size: 20px;
+  font-weight: 400;
+}
+.xs-story[data-xs-look="09"] .xs-story__title {
+  margin: 10px 0 0;
+  color: var(--xs-ink);
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.xs-story[data-xs-look="09"] .xs-story__frame::before {
+  display: none;
+}
+@media (max-width: 767px) {
+  .xs-story[data-xs-look="09"] {
+    padding: calc(70px * var(--xs-space, 1)) 15px;
+  }
+  .xs-story[data-xs-look="09"] .xs-story__part,
+  .xs-story[data-xs-look="09"] .xs-story__part[data-flip] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .xs-story[data-xs-look="09"] .xs-story__title {
+    font-size: 26px;
+  }
+}
+
+/* --- xs_products: a centred heading over pale cards ------------------------ */
+
+.xs-products[data-xs-look="09"] {
+  padding: 0 15px calc(130px * var(--xs-space, 1));
+}
+.xs-products[data-xs-look="09"] .xs-products__head {
+  justify-content: center;
+}
+.xs-products[data-xs-look="09"] .xs-products__heading {
+  padding-bottom: 50px;
+  color: var(--xs-ink);
+  font-size: 42px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.xs-products[data-xs-look="09"] .xs-products__grid {
+  margin-top: 0;
+}
+.xs-products[data-xs-look="09"] .xs-products__media {
+  aspect-ratio: 1;
+  background: var(--xs-tint);
+}
+.xs-products[data-xs-look="09"] .xs-products__meta {
+  align-items: center;
+  text-align: center;
+}
+.xs-products[data-xs-look="09"] .xs-products__name {
+  color: var(--xs-ink);
+  font-size: 18px;
+  font-weight: 500;
+}
+.xs-products[data-xs-look="09"] .xs-products__price {
+  color: var(--xs-brand);
+  font-size: 16px;
+}
+.xs-products[data-xs-look="09"] .xs-products__view,
+.xs-products[data-xs-look="09"] .xs-products__more-btn,
+.xs-products[data-xs-look="09"] .xs-products__badge {
+  border-radius: 5px;
+}
+.xs-products[data-xs-look="09"] .xs-products__more-btn {
+  background: var(--xs-brand);
+  color: #fff;
+}
+
+/* --- xs_quotes: on the look's deep plum ------------------------------------ */
+
+.xs-quotes[data-xs-look="09"] {
+  padding: calc(130px * var(--xs-space, 1)) 15px;
+  background: linear-gradient(90deg, #b08ead 0%, #4b3049 64%, #b08ead 100%);
+}
+.xs-quotes[data-xs-look="09"] .xs-quotes__heading,
+.xs-quotes[data-xs-look="09"] .xs-quotes__name,
+.xs-quotes[data-xs-look="09"] .xs-quotes__item p {
+  color: #fff;
+}
+.xs-quotes[data-xs-look="09"] .xs-quotes__item p {
+  font-size: 22px;
+  line-height: 1.7;
+}
+.xs-quotes[data-xs-look="09"] .xs-quotes__arrow {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+.xs-quotes[data-xs-look="09"] .xs-quotes__dots button[data-active] {
+  background: #fff;
+}
+
+/* --- xs_features: a heading and line, then four soft cards ----------------- */
+
+.xs-features[data-xs-look="09"] {
+  padding: calc(130px * var(--xs-space, 1)) 15px;
+}
+.xs-features[data-xs-look="09"] .xs-features__inner {
+  grid-template-columns: minmax(0, 1fr);
+}
+.xs-features[data-xs-look="09"] .xs-heading {
+  max-width: 560px;
+  font-size: 34px;
+  line-height: 1.4;
+}
+.xs-features[data-xs-look="09"] .xs-features__list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 30px;
+  margin: 50px 0 0;
+  text-align: center;
+}
+.xs-features[data-xs-look="09"] .xs-features__item {
+  margin: 0;
+  padding: 40px 20px;
+  border-radius: 5px;
+  background: var(--xs-tint);
+}
+.xs-features[data-xs-look="09"] .xs-features__icon::before {
+  display: none;
+}
+.xs-features[data-xs-look="09"] .xs-features__item h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+.xs-features[data-xs-look="09"] .xs-features__item p:empty {
+  display: none;
+}
+@media (max-width: 991px) {
+  .xs-features[data-xs-look="09"] .xs-features__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --- inner pages ----------------------------------------------------------- */
+
+.xs-title[data-xs-look="09"] {
+  padding: calc(120px * var(--xs-space, 1)) 15px;
+  background-color: var(--xs-tint);
+}
+.xs-title[data-xs-look="09"] .xs-title__heading {
+  color: var(--xs-ink);
+  font-size: 50px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.xs-contact[data-xs-look="09"] .xs-contact__submit {
+  border-radius: 5px;
+  background: var(--xs-brand);
+  text-transform: capitalize;
+}
+.xs-contact[data-xs-look="09"] .xs-contact__submit:hover:not(:disabled) {
+  background: var(--xs-dark);
+}
+.xs-contact[data-xs-look="09"] .xs-contact__value[data-accent] {
+  color: var(--xs-brand);
+}

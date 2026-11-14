@@ -23,7 +23,9 @@ export type FunnelStepTypeDto =
   | "upsell"
   | "downsell"
   | "thank_you"
-  | "custom";
+  | "custom"
+  // An advertorial before the product page.
+  | "article";
 
 export const FUNNEL_STEP_TYPES: readonly FunnelStepTypeDto[] = [
   "landing",
@@ -34,12 +36,13 @@ export const FUNNEL_STEP_TYPES: readonly FunnelStepTypeDto[] = [
   "downsell",
   "thank_you",
   "custom",
+  "article",
 ];
 
 /** Step types that must reference an active offer before publishing. */
 export const FUNNEL_OFFER_STEP_TYPES: readonly FunnelStepTypeDto[] = ["upsell", "downsell"];
 
-export type FunnelEdgeConditionType = "always" | "completed_checkout" | "accepted_offer" | "declined_offer";
+export type FunnelEdgeConditionType = "always" | "completed_checkout" | "accepted_offer" | "declined_offer" | "clicked_through";
 
 export type FunnelEdgeConditionDto = ({ type: FunnelEdgeConditionType } & Record<string, unknown>) | null;
 
@@ -66,6 +69,8 @@ export interface FunnelStepDto {
   /** Page tree (section -> row -> column -> element). */
   builderData: unknown;
   offerId: string | null;
+  /** Checkout steps only: the order bump offered on the step's form. */
+  bumpOfferId?: string | null;
   abTestExperimentId: string | null;
   /** Arbitrary keys are accepted (Joi .unknown(true)). */
   seo: Record<string, unknown>;
@@ -123,6 +128,8 @@ export interface FunnelCreatePayload {
 
 export interface FunnelUpdatePayload {
   name?: string;
+  /** The funnel's link (/f/<subdomain>); 409 FUNNEL_SUBDOMAIN_TAKEN when another funnel has it. */
+  subdomain?: string;
 }
 
 export interface FunnelStepCreatePayload {
@@ -131,6 +138,7 @@ export interface FunnelStepCreatePayload {
   name: string;
   builderData?: unknown;
   offerId?: string;
+  bumpOfferId?: string | null;
   seo?: Record<string, unknown>;
 }
 
@@ -139,6 +147,8 @@ export interface FunnelStepUpdatePayload {
   name?: string;
   builderData?: unknown;
   offerId?: string | null;
+  /** 422 on a step that is not a checkout, or with an offer that cannot be a bump. */
+  bumpOfferId?: string | null;
   seo?: Record<string, unknown>;
 }
 

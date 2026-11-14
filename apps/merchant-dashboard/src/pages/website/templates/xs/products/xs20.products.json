@@ -1,0 +1,120 @@
+{
+  "look": "20",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Breakfast",
+      "nameAr": "الفطار",
+      "slug": "breakfast"
+    },
+    {
+      "name": "Launch",
+      "nameAr": "الغداء",
+      "slug": "launch"
+    },
+    {
+      "name": "Dinner",
+      "nameAr": "العشاء",
+      "slug": "dinner"
+    }
+  ],
+  "products": [
+    {
+      "name": "Crispy Chicken Burger Board",
+      "nameAr": "بورد برجر الفراخ المقرمش",
+      "description": "Crispy chicken burger served on a wooden board with seasoned fries and garlic dip.",
+      "descriptionAr": "برجر فراخ مقرمش يُقدَّم على لوح خشبي مع بطاطس متبّلة وصوص الثوم.",
+      "price": 195,
+      "compareAt": 240,
+      "image": "/xs/20/products/p01.jpg",
+      "collections": [
+        "launch",
+        "dinner"
+      ]
+    },
+    {
+      "name": "Beef Ramen Bowl",
+      "nameAr": "طبق رامن باللحم",
+      "description": "Rich slow-simmered broth with noodles, tender sliced beef, soft-boiled egg and spring onion.",
+      "descriptionAr": "شوربة غنية مطهوة على مهل مع نودلز وشرائح لحم طرية وبيض مسلوق نصف سواء وبصل أخضر.",
+      "price": 230,
+      "image": "/xs/20/products/p02.jpg",
+      "collections": [
+        "launch",
+        "dinner"
+      ]
+    },
+    {
+      "name": "Mushroom & Arugula Pizza",
+      "nameAr": "بيتزا المشروم والجرجير",
+      "description": "Thin-crust pizza with mozzarella, sautéed mushrooms and a fresh handful of arugula.",
+      "descriptionAr": "بيتزا بعجينة رقيقة مع الموتزاريلا والمشروم السوتيه وحفنة من الجرجير الطازج.",
+      "price": 285,
+      "image": "/xs/20/products/p03.jpg",
+      "collections": [
+        "launch",
+        "dinner"
+      ]
+    },
+    {
+      "name": "Grilled Ribeye Steak",
+      "nameAr": "ستيك ريب آي مشوي",
+      "description": "Juicy ribeye grilled to your liking with rosemary, served with roasted vegetables.",
+      "descriptionAr": "ستيك ريب آي طري مشوي حسب رغبتك بإكليل الجبل، يُقدَّم مع خضار مشوي.",
+      "price": 560,
+      "compareAt": 690,
+      "image": "/xs/20/products/p04.jpg",
+      "collections": [
+        "dinner"
+      ]
+    },
+    {
+      "name": "Oriental Breakfast Spread",
+      "nameAr": "فطار شرقي مشكّل",
+      "description": "A generous spread of dips, hummus, fresh salads and warm bread, made for sharing.",
+      "descriptionAr": "تشكيلة سخية من الغموس والحمص والسلطات الطازجة مع العيش الساخن، مثالية للمشاركة.",
+      "price": 240,
+      "image": "/xs/20/products/p05.jpg",
+      "collections": [
+        "breakfast"
+      ]
+    },
+    {
+      "name": "Grilled Veal Cutlet with Fries",
+      "nameAr": "كستليتة بتلو مشوية مع بطاطس",
+      "description": "Tender veal cutlet grilled with herbs, served with golden fries and a crisp side salad.",
+      "descriptionAr": "كستليتة بتلو طرية مشوية بالأعشاب، تُقدَّم مع بطاطس ذهبية وسلطة جانبية.",
+      "price": 340,
+      "image": "/xs/20/products/p06.jpg",
+      "collections": [
+        "launch",
+        "dinner"
+      ]
+    },
+    {
+      "name": "Vegetable Supreme Pizza",
+      "nameAr": "بيتزا خضار سوبريم",
+      "description": "Loaded with tomatoes, mushrooms, black olives, peppers and mozzarella on a crisp base.",
+      "descriptionAr": "بيتزا غنية بالطماطم والمشروم والزيتون الأسود والفلفل والموتزاريلا على عجينة مقرمشة.",
+      "price": 265,
+      "image": "/xs/20/products/p07.jpg",
+      "collections": [
+        "launch",
+        "dinner"
+      ]
+    },
+    {
+      "name": "Sliced Beef with Grilled Peppers",
+      "nameAr": "شرائح لحم مشوية بالفلفل الملون",
+      "description": "Chargrilled beef slices over colourful grilled peppers and fresh greens.",
+      "descriptionAr": "شرائح لحم مشوية على الفحم فوق فلفل ملون مشوي وخضرة طازجة.",
+      "price": 420,
+      "image": "/xs/20/products/p08.jpg",
+      "collections": [
+        "dinner"
+      ]
+    }
+  ],
+  "wording": {},
+  "wordingAr": {}
+}

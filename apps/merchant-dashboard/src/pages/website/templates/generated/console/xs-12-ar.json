@@ -1,0 +1,576 @@
+{
+  "globalStyles": {
+    "primaryColor": "#72AEC8",
+    "themeSettings": {
+      "xsLook": "12",
+      "header": {
+        "menu": [
+          {
+            "label": "الرئيسية",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "المنتجات",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "تواصل معنا",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "روابط سريعة",
+            "links": [
+              {
+                "label": "الرئيسية",
+                "href": "/",
+                "kind": "home"
+              },
+              {
+                "label": "المتجر",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "تواصل معنا",
+                "href": "/contact",
+                "kind": "page"
+              }
+            ]
+          },
+          {
+            "title": "المساعدة والمعلومات",
+            "links": [
+              {
+                "label": "تتبّع طلبك",
+                "href": "/track",
+                "kind": "track"
+              },
+              {
+                "label": "السلة",
+                "href": "/cart",
+                "kind": "cart"
+              }
+            ]
+          }
+        ],
+        "text": "أحدث الموبايلات والساعات الذكية بضمان حقيقي وأسعار منافسة، مع توصيل سريع لكل محافظات مصر.",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "الرئيسية",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs12-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s1-e1",
+                        "type": "xs_hero",
+                        "props": {
+                          "look": "12",
+                          "heading": "أحدث الأجهزة بين يديك.",
+                          "text": "",
+                          "image": "/xs/12/banner-image.png",
+                          "buttonLabel": "تسوّق الآن",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s2-e1",
+                        "type": "xs_features",
+                        "props": {
+                          "look": "12",
+                          "heading": "",
+                          "text": "",
+                          "image": "",
+                          "items": [
+                            {
+                              "icon": "truck",
+                              "image": "/xs/12/ico-1.svg",
+                              "title": "توصيل مجاني",
+                              "text": "نوصّل طلبك مجانًا حتى باب بيتك."
+                            },
+                            {
+                              "icon": "support",
+                              "image": "/xs/12/ico-2.svg",
+                              "title": "ضمان الجودة",
+                              "text": "أجهزة أصلية بضمان معتمد وفحص كامل قبل الشحن."
+                            },
+                            {
+                              "icon": "return",
+                              "image": "/xs/12/ico-3.svg",
+                              "title": "عروض يومية",
+                              "text": "خصومات متجددة كل يوم على أشهر الماركات."
+                            },
+                            {
+                              "icon": "bag",
+                              "image": "/xs/12/ico-4.svg",
+                              "title": "دفع آمن 100%",
+                              "text": "ادفع بالبطاقة أو عند الاستلام بكل أمان."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s3-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "12",
+                          "heading": "موبايلات",
+                          "collection": "",
+                          "limit": 8,
+                          "showDiscount": true,
+                          "showTabs": false,
+                          "showSearch": false,
+                          "layout": "slider",
+                          "quickView": true,
+                          "allLabel": "كل المنتجات",
+                          "searchLabel": "بحث",
+                          "viewLabel": "نظرة سريعة",
+                          "searchPlaceholder": "اكتب واضغط Enter",
+                          "loadMoreLabel": "تصفّح المتجر",
+                          "openLabel": "أضف للسلة",
+                          "linkLabel": "تصفّح المتجر",
+                          "linkHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s4-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "12",
+                          "heading": "تخفيضات العام الجديد",
+                          "text": "خصم 10%",
+                          "images": [
+                            "/xs/12/single-image1.png"
+                          ],
+                          "points": [],
+                          "buttonLabel": "تسوّق العروض",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s5-e1",
+                        "type": "xs_quotes",
+                        "props": {
+                          "look": "12",
+                          "heading": "",
+                          "items": [
+                            {
+                              "quote": "اشتريت هاتفي وساعتي الذكية من هنا، ووصلت الأجهزة أصلية ومغلّفة بعناية قبل موعدها. خدمة محترمة وأسعار منافسة فعلًا.",
+                              "name": "ياسمين عادل"
+                            },
+                            {
+                              "quote": "اشتريت هاتفي وساعتي الذكية من هنا، ووصلت الأجهزة أصلية ومغلّفة بعناية قبل موعدها. خدمة محترمة وأسعار منافسة فعلًا.",
+                              "name": "كريم مجدي"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s6",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s6-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s6-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s6-e1",
+                        "type": "xs_newsletter",
+                        "props": {
+                          "look": "12",
+                          "heading": "اشترك الآن",
+                          "text": "احصل على أحدث الأخبار والعروض مباشرةً في بريدك.",
+                          "placeholder": "اكتب بريدك الإلكتروني",
+                          "buttonLabel": "اشترك"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s7",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s7-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s7-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s7-e1",
+                        "type": "xs_gallery",
+                        "props": {
+                          "look": "12",
+                          "heading": "تسوّق من إنستجرام",
+                          "images": [
+                            "/xs/12/insta-item1.jpg",
+                            "/xs/12/insta-item2.jpg",
+                            "/xs/12/insta-item3.jpg",
+                            "/xs/12/insta-item4.jpg",
+                            "/xs/12/insta-item5.jpg"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p1-s8",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p1-s8-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p1-s8-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p1-s8-e1",
+                        "type": "xs_posts",
+                        "props": {
+                          "look": "12",
+                          "heading": "أحدث المقالات",
+                          "items": [
+                            {
+                              "image": "/xs/12/post-1.jpg",
+                              "meta": "22 فبراير 2023 - أجهزة ذكية",
+                              "title": "أروع الأجهزة الذكية في 2023",
+                              "text": "",
+                              "linkLabel": "",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/12/post-2.jpg",
+                              "meta": "25 فبراير 2023 - تكنولوجيا",
+                              "title": "حيل تقنية لم تعرفها من قبل",
+                              "text": "",
+                              "linkLabel": "",
+                              "href": ""
+                            },
+                            {
+                              "image": "/xs/12/post-3.jpg",
+                              "meta": "22 فبراير 2023 - كاميرات",
+                              "title": "أفضل 10 كاميرات صغيرة في العالم",
+                              "text": "",
+                              "linkLabel": "",
+                              "href": ""
+                            }
+                          ],
+                          "linkLabel": "اقرأ المدونة",
+                          "linkHref": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "تواصل معنا",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs12-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "12",
+                          "heading": "تواصل معنا",
+                          "image": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs12-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs12-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs12-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs12-p2-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "12",
+                          "heading": "لديك استفسار؟",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "العنوان",
+                              "text": "المهندسين، الجيزة"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "الهاتف",
+                              "text": "اتصل بنا يوميًا من 10 صباحًا حتى 10 مساءً"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "البريد الإلكتروني",
+                              "text": "أرسل لنا رسالة وسنرد عليك خلال يوم"
+                            }
+                          ],
+                          "contactPlaceholder": "اكتب بريدك الإلكتروني هنا",
+                          "messagePlaceholder": "اكتب رسالتك هنا",
+                          "buttonLabel": "إرسال"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

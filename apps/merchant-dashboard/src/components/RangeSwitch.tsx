@@ -1,45 +1,72 @@
+import { CalendarDays } from "lucide-react";
 import { cn } from "@store-builder/ui";
-import { useT } from "@/i18n/LocaleContext";
-
-export type AnalyticsRange = "7d" | "30d" | "90d";
+import { Select } from "@/components/Select";
+import { useCommon, useT, type Messages } from "@/i18n/LocaleContext";
+import { ANALYTICS_RANGES, type AnalyticsRange } from "@/lib/analytics";
 
 const STRINGS = {
-  en: { range: "Date range", "7d": "7 days", "30d": "30 days", "90d": "90 days" },
-  ar: { range: "النطاق الزمني", "7d": "7 أيام", "30d": "30 يومًا", "90d": "90 يومًا" },
-};
+  en: {
+    label: "Date range",
+    yesterday: "Yesterday",
+    last365: "Last 365 days",
+    compare: "Compare: previous period",
+  },
+  ar: {
+    label: "الفترة",
+    yesterday: "أمس",
+    last365: "آخر 365 يومًا",
+    compare: "المقارنة: الفترة السابقة",
+  },
+} satisfies Messages;
 
-const RANGES: AnalyticsRange[] = ["7d", "30d", "90d"];
-
-interface RangeSwitchProps {
+/**
+ * The date-range control above the analytics and funnel screens: the presets
+ * in a native select (the dashboard's own control — it also keeps the menu
+ * library out of every page that shows this), next to the always-on
+ * comparison chip.
+ */
+export function RangeSwitch({
+  value,
+  onChange,
+  className,
+}: {
   value: AnalyticsRange;
-  onChange: (next: AnalyticsRange) => void;
+  onChange: (value: AnalyticsRange) => void;
   className?: string;
-}
-
-/** Segmented 7d / 30d / 90d control used by the home and analytics pages. */
-export function RangeSwitch({ value, onChange, className }: RangeSwitchProps) {
+}) {
   const t = useT(STRINGS);
+  const common = useCommon();
+  const labels: Record<AnalyticsRange, string> = {
+    today: common.today,
+    yesterday: t.yesterday,
+    "7d": common.last7,
+    "30d": common.last30,
+    "90d": common.last90,
+    "365d": t.last365,
+  };
   return (
-    <div
-      role="radiogroup"
-      aria-label={t.range}
-      className={cn("inline-flex rounded-[10px] border border-line bg-paper-raised p-0.5", className)}
-    >
-      {RANGES.map((r) => (
-        <button
-          key={r}
-          type="button"
-          role="radio"
-          aria-checked={value === r}
-          onClick={() => onChange(r)}
-          className={cn(
-            "cursor-pointer rounded-[8px] px-3 py-1 text-xs font-medium transition-colors",
-            value === r ? "bg-primary text-white" : "text-ink-soft hover:bg-primary-soft hover:text-ink"
-          )}
+    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+      <div className="relative">
+        <CalendarDays
+          className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft"
+          aria-hidden
+        />
+        <Select
+          aria-label={t.label}
+          value={value}
+          onChange={(e) => onChange(e.target.value as AnalyticsRange)}
+          className="h-9 w-auto ps-9 font-medium"
         >
-          {t[r]}
-        </button>
-      ))}
+          {ANALYTICS_RANGES.map((range) => (
+            <option key={range} value={range}>
+              {labels[range]}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <span className="inline-flex h-9 items-center rounded-[0.5rem] border border-line bg-paper-raised px-3 text-sm font-medium text-ink-soft">
+        {t.compare}
+      </span>
     </div>
   );
 }

@@ -1,0 +1,843 @@
+{
+  "key": "xs-22",
+  "name": "XS 22",
+  "category": "general",
+  "kind": "store",
+  "tags": [
+    "xs"
+  ],
+  "rtl": false,
+  "primaryColor": "#937AFF",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#937AFF",
+      "themeSettings": {
+        "xsLook": "22",
+        "header": {
+          "menu": [
+            {
+              "label": "Home",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "Shop",
+              "href": "/products",
+              "kind": "url"
+            },
+            {
+              "label": "About Us",
+              "href": "/about",
+              "kind": "page"
+            },
+            {
+              "label": "Contact",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "Primary",
+              "links": [
+                {
+                  "label": "Home",
+                  "href": "/",
+                  "kind": "home"
+                },
+                {
+                  "label": "About Us",
+                  "href": "/about",
+                  "kind": "page"
+                },
+                {
+                  "label": "Shop",
+                  "href": "/products",
+                  "kind": "url"
+                },
+                {
+                  "label": "Contact",
+                  "href": "/contact",
+                  "kind": "page"
+                }
+              ]
+            },
+            {
+              "title": "Resource",
+              "links": [
+                {
+                  "label": "Cart",
+                  "href": "/cart",
+                  "kind": "cart"
+                },
+                {
+                  "label": "Track Order",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            }
+          ],
+          "text": "Empowering Marketing businesses through intelligent automation.",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "Home",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs22-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p1-s1-e1",
+                          "type": "xs_hero",
+                          "props": {
+                            "look": "22",
+                            "heading": "The All-In-One Growth Software for Local Business Owners",
+                            "text": "The complete automated system designed to capture more leads, follow up instantly, and grow your local business - all in one place.",
+                            "image": "/xs/22/dashboard.png",
+                            "buttonLabel": "Start Your 14-day Free Trial",
+                            "buttonHref": "/products",
+                            "button2Label": "Book a Demo",
+                            "button2Href": "/contact"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p1-s2-e1",
+                          "type": "xs_features",
+                          "props": {
+                            "look": "22",
+                            "heading": "Replace Your Clunky Tools With A Smart, All-In-One System",
+                            "text": "Log in to a single powerful dashboard to manage everything seamlessly.",
+                            "image": "",
+                            "items": [
+                              {
+                                "icon": "support",
+                                "image": "/xs/22/ico-1.svg",
+                                "title": "Automated Customer Follow-Up",
+                                "text": "Missed Call Auto-Responder\n24/7 Appointment Scheduler\nInstant SMS & Email Follow-Up"
+                              },
+                              {
+                                "icon": "bag",
+                                "image": "/xs/22/ico-2.svg",
+                                "title": "Smart Customer Database",
+                                "text": "Unified Lead Inbox\nSmart Pipeline Manager\nClient Notes & History"
+                              },
+                              {
+                                "icon": "return",
+                                "image": "/xs/22/ico-3.svg",
+                                "title": "Autopilot Review Generator",
+                                "text": "Automated Review Requests\nGoogle & Facebook Integration\nReputation Tracking"
+                              },
+                              {
+                                "icon": "truck",
+                                "image": "/xs/22/ico-4.svg",
+                                "title": "High-Converting Websites",
+                                "text": "Drag-and-Drop Landing Pages\nLead Capture Forms\nWeb Chat Widgets"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p1-s3-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "22",
+                            "heading": "Our Products",
+                            "collection": "",
+                            "limit": 8,
+                            "showDiscount": true,
+                            "showTabs": true,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "allLabel": "All Products",
+                            "searchLabel": "Search",
+                            "searchPlaceholder": "Search",
+                            "loadMoreLabel": "Load More",
+                            "viewLabel": "Quick View",
+                            "openLabel": "Add to cart"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p1-s4-e1",
+                          "type": "xs_banners",
+                          "props": {
+                            "look": "22",
+                            "items": [
+                              {
+                                "image": "/xs/22/step-1.png",
+                                "title": "TRAFFIC",
+                                "text": "Drive more high-quality local leads to your business through optimized Google search and social visibility."
+                              },
+                              {
+                                "image": "/xs/22/step-2.png",
+                                "title": "CAPTURE",
+                                "text": "Convert website visitors into real conversations using web chat widgets and fast lead capture forms."
+                              },
+                              {
+                                "image": "/xs/22/step-3.png",
+                                "title": "NURTURING",
+                                "text": "Automatically follow up with every lead via SMS and email so no one slips through the cracks."
+                              },
+                              {
+                                "image": "/xs/22/step-4.png",
+                                "title": "CONVERT",
+                                "text": "Turn prospects into paying customers by making appointment booking and payments incredibly simple."
+                              },
+                              {
+                                "image": "/xs/22/step-5.png",
+                                "title": "REFER",
+                                "text": "Automatically request 5-star Google reviews from happy customers to drive even more organic traffic."
+                              }
+                            ],
+                            "heading": "The 5 things every Business Needs"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p1-s5-e1",
+                          "type": "xs_gallery",
+                          "props": {
+                            "look": "22",
+                            "heading": "",
+                            "images": [
+                              "/xs/22/brand-1.svg",
+                              "/xs/22/brand-2.svg",
+                              "/xs/22/brand-3.svg",
+                              "/xs/22/brand-4.svg",
+                              "/xs/22/brand-5.svg"
+                            ],
+                            "variant": "logos",
+                            "text": "Trusted by 10,000+ local businesses to scale their bookings and growth automatically."
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p1-s6",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p1-s6-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p1-s6-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p1-s6-e1",
+                          "type": "xs_quotes",
+                          "props": {
+                            "look": "22",
+                            "heading": "Real Stories From Local Business Owners",
+                            "items": [
+                              {
+                                "quote": "This all-in-one software is exactly what our local business needed. It completely eliminated our need for 4 other separate platforms and organized our entire customer pipeline.",
+                                "name": "Ronald Richards",
+                                "role": "Local Services Co.",
+                                "image": "/xs/22/avatar.png"
+                              },
+                              {
+                                "quote": "We used to lose at least 3-4 jobs a week because we couldn't answer the phone while on a roof. The Missed Call Auto-Responder immediately cut that to zero. This software pays for itself a hundred times over.",
+                                "name": "Marvin McKinney",
+                                "role": "Roofing Company Owner",
+                                "image": "/xs/22/story-1.png"
+                              },
+                              {
+                                "quote": "Our front desk was overwhelmed with appointment reminders and review requests. This system automated everything. Our show-up rate increased by 40% and our Google reviews doubled in two months.",
+                                "name": "Sarah Jenkins",
+                                "role": "Dental Practice Manager",
+                                "image": "/xs/22/story-2.png"
+                              },
+                              {
+                                "quote": "I finally cancelled my subscription to 5 different tools. Having the Smart Inbox, calendar, and text campaigns in one dashboard saved me nearly EGP 30,000 a month and made my life so much simpler.",
+                                "name": "David Alaba",
+                                "role": "HVAC Contractor",
+                                "image": "/xs/22/story-3.png"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p1-s7",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p1-s7-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p1-s7-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p1-s7-e1",
+                          "type": "xs_features",
+                          "props": {
+                            "look": "22",
+                            "heading": "Your 3-Step Path to Automated Growth",
+                            "text": "",
+                            "image": "",
+                            "items": [
+                              {
+                                "icon": "bag",
+                                "image": "/xs/22/ico-2.svg",
+                                "title": "1. Start Your Trial",
+                                "text": "Sign up for a free trial and experience the power of the platform for yourself. No credit card required."
+                              },
+                              {
+                                "icon": "support",
+                                "image": "/xs/22/ico-2.svg",
+                                "title": "2. Connect Your Business",
+                                "text": "Forward your calls, plug in your social accounts, and unify your inbox in a matter of clicks."
+                              },
+                              {
+                                "icon": "truck",
+                                "image": "/xs/22/ico-2.svg",
+                                "title": "3. Scale on Autopilot",
+                                "text": "Watch your calendar fill up and reviews come in automatically, so you can focus on serving your customers."
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p1-s8",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p1-s8-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p1-s8-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p1-s8-e1",
+                          "type": "xs_gallery",
+                          "props": {
+                            "look": "22",
+                            "heading": "Connect all your Applications",
+                            "images": [
+                              "/xs/22/app-1.png",
+                              "/xs/22/app-2.png",
+                              "/xs/22/app-3.png",
+                              "/xs/22/app-4.png",
+                              "/xs/22/app-5.png",
+                              "/xs/22/app-6.png",
+                              "/xs/22/app-7.png",
+                              "/xs/22/app-8.png"
+                            ],
+                            "variant": "photos"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p1-s9",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p1-s9-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p1-s9-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p1-s9-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "22",
+                            "heading": "Free Resource for Local Business Owners",
+                            "text": "The \"Leaking Bucket\" Audit: 5 Ways You're Losing Local Leads (And How to Fix Them).\n\nDid you know that most small businesses lose up to 50% of their potential sales simply because of slow follow-up?\n\nDownload our FREE Checklist to identify the \"lead leaks\" in your current business and learn how to plug them with simple software automation.",
+                            "images": [
+                              "/xs/22/ebook.png"
+                            ],
+                            "points": [
+                              "The Follow-Up Audit: A step-by-step guide to measuring your lead response time.",
+                              "Automation Quick-Wins: 3 workflows you can set up today to start booking more local appointments.",
+                              "The Tech Stack Check: Stop paying for 5 different software tools."
+                            ],
+                            "buttonLabel": "Get Free Checklist",
+                            "buttonHref": "/contact"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p1-s10",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p1-s10-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p1-s10-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p1-s10-e1",
+                          "type": "xs_newsletter",
+                          "props": {
+                            "look": "22",
+                            "heading": "Ready to put Your Local Business Growth on Autopilot?",
+                            "text": "Stop wasting thousands on scattered tools that don't convert and start enjoying streamlined, predictable growth.",
+                            "placeholder": "Email Address",
+                            "buttonLabel": "Start Your 14-Days Free Trial"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/about",
+        "title": "About",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs22-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "22",
+                            "heading": "Your System-Driven Growth Partner.",
+                            "image": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p2-s2-e1",
+                          "type": "xs_story",
+                          "props": {
+                            "look": "22",
+                            "items": [
+                              {
+                                "title": "Why We Do What We Do - A Letter From Our CEO",
+                                "body": "At Automark, we know you started your local business to serve your community, not to become a software engineer. The problem is most modern marketing tools are too complex, scattered, and disconnected, which leaves you feeling overwhelmed and stuck in the daily admin grind.\n\nWe believe you shouldn't have to pay for five different subscriptions or spend your weekends sending emails just to grow your company. We understand how frustrating it is to watch hard-earned leads slip through the cracks, which is why we built a single, unified platform that puts your follow-ups, reviews, and bookings on complete autopilot.",
+                                "quote": "Stop wasting money on scattered tools that don't talk to each other, and instead enjoy a streamlined business with consistent, predictable revenue growth.",
+                                "quoteAuthor": "Ronald Richards, Founder & CEO",
+                                "image": "/xs/22/ceo.png"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p2-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p2-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p2-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p2-s3-e1",
+                          "type": "xs_team",
+                          "props": {
+                            "look": "22",
+                            "heading": "Meet Our Team Of Experts",
+                            "items": [
+                              {
+                                "image": "/xs/22/team-1.png",
+                                "name": "Josh Wangombe",
+                                "role": "Co-Founder & CTO"
+                              },
+                              {
+                                "image": "/xs/22/team-2.png",
+                                "name": "Daniel Jenson",
+                                "role": "Co-Founder & CEO"
+                              },
+                              {
+                                "image": "/xs/22/team-3.png",
+                                "name": "Toun Aalbers",
+                                "role": "Co-Founder & CTO"
+                              },
+                              {
+                                "image": "/xs/22/team-4.png",
+                                "name": "Peter van Ursel",
+                                "role": "Customer Success Director"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "Contact",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs22-p3-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p3-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p3-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p3-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "22",
+                            "heading": "Contact Us",
+                            "image": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs22-p3-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs22-p3-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs22-p3-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs22-p3-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "22",
+                            "heading": "Have a question? Send us a message",
+                            "info": [
+                              {
+                                "icon": "email",
+                                "title": "Email Us",
+                                "text": "We reply to every message within one business day"
+                              },
+                              {
+                                "icon": "phone",
+                                "title": "Call or Text Us",
+                                "text": "Sunday to Thursday, 9 am to 6 pm"
+                              }
+                            ],
+                            "contactPlaceholder": "Email Address",
+                            "messagePlaceholder": "Write your message...",
+                            "buttonLabel": "Send Message"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

@@ -1,0 +1,364 @@
+/*
+ * Look 08 · Karma (Colorlib, CC BY 3.0) — everything that is this one
+ * template's: its colours and type, how its header and footer differ from the
+ * shared layout in xs-shell.css, and how it draws the bands it shares with
+ * other looks. Deleting this file (and its import, its pictures under
+ * public/xs/08 and its entries in lib/xsShell.ts and the editor's
+ * xsBlocks.ts) removes the template.
+ *
+ * Its faces are served from this app, Latin only (xs-fonts.css); Arabic text
+ * falls through to the store's own face.
+ */
+
+[data-xs-look="08"],
+.brand-theme[data-xs-shell="08"] {
+  --xs-sans: "Roboto", "XS Ar IBM Plex Sans Arabic", var(--font-sans), sans-serif;
+  --xs-display: "Roboto", "XS Ar IBM Plex Sans Arabic", var(--font-sans), sans-serif;
+  --xs-ink: #222;
+  --xs-ink-soft: #777;
+  --xs-muted: #777;
+  --xs-brand: #ffba00;
+  --xs-accent: #ffba00;
+  --xs-button: #ff6c00;
+  --xs-highlight: #ffba00;
+  --xs-grad: linear-gradient(90deg, #ffba00 0%, #ff6c00 100%);
+  --xs-tint: #f9f9ff;
+  --xs-dark: #222;
+  --xs-line: #eee;
+  --xs-ground: #fff;
+  --xs-footer-ink: #777;
+  --xs-badge: #ff6c00;
+  --xs-btn-radius: 50px;
+  --xs-container: 1170px;
+  color: var(--xs-ink-soft);
+  font-size: 14px;
+  line-height: 1.625em;
+}
+
+/* --- header: one white bar with a soft shadow ------------------------------ */
+
+.xs-header[data-xs-look="08"] {
+  padding-bottom: 0;
+}
+.xs-header[data-xs-look="08"] .xs-header__strip {
+  display: none;
+}
+.xs-header[data-xs-look="08"] .xs-header__bar,
+.xs-header[data-xs-look="08"][data-scrolled] .xs-header__bar {
+  position: static;
+  height: 80px;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.xs-header[data-xs-look="08"] .xs-header__logo-name {
+  background: var(--xs-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.xs-header[data-xs-look="08"] .xs-header__menu {
+  margin-inline-start: auto;
+}
+.xs-header[data-xs-look="08"] .xs-header__link {
+  margin-inline: 0;
+  padding: 0 14px;
+  color: var(--xs-ink);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.xs-header[data-xs-look="08"] .xs-header__link:hover {
+  color: var(--xs-brand);
+}
+.xs-header[data-xs-look="08"] .xs-header__icons {
+  flex: 0 0 auto;
+  margin-inline-start: 20px;
+}
+.xs-header[data-xs-look="08"] .zt-icon-btn > span {
+  border-radius: 50%;
+}
+@media (max-width: 991px) {
+  .xs-header[data-xs-look="08"] .xs-header__icons {
+    flex: 1;
+  }
+}
+
+/* --- footer: near-black, white column titles ------------------------------- */
+
+.xs-footer[data-xs-look="08"] {
+  padding-top: 100px;
+  font-size: 14px;
+  line-height: 1.625em;
+}
+.xs-footer[data-xs-look="08"] .xs-footer__col:last-child {
+  order: -1;
+}
+.xs-footer[data-xs-look="08"] .xs-footer__title {
+  padding-bottom: 25px;
+  font-size: 18px;
+  font-weight: 600;
+  text-transform: none;
+}
+.xs-footer[data-xs-look="08"] a:hover {
+  color: var(--xs-brand);
+}
+.xs-footer[data-xs-look="08"] .xs-footer__bottom {
+  padding-top: 30px;
+}
+
+/* --- xs_hero: the words on a pale photograph, the product standing beside -- */
+
+.xs-hero[data-xs-look="08"] {
+  padding: calc(120px * var(--xs-space, 1)) 15px;
+  background: url("/xs/08/banner-bg.jpg") center / cover no-repeat;
+}
+.xs-hero[data-xs-look="08"] .xs-hero__inner {
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  align-items: center;
+}
+.xs-hero[data-xs-look="08"] .xs-hero__heading {
+  color: var(--xs-ink);
+  font-size: 72px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.xs-hero[data-xs-look="08"] .xs-hero__line {
+  color: var(--xs-ink-soft);
+}
+.xs-hero[data-xs-look="08"] .xs-hero__art img {
+  position: static;
+  width: 100%;
+  max-width: none;
+}
+.xs-hero[data-xs-look="08"] .xs-hero__art::after {
+  display: none;
+}
+[data-xs-look="08"] .xs-btn {
+  padding: 0 30px;
+  border: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 50px;
+  text-transform: uppercase;
+}
+[data-xs-look="08"] .xs-btn[data-tone="accent"],
+[data-xs-look="08"] .xs-btn[data-tone="solid"] {
+  background: var(--xs-grad);
+  color: #fff;
+}
+[data-xs-look="08"] .xs-btn[data-tone="accent"]:hover,
+[data-xs-look="08"] .xs-btn[data-tone="solid"]:hover {
+  background: var(--xs-dark);
+  filter: none;
+}
+@media (max-width: 991px) {
+  .xs-hero[data-xs-look="08"] {
+    padding: calc(60px * var(--xs-space, 1)) 15px;
+  }
+  .xs-hero[data-xs-look="08"] .xs-hero__inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .xs-hero[data-xs-look="08"] .xs-hero__heading {
+    font-size: 44px;
+  }
+}
+
+/* --- xs_features: four promises in one bordered box ------------------------ */
+
+.xs-features[data-xs-look="08"] {
+  padding: calc(100px * var(--xs-space, 1)) 15px;
+}
+.xs-features[data-xs-look="08"] .xs-features__inner {
+  grid-template-columns: minmax(0, 1fr);
+}
+.xs-features[data-xs-look="08"] .xs-features__list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 40px 0;
+  box-shadow: 0 10px 20px rgba(153, 153, 153, 0.1);
+  text-align: center;
+}
+.xs-features[data-xs-look="08"] .xs-features__item {
+  margin: 0;
+  padding: 0 20px;
+  border-inline-end: 1px solid var(--xs-line);
+}
+.xs-features[data-xs-look="08"] .xs-features__item:last-child {
+  border: 0;
+}
+.xs-features[data-xs-look="08"] .xs-features__icon::before {
+  display: none;
+}
+.xs-features[data-xs-look="08"] .xs-features__item h3 {
+  margin-bottom: 4px;
+  font-size: 16px;
+  font-weight: 500;
+}
+@media (max-width: 767px) {
+  .xs-features[data-xs-look="08"] .xs-features__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 30px 0;
+  }
+}
+
+/* --- xs_banners "tile": pictures that dim to show their name --------------- */
+
+.xs-banners[data-xs-look="08"] {
+  padding: 0 15px calc(100px * var(--xs-space, 1));
+}
+.xs-banners[data-xs-look="08"] .xs-banners__item {
+  border: 0;
+  overflow: hidden;
+}
+.xs-banners[data-xs-look="08"] .xs-banners__img {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+.xs-banners[data-xs-look="08"] .xs-banners__text {
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.3s, background-color 0.3s;
+}
+.xs-banners[data-xs-look="08"] .xs-banners__item:hover .xs-banners__text {
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 1;
+}
+.xs-banners[data-xs-look="08"] .xs-banners__title,
+.xs-banners[data-xs-look="08"] .xs-banners__item:hover .xs-banners__title {
+  padding: 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+/* --- xs_products: a centred heading and line ------------------------------- */
+
+.xs-products[data-xs-look="08"] {
+  padding: 0 15px calc(100px * var(--xs-space, 1));
+}
+.xs-products[data-xs-look="08"] .xs-products__head {
+  justify-content: center;
+}
+.xs-products[data-xs-look="08"] .xs-products__heading {
+  padding-bottom: 30px;
+  color: var(--xs-ink);
+  font-size: 36px;
+  font-weight: 700;
+  text-transform: none;
+}
+.xs-products[data-xs-look="08"] .xs-products__grid {
+  margin-top: 0;
+}
+.xs-products[data-xs-look="08"] .xs-products__media {
+  aspect-ratio: 1;
+}
+.xs-products[data-xs-look="08"] .xs-products__name {
+  padding-bottom: 8px;
+  color: var(--xs-ink);
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.xs-products[data-xs-look="08"] .xs-products__price {
+  color: var(--xs-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.xs-products[data-xs-look="08"] .xs-products__view {
+  background: var(--xs-grad);
+  color: #fff;
+}
+.xs-products[data-xs-look="08"] .xs-products__more-btn {
+  background: var(--xs-grad);
+  color: #fff;
+}
+
+/* --- xs_split: the hot deal — words over a photograph, the product beside -- */
+
+.xs-split[data-xs-look="08"] {
+  padding: 0;
+  background: var(--xs-tint);
+}
+.xs-split[data-xs-look="08"] .xs-split__inner {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  align-items: stretch;
+  max-width: none;
+}
+.xs-split[data-xs-look="08"] .xs-split__grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  order: 2;
+  padding: 60px 30px;
+}
+.xs-split[data-xs-look="08"] .xs-split__grid::before {
+  display: none;
+}
+.xs-split[data-xs-look="08"] .xs-split__pic {
+  padding: 0;
+}
+.xs-split[data-xs-look="08"] .xs-split__pic:not([data-slot="1"]) {
+  display: none;
+}
+.xs-split[data-xs-look="08"] .xs-split__pic img {
+  max-height: 380px;
+  border-radius: 0;
+}
+.xs-split[data-xs-look="08"] .xs-split__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 140px 40px;
+  background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url("/xs/08/exclusive.jpg") center / cover no-repeat;
+  text-align: center;
+}
+.xs-split[data-xs-look="08"] .xs-heading {
+  max-width: 420px;
+  color: #fff;
+  font-size: 36px;
+  font-weight: 700;
+}
+.xs-split[data-xs-look="08"] .xs-split__text p {
+  margin-bottom: 30px;
+  color: #fff;
+}
+@media (max-width: 991px) {
+  .xs-split[data-xs-look="08"] .xs-split__inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --- inner pages ----------------------------------------------------------- */
+
+.xs-title[data-xs-look="08"] {
+  padding: calc(110px * var(--xs-space, 1)) 15px;
+  background: var(--xs-grad);
+}
+.xs-title[data-xs-look="08"] .xs-title__heading {
+  font-size: 48px;
+  font-weight: 600;
+}
+.xs-contact[data-xs-look="08"] .xs-contact__submit {
+  background: var(--xs-grad);
+}
+.xs-contact[data-xs-look="08"] .xs-contact__submit:hover:not(:disabled) {
+  background: var(--xs-dark);
+}
+.xs-contact[data-xs-look="08"] .xs-contact__row svg {
+  color: var(--xs-button);
+}
+.xs-contact[data-xs-look="08"] .xs-contact__value[data-accent] {
+  color: var(--xs-ink-soft);
+}

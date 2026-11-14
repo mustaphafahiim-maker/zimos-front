@@ -1,0 +1,150 @@
+{
+  "look": "16",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Men",
+      "nameAr": "رجالي",
+      "slug": "men"
+    },
+    {
+      "name": "Women",
+      "nameAr": "حريمي",
+      "slug": "women"
+    },
+    {
+      "name": "Accessories",
+      "nameAr": "إكسسوارات",
+      "slug": "accessories"
+    },
+    {
+      "name": "T-Shirts",
+      "nameAr": "تيشيرتات",
+      "slug": "t-shirts"
+    }
+  ],
+  "products": [
+    {
+      "name": "Black Satin Cowl-Neck Slip Dress",
+      "nameAr": "فستان ساتان أسود بحمالات رفيعة",
+      "description": "Fluid satin slip dress with a soft cowl neckline and thin straps. Effortless with sneakers or heels.",
+      "descriptionAr": "فستان ساتان انسيابي بياقة مكسّرة وحمالات رفيعة، يليق مع الكوتشي أو الكعب.",
+      "price": 1250,
+      "image": "/xs/16/products/p01.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Black Wide-Leg Trouser Suit",
+      "nameAr": "بدلة حريمي سوداء ببنطلون واسع",
+      "description": "Relaxed black blazer with matching wide-leg trousers. A sharp, modern suit for work and evenings.",
+      "descriptionAr": "بليزر أسود بقصّة مريحة مع بنطلون واسع من نفس الخامة، بدلة عصرية للشغل والسهرة.",
+      "price": 2850,
+      "image": "/xs/16/products/p02.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Black Strappy Flared Midi Dress",
+      "nameAr": "فستان ميدي أسود بحمالات",
+      "description": "Fitted bodice with thin straps and a flared midi skirt that moves with you. Day-to-night essential.",
+      "descriptionAr": "فستان بصدر محدّد وحمالات رفيعة وجيبة ميدي واسعة تتحرك معك، أساسي من الصبح للسهرة.",
+      "price": 1390,
+      "compareAt": 1750,
+      "image": "/xs/16/products/p03.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Black Leather Biker Jacket",
+      "nameAr": "جاكيت جلد أسود بايكر",
+      "description": "Classic biker jacket in soft black leather with asymmetric zip, snap lapels and zipped cuffs.",
+      "descriptionAr": "جاكيت بايكر كلاسيك من الجلد الأسود الناعم بسوستة جانبية وياقة بكباسين وأساور بسوستة.",
+      "price": 3200,
+      "compareAt": 3990,
+      "image": "/xs/16/products/p04.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Cobalt Blue Women's Suit",
+      "nameAr": "بدلة حريمي أزرق كوبالت",
+      "description": "Bold cobalt blazer and wide-leg trousers cut for a confident, head-turning look.",
+      "descriptionAr": "بليزر أزرق كوبالت جريء مع بنطلون واسع، لإطلالة واثقة تلفت الأنظار.",
+      "price": 2650,
+      "image": "/xs/16/products/p05.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "White Linen Band-Collar Shirt",
+      "nameAr": "قميص كتان أبيض بياقة مانديرن",
+      "description": "Breathable oversized linen shirt with a band collar and dropped shoulders. Cool and easy all summer.",
+      "descriptionAr": "قميص كتان أوفر سايز يسمح بمرور الهواء، بياقة مانديرن وأكتاف واسعة. منعش طوال الصيف.",
+      "price": 790,
+      "image": "/xs/16/products/p06.jpg",
+      "collections": [
+        "women",
+        "t-shirts"
+      ]
+    },
+    {
+      "name": "Mustard Double-Breasted Men's Suit",
+      "nameAr": "بدلة رجالي مستردة دبل بريست",
+      "description": "Statement mustard-yellow suit with a double-breasted jacket and tapered trousers.",
+      "descriptionAr": "بدلة رجالي بلون مستردة لافت بجاكيت دبل بريست وبنطلون بقصّة ضيقة من تحت.",
+      "price": 3450,
+      "image": "/xs/16/products/p07.jpg",
+      "collections": [
+        "men"
+      ]
+    },
+    {
+      "name": "Red Turtleneck Knit Midi Dress",
+      "nameAr": "فستان تريكو أحمر برقبة عالية",
+      "description": "Long-sleeve red knit dress with a high neck and figure-skimming midi length. Warm, elegant and easy.",
+      "descriptionAr": "فستان تريكو أحمر بكم طويل ورقبة عالية وطول ميدي يحدّد القوام. دافئ وأنيق.",
+      "price": 1290,
+      "image": "/xs/16/products/p08.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Night-Out Set: Slip Dress, Blazer & Handbag",
+      "nameAr": "طقم سهرة: فستان ساتان وبليزر وشنطة يد",
+      "description": "The full evening look in one order: black satin slip dress, oversized black blazer and a top-handle handbag.",
+      "descriptionAr": "إطلالة السهرة كاملة في طلب واحد: فستان ساتان أسود وبليزر أسود أوفر سايز وشنطة يد أنيقة.",
+      "price": 3950,
+      "compareAt": 4800,
+      "image": "/xs/16/products/p09.jpg",
+      "images": [
+        "/xs/16/products/p09.jpg",
+        "/xs/16/products/p09b.jpg",
+        "/xs/16/products/p09c.jpg",
+        "/xs/16/products/p09d.jpg",
+        "/xs/16/products/p09e.jpg",
+        "/xs/16/products/p09f.jpg"
+      ],
+      "collections": [
+        "women",
+        "accessories"
+      ]
+    }
+  ],
+  "wording": {
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search for products...",
+    "openLabel": "Add to Cart"
+  },
+  "wordingAr": {
+    "searchLabel": "بحث",
+    "searchPlaceholder": "ابحث عن منتج...",
+    "openLabel": "أضف للسلة"
+  }
+}

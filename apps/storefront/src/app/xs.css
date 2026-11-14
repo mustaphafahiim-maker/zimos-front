@@ -1,0 +1,17 @@
+/*
+ * The imported templates ("xs" looks) — the part every page carries: the
+ * shared bands, inner pages, home bands and the shared header and footer, in
+ * the order the cascade needs. globals.css imports only this file.
+ *
+ * Each look's own file (xs-look-NN.css), the faces it is set in (xs-fonts.css)
+ * and the phone header (xs-phone.css) are not imported here: they are built
+ * into one small stylesheet per look (scripts/xs-look-css.mjs) that a page
+ * links only when it draws that look (components/xs/XsLookStyles). Removing a
+ * look is deleting its file (and its pictures); removing the whole feature is
+ * deleting the one import in globals.css.
+ */
+@import "./xs-sections.css";
+@import "./xs-pages.css";
+@import "./xs-home.css";
+@import "./xs-shell.css";
+@import "./xs-store.css";

@@ -1,0 +1,231 @@
+/*
+ * Look 02 · Furni (Untree.co, CC BY 3.0) — everything that is this one
+ * template's: its colours and type, and how its header and footer differ
+ * from the shared layout in xs-shell.css. Deleting this file (and its import,
+ * its pictures under public/xs/02 and its entries in lib/xsShell.ts and the
+ * editor's xsBlocks.ts) removes the template.
+ *
+ * Its faces are served from this app, Latin only (xs-fonts.css); Arabic text
+ * falls through to the store's own face.
+ */
+
+[data-xs-look="02"],
+.brand-theme[data-xs-shell="02"] {
+  --xs-sans: "Inter", "XS Ar IBM Plex Sans Arabic", var(--font-sans), sans-serif;
+  --xs-display: "Inter", "XS Ar IBM Plex Sans Arabic", var(--font-sans), sans-serif;
+  --xs-ink: #2f2f2f;
+  --xs-ink-soft: #6a6a6a;
+  --xs-muted: #6a6a6a;
+  --xs-brand: #3b5d50;
+  --xs-accent: #3b5d50;
+  --xs-button: #3b5d50;
+  --xs-highlight: #f9bf29;
+  --xs-tint: #dce5e4;
+  --xs-dark: #222;
+  --xs-line: #dce5e4;
+  --xs-ground: #eff2f1;
+  --xs-footer-ink: #2f2f2f;
+  --xs-badge: #f9bf29;
+  --xs-container: 1140px;
+  --xs-dots-light: url("/xs/02/dots-light.svg");
+  --xs-dots-accent: url("/xs/02/dots-yellow.svg");
+  --xs-dots-brand: url("/xs/02/dots-green.svg");
+  color: var(--xs-ink-soft);
+  font-size: 14px;
+  line-height: 28px;
+}
+
+/* --- header: one bar in the brand colour, the menu pushed to the end ------- */
+
+.xs-header[data-xs-look="02"] {
+  padding-bottom: 0;
+  background: var(--xs-brand);
+}
+.xs-header[data-xs-look="02"] .xs-header__strip {
+  display: none;
+}
+.xs-header[data-xs-look="02"] .xs-header__bar,
+.xs-header[data-xs-look="02"][data-scrolled] .xs-header__bar {
+  position: static;
+  height: auto;
+  padding-block: 20px;
+  background: var(--xs-brand);
+  box-shadow: none;
+}
+.xs-header[data-xs-look="02"] .xs-header__logo {
+  height: auto;
+  margin-inline-end: 0;
+  color: #fff;
+}
+.xs-header[data-xs-look="02"] .xs-header__logo-name {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+/* The template's wordmark ends on a faded full stop. */
+.xs-header[data-xs-look="02"] .xs-header__logo-name::after {
+  content: ".";
+  opacity: 0.4;
+}
+.xs-header[data-xs-look="02"] .xs-header__menu {
+  margin-inline-start: auto;
+}
+.xs-header[data-xs-look="02"] .xs-header__link {
+  position: relative;
+  margin-inline: 15px;
+  padding: 8px;
+  color: #fff;
+  font-size: 16px;
+  opacity: 0.5;
+  transition: opacity 0.3s;
+}
+.xs-header[data-xs-look="02"] .xs-header__link::before {
+  content: "";
+  position: absolute;
+  inset-inline: 8px;
+  bottom: 0;
+  width: 0;
+  height: 5px;
+  background: var(--xs-highlight);
+  transition: width 0.15s ease-out;
+}
+.xs-header[data-xs-look="02"] .xs-header__link:hover,
+.xs-header[data-xs-look="02"] .xs-header__link[aria-current="page"] {
+  color: #fff;
+  opacity: 1;
+}
+.xs-header[data-xs-look="02"] .xs-header__link:hover::before,
+.xs-header[data-xs-look="02"] .xs-header__link[aria-current="page"]::before {
+  width: calc(100% - 16px);
+}
+.xs-header[data-xs-look="02"] .xs-header__icons {
+  flex: 0 0 auto;
+  margin-inline-start: 40px;
+}
+.xs-header[data-xs-look="02"] .zt-icon-btn,
+.xs-header[data-xs-look="02"] .zt-icon-btn:hover {
+  color: #fff;
+}
+.xs-header[data-xs-look="02"] .zt-icon-btn > span {
+  border-radius: 50%;
+  color: var(--xs-ink);
+}
+@media (max-width: 991px) {
+  .xs-header[data-xs-look="02"] .xs-header__bar,
+  .xs-header[data-xs-look="02"][data-scrolled] .xs-header__bar {
+    position: static;
+    height: auto;
+  }
+  .xs-header[data-xs-look="02"] .xs-header__icons {
+    flex: 1;
+    margin-inline-start: 0;
+  }
+}
+
+/* --- footer: white, the wordmark and the link columns side by side --------- */
+
+.xs-footer[data-xs-look="02"] {
+  position: relative;
+  padding: 80px 15px;
+  background: #fff;
+  color: var(--xs-ink-soft);
+  font-size: 14px;
+  line-height: 28px;
+}
+/* The template's sofa leans over the footer's top edge. */
+.xs-footer[data-xs-look="02"]::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  inset-inline-end: max(15px, calc((100% - var(--xs-container)) / 2));
+  width: 380px;
+  height: 240px;
+  background: url("/xs/02/sofa.png") no-repeat center bottom / contain;
+  pointer-events: none;
+}
+.xs-footer[data-xs-look="02"] .xs-footer__grid {
+  position: relative;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  padding-top: 54px;
+}
+/* The store's name and line lead, as the template's wordmark column does. */
+.xs-footer[data-xs-look="02"] .xs-footer__col:last-child {
+  order: -1;
+  grid-column: span 2;
+}
+.xs-footer[data-xs-look="02"] .xs-footer__col:last-child .xs-footer__title {
+  padding-bottom: 24px;
+  color: var(--xs-brand);
+  font-size: 32px;
+  font-weight: 500;
+  text-transform: none;
+}
+.xs-footer[data-xs-look="02"] .xs-footer__col:last-child .xs-footer__title::after {
+  content: ".";
+  opacity: 0.4;
+}
+.xs-footer[data-xs-look="02"] .xs-footer__title {
+  padding-bottom: 10px;
+  color: var(--xs-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: none;
+}
+.xs-footer[data-xs-look="02"] a {
+  color: var(--xs-ink);
+}
+.xs-footer[data-xs-look="02"] a:hover {
+  color: color-mix(in srgb, var(--xs-ink) 50%, transparent);
+}
+.xs-footer[data-xs-look="02"] .xs-footer__social a {
+  background: var(--xs-tint);
+  color: var(--xs-brand);
+  border-radius: 50%;
+}
+.xs-footer[data-xs-look="02"] .xs-footer__social a:hover {
+  background: var(--xs-brand);
+  color: #fff;
+}
+.xs-footer[data-xs-look="02"] .xs-footer__bottom {
+  align-items: flex-start;
+  padding-top: 24px;
+  border-top: 1px solid var(--xs-tint);
+  text-align: start;
+}
+@media (max-width: 991px) {
+  .xs-footer[data-xs-look="02"]::before {
+    width: 240px;
+    height: 150px;
+    top: -80px;
+  }
+}
+
+/* --- this look on the bands it shares with others -------------------------- */
+
+.xs-title[data-xs-look="02"] {
+  padding: calc(7rem * var(--xs-space, 1)) 15px;
+  background-color: var(--xs-brand);
+  text-align: start;
+}
+.xs-title[data-xs-look="02"] .xs-title__heading {
+  max-width: var(--xs-container);
+  margin-inline: auto;
+  font-size: 54px;
+}
+.xs-contact[data-xs-look="02"] .xs-contact__box {
+  border: 0;
+  border-radius: 10px;
+  background: #fff;
+}
+.xs-contact[data-xs-look="02"] .xs-contact__grid {
+  gap: 24px;
+}
+.xs-contact[data-xs-look="02"] .xs-contact__submit {
+  border-radius: 30px;
+  background: var(--xs-ink);
+  text-transform: none;
+}
+.xs-contact[data-xs-look="02"] :is(.xs-contact__field, .xs-contact__message) {
+  border-radius: 10px;
+}

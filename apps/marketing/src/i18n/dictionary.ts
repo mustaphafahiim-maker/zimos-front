@@ -1,3 +1,5 @@
+import type { PlanFeatureKey } from "@/lib/plans";
+
 /**
  * The shape every locale dictionary must satisfy.
  *
@@ -35,13 +37,20 @@ export interface Dictionary {
     homeAria: string;
     /** Accessible name of the primary <nav>. */
     primaryLabel: string;
-    product: string;
-    solutions: string;
+    benefits: string;
+    templates: string;
+    howItWorks: string;
+    /** The features page (/features). */
+    features: string;
     pricing: string;
     faq: string;
-    /** Visible label of the language switcher — the name of the OTHER language. */
+    /** Visible label of the footer's language switcher — the name of the OTHER language. */
     switchLanguage: string;
     switchLanguageAria: string;
+    /** Accessible name of the AR | EN switch in the header. */
+    languageLabel: string;
+    /** Beside the theme switch in the phone menu. */
+    themeLabel: string;
     switchToDark: string;
     switchToLight: string;
     openMenu: string;
@@ -52,203 +61,281 @@ export interface Dictionary {
   };
 
   hero: {
-    kicker: string;
-    /** Main headline — the "Build. Sell. Grow." phrase. */
-    headline: string;
-    subheadline: string;
+    /** The slogan: these lines, then `accent` in the brand blue. */
+    lines: string[];
+    accent: string;
+    body: string;
     primaryCta: string;
     secondaryCta: string;
-    /** Microcopy under the CTAs. */
-    ctaNote: string;
-    visual: HeroVisual;
+    /** Under the buttons, each with a tick. */
+    ticks: [string, string, string];
+    /** In the address pill of the browser frame. */
+    frameLabel: string;
+    imageAlt: string;
+    /** The cards floating over the screenshot — illustration, generic labels. */
+    chips: {
+      template: Chip;
+      published: Chip;
+      order: Chip;
+    };
   };
 
-  platform: {
+  /** Real stores built on the template library, in a gallery. */
+  templates: {
     kicker: string;
     heading: string;
     intro: string;
-    items: [
-      Capability,
-      Capability,
-      Capability,
-      Capability,
-      Capability,
-      Capability,
-      Capability,
-      Capability,
-    ];
+    /** "Template {n}" under each card. */
+    templateLabel: string;
+    /** Category of each look shown (lib/store-shots.ts), by look number ("01" …). */
+    categories: Record<string, string>;
+    /** On a computer: pointing at a card scrolls its picture. */
+    hoverHint: string;
+    /** On a phone: the cards are a row to swipe through. */
+    swipeHint: string;
+    cta: string;
+    caption: string;
   };
 
-  lifecycle: {
-    kicker: string;
-    heading: string;
-    intro: string;
-    points: [string, string, string];
-    flowCaption: string;
-    flowAria: string;
-    trackingLabel: string;
-    steps: [FlowStep, FlowStep, FlowStep, FlowStep];
-  };
-
-  howItWorks: {
-    kicker: string;
-    heading: string;
-    intro: string;
-    /** Visible "Step" label preceding the ordinal. */
-    stepLabel: string;
-    steps: [HowStep, HowStep, HowStep];
-  };
-
-  deepDives: {
-    kicker: string;
-    heading: string;
-    intro: string;
-    confirm: DeepDive & { visual: ConfirmVisual };
-    profit: DeepDive & { visual: ProfitVisual };
-    funnels: DeepDive & { visual: FunnelVisual };
-  };
-
+  /** The strip of platforms under the hero; their names are not translated. */
   integrations: {
+    label: string;
+    note: string;
+    /** Beside InstaPay's mark: it is a manual transfer, not a connection. */
+    manualTransfer: string;
+    /** In place of the shipping companies' marks, which the site does not name. */
+    shippingCompanies: string;
+    /** In place of the payment gateways' marks, which the site does not name. */
+    paymentGateways: string;
+  };
+
+  benefits: {
     kicker: string;
     heading: string;
     intro: string;
-    groups: [IntegrationGroup, IntegrationGroup, IntegrationGroup];
-    note: string;
+    /** The big card: the store, with the chain that follows it as chips. */
+    hero: { title: string; body: string; chips: [string, string, string, string, string] };
+    items: [Capability, Capability, Capability, Capability, Capability, Capability];
+    /** The wide card: automations, with a feed of what happens on its own. */
+    wide: { title: string; body: string; feed: [Chip, Chip, Chip] };
   };
 
+  journey: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    /** Who does a step. */
+    by: Record<StepOwner, string>;
+    steps: [JourneyStep, JourneyStep, JourneyStep, JourneyStep, JourneyStep];
+  };
+
+  /** Real screens of the dashboard behind tabs. */
+  dashboard: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    tabs: [ShotTab, ShotTab, ShotTab];
+    caption: string;
+  };
+
+  /** "What should reassure you": what is paid for, how, and whose data it is. */
+  trust: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    points: [TrustPoint, TrustPoint, TrustPoint, TrustPoint];
+    /** The link in the payment point. */
+    refundLink: string;
+  };
+
+  /** Plans and prices come from the API (GET /plans/public); these are the words around them. */
   pricing: {
     kicker: string;
     heading: string;
     intro: string;
-    badge: string;
-    plans: [Plan, Plan, Plan];
-    note: string;
+    pageTitle: string;
+    pageDescription: string;
+    pageHeading: string;
+    pageIntro: string;
+    billingCycle: string;
+    monthly: string;
+    yearly: string;
+    /**
+     * After "Yearly" on the switch, only while yearly saves on some plan. No
+     * number: what a plan saves is worked out from its prices
+     * (@store-builder/ui/plan-pricing), under its yearly price.
+     */
+    yearlySave: string;
+    perMonth: string;
+    perYear: string;
+    /** "{price}" */
+    yearlyEquivalent: string;
+    /** Read before the struck-out twelve monthly payments under a yearly price (screen readers only). */
+    fullYearLabel: string;
+    /** "{price}": the yearly price over twelve months, under it. */
+    perMonthEquivalent: string;
+    free: string;
+    /** "{days}" */
+    trial: string;
+    noTrial: string;
+    stores: string;
+    funnels: string;
+    orders: string;
+    unlimited: string;
+    cta: string;
+    ctaYearly: string;
+    seeAll: string;
+    comingSoon: string;
+    comingSoonBody: string;
+    comingSoonCta: string;
+    /** Followed by the refund policy link. */
+    paymentNote: string;
+    refundLink: string;
+    features: Record<PlanFeatureKey, string>;
+    /**
+     * The pay-per-order card and its questions, shown only while the API
+     * sends that plan (lib/plans `payPerOrder`). Every number in them — the
+     * fee, the free orders — comes from the plan.
+     */
+    payPerOrder: {
+      /** The pill above the plan's name. */
+      badge: string;
+      tagline: string;
+      /** After the fee, like perMonth. */
+      perOrder: string;
+      /** "{orders}" (lib/format formatOrderCount). */
+      freeOrders: string;
+      /** One of the two, as the API says the fee is taken. */
+      feeAtConfirmation: string;
+      feeAtPlacement: string;
+      noExpiry: string;
+      topUp: string;
+      cta: string;
+      /** Under the button: where the plan is chosen after sign-up. */
+      howToChoose: string;
+      /** The page's intro while the card is shown, in place of pageIntro. */
+      pageIntro: string;
+      faq: {
+        kicker: string;
+        heading: string;
+        afterFreeQuestion: string;
+        /** "{orders}", "{fee}" */
+        afterFreeAnswer: string;
+        whenQuestion: string;
+        whenAtConfirmation: string;
+        whenAtPlacement: string;
+        expiryQuestion: string;
+        expiryAnswer: string;
+        chooseQuestion: string;
+        chooseAnswer: string;
+      };
+    };
+  };
+
+  /** What the service is and what is sold — said plainly on the pricing page. */
+  service: {
+    kicker: string;
+    heading: string;
+    body: string;
+    /** `body` while the pricing page shows the pay-per-order plan. */
+    bodyWithPayPerOrder: string;
+    /** A point's `withPayPerOrder` replaces its body while that plan is shown. */
+    points: [TrustPoint, TrustPoint, TrustPoint, TrustPoint];
+  };
+
+  /** Shared by the policy and contact pages. */
+  legal: {
+    /** "{date}" */
+    lastUpdated: string;
+    contactHeading: string;
+    email: string;
+    phone: string;
+    address: string;
+    hours: string;
+    entityHeading: string;
+    legalName: string;
+    registration: string;
+    taxRegistration: string;
+    relatedHeading: string;
+    /** Above the social accounts on the contact page. */
+    socialHeading: string;
+  };
+
+  /** The credits page (/credits), linked from the footer. */
+  credits: {
+    title: string;
+    description: string;
+    intro: string;
+    templatesHeading: string;
+    /** Before the list of the designs' credits (lib/store-shots.ts SHOT_CREDITS). */
+    templatesLead: string;
+    resourcesHeading: string;
   };
 
   faq: {
     kicker: string;
     heading: string;
-    intro: string;
+    /** Under the heading, linking to the contact page. */
+    contactLink: string;
     items: FaqItem[];
   };
 
-  /** Navy closing band; its heading is `brand.limits`. */
+  /** The navy closing band. */
   finalCta: {
+    heading: string;
     body: string;
     primaryCta: string;
+    /** The sign-in link beside the button. */
     secondaryCta: string;
   };
 
   footer: {
     navLabel: string;
-    columns: [FooterColumn, FooterColumn, FooterColumn, FooterColumn];
+    /** `#anchor` for a home-page section, `/path` for a page (the locale is prefixed at render). */
+    links: { label: string; href: string }[];
     rights: string;
     languageLabel: string;
+    registration: string;
+    taxRegistration: string;
   };
 }
 
-export interface HeroVisual {
-  aria: string;
-  storeLabel: string;
-  liveLabel: string;
-  funnelTitle: string;
-  funnelSteps: [string, string, string, string];
-  pipelineTitle: string;
-  columns: [string, string, string];
-  order: string;
-  confirmTitle: string;
-  confirmBody: string;
-}
-
-export interface Capability {
-  id:
-    | "store"
-    | "funnels"
-    | "confirmation"
-    | "shipping"
-    | "analytics"
-    | "fraud"
-    | "automations"
-    | "teams";
-  title: string;
-  body: string;
-}
-
-export interface FlowStep {
-  /** Stable id, not shown. */
-  id: "placed" | "confirmed" | "tracked" | "delivered";
+/** A two-line label: a bold title and a small line under it. */
+export interface Chip {
   title: string;
   detail: string;
 }
 
-export interface HowStep {
-  id: "build" | "sell" | "grow";
+export interface Capability {
+  id: "mobile" | "domain" | "funnels" | "confirmation" | "shipping" | "analytics";
   title: string;
   body: string;
 }
 
-export interface DeepDive {
-  kicker: string;
-  heading: string;
+export type StepOwner = "you" | "auto" | "zimos";
+
+export interface JourneyStep {
+  id: "template" | "customize" | "publish" | "confirm" | "ship";
+  by: StepOwner;
+  title: string;
   body: string;
-  points: [string, string, string];
 }
 
-export interface ConfirmVisual {
-  aria: string;
-  queueTitle: string;
-  order: string;
-  cities: [string, string, string];
-  statusCalling: string;
-  statusConfirmed: string;
-  statusWaiting: string;
-  chatTitle: string;
-  storeMessage: string;
-  customerReply: string;
-  systemMessage: string;
-}
-
-export interface ProfitVisual {
-  aria: string;
-  title: string;
-  illustrative: string;
-  bars: [string, string, string, string, string, string];
-  metrics: [string, string, string];
-}
-
-export interface FunnelVisual {
-  aria: string;
-  title: string;
-  landing: string;
-  checkout: string;
-  bump: string;
-  upsell: string;
-  accept: string;
-  decline: string;
-  downsell: string;
-  thankYou: string;
-}
-
-export interface IntegrationGroup {
+export interface ShotTab {
+  /** The capture in public/product: `{id}-{locale}.webp`. */
+  id: "home" | "orders" | "profit";
   label: string;
-  items: string[];
+  alt: string;
 }
 
-export interface Plan {
-  id: "starter" | "growth" | "scale";
-  name: string;
-  description: string;
-  features: string[];
-  cta: string;
+export interface TrustPoint {
+  title: string;
+  body: string;
+  /** The service section's body for this point while the pay-per-order plan is shown. */
+  withPayPerOrder?: string;
 }
 
 export interface FaqItem {
   question: string;
   answer: string;
-}
-
-export interface FooterColumn {
-  title: string;
-  /** `#anchor` for in-page targets, `/path` for routes (locale is prefixed at render). */
-  links: { label: string; href: string }[];
 }

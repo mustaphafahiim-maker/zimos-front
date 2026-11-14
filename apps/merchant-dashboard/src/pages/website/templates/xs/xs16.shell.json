@@ -1,0 +1,118 @@
+{
+  "xsLook": "16",
+  "header": {
+    "menu": [
+      {
+        "label": "Home",
+        "href": "/",
+        "kind": "home"
+      },
+      {
+        "label": "Shop",
+        "href": "/products",
+        "kind": "url"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact",
+        "kind": "page"
+      }
+    ],
+    "show": {
+      "theme": false,
+      "trackOrder": false,
+      "language": false
+    },
+    "zones": {
+      "notice": [
+        {
+          "id": "notice",
+          "type": "notice"
+        }
+      ],
+      "links": [],
+      "brand": [
+        {
+          "id": "logo",
+          "type": "logo"
+        }
+      ],
+      "menu": [
+        {
+          "id": "menu",
+          "type": "menu"
+        }
+      ],
+      "icons": [
+        {
+          "id": "search",
+          "type": "search"
+        },
+        {
+          "id": "account",
+          "type": "account"
+        },
+        {
+          "id": "wishlist",
+          "type": "wishlist"
+        },
+        {
+          "id": "cart",
+          "type": "cart"
+        },
+        {
+          "id": "phone",
+          "type": "phone"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "groups": [
+      {
+        "title": "Shop",
+        "links": [
+          {
+            "label": "Shop",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Home",
+            "href": "/",
+            "kind": "home"
+          }
+        ]
+      },
+      {
+        "title": "Pages",
+        "links": [
+          {
+            "label": "Contact",
+            "href": "/contact",
+            "kind": "page"
+          },
+          {
+            "label": "Track Order",
+            "href": "/track",
+            "kind": "track"
+          }
+        ]
+      },
+      {
+        "title": "Account",
+        "links": [
+          {
+            "label": "Cart",
+            "href": "/cart",
+            "kind": "cart"
+          }
+        ]
+      }
+    ],
+    "text": "Modern fashion and sportswear for men and women, in comfortable fabrics and designs that keep up with every trend. Heliopolis, Cairo · Open every day from 10 am to 10 pm",
+    "show": {
+      "help": false
+    }
+  }
+}

@@ -32,6 +32,20 @@ export const CashIcon = (p: IconProps) => (
   </Base>
 );
 
+export const CardIcon = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="2.5" y="5" width="19" height="14" rx="2" />
+    <path d="M2.5 10h19M6.5 15h4" />
+  </Base>
+);
+
+export const WalletIcon = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
+    <path d="M10.5 18.5h3" />
+  </Base>
+);
+
 export const TruckIcon = (p: IconProps) => (
   <Base {...p}>
     <path d="M3 6.5h11v9H3zM14 9.5h4l3 3v3h-7z" />
@@ -59,6 +73,13 @@ export const CheckIcon = (p: IconProps) => (
   </Base>
 );
 
+/** The "no" half of a check/cross pair, and the close control of the lightbox. */
+export const CrossIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M18 6 6 18M6 6l12 12" />
+  </Base>
+);
+
 export const ChevronIcon = (p: IconProps) => (
   <Base {...p}>
     <path d="m6 9 6 6 6-6" />
@@ -69,6 +90,21 @@ export const ChevronIcon = (p: IconProps) => (
 export const ArrowIcon = (p: IconProps) => (
   <Base {...p}>
     <path d="M5 12h14M13 6l6 6-6 6" />
+  </Base>
+);
+
+/** Always points up — never flipped, in either direction. */
+export const ArrowUpIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </Base>
+);
+
+/** Shown over the gallery's main image: the photo opens larger. */
+export const ZoomIcon = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m20 20-4.2-4.2M8.5 11h5M11 8.5v5" />
   </Base>
 );
 
@@ -114,6 +150,27 @@ export const SearchIcon = (p: IconProps) => (
   <Base {...p}>
     <circle cx="11" cy="11" r="6.5" />
     <path d="m20 20-4.2-4.2" />
+  </Base>
+);
+
+/** The mobile header's menu control; the sheet it opens closes with CrossIcon. */
+export const MenuIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </Base>
+);
+
+/** The gallery slideshow's autoplay toggle, showing when it is running. */
+export const PauseIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M8 5v14M16 5v14" />
+  </Base>
+);
+
+/** The gallery slideshow's autoplay toggle, showing when it is stopped. */
+export const PlayIcon = (p: IconProps) => (
+  <Base {...p} fill="currentColor">
+    <path d="M7 4.5v15l13-7.5z" />
   </Base>
 );
 

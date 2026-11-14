@@ -1,427 +1,170 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import {
-  Activity,
-  Ban,
-  Building2,
-  ChevronDown,
-  CreditCard,
-  Factory,
-  Flag,
-  LayoutDashboard,
-  LayoutTemplate,
-  Layers,
-  LifeBuoy,
-  LogOut,
-  Megaphone,
-  Menu,
-  MessageCircle,
-  Puzzle,
-  RotateCcw,
-  ScrollText,
-  Search,
-  ShieldAlert,
-  Truck,
-  UserCog,
-  Wallet,
-  X,
-} from "lucide-react";
-import { Spinner, ZimosLogo, cn } from "@store-builder/ui";
+import { useCallback, useEffect, useState } from "react";
+import { Outlet, useLocation } from "react-router-dom";
+import { PanelLeft } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Status } from "@/components/StatusBadge";
-import { adminApi } from "@/mock/adminApi";
-import type { AdminWorkspace } from "@/mock/types";
-import { initials } from "@/lib/format";
+import { NotificationBell } from "@/components/NotificationBell";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { OverlayRoot } from "@/components/overlayRoot";
+import { AccountMenu } from "@/components/shell/AccountMenu";
+import { Breadcrumbs } from "@/components/shell/Breadcrumbs";
+import { Dock, type DockEditorState } from "@/components/shell/Dock";
+import { HomeShortcuts } from "@/components/HomeShortcuts";
+import { PushBridge } from "@/components/push/PushBridge";
+import { PushPrompt } from "@/components/push/PushPrompt";
+import { GlobalSearch } from "@/components/shell/GlobalSearch";
+import { PhoneMenu } from "@/components/shell/PhoneMenu";
+import { SidebarNav } from "@/components/shell/SidebarNav";
+import { useT } from "@/i18n/LocaleContext";
+import { SHELL_STRINGS } from "@/lib/shellStrings";
+import { P } from "@/lib/permissions";
+import { useLandingPath } from "@/lib/nav";
 
-interface NavItem {
-  label: string;
-  to: string;
-  icon: ComponentType<{ className?: string }>;
-}
+const SIDE_MENU_ID = "zimos-side-menu";
+/** Whether the side menu is hidden, kept on this device (the merchant dashboard's key). */
+const FOCUS_KEY = "zimos.focus";
 
-const NAV_GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
-  { label: null, items: [{ label: "Overview", to: "/", icon: LayoutDashboard }] },
-  {
-    label: "Merchants",
-    items: [
-      { label: "Workspaces", to: "/workspaces", icon: Building2 },
-      { label: "Subscriptions", to: "/subscriptions", icon: CreditCard },
-      { label: "Plans", to: "/plans", icon: Layers },
-    ],
-  },
-  {
-    label: "Marketplace",
-    items: [
-      { label: "Templates", to: "/templates", icon: LayoutTemplate },
-      { label: "Suppliers", to: "/suppliers", icon: Factory },
-      { label: "Apps", to: "/apps", icon: Puzzle },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { label: "Carriers", to: "/carriers", icon: Truck },
-      { label: "Payment gateways", to: "/payment-gateways", icon: Wallet },
-      { label: "WhatsApp numbers", to: "/whatsapp-numbers", icon: MessageCircle },
-    ],
-  },
-  {
-    label: "Risk",
-    items: [
-      { label: "Fraud signals", to: "/fraud-signals", icon: ShieldAlert },
-      { label: "Blocklist (global)", to: "/blocklist", icon: Ban },
-    ],
-  },
-  {
-    label: "Support",
-    items: [
-      { label: "Tickets", to: "/tickets", icon: LifeBuoy },
-      { label: "Announcements", to: "/announcements", icon: Megaphone },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { label: "Feature flags", to: "/feature-flags", icon: Flag },
-      { label: "Audit log", to: "/audit-log", icon: ScrollText },
-      { label: "System health", to: "/system-health", icon: Activity },
-      { label: "Admin users", to: "/admin-users", icon: UserCog },
-    ],
-  },
-];
-
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  return (
-    <>
-      <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
-        <ZimosLogo height={28} />
-        <span className="rounded-full border border-line bg-primary-soft px-2 py-0.5 text-[11px] font-semibold tracking-wide text-primary uppercase">
-          Platform Admin
-        </span>
-      </div>
-      <nav className="scroll-thin flex-1 overflow-y-auto px-3 pb-4" aria-label="Main">
-        {NAV_GROUPS.map((group, gi) => (
-          <div key={gi} className={cn(gi > 0 && "mt-4")}>
-            {group.label && (
-              <p className="mb-1 px-3 text-[11px] font-semibold tracking-wider text-ink-muted uppercase">{group.label}</p>
-            )}
-            <ul className="space-y-0.5">
-              {group.items.map((item) => (
-                <li key={item.to}>
-                  <NavLink
-                    to={item.to}
-                    end={item.to === "/"}
-                    onClick={onNavigate}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-primary-soft hover:text-ink",
-                        isActive && "bg-primary-soft text-primary"
-                      )
-                    }
-                  >
-                    <item.icon className="size-4 shrink-0" />
-                    {item.label}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </nav>
-    </>
-  );
-}
-
-function GlobalSearch() {
-  const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<AdminWorkspace[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(0);
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const q = query.trim();
-    if (!q) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    let cancelled = false;
-    const t = window.setTimeout(() => {
-      adminApi
-        .searchWorkspaces(q)
-        .then((rows) => {
-          if (!cancelled) {
-            setResults(rows);
-            setActive(0);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setResults([]);
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-    }, 180);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t);
-    };
-  }, [query]);
-
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        wrapRef.current?.querySelector("input")?.focus();
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, []);
-
-  function go(ws: AdminWorkspace) {
-    setOpen(false);
-    setQuery("");
-    navigate(`/workspaces/${ws.id}`);
-  }
-
-  return (
-    <div ref={wrapRef} className="relative w-full max-w-md">
-      <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted" aria-hidden />
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowDown") {
-            e.preventDefault();
-            setActive((i) => Math.min(i + 1, Math.max(results.length - 1, 0)));
-          } else if (e.key === "ArrowUp") {
-            e.preventDefault();
-            setActive((i) => Math.max(i - 1, 0));
-          } else if (e.key === "Enter" && results[active]) {
-            e.preventDefault();
-            go(results[active]);
-          } else if (e.key === "Escape") {
-            setOpen(false);
-          }
-        }}
-        placeholder="Search workspaces or owner email…"
-        aria-label="Search workspaces by name or owner email"
-        role="combobox"
-        aria-expanded={open && query.trim().length > 0}
-        aria-controls="global-search-results"
-        className="h-9 w-full rounded-[10px] border border-input bg-paper px-3 ps-9 text-sm text-ink outline-none placeholder:text-ink-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-      />
-      {open && query.trim() && (
-        <div
-          id="global-search-results"
-          role="listbox"
-          className="animate-zimos-slide-up absolute inset-x-0 top-11 z-40 overflow-hidden rounded-[12px] border border-line bg-paper-raised shadow-[var(--shadow-pop)]"
-        >
-          {loading ? (
-            <div className="flex items-center gap-2 px-4 py-3 text-sm text-ink-soft">
-              <Spinner /> Searching…
-            </div>
-          ) : results.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-ink-soft">No workspaces match “{query.trim()}”.</p>
-          ) : (
-            <ul className="max-h-80 overflow-y-auto py-1">
-              {results.map((ws, i) => (
-                <li key={ws.id} role="option" aria-selected={i === active}>
-                  <button
-                    type="button"
-                    onMouseEnter={() => setActive(i)}
-                    onClick={() => go(ws)}
-                    className={cn(
-                      "flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2 text-start text-sm",
-                      i === active && "bg-primary-soft"
-                    )}
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium text-ink">{ws.name}</span>
-                      <span className="block truncate text-xs text-ink-soft">{ws.meta.ownerEmail}</span>
-                    </span>
-                    <Status value={ws.meta.suspended ? "suspended" : ws.meta.subscriptionStatus} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function UserMenu() {
-  const { user, logout } = useAuth();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const name = user?.fullName || user?.email || "Admin";
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        className="flex cursor-pointer items-center gap-2 rounded-full border border-line bg-paper-raised py-1 ps-1 pe-2 text-sm text-ink transition-colors hover:border-line-strong"
-      >
-        <span className="flex size-7 items-center justify-center rounded-full bg-zimos-navy text-xs font-semibold text-white">
-          {initials(name)}
-        </span>
-        <span className="hidden max-w-32 truncate sm:inline">{name}</span>
-        <ChevronDown className="size-3.5 text-ink-soft" aria-hidden />
-      </button>
-      {open && (
-        <div
-          role="menu"
-          className="animate-zimos-slide-up absolute end-0 top-11 z-40 w-64 overflow-hidden rounded-[12px] border border-line bg-paper-raised shadow-[var(--shadow-pop)]"
-        >
-          <div className="border-b border-line px-4 py-3">
-            <p className="truncate text-sm font-medium text-ink">{name}</p>
-            <p className="truncate text-xs text-ink-soft">{user?.email}</p>
-          </div>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              adminApi.resetAllMockData();
-              window.location.reload();
-            }}
-            className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-start text-sm text-ink-soft hover:bg-primary-soft hover:text-ink"
-          >
-            <RotateCcw className="size-4" aria-hidden /> Reset demo data
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => void logout()}
-            className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-start text-sm text-ink-soft hover:bg-danger-soft hover:text-danger"
-          >
-            <LogOut className="size-4" aria-hidden /> Sign out
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
+/**
+ * The console's frame — the merchant dashboard's own (its DashboardLayout):
+ * three glass panes over the backdrop (`.glass-app`; the material is the
+ * shared theme in packages/ui/src/theme):
+ *
+ *   - the side menu (components/shell/SidebarNav.tsx), from `md` up;
+ *   - the toolbar: hide/show the side menu, where you are, then the workspace
+ *     search, the language, light or dark, alerts and the account;
+ *   - the page.
+ *
+ * On a phone the side menu is the dock (components/shell/Dock.tsx) and, behind
+ * its last slot, the whole menu as a sheet (components/shell/PhoneMenu.tsx).
+ */
 export function AdminLayout() {
-  const { user } = useAuth();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const t = useT(SHELL_STRINGS);
   const location = useLocation();
+  const { can } = useAuth();
 
+  // Full width: the side menu steps aside so the page has the whole screen.
+  const [focus, setFocus] = useState(() => {
+    try {
+      return localStorage.getItem(FOCUS_KEY) === "on";
+    } catch {
+      return false;
+    }
+  });
   useEffect(() => {
-    if (user) adminApi.setMockActor({ name: user.fullName || user.email, email: user.email });
-  }, [user]);
+    try {
+      localStorage.setItem(FOCUS_KEY, focus ? "on" : "off");
+    } catch {
+      /* private mode — non-fatal */
+    }
+  }, [focus]);
+  const toggleFocus = useCallback(() => setFocus((on) => !on), []);
 
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const openMobile = useCallback(() => setMobileOpen(true), []);
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
+  // The bottom bar's editor, opened from the phone menu, which steps aside for it.
+  const [dockEditor, setDockEditor] = useState<DockEditorState>({ open: false, opened: 0 });
+  const customizeDock = useCallback(() => {
+    setMobileOpen(false);
+    setDockEditor((current) => ({ open: true, opened: current.opened + 1 }));
+  }, []);
+  const closeDockEditor = useCallback(() => setDockEditor((current) => ({ ...current, open: false })), []);
+  // The account's first page (Overview, or the first section it opens): where the
+  // offer of device notifications and its shortcuts row sit, as on the dashboard's Home.
+  const landing = useLandingPath();
+  const onLanding = landing !== null && location.pathname === landing;
+
+  // A menu left open across navigation would cover the page it just opened.
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
 
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [mobileOpen]);
-
-  const envLabel = import.meta.env.DEV ? "Development" : import.meta.env.MODE === "production" ? "Production" : import.meta.env.MODE;
+  // The environment badge shows only on a build labelled as a non-production
+  // one; unset (or anything else) shows none.
+  const appEnv = import.meta.env.VITE_APP_ENV;
+  const envLabel = appEnv === "staging" ? t.staging : appEnv === "development" ? t.development : null;
 
   return (
-    <div className="flex min-h-screen bg-paper">
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-e border-line bg-paper-raised lg:flex">
-        <SidebarContent />
+    <div className="glass-app flex min-h-screen" data-focus={focus ? "on" : undefined}>
+      <aside
+        id={SIDE_MENU_ID}
+        data-slot="side-menu"
+        className="zimos-glass zimos-glass-panel glass-nav zimos-menu sticky top-3 my-3 ms-3 hidden h-[calc(100dvh-1.5rem)] w-[248px] shrink-0 md:flex md:flex-col"
+      >
+        <SidebarNav />
       </aside>
 
-      {mobileOpen && (
-        <div className="fixed inset-0 z-50 bg-zimos-navy/40 lg:hidden" onMouseDown={() => setMobileOpen(false)}>
-          <aside
-            role="dialog"
-            aria-modal="true"
-            aria-label="Navigation"
-            onMouseDown={(e) => e.stopPropagation()}
-            className="animate-zimos-slide-in-start absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col border-e border-line bg-paper-raised shadow-[var(--shadow-pop)]"
-          >
-            <button
-              type="button"
-              onClick={() => setMobileOpen(false)}
-              aria-label="Close navigation"
-              className="absolute end-3 top-4 cursor-pointer rounded-md p-1 text-ink-soft hover:bg-primary-soft hover:text-ink"
-            >
-              <X className="size-4" aria-hidden />
-            </button>
-            <SidebarContent onNavigate={() => setMobileOpen(false)} />
-          </aside>
-        </div>
-      )}
+      {/* Below `md` the side menu is hidden: the dock is the navigation, and its
+          last slot opens the whole menu as a sheet. */}
+      <PhoneMenu open={mobileOpen} onClose={closeMobile} onCustomizeDock={customizeDock} />
+      {/* Device notifications: this browser's subscription kept in step, and a clicked one opening its page. */}
+      <PushBridge />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-paper-raised/95 px-4 backdrop-blur sm:px-6">
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            aria-label="Open navigation"
-            className="cursor-pointer rounded-md p-2 text-ink-soft hover:bg-primary-soft hover:text-ink lg:hidden"
-          >
-            <Menu className="size-5" aria-hidden />
-          </button>
-          <GlobalSearch />
-          <div className="ms-auto flex items-center gap-2 sm:gap-3">
-            <span
-              className="hidden items-center gap-1.5 rounded-full border border-warning/25 bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning sm:inline-flex"
-              title="Environment"
+        <header
+          data-slot="toolbar"
+          aria-label={t.toolbar}
+          className="zimos-glass glass-nav glass-topbar zimos-toolbar sticky top-0 z-30 flex h-14 items-center gap-2 ps-4 pe-1.5 md:top-3 md:mx-3 md:mt-3 md:gap-3 md:px-[9px]"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {/* Phones open the menu from "More" in the dock; one way in, not two. */}
+            <button
+              type="button"
+              onClick={toggleFocus}
+              aria-expanded={!focus}
+              aria-controls={SIDE_MENU_ID}
+              aria-label={focus ? t.showMenu : t.hideMenu}
+              title={focus ? t.showMenu : t.hideMenu}
+              className="zimos-tool hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-soft transition-[background-color,color,scale] duration-150 hover:bg-paper-sunken hover:text-ink focus-visible:outline-2 focus-visible:outline-primary active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 md:inline-flex pointer-coarse:size-11"
             >
-              <span className="size-1.5 rounded-full bg-warning" aria-hidden />
-              {envLabel}
+              {/* The glyph's panel is on the side the menu is on: mirrored in Arabic. */}
+              <PanelLeft className="size-5 rtl:-scale-x-100" aria-hidden />
+            </button>
+            <Breadcrumbs />
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1 md:gap-1.5">
+            {/* Workspace search reads the workspace and subscription lists. */}
+            {can(P.WORKSPACES_VIEW) && <GlobalSearch />}
+            {envLabel && (
+              <span
+                className="hidden items-center gap-1.5 rounded-full border border-accent/25 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-dark sm:inline-flex"
+                title={t.environment}
+              >
+                <span className="size-1.5 rounded-full bg-accent" aria-hidden />
+                {envLabel}
+              </span>
+            )}
+            {/* Arabic / English, flipping the whole console between RTL and LTR.
+                On a phone the language and the theme are in the menu sheet and in the account menu. */}
+            <LanguageToggle compact className="hidden md:inline-flex" />
+            {/* The toggle sets its own display, so the wrapper is what hides it on a phone. */}
+            <span className="hidden md:contents">
+              <ThemeToggle />
             </span>
-            <ThemeToggle />
-            <UserMenu />
+            {/* Any console account's: the API tells each only what its permissions open. */}
+            <NotificationBell />
+            <AccountMenu />
           </div>
         </header>
-        <main className="min-w-0 flex-1 p-4 sm:p-6">
-          <div className="mx-auto w-full max-w-7xl">
-            <Outlet />
+
+        <main className="flex-1 p-4 sm:p-6">
+          {/* Settles in when moving between sections; the theme centres the page column. */}
+          <div key={location.pathname.split("/")[1] ?? ""} className="page-in">
+            <div className="mx-auto w-full max-w-7xl">
+              {onLanding && (
+                <>
+                  <PushPrompt className="mb-4" />
+                  <HomeShortcuts className="mb-6" />
+                </>
+              )}
+              <Outlet />
+            </div>
           </div>
+          <OverlayRoot />
         </main>
       </div>
+      <Dock onMore={openMobile} moreOpen={mobileOpen} editor={dockEditor} onEditorClose={closeDockEditor} />
     </div>
   );
 }

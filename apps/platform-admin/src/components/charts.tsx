@@ -145,7 +145,7 @@ export function Sparkline({ values, className, color = "var(--color-primary)" }:
 export function ChartAxis({ points }: { points: ChartPoint[] }) {
   if (points.length === 0) return null;
   return (
-    <div className="mt-2 flex justify-between text-xs text-ink-muted">
+    <div className="mt-2 flex justify-between text-xs text-ink-soft">
       <span>{points[0].label}</span>
       <span>{points[points.length - 1].label}</span>
     </div>

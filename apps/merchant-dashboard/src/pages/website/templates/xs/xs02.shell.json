@@ -1,0 +1,123 @@
+{
+  "xsLook": "02",
+  "header": {
+    "menu": [
+      {
+        "label": "Home",
+        "href": "/",
+        "kind": "home"
+      },
+      {
+        "label": "Shop",
+        "href": "/products",
+        "kind": "url"
+      },
+      {
+        "label": "About us",
+        "href": "/about",
+        "kind": "page"
+      },
+      {
+        "label": "Services",
+        "href": "/services",
+        "kind": "page"
+      },
+      {
+        "label": "Contact us",
+        "href": "/contact",
+        "kind": "page"
+      }
+    ],
+    "show": {
+      "theme": false,
+      "trackOrder": false,
+      "language": false
+    },
+    "zones": {
+      "notice": [
+        {
+          "id": "notice",
+          "type": "notice"
+        }
+      ],
+      "links": [],
+      "brand": [
+        {
+          "id": "logo",
+          "type": "logo"
+        }
+      ],
+      "menu": [
+        {
+          "id": "menu",
+          "type": "menu"
+        }
+      ],
+      "icons": [
+        {
+          "id": "search",
+          "type": "search"
+        },
+        {
+          "id": "account",
+          "type": "account"
+        },
+        {
+          "id": "wishlist",
+          "type": "wishlist"
+        },
+        {
+          "id": "cart",
+          "type": "cart"
+        },
+        {
+          "id": "phone",
+          "type": "phone"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "groups": [
+      {
+        "title": "Store",
+        "links": [
+          {
+            "label": "Shop",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Cart",
+            "href": "/cart",
+            "kind": "cart"
+          },
+          {
+            "label": "Track Order",
+            "href": "/track",
+            "kind": "track"
+          }
+        ]
+      },
+      {
+        "title": "Help",
+        "links": [
+          {
+            "label": "About us",
+            "href": "/about",
+            "kind": "page"
+          },
+          {
+            "label": "Contact us",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ]
+      }
+    ],
+    "text": "We design modern furniture that brings comfort and quality together, giving every corner of your home a warm touch that lasts for years.",
+    "show": {
+      "help": false
+    }
+  }
+}

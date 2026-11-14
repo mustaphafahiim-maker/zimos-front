@@ -1,57 +1,45 @@
-import type { Locale } from "@/i18n/config";
+/* eslint-disable @next/next/no-img-element -- the captures are already sized and compressed for the page. */
 import type { Dictionary } from "@/i18n/dictionary";
-import { REGISTER_URL } from "@/lib/urls";
-import { ArrowIcon } from "./icons";
-import { Ribbons } from "./ribbons";
-import { ZimosLogo } from "./zimos-logo";
+import { END_LOOKS, STORE_SHOTS } from "@/lib/store-shots";
+import { LOGIN_URL, REGISTER_URL } from "@/lib/urls";
+import { Backdrop } from "./backdrop";
+import { Arrow } from "./duo-icons";
 
 /**
- * Deep Navy closing band. The logo sits on the plain Navy half with generous
- * clear space; the ribbon motif stays on the opposite side, away from it.
+ * The navy closing band: the last push, the way in and the way back for
+ * those who already have an account. Its ground moves like the hero's
+ * (components/backdrop.tsx), and on the plain side three real stores stand
+ * on phones, gently bobbing — decoration only. Without `phones` (the
+ * features page, which shows no store and so no design credits) the words
+ * stand in the middle.
  */
-export function FinalCta({
-  copy,
-  brand,
-  locale,
-}: {
-  copy: Dictionary["finalCta"];
-  brand: Dictionary["brand"];
-  locale: Locale;
-}) {
+export function FinalCta({ copy, phones = true }: { copy: Dictionary["finalCta"]; phones?: boolean }) {
   return (
-    <section aria-labelledby="final-cta-heading" className="bg-paper px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-      <div className="relative isolate mx-auto max-w-7xl overflow-hidden rounded-3xl bg-zimos-navy px-6 py-14 sm:px-12 sm:py-20 lg:px-16 dark:ring-1 dark:ring-white/10">
-        <Ribbons navy className="inset-y-0 end-0 -z-10 hidden w-1/2 md:block" />
-
-        <div className="max-w-xl">
-          <ZimosLogo surface="dark" height={36} />
-
-          <h2 id="final-cta-heading" className="mt-12 text-4xl font-bold text-white sm:text-5xl">
-            {brand.limits}
-          </h2>
-          {brand.limitsLatin ? (
-            <p className="mt-3 text-sm font-medium text-zimos-sky">
-              <span lang="en" dir="ltr">
-                {brand.limitsLatin}
-              </span>
-            </p>
+    <section className="lz-sec" aria-labelledby="final-cta-heading" data-section="final-cta">
+      <div className="lz-in">
+        <div className={phones ? "lz-end lz-r" : "lz-end lz-end--plain lz-r"}>
+          <Backdrop id="lz-wave-end" />
+          {phones ? (
+            <div className="lz-end__phones" aria-hidden>
+              {END_LOOKS.map((look) => (
+                <span key={look} className="lz-end__phone">
+                  <img src={STORE_SHOTS[look].phone} width={390} height={1600} alt="" loading="lazy" decoding="async" />
+                </span>
+              ))}
+            </div>
           ) : null}
-          <p className="mt-5 text-lg leading-relaxed text-pretty text-[#c9d8f5]">{copy.body}</p>
-
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <a
-              href={REGISTER_URL}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-white px-6 text-base font-semibold text-zimos-navy transition-colors duration-200 hover:bg-zimos-ice focus-visible:outline-white"
-            >
-              {copy.primaryCta}
-              <ArrowIcon width="1.1rem" height="1.1rem" />
-            </a>
-            <a
-              href={`/${locale}/contact`}
-              className="inline-flex h-12 items-center justify-center rounded-lg border border-white/30 px-6 text-base font-medium text-white transition-colors duration-200 hover:bg-white/10 focus-visible:outline-white"
-            >
-              {copy.secondaryCta}
-            </a>
+          <div className="lz-end__copy">
+            <h2 id="final-cta-heading">{copy.heading}</h2>
+            <p>{copy.body}</p>
+            <div className="lz-ctas">
+              <a className="lz-btn lz-btn--light" href={REGISTER_URL}>
+                {copy.primaryCta}
+                <Arrow size={18} className="lz-arrow" />
+              </a>
+              <a className="lz-link lz-link--light" href={LOGIN_URL}>
+                {copy.secondaryCta}
+              </a>
+            </div>
           </div>
         </div>
       </div>

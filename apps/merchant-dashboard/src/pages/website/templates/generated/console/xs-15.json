@@ -1,0 +1,487 @@
+{
+  "globalStyles": {
+    "primaryColor": "#D10024",
+    "themeSettings": {
+      "xsLook": "15",
+      "header": {
+        "announcement": {
+          "enabled": true,
+          "text": "Nasr City, Cairo · Open every day from 10 am to 10 pm"
+        },
+        "menu": [
+          {
+            "label": "Home",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "Hot Deals",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Contact Us",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [
+            {
+              "id": "strip-0",
+              "type": "text",
+              "label": "EGP"
+            },
+            {
+              "id": "strip-1",
+              "type": "link",
+              "label": "My Account",
+              "href": "/account"
+            }
+          ],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "Information",
+            "links": [
+              {
+                "label": "Hot deals",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "Contact Us",
+                "href": "/contact",
+                "kind": "page"
+              }
+            ]
+          },
+          {
+            "title": "Service",
+            "links": [
+              {
+                "label": "View Cart",
+                "href": "/cart",
+                "kind": "cart"
+              },
+              {
+                "label": "Track My Order",
+                "href": "/track",
+                "kind": "track"
+              }
+            ]
+          }
+        ],
+        "text": "Genuine laptops, phones, cameras and accessories with an official warranty and competitive prices, plus fast delivery to every governorate.",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "Home",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs15-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs15-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs15-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs15-p1-s1-e1",
+                        "type": "xs_banners",
+                        "props": {
+                          "look": "15",
+                          "items": [
+                            {
+                              "image": "/xs/15/shop01.png",
+                              "title": "Laptop Collection",
+                              "linkLabel": "Shop Now",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/15/shop03.png",
+                              "title": "Accessories Collection",
+                              "linkLabel": "Shop Now",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/15/shop02.png",
+                              "title": "Cameras Collection",
+                              "linkLabel": "Shop Now",
+                              "href": "/products"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs15-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs15-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs15-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs15-p1-s2-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "15",
+                          "heading": "New Products",
+                          "collection": "",
+                          "limit": 8,
+                          "showDiscount": true,
+                          "showTabs": true,
+                          "showSearch": false,
+                          "layout": "slider",
+                          "quickView": true,
+                          "loadMoreLabel": "Load More",
+                          "allLabel": "All Categories",
+                          "searchLabel": "Search",
+                          "searchPlaceholder": "Search here",
+                          "viewLabel": "quick view",
+                          "openLabel": "add to cart"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs15-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs15-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs15-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs15-p1-s3-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "15",
+                          "heading": "Hot Deal This Week",
+                          "text": "New Collection Up to 50% OFF",
+                          "images": [
+                            "/xs/15/hotdeal.png"
+                          ],
+                          "points": [],
+                          "endsAt": "",
+                          "countdownLabels": [
+                            "Days",
+                            "Hours",
+                            "Mins",
+                            "Secs"
+                          ],
+                          "buttonLabel": "Shop Now",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs15-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs15-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs15-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs15-p1-s4-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "15",
+                          "heading": "Top selling",
+                          "collection": "",
+                          "limit": 8,
+                          "showDiscount": true,
+                          "showTabs": true,
+                          "showSearch": false,
+                          "layout": "slider",
+                          "quickView": true,
+                          "loadMoreLabel": "Load More",
+                          "allLabel": "All Categories",
+                          "searchLabel": "Search",
+                          "searchPlaceholder": "Search here",
+                          "viewLabel": "quick view",
+                          "openLabel": "add to cart"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs15-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs15-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs15-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs15-p1-s5-e1",
+                        "type": "xs_minis",
+                        "props": {
+                          "look": "15",
+                          "collection": "",
+                          "limit": 9,
+                          "linkLabel": "Shop Now"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs15-p1-s6",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs15-p1-s6-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs15-p1-s6-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs15-p1-s6-e1",
+                        "type": "xs_newsletter",
+                        "props": {
+                          "look": "15",
+                          "heading": "Sign Up for the NEWSLETTER",
+                          "text": "",
+                          "placeholder": "Enter Your Email",
+                          "buttonLabel": "Subscribe"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "Contact",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs15-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs15-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs15-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs15-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "15",
+                          "heading": "Contact Us",
+                          "image": ""
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs15-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs15-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs15-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs15-p2-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "15",
+                          "heading": "Send Us a Message",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "Address",
+                              "text": "Nasr City, Cairo"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "Phone",
+                              "text": "Call us any day from 10 am to 10 pm"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "Email",
+                              "text": "Send us a message and we reply within a day"
+                            }
+                          ],
+                          "contactPlaceholder": "Email",
+                          "messagePlaceholder": "Your Message",
+                          "buttonLabel": "Send Now"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

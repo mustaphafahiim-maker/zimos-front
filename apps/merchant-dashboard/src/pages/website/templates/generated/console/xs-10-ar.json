@@ -1,0 +1,564 @@
+{
+  "globalStyles": {
+    "primaryColor": "#FF003C",
+    "themeSettings": {
+      "xsLook": "10",
+      "header": {
+        "announcement": {
+          "enabled": true,
+          "text": "تشكيلة الشتاء الجديدة وصلت"
+        },
+        "menu": [
+          {
+            "label": "الرئيسية",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "الجديد",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "من نحن",
+            "href": "/about",
+            "kind": "page"
+          },
+          {
+            "label": "تواصل معنا",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [
+            {
+              "id": "strip-0",
+              "type": "link",
+              "label": "حسابي",
+              "href": "/account"
+            },
+            {
+              "id": "strip-1",
+              "type": "link",
+              "label": "المفضلة",
+              "href": "/account/wishlist"
+            },
+            {
+              "id": "strip-2",
+              "type": "link",
+              "label": "سلة التسوق",
+              "href": "/cart"
+            },
+            {
+              "id": "strip-3",
+              "type": "link",
+              "label": "إتمام الطلب",
+              "href": "/checkout"
+            }
+          ],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "روابط سريعة",
+            "links": [
+              {
+                "label": "الجديد",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "سلة التسوق",
+                "href": "/cart",
+                "kind": "cart"
+              }
+            ]
+          },
+          {
+            "title": "الدعم",
+            "links": [
+              {
+                "label": "من نحن",
+                "href": "/about",
+                "kind": "page"
+              },
+              {
+                "label": "تواصل معنا",
+                "href": "/contact",
+                "kind": "page"
+              },
+              {
+                "label": "تتبّع طلبك",
+                "href": "/track",
+                "kind": "track"
+              }
+            ]
+          }
+        ],
+        "text": "أزياء عصرية بخامات مختارة وأسعار تناسبك، مع توصيل سريع لكل محافظات مصر.",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "الرئيسية",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs10-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs10-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs10-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs10-p1-s1-e1",
+                        "type": "xs_hero",
+                        "props": {
+                          "look": "10",
+                          "heading": "تشكيلة الشتاء",
+                          "text": "خصم 60%",
+                          "image": "/xs/10/hero_man.png",
+                          "buttonLabel": "تسوّق الآن",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs10-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs10-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs10-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs10-p1-s2-e1",
+                        "type": "xs_banners",
+                        "props": {
+                          "look": "10",
+                          "items": [
+                            {
+                              "image": "/xs/10/cat1.jpg",
+                              "title": "أزياء نسائية",
+                              "text": "أقوى العروض الجديدة",
+                              "linkLabel": "التشكيلة الجديدة",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/10/cat2.jpg",
+                              "title": "ملابس الشتاء",
+                              "text": "خصومات حصرية!",
+                              "linkLabel": "التشكيلة الجديدة",
+                              "href": "/products"
+                            },
+                            {
+                              "image": "/xs/10/cat3.jpg",
+                              "title": "أزياء رجالية",
+                              "text": "أقوى العروض الجديدة",
+                              "linkLabel": "التشكيلة الجديدة",
+                              "href": "/products"
+                            }
+                          ],
+                          "heading": "تسوّق حسب القسم"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs10-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs10-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs10-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs10-p1-s3-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "10",
+                          "heading": "أحدث المنتجات",
+                          "collection": "",
+                          "limit": 6,
+                          "showDiscount": true,
+                          "showTabs": true,
+                          "showSearch": false,
+                          "layout": "grid",
+                          "quickView": true,
+                          "searchLabel": "بحث",
+                          "viewLabel": "نظرة سريعة",
+                          "openLabel": "أضف للسلة",
+                          "allLabel": "الكل",
+                          "searchPlaceholder": "ابحث عن منتج",
+                          "loadMoreLabel": "عرض المزيد"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs10-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs10-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs10-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs10-p1-s4-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "10",
+                          "heading": "اكتشف أجمل ما في متجرنا",
+                          "text": "قطع صمّمها مبدعون يعشقون التفاصيل، لتليق بإطلالتك كل يوم.",
+                          "images": [
+                            "/xs/10/card-man.png"
+                          ],
+                          "points": [],
+                          "buttonLabel": "تسوّق الآن",
+                          "buttonHref": "/products"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs10-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs10-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs10-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs10-p1-s5-e1",
+                        "type": "xs_features",
+                        "props": {
+                          "look": "10",
+                          "heading": "",
+                          "text": "",
+                          "image": "",
+                          "items": [
+                            {
+                              "icon": "truck",
+                              "image": "/xs/10/ico-1.svg",
+                              "title": "شحن مجاني",
+                              "text": "توصيل مجاني لكل طلب حتى باب بيتك."
+                            },
+                            {
+                              "icon": "bag",
+                              "image": "/xs/10/ico-2.svg",
+                              "title": "دفع آمن ومضمون",
+                              "text": "ادفع بالبطاقة أو نقدًا عند الاستلام بأمان."
+                            },
+                            {
+                              "icon": "support",
+                              "image": "/xs/10/ico-3.svg",
+                              "title": "دفع آمن ومضمون",
+                              "text": "خدمة تضمن لك تجربة تسوّق مريحة وآمنة من أول طلب."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/about",
+      "title": "من نحن",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs10-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs10-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs10-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs10-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "10",
+                          "heading": "من نحن",
+                          "image": "/xs/10/category.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs10-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs10-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs10-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs10-p2-s2-e1",
+                        "type": "xs_story",
+                        "props": {
+                          "look": "10",
+                          "items": [
+                            {
+                              "title": "رسالتنا",
+                              "body": "نؤمن بأن الأناقة حق للجميع، لذلك نختار كل قطعة بعناية لتجمع بين الخامة الجيدة والتصميم العصري والسعر العادل.\n\nمن تشكيلات الشتاء الدافئة إلى إطلالات الكاجوال اليومية، نحرص على تقديم أحدث صيحات الموضة مع خدمة سريعة وتجربة تسوّق تستحق ثقتك.",
+                              "image": "/xs/10/about_us_video.png"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "تواصل معنا",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs10-p3-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs10-p3-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs10-p3-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs10-p3-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "10",
+                          "heading": "تواصل معنا",
+                          "image": "/xs/10/contact_hero.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs10-p3-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs10-p3-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs10-p3-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs10-p3-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "10",
+                          "heading": "يسعدنا تواصلك",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "التجمع الخامس، القاهرة الجديدة.",
+                              "text": "مفتوح يوميًا من 10 صباحًا حتى 10 مساءً"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "اتصل بنا",
+                              "text": "من السبت إلى الخميس، 9 صباحًا حتى 6 مساءً"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "راسلنا",
+                              "text": "راسلنا باستفسارك في أي وقت!"
+                            }
+                          ],
+                          "contactPlaceholder": "أدخل بريدك الإلكتروني",
+                          "messagePlaceholder": "اكتب رسالتك",
+                          "buttonLabel": "أرسل الآن"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

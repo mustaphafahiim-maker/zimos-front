@@ -1,0 +1,343 @@
+{
+  "look": "04",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Women’s",
+      "nameAr": "سيدات",
+      "slug": "womens"
+    },
+    {
+      "name": "Men’s",
+      "nameAr": "رجال",
+      "slug": "mens"
+    },
+    {
+      "name": "Kid’s",
+      "nameAr": "أطفال",
+      "slug": "kids"
+    },
+    {
+      "name": "Accessories",
+      "nameAr": "إكسسوارات",
+      "slug": "accessories"
+    },
+    {
+      "name": "Cosmetics",
+      "nameAr": "تجميل",
+      "slug": "cosmetics"
+    }
+  ],
+  "products": [
+    {
+      "name": "Yellow Puff-Shoulder Blouse",
+      "nameAr": "بلوزة صفراء بأكتاف منفوخة",
+      "description": "A sunny yellow cotton blouse with puffed shoulders and gathered cuffs. A bright lift for any day.",
+      "descriptionAr": "بلوزة قطن صفراء بأكتاف منفوخة وأساور مكشكشة، لمسة بهجة لأي يوم.",
+      "price": 950,
+      "image": "/xs/04/products/p01.jpg",
+      "images": [
+        "/xs/04/products/p01.jpg",
+        "/xs/04/products/p01b.jpg"
+      ],
+      "collections": [
+        "womens"
+      ]
+    },
+    {
+      "name": "Pink Corduroy Shirt",
+      "nameAr": "قميص قطيفة مضلعة وردي",
+      "description": "A soft pink micro-corduroy shirt with a button-down collar. Wear it open over a knit for easy layering.",
+      "descriptionAr": "قميص وردي من القطيفة المضلعة الناعمة بياقة بزراير، يتلبس مفتوح فوق البلوفر بشكل عصري.",
+      "price": 1100,
+      "image": "/xs/04/products/p02.jpg",
+      "images": [
+        "/xs/04/products/p02.jpg",
+        "/xs/04/products/p02b.jpg",
+        "/xs/04/products/p02c.jpg"
+      ],
+      "collections": [
+        "mens"
+      ]
+    },
+    {
+      "name": "Mustard T-Shirt Dress",
+      "nameAr": "فستان تيشيرت مستردة",
+      "description": "A mustard jersey dress with a T-shirt top and an elastic waist. Comfortable, flattering and easy to wear.",
+      "descriptionAr": "فستان جيرسيه بلون المستردة بتصميم تيشيرت ووسط أستك، مريح وبيحدد الجسم بشكل جميل.",
+      "price": 1250,
+      "image": "/xs/04/products/p03.jpg",
+      "images": [
+        "/xs/04/products/p03.jpg",
+        "/xs/04/products/p03b.jpg",
+        "/xs/04/products/p03c.jpg"
+      ],
+      "collections": [
+        "womens",
+        "kids"
+      ]
+    },
+    {
+      "name": "Striped Oxford Shirt",
+      "nameAr": "قميص أكسفورد مقلّم",
+      "description": "A burgundy-and-white striped Oxford shirt with a button-down collar. A smart office essential.",
+      "descriptionAr": "قميص أكسفورد مقلّم نبيتي في أبيض بياقة بزراير، أساسي في دولاب الشغل.",
+      "price": 950,
+      "image": "/xs/04/products/p04.jpg",
+      "images": [
+        "/xs/04/products/p04.jpg",
+        "/xs/04/products/p04b.jpg"
+      ],
+      "collections": [
+        "mens"
+      ]
+    },
+    {
+      "name": "Ombre Stripe Camp Shirt",
+      "nameAr": "قميص صيفي مقلّم بياقة مفتوحة",
+      "description": "A short-sleeve camp-collar shirt with ochre ombre stripes and a chest pocket. Made for summer.",
+      "descriptionAr": "قميص نص كم بياقة مفتوحة وخطوط مستردة متدرجة وجيب على الصدر، معمول للصيف.",
+      "price": 1050,
+      "compareAt": 1350,
+      "image": "/xs/04/products/p05.jpg",
+      "collections": [
+        "mens"
+      ]
+    },
+    {
+      "name": "Floral Print Oversized Blouse",
+      "nameAr": "بلوزة واسعة بطبعة ورد",
+      "description": "A relaxed off-white blouse with a soft yellow floral print and full sleeves. Pretty with dark denim.",
+      "descriptionAr": "بلوزة أوف وايت واسعة بطبعة ورد صفراء رقيقة وأكمام طويلة، تحفة مع الجينز الغامق.",
+      "price": 890,
+      "compareAt": 1150,
+      "image": "/xs/04/products/p06.jpg",
+      "collections": [
+        "womens"
+      ]
+    },
+    {
+      "name": "Satin V-Neck Cami Top",
+      "nameAr": "توب ساتان بحمالات رفيعة",
+      "description": "An ivory satin cami with a V-neck and thin adjustable straps. Dress it up or keep it casual.",
+      "descriptionAr": "توب ساتان عاجي برقبة V وحمالات رفيعة قابلة للضبط، للسهرة أو للكاجوال.",
+      "price": 650,
+      "image": "/xs/04/products/p07.jpg",
+      "images": [
+        "/xs/04/products/p07.jpg",
+        "/xs/04/products/p07b.jpg"
+      ],
+      "collections": [
+        "womens"
+      ]
+    },
+    {
+      "name": "Palm Print Resort Shirt",
+      "nameAr": "قميص صيفي بطبعة نخل",
+      "description": "A pink resort shirt with a sunset palm-tree print and a relaxed fit. Holiday mode, switched on.",
+      "descriptionAr": "قميص صيفي وردي بطبعة نخل وغروب وقصّة مريحة، جاهز للساحل والإجازة.",
+      "price": 850,
+      "compareAt": 1100,
+      "image": "/xs/04/products/p08.jpg",
+      "collections": [
+        "mens"
+      ]
+    },
+    {
+      "name": "Mini Chain Box Bag",
+      "nameAr": "شنطة بوكس صغيرة بسلسلة",
+      "description": "A compact black box bag with a zip-around top and a metal chain strap. Holds the essentials in style.",
+      "descriptionAr": "شنطة بوكس سوداء صغيرة بسوستة دائرية وسلسلة معدن، تشيل أساسياتك بشياكة.",
+      "price": 950,
+      "image": "/xs/04/products/p09.jpg",
+      "collections": [
+        "accessories"
+      ]
+    },
+    {
+      "name": "Fringe Drop Earrings",
+      "nameAr": "حلق طويل بشراشيب",
+      "description": "Statement drop earrings with a black top and shimmering multicolour fringe. Lightweight to wear.",
+      "descriptionAr": "حلق طويل لافت بقطعة سوداء وشراشيب ملونة لامعة، خفيف ومريح طول اليوم.",
+      "price": 320,
+      "image": "/xs/04/products/p10.jpg",
+      "collections": [
+        "accessories"
+      ]
+    },
+    {
+      "name": "Pebbled Leather Briefcase",
+      "nameAr": "شنطة لابتوب جلد محبّب",
+      "description": "A black pebbled-leather briefcase with zip pockets, top handles and a detachable shoulder strap.",
+      "descriptionAr": "شنطة لابتوب سوداء من الجلد المحبّب بجيوب بسوستة ويد علوية وحزام كتف قابل للفك.",
+      "price": 2900,
+      "image": "/xs/04/products/p11.jpg",
+      "collections": [
+        "accessories",
+        "mens"
+      ]
+    },
+    {
+      "name": "Round Rattan Ring-Handle Bag",
+      "nameAr": "شنطة راتان دائرية بيد حلقة",
+      "description": "A round woven rattan bag with ring handles. The perfect summer piece for beach days and brunch.",
+      "descriptionAr": "شنطة راتان مجدولة دائرية بيد على شكل حلقة، قطعة الصيف المثالية للبحر والخروجات.",
+      "price": 850,
+      "image": "/xs/04/products/p12.jpg",
+      "collections": [
+        "accessories"
+      ]
+    },
+    {
+      "name": "Green Wrap Midi Skirt",
+      "nameAr": "جيبة ميدي ملفوفة خضراء",
+      "description": "A mint-green midi skirt with a wrap front and a tie waist. Fluid fabric that moves beautifully.",
+      "descriptionAr": "جيبة ميدي خضراء بتصميم ملفوف ورباط على الوسط، قماشة منسدلة بتتحرك بنعومة.",
+      "price": 950,
+      "image": "/xs/04/products/p13.jpg",
+      "collections": [
+        "womens"
+      ]
+    },
+    {
+      "name": "Shell Drop Earrings",
+      "nameAr": "حلق صدف متدلي",
+      "description": "Dainty drop earrings with natural shell charms on gold-tone hooks. Summer in every detail.",
+      "descriptionAr": "حلق رقيق متدلي بقطع صدف طبيعي على خطاف دهبي، روح الصيف في كل تفصيلة.",
+      "price": 280,
+      "image": "/xs/04/products/p14.jpg",
+      "collections": [
+        "accessories",
+        "cosmetics"
+      ]
+    },
+    {
+      "name": "Yellow Quilted Shoulder Bag",
+      "nameAr": "شنطة كتف صفراء مبطّنة",
+      "description": "A bright yellow quilted shoulder bag with a flap and a metal clasp. A bold pop of colour.",
+      "descriptionAr": "شنطة كتف صفراء مبطّنة بقلاب وقفل معدن، لمسة لون جريئة لإطلالتك.",
+      "price": 1350,
+      "compareAt": 1750,
+      "image": "/xs/04/products/p15.jpg",
+      "collections": [
+        "accessories"
+      ]
+    },
+    {
+      "name": "Faux-Fur Hooded Duffle Coat",
+      "nameAr": "بالطو دافل بكابيشون فرو",
+      "description": "A black duffle coat with toggle fastening, a full zip and a faux-fur-trimmed hood. Built for cold days.",
+      "descriptionAr": "بالطو دافل أسود بأزرار خشبية وسوستة كاملة وكابيشون بفرو صناعي، جاهز لأبرد الأيام.",
+      "price": 3600,
+      "compareAt": 4500,
+      "image": "/xs/04/products/p16.jpg",
+      "collections": [
+        "womens"
+      ]
+    },
+    {
+      "name": "Pleated Print Midi Dress",
+      "nameAr": "فستان ميدي بليسيه مطبوع",
+      "description": "A pleated midi slip dress with an abstract colour-block print and thin straps. Elegant for evenings.",
+      "descriptionAr": "فستان ميدي بليسيه بحمالات رفيعة وطبعة ألوان تجريدية، أنيق للسهرات والمناسبات.",
+      "price": 1650,
+      "image": "/xs/04/products/p17.jpg",
+      "collections": [
+        "womens"
+      ]
+    },
+    {
+      "name": "Washed Black Skinny Jeans",
+      "nameAr": "جينز سكيني أسود مغسول",
+      "description": "Skinny jeans in a faded black wash with a high rise and stretch for all-day comfort.",
+      "descriptionAr": "جينز سكيني أسود بغسلة باهتة وخصر عالي وخامة مرنة مريحة طول اليوم.",
+      "price": 1050,
+      "image": "/xs/04/products/p18.jpg",
+      "collections": [
+        "womens"
+      ]
+    },
+    {
+      "name": "Lace-Up Heeled Ankle Boots",
+      "nameAr": "هاف بوت برباط وكعب",
+      "description": "Sand-coloured ankle boots with front lacing, a square toe and a sculpted block heel.",
+      "descriptionAr": "هاف بوت بلون الرملي برباط أمامي وبوز مربع وكعب عريض مريح.",
+      "price": 2300,
+      "image": "/xs/04/products/p19.jpg",
+      "collections": [
+        "womens"
+      ]
+    },
+    {
+      "name": "Blue Petal Flower Earrings",
+      "nameAr": "حلق ورد بتلات زرقاء",
+      "description": "Gold-tone flower studs with cascading blue organza petals. A romantic statement for special days.",
+      "descriptionAr": "حلق وردة دهبي ببتلات أورجانزا زرقاء متدلية، لمسة رومانسية للمناسبات الخاصة.",
+      "price": 350,
+      "image": "/xs/04/products/p20.jpg",
+      "collections": [
+        "accessories",
+        "cosmetics"
+      ]
+    },
+    {
+      "name": "Knee-High Leather Boots",
+      "nameAr": "بوت جلد طويل بكعب",
+      "description": "Black leather knee-high boots with a block heel and a sleek almond toe. A winter wardrobe icon.",
+      "descriptionAr": "بوت جلد أسود طويل لحد الركبة بكعب عريض وبوز ناعم، أيقونة دولاب الشتاء.",
+      "price": 3200,
+      "compareAt": 3900,
+      "image": "/xs/04/products/p21.jpg",
+      "collections": [
+        "womens"
+      ]
+    },
+    {
+      "name": "Oversized Ochre Short-Sleeve Shirt",
+      "nameAr": "قميص أوفر سايز نص كم بني فاتح",
+      "description": "An oversized ochre shirt with dropped short sleeves and a patch pocket. Wear it open over a white tee.",
+      "descriptionAr": "قميص أوفر سايز بلون الكراميل بأكمام قصيرة وجيب، يتلبس مفتوح فوق تيشيرت أبيض.",
+      "price": 950,
+      "image": "/xs/04/products/p22.jpg",
+      "images": [
+        "/xs/04/products/p22.jpg",
+        "/xs/04/products/p22b.jpg",
+        "/xs/04/products/p22c.jpg",
+        "/xs/04/products/p22d.jpg"
+      ],
+      "collections": [
+        "mens"
+      ]
+    },
+    {
+      "name": "Black Ripped Skinny Jeans",
+      "nameAr": "جينز سكيني أسود مقطّع",
+      "description": "Black skinny jeans with ripped knees and a cropped ankle. Edgy, stretchy and easy to style.",
+      "descriptionAr": "جينز سكيني أسود بقطع عند الركبة وطول للكاحل، جريء ومرن وسهل التنسيق.",
+      "price": 990,
+      "image": "/xs/04/products/p23.jpg",
+      "collections": [
+        "womens"
+      ]
+    },
+    {
+      "name": "Fine-Knit Mock-Neck Top",
+      "nameAr": "بلوزة تريكو خفيف برقبة نص عالية",
+      "description": "A dark fine-knit top with a mock neck and long sleeves. The perfect base layer for cooler days.",
+      "descriptionAr": "بلوزة تريكو خفيف بلون غامق ورقبة نص عالية وأكمام طويلة، أساس مثالي للأيام الباردة.",
+      "price": 550,
+      "image": "/xs/04/products/p24.jpg",
+      "collections": [
+        "womens"
+      ]
+    }
+  ],
+  "wording": {
+    "allLabel": "All",
+    "searchPlaceholder": "Search here....."
+  },
+  "wordingAr": {
+    "allLabel": "الكل",
+    "searchPlaceholder": "ابحث هنا..."
+  }
+}

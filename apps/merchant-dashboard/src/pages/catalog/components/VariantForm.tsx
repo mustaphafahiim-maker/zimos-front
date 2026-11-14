@@ -1,62 +1,91 @@
 import { useState, type FormEvent } from "react";
 import { Alert, Button } from "@store-builder/ui";
-import type { CreateVariantPayload, UpdateVariantPayload, Variant } from "@store-builder/api-client";
+import {
+  isApiErrorCode,
+  type CreateVariantPayload,
+  type UpdateVariantPayload,
+  type Variant,
+} from "@store-builder/api-client";
 import { apiClient } from "@/lib/apiClient";
 import { useWorkspaceId } from "@/lib/useWorkspaceId";
-import { getErrorMessage, getFieldErrors } from "@/lib/errors";
+import { getFieldErrors } from "@/lib/errors";
+import { useErrorMessage } from "@/lib/errorMessages";
 import { majorToMinor, minorToMajorInput, formatOptions } from "@/lib/format";
 import { TextField, Field } from "@/components/Field";
 import { MoneyInput } from "@/components/MoneyInput";
+import { WeightInput } from "@/components/WeightInput";
+import { gramsToKgInput, kgInputToGrams } from "@/lib/weight";
 import { Select } from "@/components/Select";
-import { fmt, useCommon, useLocale, useT, type Locale, type Messages } from "@/i18n/LocaleContext";
+import { useT, fmt, type Messages } from "@/i18n/LocaleContext";
+import { useCatalogLabels } from "../catalogLabels";
+import { ImageField } from "@/pages/website/editor/ImageField";
 
 const STRINGS = {
   en: {
+    sku: "SKU",
     price: "Price",
     cost: "Cost",
     optional: "Optional.",
     compareAt: "Compare-at price",
     compareAtHint: "Optional — shown struck-through on the storefront.",
-    initialStock: "Initial stock",
-    initialStockHint: "Set once here. Later changes go through Inventory.",
-    optionValues: "Option values",
-    optionValuesHint: "e.g. Size=M, Color=Red",
-    stockSummary: "Stock: {onHand} on hand — managed in Inventory.",
-    stockSummaryReserved: "Stock: {onHand} on hand, {reserved} reserved — managed in Inventory.",
-    options: "Options:",
+    stock: "Initial stock",
+    stockHint: "Set once here. Later changes go through Inventory.",
+    options: "Option values",
+    optionsHint: "e.g. Size=M, Color=Red",
+    stockLine: "Stock: {onHand} on hand",
+    reserved: ", {reserved} reserved",
+    managedInInventory: " — managed in Inventory.",
+    optionsLine: "Options: {options}",
+    status: "Status",
     allowOverselling: "Allow overselling (accept orders past available stock)",
-    saveVariant: "Save variant",
-    addVariant: "Add variant",
-    errPrice: "Enter a valid price (0 or more).",
-    errCost: "Enter a valid cost, or leave it blank.",
-    errCompareAt: "Enter a valid amount, or leave it blank.",
+    priceInvalid: "Enter a valid price (0 or more).",
+    costInvalid: "Enter a valid cost, or leave it blank.",
+    compareAtInvalid: "Enter a valid amount, or leave it blank.",
+    weight: "Weight",
+    weightUnit: "kg",
+    weightHint: "Used for shipping price and the courier's package. Leave blank if unknown.",
+    image: "Variant image",
+    imageHint: "Optional. Shown on the product page when this variant is chosen, and in the cart.",
+    weightInvalid: "Enter a weight between 0 and 1000 kg, or leave it blank.",
+    skuTaken: "That SKU is already used by another variant.",
+    cancel: "Cancel",
+    saving: "Saving…",
+    save: "Save variant",
+    add: "Add variant",
   },
   ar: {
+    sku: "SKU",
     price: "السعر",
     cost: "التكلفة",
     optional: "اختياري.",
     compareAt: "السعر قبل الخصم",
     compareAtHint: "اختياري — يظهر مشطوبًا في المتجر.",
-    initialStock: "المخزون المبدئي",
-    initialStockHint: "يُحدَّد مرة واحدة هنا. أي تعديل لاحق يتم من صفحة المخزون.",
-    optionValues: "قيم الخيارات",
-    optionValuesHint: "مثال: Size=M, Color=Red",
-    stockSummary: "المخزون: {onHand} متاح — تتم إدارته من صفحة المخزون.",
-    stockSummaryReserved: "المخزون: {onHand} متاح، و{reserved} محجوز — تتم إدارته من صفحة المخزون.",
-    options: "الخيارات:",
-    allowOverselling: "السماح بالبيع بدون مخزون (قبول طلبات تتجاوز المخزون المتاح)",
-    saveVariant: "حفظ المتغيّر",
-    addVariant: "إضافة متغيّر",
-    errPrice: "أدخل سعرًا صحيحًا (0 أو أكثر).",
-    errCost: "أدخل تكلفة صحيحة، أو اتركها فارغة.",
-    errCompareAt: "أدخل مبلغًا صحيحًا، أو اتركه فارغًا.",
+    stock: "المخزون المبدئي",
+    stockHint: "يُحدد مرة واحدة هنا. أي تغيير لاحق يتم من المخزون.",
+    options: "قيم الخيارات",
+    optionsHint: "مثال: Size=M, Color=Red",
+    stockLine: "المخزون: {onHand} متاح",
+    reserved: "، {reserved} محجوز",
+    managedInInventory: " — يُدار من المخزون.",
+    optionsLine: "الخيارات: {options}",
+    status: "الحالة",
+    allowOverselling: "السماح بالبيع بعد نفاد المخزون (قبول أوردرات تتجاوز المتاح)",
+    priceInvalid: "أدخل سعرًا صحيحًا (صفر أو أكثر).",
+    costInvalid: "أدخل تكلفة صحيحة، أو اتركها فارغة.",
+    compareAtInvalid: "أدخل مبلغًا صحيحًا، أو اتركه فارغًا.",
+    weight: "الوزن",
+    weightUnit: "كجم",
+    weightHint: "يُستخدم لحساب سعر الشحن ونوع الشحنة عند شركة الشحن. اتركه فارغًا لو غير معروف.",
+    image: "صورة النسخة",
+    imageHint: "اختياري. بتظهر في صفحة المنتج لما العميل يختار النسخة دي، وفي السلة.",
+    weightInvalid: "أدخل وزنًا بين 0 و1000 كجم، أو اتركه فارغًا.",
+    skuTaken: "رمز SKU هذا مستخدم لمتغير آخر.",
+    cancel: "إلغاء",
+    saving: "جارٍ الحفظ…",
+    save: "حفظ المتغير",
+    add: "إضافة المتغير",
   },
 } satisfies Messages;
-
-const VARIANT_STATUS_LABELS: Record<Locale, Record<"active" | "archived", string>> = {
-  en: { active: "Active", archived: "Archived" },
-  ar: { active: "نشط", archived: "مؤرشف" },
-};
 
 interface Props {
   productId: string;
@@ -86,8 +115,8 @@ function stringifyOptionValues(values: Record<string, string> | undefined): stri
 
 export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
   const t = useT(STRINGS);
-  const c = useCommon();
-  const { locale } = useLocale();
+  const labels = useCatalogLabels();
+  const errorMessage = useErrorMessage();
   const workspaceId = useWorkspaceId();
   const isEdit = Boolean(variant);
 
@@ -95,10 +124,13 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
   const [price, setPrice] = useState(minorToMajorInput(variant?.priceAmount));
   const [cost, setCost] = useState(minorToMajorInput(variant?.costAmount));
   const [compareAt, setCompareAt] = useState(minorToMajorInput(variant?.compareAtAmount));
+  const [weight, setWeight] = useState(gramsToKgInput(variant?.weightGrams));
   const [stock, setStock] = useState("0");
   const [options, setOptions] = useState(stringifyOptionValues(variant?.optionValues));
   const [allowOverselling, setAllowOverselling] = useState(variant?.allowOverselling ?? false);
   const [status, setStatus] = useState<"active" | "archived">(variant?.status ?? "active");
+  // The variant's own picture (SPEC §7.2); the Variant type does not name it yet.
+  const [imageUrl, setImageUrl] = useState((variant as { imageUrl?: string | null } | undefined)?.imageUrl ?? "");
 
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -106,22 +138,28 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (saving) return;
     setFormError(null);
     setFieldErrors({});
 
     const priceMinor = majorToMinor(price);
     if (!Number.isFinite(priceMinor) || priceMinor < 0) {
-      setFieldErrors({ priceAmount: t.errPrice });
+      setFieldErrors({ priceAmount: t.priceInvalid });
       return;
     }
     const costMinor = cost.trim() ? majorToMinor(cost) : null;
     if (costMinor !== null && (!Number.isFinite(costMinor) || costMinor < 0)) {
-      setFieldErrors({ costAmount: t.errCost });
+      setFieldErrors({ costAmount: t.costInvalid });
       return;
     }
     const compareMinor = compareAt.trim() ? majorToMinor(compareAt) : null;
     if (compareMinor !== null && (!Number.isFinite(compareMinor) || compareMinor < 0)) {
-      setFieldErrors({ compareAtAmount: t.errCompareAt });
+      setFieldErrors({ compareAtAmount: t.compareAtInvalid });
+      return;
+    }
+    const weightGrams = kgInputToGrams(weight);
+    if (weightGrams !== null && Number.isNaN(weightGrams)) {
+      setFieldErrors({ weightGrams: t.weightInvalid });
       return;
     }
 
@@ -133,8 +171,10 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
           priceAmount: priceMinor,
           costAmount: costMinor,
           compareAtAmount: compareMinor,
+          weightGrams,
           allowOverselling,
           status,
+          ...{ imageUrl: imageUrl || null },
         };
         await apiClient.updateVariant(workspaceId, variant.id, payload);
       } else {
@@ -145,7 +185,9 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
           costAmount: costMinor,
           compareAtAmount: compareMinor,
           optionValues: parseOptionValues(options),
+          weightGrams,
           allowOverselling,
+          ...{ imageUrl: imageUrl || null },
           stockOnHand: Number.isFinite(stockValue) && stockValue > 0 ? Math.floor(stockValue) : 0,
         };
         await apiClient.createVariant(workspaceId, productId, payload);
@@ -153,22 +195,20 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
       onDone();
     } catch (err) {
       const fields = getFieldErrors(err);
+      if (isApiErrorCode(err, "DUPLICATE_RESOURCE")) fields.sku = t.skuTaken;
       setFieldErrors(fields);
-      if (Object.keys(fields).length === 0) setFormError(getErrorMessage(err));
+      if (Object.keys(fields).length === 0) setFormError(errorMessage(err));
     } finally {
       setSaving(false);
     }
   }
-
-  const optionsText = formatOptions(variant?.optionValues);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {formError && <Alert variant="danger">{formError}</Alert>}
 
       <TextField
-        label="SKU"
-        dir="ltr"
+        label={t.sku}
         value={sku}
         onChange={(e) => setSku(e.target.value)}
         error={fieldErrors.sku}
@@ -203,50 +243,59 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
         currency={variant?.currency ?? "EGP"}
       />
 
+      <WeightInput
+        label={t.weight}
+        unit={t.weightUnit}
+        value={weight}
+        onChange={setWeight}
+        error={fieldErrors.weightGrams}
+        hint={t.weightHint}
+      />
+
+      <ImageField label={t.image} hint={t.imageHint} value={imageUrl} onChange={setImageUrl} />
+
       {!isEdit && (
         <>
           <TextField
-            label={t.initialStock}
+            label={t.stock}
             type="number"
-            dir="ltr"
             min={0}
             value={stock}
             onChange={(e) => setStock(e.target.value)}
             error={fieldErrors.stockOnHand}
-            hint={t.initialStockHint}
+            hint={t.stockHint}
           />
           <TextField
-            label={t.optionValues}
-            dir="ltr"
+            label={t.options}
             value={options}
             onChange={(e) => setOptions(e.target.value)}
             error={fieldErrors.optionValues}
-            hint={t.optionValuesHint}
+            hint={t.optionsHint}
           />
         </>
       )}
 
       {isEdit && (
         <>
-          <div className="rounded-xl border border-line bg-zimos-ice px-3 py-2 text-sm text-ink-soft">
-            {variant?.reservedStock
-              ? fmt(t.stockSummaryReserved, { onHand: variant.stockOnHand, reserved: variant.reservedStock })
-              : fmt(t.stockSummary, { onHand: variant?.stockOnHand ?? 0 })}
-            {optionsText && (
+          <div className="rounded-[0.5rem] border border-line bg-paper px-3 py-2 text-sm text-ink-soft">
+            {fmt(t.stockLine, { onHand: variant?.stockOnHand ?? 0 })}
+            {variant?.reservedStock ? fmt(t.reserved, { reserved: variant.reservedStock }) : ""}
+            {t.managedInInventory}
+            {formatOptions(variant?.optionValues) && (
               <div className="mt-0.5">
-                {t.options} <bdi>{optionsText}</bdi>
+                {fmt(t.optionsLine, { options: formatOptions(variant?.optionValues) })}
               </div>
             )}
           </div>
-          <Field label={c.status} error={fieldErrors.status}>
+          <Field label={t.status} error={fieldErrors.status}>
             {({ id }) => (
               <Select
                 id={id}
                 value={status}
                 onChange={(e) => setStatus(e.target.value as "active" | "archived")}
               >
-                <option value="active">{VARIANT_STATUS_LABELS[locale].active}</option>
-                <option value="archived">{VARIANT_STATUS_LABELS[locale].archived}</option>
+                <option value="active">{labels.status("active")}</option>
+                <option value="archived">{labels.status("archived")}</option>
               </Select>
             )}
           </Field>
@@ -264,10 +313,10 @@ export function VariantForm({ productId, variant, onDone, onCancel }: Props) {
 
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          {c.cancel}
+          {t.cancel}
         </Button>
         <Button type="submit" disabled={saving}>
-          {saving ? c.saving : isEdit ? t.saveVariant : t.addVariant}
+          {saving ? t.saving : isEdit ? t.save : t.add}
         </Button>
       </div>
     </form>

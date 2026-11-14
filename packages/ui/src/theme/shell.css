@@ -1,0 +1,28 @@
+/* The dashboard's frame on a phone — components/MobileTabBar.tsx and
+   components/shell/PhoneMenu.tsx. Not part of the glass layer: these hold
+   with data-glass="off" too. */
+
+/* Room for the floating phone dock under the page: 0.75rem below it, 4rem of
+   dock, and air above. From md up the side menu replaces the dock. */
+@media (max-width: 47.99rem) {
+  .glass-app main {
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+  }
+  /* A page with its main action in a bar above the dock needs room for that too. */
+  .glass-app main:has([data-page-action]) {
+    padding-bottom: calc(10rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* The phone menu rises from the bottom edge and the page dims behind it.
+   Filled backwards only: nothing is left on the sheet once it has risen. */
+@keyframes phone-menu-rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes phone-menu-dim {
+  from {
+    opacity: 0;
+  }
+}

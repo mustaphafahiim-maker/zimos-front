@@ -1,21 +1,28 @@
 /* eslint-disable @next/next/no-img-element -- the official raster exports are
-   rendered as-is with blend modes from brand/zimos.css; next/image would add
-   wrappers that break the `.zimos-logo img` rules. */
+   rendered as-is under the `.zimos-logo` rules in app/globals.css; next/image
+   would add wrappers that break those rules. */
 import * as React from "react";
 
 /**
  * The official ZIMOS logo, rendered from the approved exports only.
- * Local copy of packages/ui/src/brand/ZimosLogo.tsx (the marketing app does
- * not depend on @store-builder/ui) — keep the markup and class names in sync.
+ * The marketing app does not depend on @store-builder/ui, so this is a local
+ * copy — keep the markup and class names in sync with the shared one.
  *
- * Never redraw, retype or recolour the logo. The styling that makes the
- * baked-in export background disappear lives in `brand/zimos.css`
- * (`.zimos-logo`, `.zimos-mark`), imported by `app/globals.css`.
+ * Never redraw, retype or recolour the logo. The exports carry real alpha, so
+ * they need no blend modes; the rules that pick the right lockup for a surface
+ * (`.zimos-logo`, `.zimos-mark`) live in `app/globals.css`.
  *
  * Assets are served from `public/brand/`:
  *   zimos-logo-light.png  full logo, for light surfaces
- *   zimos-logo-dark.png   full logo (white wordmark), for navy surfaces
- *   zimos-mark-tile.png   icon-only mark on its navy app-icon tile
+ *   zimos-logo-dark.png   full logo (white wordmark), for dark surfaces
+ *   zimos-logo-*.webp     the same two, lossless, 72 px tall: twice the
+ *                         tallest the site draws them (36 px, the header)
+ *   zimos-mark-tile.png   icon-only mark on its app-icon tile
+ *
+ * Each lockup is a <picture>: browsers take the small WebP, the PNG stays for
+ * any that can't. React preloads a bare <img> it renders early on the page,
+ * not one inside a <picture>, so neither logo (the hidden one included) is
+ * preloaded ahead of the hero's picture.
  */
 
 const cn = (...classes: Array<string | undefined | false>) =>
@@ -41,9 +48,8 @@ export function ZimosLogo({
   className,
   alt = "ZIMOS",
 }: ZimosLogoProps) {
-  // The two exports are framed differently; nudge the dark one so both read at
-  // the same optical size for a given height.
-  const darkHeight = Math.round(height * 1.02);
+  // Both exports are cropped to the identical ink bounding box, so one height
+  // gives both the same optical size — no per-variant nudging.
   return (
     <span
       className={cn("zimos-logo", className)}
@@ -52,20 +58,26 @@ export function ZimosLogo({
       role="img"
       aria-label={alt}
     >
-      <img
-        className="zimos-logo-on-light"
-        src={`${basePath}/zimos-logo-light.png`}
-        alt=""
-        draggable={false}
-        style={{ height }}
-      />
-      <img
-        className="zimos-logo-on-dark"
-        src={`${basePath}/zimos-logo-dark.png`}
-        alt=""
-        draggable={false}
-        style={{ height: darkHeight }}
-      />
+      <picture>
+        <source srcSet={`${basePath}/zimos-logo-light.webp`} type="image/webp" />
+        <img
+          className="zimos-logo-on-light"
+          src={`${basePath}/zimos-logo-light.png`}
+          alt=""
+          draggable={false}
+          style={{ height }}
+        />
+      </picture>
+      <picture>
+        <source srcSet={`${basePath}/zimos-logo-dark.webp`} type="image/webp" />
+        <img
+          className="zimos-logo-on-dark"
+          src={`${basePath}/zimos-logo-dark.png`}
+          alt=""
+          draggable={false}
+          style={{ height }}
+        />
+      </picture>
     </span>
   );
 }

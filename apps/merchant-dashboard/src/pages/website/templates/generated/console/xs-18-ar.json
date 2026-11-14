@@ -1,0 +1,677 @@
+{
+  "globalStyles": {
+    "primaryColor": "#FFBE33",
+    "themeSettings": {
+      "xsLook": "18",
+      "header": {
+        "menu": [
+          {
+            "label": "الرئيسية",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "المنيو",
+            "href": "/menu",
+            "kind": "page"
+          },
+          {
+            "label": "من نحن",
+            "href": "/about",
+            "kind": "page"
+          },
+          {
+            "label": "احجز طاولة",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "تواصل معنا",
+            "links": [
+              {
+                "label": "احجز طاولة",
+                "href": "/contact",
+                "kind": "page"
+              },
+              {
+                "label": "تتبّع طلبك",
+                "href": "/track",
+                "kind": "track"
+              }
+            ]
+          },
+          {
+            "title": "قائمة طعامنا",
+            "links": [
+              {
+                "label": "المنيو",
+                "href": "/menu",
+                "kind": "page"
+              },
+              {
+                "label": "من نحن",
+                "href": "/about",
+                "kind": "page"
+              },
+              {
+                "label": "السلة",
+                "href": "/cart",
+                "kind": "cart"
+              }
+            ]
+          }
+        ],
+        "text": "برجر مشوي على الفحم، وبيتزا خارجة من الفرن، وباستا بصوص البيت، تُحضَّر طازجة لحظة طلبك.\nمواعيد العمل: يوميًا من 10 صباحًا حتى 10 مساءً",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "الرئيسية",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs18-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p1-s1-e1",
+                        "type": "xs_slider",
+                        "props": {
+                          "look": "18",
+                          "slides": [
+                            {
+                              "image": "/xs/18/hero-bg.jpg",
+                              "heading": "وجبات سريعة بطعم لا يُنسى",
+                              "text": "برجر عصاري، وبيتزا ساخنة من الفرن، وبطاطس مقرمشة تُحضَّر لك طازجة في دقائق. اطلب الآن واستمتع بوجبتك ساخنة أينما كنت.",
+                              "buttonLabel": "اطلب الآن",
+                              "buttonHref": "/menu"
+                            },
+                            {
+                              "image": "/xs/18/hero-bg.jpg",
+                              "heading": "وجبات سريعة بطعم لا يُنسى",
+                              "text": "برجر عصاري، وبيتزا ساخنة من الفرن، وبطاطس مقرمشة تُحضَّر لك طازجة في دقائق. اطلب الآن واستمتع بوجبتك ساخنة أينما كنت.",
+                              "buttonLabel": "اطلب الآن",
+                              "buttonHref": "/menu"
+                            },
+                            {
+                              "image": "/xs/18/hero-bg.jpg",
+                              "heading": "وجبات سريعة بطعم لا يُنسى",
+                              "text": "برجر عصاري، وبيتزا ساخنة من الفرن، وبطاطس مقرمشة تُحضَّر لك طازجة في دقائق. اطلب الآن واستمتع بوجبتك ساخنة أينما كنت.",
+                              "buttonLabel": "اطلب الآن",
+                              "buttonHref": "/menu"
+                            }
+                          ],
+                          "autoplay": true,
+                          "seconds": 6
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs18-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p1-s2-e1",
+                        "type": "xs_banners",
+                        "props": {
+                          "look": "18",
+                          "items": [
+                            {
+                              "image": "/xs/18/o1.jpg",
+                              "title": "عروض الخميس",
+                              "text": "خصم 20%",
+                              "linkLabel": "اطلب الآن",
+                              "href": "/menu"
+                            },
+                            {
+                              "image": "/xs/18/o2.jpg",
+                              "title": "أيام البيتزا",
+                              "text": "خصم 15%",
+                              "linkLabel": "اطلب الآن",
+                              "href": "/menu"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs18-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p1-s3-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "18",
+                          "heading": "قائمة طعامنا",
+                          "collection": "",
+                          "limit": 9,
+                          "showDiscount": true,
+                          "showTabs": true,
+                          "showSearch": false,
+                          "layout": "grid",
+                          "quickView": true,
+                          "searchLabel": "بحث",
+                          "searchPlaceholder": "بحث",
+                          "viewLabel": "نظرة سريعة",
+                          "openLabel": "أضف للسلة",
+                          "allLabel": "الكل",
+                          "loadMoreLabel": "عرض المزيد"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs18-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p1-s4-e1",
+                        "type": "xs_split",
+                        "props": {
+                          "look": "18",
+                          "heading": "نحن Feane",
+                          "text": "في Feane نؤمن أن الوجبة السريعة تستحق اهتمامًا حقيقيًا. نختار اللحوم الطازجة يوميًا، ونخبز عجينة البيتزا في مطبخنا، ونحضّر صوصاتنا بوصفاتنا الخاصة. ومن أول قضمة ستعرف الفرق، سواء شرّفتنا في المطعم أو طلبت التوصيل إلى باب بيتك.",
+                          "images": [
+                            "/xs/18/about-img.png"
+                          ],
+                          "points": [],
+                          "buttonLabel": "اقرأ المزيد",
+                          "buttonHref": "/about"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs18-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p1-s5-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "18",
+                          "heading": "احجز طاولتك",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "مواعيد العمل",
+                              "text": "يوميًا من 10 صباحًا حتى 10 مساءً"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "اتصل بنا",
+                              "text": "اتصل بنا خلال مواعيد العمل"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "تواصل معنا",
+                              "text": "أرسل لنا رسالة وسنرد عليك خلال يوم"
+                            }
+                          ],
+                          "contactPlaceholder": "رقم الهاتف",
+                          "messagePlaceholder": "كم عدد الأفراد؟",
+                          "buttonLabel": "احجز الآن"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs18-p1-s6",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p1-s6-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p1-s6-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p1-s6-e1",
+                        "type": "xs_quotes",
+                        "props": {
+                          "look": "18",
+                          "heading": "ماذا يقول عملاؤنا",
+                          "items": [
+                            {
+                              "quote": "البرجر عصاري والبيتزا عجينتها خفيفة ومقرمشة، والطلب وصل ساخنًا قبل موعده. أصبح Feane اختيارنا الأول في سهرات نهاية الأسبوع.",
+                              "name": "منة الله حسن",
+                              "role": "من عملائنا الدائمين",
+                              "image": "/xs/18/client1.jpg"
+                            },
+                            {
+                              "quote": "البرجر عصاري والبيتزا عجينتها خفيفة ومقرمشة، والطلب وصل ساخنًا قبل موعده. أصبح Feane اختيارنا الأول في سهرات نهاية الأسبوع.",
+                              "name": "كريم حمدي",
+                              "role": "من عملائنا الدائمين",
+                              "image": "/xs/18/client2.jpg"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/menu",
+      "title": "المنيو",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs18-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "18",
+                          "heading": "المنيو",
+                          "image": "/xs/18/hero-bg.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs18-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p2-s2-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "18",
+                          "heading": "قائمة طعامنا",
+                          "collection": "",
+                          "limit": 9,
+                          "showDiscount": true,
+                          "showTabs": true,
+                          "showSearch": false,
+                          "layout": "grid",
+                          "quickView": true,
+                          "searchLabel": "بحث",
+                          "searchPlaceholder": "بحث",
+                          "viewLabel": "نظرة سريعة",
+                          "openLabel": "أضف للسلة",
+                          "allLabel": "الكل",
+                          "loadMoreLabel": "عرض المزيد"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/about",
+      "title": "من نحن",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs18-p3-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p3-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p3-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p3-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "18",
+                          "heading": "من نحن",
+                          "image": "/xs/18/hero-bg.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs18-p3-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p3-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p3-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p3-s2-e1",
+                        "type": "xs_story",
+                        "props": {
+                          "look": "18",
+                          "items": [
+                            {
+                              "title": "نحن Feane",
+                              "body": "في Feane نؤمن أن الوجبة السريعة تستحق اهتمامًا حقيقيًا. نختار اللحوم الطازجة يوميًا، ونخبز عجينة البيتزا في مطبخنا، ونحضّر صوصاتنا بوصفاتنا الخاصة. ومن أول قضمة ستعرف الفرق، سواء شرّفتنا في المطعم أو طلبت التوصيل إلى باب بيتك.",
+                              "image": "/xs/18/about-img.png"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "احجز طاولة",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs18-p4-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p4-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p4-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p4-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "18",
+                          "heading": "احجز طاولة",
+                          "image": "/xs/18/hero-bg.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs18-p4-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs18-p4-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs18-p4-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs18-p4-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "18",
+                          "heading": "احجز طاولتك",
+                          "info": [
+                            {
+                              "icon": "address",
+                              "title": "مواعيد العمل",
+                              "text": "يوميًا من 10 صباحًا حتى 10 مساءً"
+                            },
+                            {
+                              "icon": "phone",
+                              "title": "اتصل بنا",
+                              "text": "اتصل بنا خلال مواعيد العمل"
+                            },
+                            {
+                              "icon": "email",
+                              "title": "تواصل معنا",
+                              "text": "أرسل لنا رسالة وسنرد عليك خلال يوم"
+                            }
+                          ],
+                          "contactPlaceholder": "رقم الهاتف",
+                          "messagePlaceholder": "كم عدد الأفراد؟",
+                          "buttonLabel": "احجز الآن"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

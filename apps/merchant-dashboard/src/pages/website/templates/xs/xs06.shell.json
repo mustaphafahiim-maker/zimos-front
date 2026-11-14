@@ -1,0 +1,122 @@
+{
+  "xsLook": "06",
+  "header": {
+    "announcement": {
+      "enabled": true,
+      "text": "FAQs · Help · Support"
+    },
+    "menu": [
+      {
+        "label": "Home",
+        "href": "/",
+        "kind": "home"
+      },
+      {
+        "label": "Shop",
+        "href": "/products",
+        "kind": "url"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact",
+        "kind": "page"
+      }
+    ],
+    "show": {
+      "theme": false,
+      "trackOrder": false,
+      "language": false
+    },
+    "zones": {
+      "notice": [
+        {
+          "id": "notice",
+          "type": "notice"
+        }
+      ],
+      "links": [
+        {
+          "id": "social",
+          "type": "social"
+        }
+      ],
+      "brand": [
+        {
+          "id": "logo",
+          "type": "logo"
+        }
+      ],
+      "menu": [
+        {
+          "id": "menu",
+          "type": "menu"
+        }
+      ],
+      "icons": [
+        {
+          "id": "search",
+          "type": "search"
+        },
+        {
+          "id": "account",
+          "type": "account"
+        },
+        {
+          "id": "wishlist",
+          "type": "wishlist"
+        },
+        {
+          "id": "cart",
+          "type": "cart"
+        },
+        {
+          "id": "phone",
+          "type": "phone"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "groups": [
+      {
+        "title": "Quick Links",
+        "links": [
+          {
+            "label": "Home",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "Our Shop",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Shopping Cart",
+            "href": "/cart",
+            "kind": "cart"
+          },
+          {
+            "label": "Contact Us",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ]
+      },
+      {
+        "title": "Help",
+        "links": [
+          {
+            "label": "Track Order",
+            "href": "/track",
+            "kind": "track"
+          }
+        ]
+      }
+    ],
+    "text": "Modern fashion for the whole family in carefully chosen fabrics at fair prices, delivered to your door anywhere in Egypt.",
+    "show": {
+      "help": false
+    }
+  }
+}

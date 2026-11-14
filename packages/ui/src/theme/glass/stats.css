@@ -1,0 +1,106 @@
+/* Stat cards (advanced-stats): label, big figure, change chip, area sparkline — components/KpiCard.tsx, charts.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables. */
+:root:not([data-glass="off"]) {
+  /* ---------------------------------------------------------------- *
+   * A stat card is the shared Card, so its pane (fill, rim, sheen) is
+   * already drawn by liquid-glass.css, and so is the tint it takes
+   * under the pointer (data-trend). What sits ON the pane is tinted
+   * glass as well, never a solid block: the icon chip, the change
+   * chip, the wash under the trend and the bones of the skeleton.
+   * No blur here: a card lies in the page, nothing passes beneath it.
+   * ---------------------------------------------------------------- */
+
+  /* The figure is the one thing on the card at full ink, on the plain pane
+     and on the green or red tint the pane takes under the pointer. */
+  [data-kpi] [data-slot="kpi-figure"] {
+    color: var(--color-ink);
+  }
+
+  /* The icon chip: a drop of the brand colour with a lit top edge. */
+  [data-kpi] [data-slot="kpi-icon"] {
+    background-color: color-mix(in srgb, var(--color-primary) 11%, transparent);
+    color: var(--lg-text-primary);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 9%, transparent);
+  }
+  &.dark [data-kpi] [data-slot="kpi-icon"] {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+      inset 0 0 0 1px rgb(255 255 255 / 0.05);
+  }
+
+  /* The change chip. The tints stay strong enough that the percent holds
+     4.5:1 whatever part of the aurora is behind the pane. Worked out from the
+     tokens over every pool of the backdrop (not yet measured on rendered
+     pixels): the deeper text shades give 5.8:1 on the light tints and 5.0:1 or
+     more on the dark ones, also while the card wears its pointer tint. A
+     hairline of the same colour keeps the pill readable as a pill when the
+     whole card takes that tint. */
+  [data-kpi] [data-slot="kpi-chip"] {
+    background-color: color-mix(in srgb, var(--color-ink) 7%, transparent);
+    color: var(--lg-ink-soft);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+  [data-kpi] [data-slot="kpi-chip"][data-tone="good"] {
+    background-color: color-mix(in srgb, var(--color-success-soft) 88%, transparent);
+    color: var(--lg-text-success);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 16%, transparent);
+  }
+  [data-kpi] [data-slot="kpi-chip"][data-tone="bad"] {
+    background-color: color-mix(in srgb, var(--color-danger-soft) 88%, transparent);
+    color: var(--lg-text-danger);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 16%, transparent);
+  }
+  /* On dark glass the soft tokens are nearly black and would read as holes
+     in the pane, so the tint is mixed from the colour itself. */
+  &.dark [data-kpi] [data-slot="kpi-chip"] {
+    background-color: color-mix(in srgb, var(--color-ink) 10%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+      inset 0 0 0 1px rgb(255 255 255 / 0.04);
+  }
+  &.dark [data-kpi] [data-slot="kpi-chip"][data-tone="good"] {
+    background-color: color-mix(in srgb, var(--color-success) 18%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-success) 22%, transparent);
+  }
+  &.dark [data-kpi] [data-slot="kpi-chip"][data-tone="bad"] {
+    background-color: color-mix(in srgb, var(--color-danger) 18%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 22%, transparent);
+  }
+
+  /* The wash under a trend (charts.tsx reads --spark-wash: its strength at
+     the line, fading to nothing at the baseline). 22% is right on a light
+     pane; a dark pane swallows it, so there it starts stronger. Set on the
+     figure itself, so a sparkline outside a stat card takes it too. */
+  &.dark [data-slot="sparkline"] {
+    --spark-wash: 0.34;
+  }
+
+  /* The skeleton: frosted bars, not grey blocks. */
+  [data-kpi] [data-slot="kpi-bone"] {
+    background-color: color-mix(in srgb, var(--color-ink) 9%, transparent);
+  }
+  [data-kpi] [data-slot="kpi-bone-wash"] {
+    background-image: linear-gradient(to top, color-mix(in srgb, var(--color-ink) 8%, transparent), transparent);
+  }
+
+  /* A card rises and settles on the soft spring, and the tint it takes under
+     the pointer fades in. The lift itself (2px, links only) and the tint are
+     set in liquid-glass.css; the durations are zero for reduced motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    .glass-app main [data-kpi] {
+      transition:
+        transform var(--dur-move) var(--ease-spring),
+        box-shadow var(--dur-fade) var(--ease-out),
+        background-color var(--dur-fade) var(--ease-out);
+    }
+  }
+}

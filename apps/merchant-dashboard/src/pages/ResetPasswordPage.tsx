@@ -1,49 +1,64 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Button, Label, Alert } from "@store-builder/ui";
+import { Button, Alert } from "@store-builder/ui";
 import { ApiError } from "@/context/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import { MIN_PASSWORD_LENGTH, isPasswordStrong, unmetPasswordRules } from "@/lib/passwordRules";
-import { useT } from "@/i18n/LocaleContext";
-import { AuthBackLink, AuthShell, AuthTitle, PasswordInput, PasswordRuleList } from "@/components/AuthShell";
+import { AUTH_SUBMIT, AuthHeading, AuthLink, AuthPasswordField, AuthRules, AuthShell } from "./AuthShell";
+import { useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { MIN_PASSWORD_LENGTH, isPasswordStrong, passwordRuleLabel, unmetPasswordRules } from "@/lib/passwordRules";
 
 const STRINGS = {
   en: {
     title: "Set a new password",
-    intro: "Choose a new password for your account.",
-    invalidLink: "This link is invalid. It may be incomplete or copied incorrectly.",
-    requestNew: "Request a new link",
-    success: "Your password has been changed. Taking you to sign in…",
-    signIn: "Sign in",
-    newPassword: "New password",
+    intro: "Choose a new password for your account. You'll be signed out everywhere else.",
+    password: "New password",
     passwordPlaceholder: "At least 8 characters",
     confirm: "Confirm password",
-    rulesUnmet: "Your password doesn't meet all the requirements listed below.",
-    mismatch: "Passwords don't match.",
-    submit: "Save new password",
-    submitting: "Saving…",
-    failed: "We couldn't change your password. Please try again.",
+    show: "Show password",
+    hide: "Hide password",
+    save: "Save new password",
+    saving: "Saving…",
+    rulesUnmet: "The password still misses some of the rules listed below it.",
+    mismatch: "The two passwords don't match.",
+    invalidLink: "This link isn't valid: it may be incomplete or copied wrongly.",
+    expired: "This link has expired or was already used. Ask for a new one.",
+    askAgain: "Ask for a new link",
+    done: "Your password has been changed. Taking you to sign in…",
+    signIn: "Sign in",
+    back: "Back to sign in",
+    generic: "The password couldn't be changed. Try again.",
   },
   ar: {
     title: "تعيين كلمة مرور جديدة",
-    intro: "اختر كلمة مرور جديدة لحسابك.",
-    invalidLink: "هذا الرابط غير صالح. ربما يكون ناقصًا أو نُسخ بشكل غير صحيح.",
-    requestNew: "اطلب رابطًا جديدًا",
-    success: "تم تغيير كلمة المرور بنجاح. جارٍ تحويلك إلى تسجيل الدخول…",
-    signIn: "تسجيل الدخول",
-    newPassword: "كلمة المرور الجديدة",
+    intro: "اختر كلمة مرور جديدة لحسابك. سيُسجَّل خروجك من كل الأجهزة الأخرى.",
+    password: "كلمة المرور الجديدة",
     passwordPlaceholder: "8 أحرف على الأقل",
     confirm: "تأكيد كلمة المرور",
-    rulesUnmet: "كلمة المرور لا تستوفي كل الشروط الموضحة أدناه.",
+    show: "إظهار كلمة المرور",
+    hide: "إخفاء كلمة المرور",
+    save: "حفظ كلمة المرور الجديدة",
+    saving: "جارٍ الحفظ…",
+    rulesUnmet: "كلمة المرور لا تستوفي بعد بعض الشروط المذكورة أسفلها.",
     mismatch: "كلمتا المرور غير متطابقتين.",
-    submit: "حفظ كلمة المرور الجديدة",
-    submitting: "جارٍ الحفظ…",
-    failed: "تعذّر تغيير كلمة المرور. حاول مرة أخرى.",
+    invalidLink: "هذا الرابط غير صالح: ربما يكون ناقصًا أو نُسخ بشكل خاطئ.",
+    expired: "انتهت صلاحية هذا الرابط أو سبق استخدامه. اطلب رابطًا جديدًا.",
+    askAgain: "طلب رابط جديد",
+    done: "تم تغيير كلمة المرور. جارٍ نقلك إلى تسجيل الدخول…",
+    signIn: "تسجيل الدخول",
+    back: "العودة إلى تسجيل الدخول",
+    generic: "تعذّر تغيير كلمة المرور. حاول مرة أخرى.",
   },
-};
+} satisfies Messages;
 
+/**
+ * The page the emailed link opens (/reset-password?token=…): a new password
+ * (the same rules as sign-up), then sign in. Works for an account made with
+ * Google, which sets its first password here. The server signs the account
+ * out everywhere and counts its email as confirmed.
+ */
 export function ResetPasswordPage() {
   const t = useT(STRINGS);
+  const { locale } = useLocale();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   // The emailed link is /reset-password?token=xxx.
@@ -52,13 +67,13 @@ export function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [linkDead, setLinkDead] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
   const unmetRules = unmetPasswordRules(password);
 
-  // On success, bounce to the login page after a short beat. The manual button
-  // below covers the case where the timer is missed (tab backgrounded, etc.).
+  // On success, on to sign in after a short beat; the button covers a missed timer.
   useEffect(() => {
     if (!done) return;
     const timer = setTimeout(() => navigate("/login", { replace: true }), 2000);
@@ -84,64 +99,95 @@ export function ResetPasswordPage() {
       await apiClient.resetPassword(token, password);
       setDone(true);
     } catch (err) {
-      // Keep the form mounted so they can fix a typo or go request a fresh link.
-      setError(err instanceof ApiError ? err.message : t.failed);
+      // An expired or used link can't be retried: send them for a new one.
+      if (err instanceof ApiError && err.code === "INVALID_RESET_TOKEN") setLinkDead(true);
+      else setError(t.generic);
     } finally {
       setSubmitting(false);
     }
   }
 
+  const askAgain = (
+    <AuthLink to="/forgot-password" className="mt-4">
+      {t.askAgain}
+    </AuthLink>
+  );
+
   return (
     <AuthShell>
-      <AuthTitle title={t.title} subtitle={token && !done ? t.intro : undefined} />
-
       {!token ? (
         <>
-          <Alert variant="danger" className="mt-6">
+          <AuthHeading title={t.title} />
+          <Alert variant="danger" className="mt-6" role="alert">
             {t.invalidLink}
           </Alert>
-          <AuthBackLink to="/forgot-password" label={t.requestNew} />
+          {askAgain}
+        </>
+      ) : linkDead ? (
+        <>
+          <AuthHeading title={t.title} />
+          <Alert variant="danger" className="mt-6" role="alert">
+            {t.expired}
+          </Alert>
+          {askAgain}
         </>
       ) : done ? (
         <>
-          <Alert variant="success" className="mt-6">
-            {t.success}
+          <AuthHeading title={t.title} />
+          <Alert variant="success" className="mt-6" role="status">
+            {t.done}
           </Alert>
-          <Button type="button" className="mt-6 w-full" onClick={() => navigate("/login", { replace: true })}>
+          <Button type="button" className={`mt-6 ${AUTH_SUBMIT}`} onClick={() => navigate("/login", { replace: true })}>
             {t.signIn}
           </Button>
         </>
       ) : (
         <>
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-            {error && <Alert variant="danger">{error}</Alert>}
+          <AuthHeading title={t.title}>{t.intro}</AuthHeading>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="password">{t.newPassword}</Label>
-              <PasswordInput
-                id="password"
-                value={password}
-                onChange={setPassword}
-                autoComplete="new-password"
-                minLength={MIN_PASSWORD_LENGTH}
-                placeholder={t.passwordPlaceholder}
-                describedBy="password-rules"
-              />
-              {password.length > 0 && unmetRules.length > 0 && <PasswordRuleList id="password-rules" rules={unmetRules} />}
-            </div>
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            {error && (
+              <Alert variant="danger" role="alert">
+                {error}
+              </Alert>
+            )}
 
-            <div className="space-y-1.5">
-              <Label htmlFor="confirm">{t.confirm}</Label>
-              <PasswordInput id="confirm" value={confirm} onChange={setConfirm} autoComplete="new-password" />
-              {confirm.length > 0 && password !== confirm && <p className="mt-1 text-xs text-danger">{t.mismatch}</p>}
-            </div>
+            <AuthPasswordField
+              label={t.password}
+              fieldId="password"
+              autoComplete="new-password"
+              enterKeyHint="next"
+              required
+              minLength={MIN_PASSWORD_LENGTH}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t.passwordPlaceholder}
+              aria-describedby={password.length > 0 && unmetRules.length > 0 ? "password-rules" : undefined}
+            >
+              {/* What is still missing, while the password is being typed. */}
+              {password.length > 0 && <AuthRules id="password-rules" rules={unmetRules.map((rule) => passwordRuleLabel(rule, locale))} />}
+            </AuthPasswordField>
 
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? t.submitting : t.submit}
+            <AuthPasswordField
+              label={t.confirm}
+              fieldId="confirm"
+              autoComplete="new-password"
+              enterKeyHint="done"
+              required
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="••••••••"
+              error={confirm.length > 0 && password !== confirm ? t.mismatch : undefined}
+            />
+
+            <Button type="submit" className={AUTH_SUBMIT} disabled={submitting}>
+              {submitting ? t.saving : t.save}
             </Button>
           </form>
 
-          <AuthBackLink />
+          <AuthLink to="/login" back className="mt-4">
+            {t.back}
+          </AuthLink>
         </>
       )}
     </AuthShell>

@@ -1,0 +1,253 @@
+{
+  "look": "08",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Latest Products",
+      "slug": "latest-products",
+      "nameAr": "أحدث المنتجات"
+    },
+    {
+      "name": "Deals of the Week",
+      "slug": "deals-of-the-week",
+      "nameAr": "عروض الأسبوع"
+    }
+  ],
+  "products": [
+    {
+      "name": "Grey Knit Running Shoes",
+      "nameAr": "حذاء جري تريكو رمادي",
+      "description": "Lightweight knit running shoes with a cushioned sole and a teal accent.",
+      "descriptionAr": "حذاء جري خفيف من التريكو بنعل مريح ولمسة تركواز.",
+      "price": 2850,
+      "compareAt": 3600,
+      "image": "/xs/08/products/p01.jpg",
+      "collections": [
+        "latest-products"
+      ]
+    },
+    {
+      "name": "Grey & Neon Training Shoes",
+      "nameAr": "حذاء تمرين رمادي ونيون",
+      "description": "Flexible training shoes in grey with neon-yellow laces and sole.",
+      "descriptionAr": "حذاء تمرين مرن باللون الرمادي مع رباط ونعل أصفر نيون.",
+      "price": 2450,
+      "image": "/xs/08/products/p01b.jpg",
+      "collections": [
+        "latest-products"
+      ]
+    },
+    {
+      "name": "Black Perforated Slip-On Sneakers",
+      "nameAr": "سنيكرز سليب أون أسود مخرّم",
+      "description": "Easy slip-on sneakers in black perforated suede with a white sole.",
+      "descriptionAr": "سنيكرز سليب أون من الشمواه الأسود المخرّم بنعل أبيض.",
+      "price": 1350,
+      "image": "/xs/08/products/p01c.jpg",
+      "collections": [
+        "latest-products"
+      ]
+    },
+    {
+      "name": "Retro Tan Suede Sneakers",
+      "nameAr": "سنيكرز ريترو شمواه هافان",
+      "description": "Retro-style sneakers in tan suede with bold orange and turquoise details.",
+      "descriptionAr": "سنيكرز بطابع ريترو من الشمواه الهافان بتفاصيل برتقالي وتركواز.",
+      "price": 2200,
+      "compareAt": 2750,
+      "image": "/xs/08/products/p01d.jpg",
+      "collections": [
+        "latest-products"
+      ]
+    },
+    {
+      "name": "Light Grey Suede Court Sneakers",
+      "nameAr": "سنيكرز شمواه رمادي فاتح",
+      "description": "Clean low-top court sneakers in light grey suede with a coral sole.",
+      "descriptionAr": "سنيكرز منخفض من الشمواه الرمادي الفاتح بنعل مرجاني.",
+      "price": 1950,
+      "image": "/xs/08/products/p01e.jpg",
+      "collections": [
+        "latest-products"
+      ]
+    },
+    {
+      "name": "Orange Cushioned Running Shoes",
+      "nameAr": "حذاء جري برتقالي بتبطين مريح",
+      "description": "High-cushion running shoes in vivid orange for long runs.",
+      "descriptionAr": "حذاء جري بتبطين عالي ولون برتقالي جريء، للمسافات الطويلة.",
+      "price": 3100,
+      "image": "/xs/08/products/p01f.jpg",
+      "collections": [
+        "latest-products"
+      ]
+    },
+    {
+      "name": "Stone-Wash Suede Classic Sneakers",
+      "nameAr": "سنيكرز كلاسيك شمواه مغسول",
+      "description": "Classic sneakers in washed grey suede, broken-in look from day one.",
+      "descriptionAr": "سنيكرز كلاسيك من الشمواه الرمادي المغسول بإطلالة كاجوال من أول يوم.",
+      "price": 1750,
+      "image": "/xs/08/products/p01g.jpg",
+      "collections": [
+        "latest-products"
+      ]
+    },
+    {
+      "name": "Ice Blue & Rose Suede Sneakers",
+      "nameAr": "سنيكرز شمواه لبني وروز",
+      "description": "Soft ice-blue suede sneakers with rose heel and wide ribbon laces.",
+      "descriptionAr": "سنيكرز شمواه لبني ناعم بكعب روز ورباط شريط عريض.",
+      "price": 1850,
+      "compareAt": 2300,
+      "image": "/xs/08/products/p01h.jpg",
+      "collections": [
+        "latest-products"
+      ]
+    },
+    {
+      "name": "Comic Print High-Top Canvas Sneakers",
+      "nameAr": "سنيكرز كانفاس هاي توب بطبعة كوميكس",
+      "description": "High-top canvas sneakers covered in a bold comic print with red laces.",
+      "descriptionAr": "سنيكرز كانفاس هاي توب بطبعة كوميكس جريئة ورباط أحمر.",
+      "price": 1650,
+      "image": "/xs/08/products/p01i.png",
+      "collections": [
+        "latest-products"
+      ]
+    },
+    {
+      "name": "Black Ankle-Strap Stiletto Sandals",
+      "nameAr": "صندل كعب عالي أسود بسير للكاحل",
+      "description": "Elegant black stiletto sandals with a slim ankle strap for evening looks.",
+      "descriptionAr": "صندل كعب عالي أسود بسير رفيع حول الكاحل، لإطلالات السهرة.",
+      "price": 1450,
+      "compareAt": 1800,
+      "image": "/xs/08/products/p02.jpg",
+      "collections": [
+        "deals-of-the-week"
+      ]
+    },
+    {
+      "name": "Camo Compression Training Tee",
+      "nameAr": "تيشيرت تمرين ضاغط مموّه",
+      "description": "A fitted grey camo compression tee that keeps you dry during workouts.",
+      "descriptionAr": "تيشيرت تمرين ضاغط بنقشة مموّهة رمادي، يحافظ على جفافك أثناء التمرين.",
+      "price": 650,
+      "image": "/xs/08/products/p02b.jpg",
+      "collections": [
+        "deals-of-the-week"
+      ]
+    },
+    {
+      "name": "Black Sleeveless V-Neck Dress",
+      "nameAr": "فستان أسود بدون أكمام برقبة V",
+      "description": "A simple black sleeveless dress with a V-neck, effortless from day to night.",
+      "descriptionAr": "فستان أسود بسيط بدون أكمام وبرقبة V، يناسب النهار والسهرة.",
+      "price": 1100,
+      "image": "/xs/08/products/p02c.jpg",
+      "collections": [
+        "deals-of-the-week"
+      ]
+    },
+    {
+      "name": "Teal Belted V-Neck Dress",
+      "nameAr": "فستان تركواز برقبة V وحزام",
+      "description": "A flowing teal dress with a wrap V-neck and a tie belt at the waist.",
+      "descriptionAr": "فستان تركواز منسدل برقبة V ملفوفة وحزام على الوسط.",
+      "price": 1250,
+      "compareAt": 1600,
+      "image": "/xs/08/products/p02d.jpg",
+      "collections": [
+        "deals-of-the-week"
+      ]
+    },
+    {
+      "name": "Tartan Pointed Flats with Ankle Tie",
+      "nameAr": "باليرينا كاروهات بمقدمة مدببة ورباط",
+      "description": "Pointed tartan flats finished with a navy velvet ankle tie.",
+      "descriptionAr": "باليرينا بنقشة كاروهات ومقدمة مدببة، برباط قطيفة كحلي حول الكاحل.",
+      "price": 1050,
+      "image": "/xs/08/products/p02e.jpg",
+      "collections": [
+        "deals-of-the-week"
+      ]
+    },
+    {
+      "name": "Dark Navy Football Training Jersey",
+      "nameAr": "تيشيرت تمرين كرة قدم كحلي",
+      "description": "A breathable dark navy football jersey for training and match days.",
+      "descriptionAr": "تيشيرت كرة قدم كحلي غامق بخامة تسمح بالتهوية، للتمرين ويوم المباراة.",
+      "price": 750,
+      "image": "/xs/08/products/p02f.jpg",
+      "collections": [
+        "deals-of-the-week"
+      ]
+    },
+    {
+      "name": "Grey Marl Crewneck Sweatshirt",
+      "nameAr": "سويت شيرت رمادي ملانج برقبة دائرية",
+      "description": "A cosy grey marl sweatshirt with a classic crew neck.",
+      "descriptionAr": "سويت شيرت رمادي ملانج دافئ برقبة دائرية كلاسيكية.",
+      "price": 890,
+      "image": "/xs/08/products/p02g.jpg",
+      "collections": [
+        "deals-of-the-week"
+      ]
+    },
+    {
+      "name": "Embroidered Black Mesh Top",
+      "nameAr": "بلوزة شبك سوداء مطرزة",
+      "description": "A long-sleeve black mesh top with delicate floral embroidery.",
+      "descriptionAr": "بلوزة شبك سوداء بأكمام طويلة وتطريز ورود رقيق.",
+      "price": 820,
+      "image": "/xs/08/products/p02h.jpg",
+      "collections": [
+        "deals-of-the-week"
+      ]
+    },
+    {
+      "name": "Grey & Yellow Pointed Ankle-Strap Heels",
+      "nameAr": "حذاء كعب مدبب رمادي وأصفر بسير",
+      "description": "Two-tone pointed heels in grey and yellow with an ankle strap.",
+      "descriptionAr": "حذاء كعب بمقدمة مدببة بلونين رمادي وأصفر، بسير حول الكاحل.",
+      "price": 1380,
+      "image": "/xs/08/products/p02i.jpg",
+      "collections": [
+        "deals-of-the-week"
+      ]
+    },
+    {
+      "name": "Navy & Gold High-Top Basketball Shoes",
+      "nameAr": "حذاء باسكت هاي توب كحلي وذهبي",
+      "description": "Supportive high-top basketball shoes in navy with gold accents and a strap.",
+      "descriptionAr": "حذاء باسكت هاي توب كحلي بلمسات ذهبية وسير تثبيت للكاحل.",
+      "price": 3900,
+      "image": "/xs/08/products/p03.jpg",
+      "collections": [
+        "latest-products"
+      ]
+    },
+    {
+      "name": "Fresh Blackberries (250 g)",
+      "nameAr": "توت أسود طازج (250 جم)",
+      "description": "Plump, sweet blackberries packed fresh.",
+      "descriptionAr": "توت أسود ممتلئ وحلو، معبأ طازجًا.",
+      "price": 120,
+      "image": "/xs/08/products/p04.jpg",
+      "collections": [
+        "latest-products"
+      ]
+    }
+  ],
+  "wording": {
+    "searchPlaceholder": "Search Here",
+    "viewLabel": "view more",
+    "openLabel": "add to bag"
+  },
+  "wordingAr": {
+    "searchPlaceholder": "ابحث هنا",
+    "viewLabel": "عرض التفاصيل",
+    "openLabel": "أضف للسلة"
+  }
+}

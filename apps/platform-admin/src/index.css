@@ -2,40 +2,46 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
+/* The console is drawn from the merchant dashboard's own base: the palette, the
+   map of it Tailwind's utilities read, the glass frame, the comfort layer, the
+   sign-in frame and the logo rules. One copy for both apps:
+   packages/ui/src/theme/app.css. The theme's layers (tokens, looks, glass) are
+   imported after this file in main.tsx, in the dashboard's order. */
+@import "../../../packages/ui/src/theme/app.css";
 
-/* ZIMOS brand tokens, fonts, logo rendering. Every colour, radius and font
-   used by this app comes from here. */
-@import "../../../packages/ui/src/brand/zimos.css";
-
-/* Tailwind v4 only scans this app's own tree; the shared UI package resolves
-   through node_modules, so point the scanner at its source explicitly.
-   Path: src -> platform-admin -> apps -> root. */
+/* Tailwind v4 auto-detects template sources from this app's own tree only; it
+   never looks inside node_modules, which is where the workspace-linked
+   `@store-builder/ui` package resolves. Without this directive the shared
+   components' utility classes (e.g. `<Button variant="primary">`'s `bg-primary`)
+   are never emitted into the compiled CSS, so the button renders with no fill.
+   Path is resolved relative to this file: src -> platform-admin -> apps -> root. */
 @source "../../../packages/ui/src";
 
-/* Dark mode is driven by a `.dark` class on <html>, set before first paint by
-   an inline script in index.html and toggled by the theme switch. */
-@custom-variant dark (&:where(.dark, .dark *));
-
-@layer base {
-  * {
-    @apply outline-ring/50;
-  }
-  body {
-    @apply bg-paper text-ink;
-  }
+/* ------------------------------------------------------------------ *
+ * What only the console has. Motion tokens: `--ease-brisk` is the same
+ * curve the marketing site uses — quick, directional, never bouncy.
+ * ------------------------------------------------------------------ */
+:root {
+  --ease-brisk: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
 }
 
 @layer utilities {
+  /* Figures in tables/KPIs line up column-wise. */
   .tabular {
     font-variant-numeric: tabular-nums;
   }
   .scroll-thin {
     scrollbar-width: thin;
-    scrollbar-color: var(--color-line-strong) transparent;
+    scrollbar-color: var(--color-line) transparent;
   }
 }
 
-@keyframes zimos-slide-up {
+/* Entrance animations for popovers, drawers and toasts. The keyframes
+   slide-in-start / slide-in-end and `.animate-slide-in-start` come from
+   app.css; "start"/"end" are writing-direction relative, so they swap under RTL. */
+@keyframes slide-up {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -45,43 +51,33 @@
     transform: translateY(0);
   }
 }
-@keyframes zimos-slide-in-end {
-  from {
-    opacity: 0;
-    transform: translateX(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+[dir="rtl"] .animate-slide-in-end {
+  animation-name: slide-in-start;
 }
-@keyframes zimos-slide-in-start {
-  from {
-    opacity: 0;
-    transform: translateX(-16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
+/* backwards, not both: a transform left on a modal, drawer or menu once it
+   has played would make it the box that position: fixed inside it follows. */
+.animate-slide-up {
+  animation: slide-up var(--dur-base) var(--ease-brisk) backwards;
+}
+.animate-slide-in-end {
+  animation: slide-in-end var(--dur-base) var(--ease-brisk) backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-up,
+  .animate-slide-in-end {
+    animation: none;
   }
 }
-[dir="rtl"] .animate-zimos-slide-in-end {
-  animation-name: zimos-slide-in-start;
-}
-[dir="rtl"] .animate-zimos-slide-in-start {
-  animation-name: zimos-slide-in-end;
-}
-.animate-zimos-slide-up {
-  animation: zimos-slide-up var(--dur-base) var(--ease-zimos) both;
-}
-.animate-zimos-slide-in-end {
-  animation: zimos-slide-in-end var(--dur-base) var(--ease-zimos) both;
-}
-.animate-zimos-slide-in-start {
-  animation: zimos-slide-in-start var(--dur-base) var(--ease-zimos) both;
+
+/* Tables here are the shared <Table> with this app's <Th> (components/Panel.tsx):
+   the head's tint is on its cells, where the dashboard's own table tints the
+   head row. Under the glass layer both are the pane's head tint; with glass
+   off the cells keep the solid band they name themselves. */
+:root:not([data-glass="off"]) .glass-app main [data-slot="table-head"] {
+  background-color: var(--lg-thead);
 }
 
 /* Range input tinted with the brand primary. */
-input[type="range"].zimos-range {
+input[type="range"].range-primary {
   accent-color: var(--color-primary);
 }

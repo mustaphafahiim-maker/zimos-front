@@ -1,0 +1,163 @@
+/* Sheet, Quick Look and context menus — components/Sheet.tsx, QuickLook.tsx, ContextMenu.tsx, Modal.tsx.
+   Part of the liquid-glass layer (../liquid-glass.css): everything here is under the
+   same switch, so with data-glass="off" none of it applies and the component stands
+   on its own solid Tailwind classes. Fills, blur and rims come from the --lg-* variables. */
+:root:not([data-glass="off"]) {
+  /* ---------------------------------------------------------------- *
+   * The dimmed page behind a sheet. Ink at 32% on a light page, black
+   * at 55% on a dark one, and no blur: the pane above it does the
+   * frosting, and a second blur over the whole screen would cost every
+   * frame of the sheet's spring.
+   * ---------------------------------------------------------------- */
+  [data-slot="sheet-backdrop"] {
+    background-color: color-mix(in srgb, var(--color-ink) 32%, transparent);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  &.dark [data-slot="sheet-backdrop"] {
+    background-color: rgb(0 0 0 / 0.55);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The panes: a sheet (Sheet, Modal, Quick Look) and a context menu
+   * float over whatever the page shows, so they are overlay glass —
+   * near solid, frosted, a hairline outside and a bright line inside.
+   * ---------------------------------------------------------------- */
+  [data-slot="sheet"],
+  [data-slot="context-menu"] {
+    background-color: var(--lg-overlay);
+    -webkit-backdrop-filter: var(--lg-blur-overlay);
+    backdrop-filter: var(--lg-blur-overlay);
+    border: 1px solid var(--lg-edge);
+    box-shadow: var(--lg-rim-line), var(--shadow-pop);
+  }
+  /* A sheet that hangs from the bottom edge is lit from above: its shadow falls up the page. */
+  [data-slot="sheet"][data-side="bottom"] {
+    border-width: 1px 0 0;
+    box-shadow: var(--lg-rim-line), 0 -18px 48px -18px rgb(20 22 26 / 0.26);
+  }
+  &.dark [data-slot="sheet"][data-side="bottom"] {
+    box-shadow: var(--lg-rim-line), 0 -18px 48px -18px rgb(0 0 0 / 0.7);
+  }
+  /* On a phone a sheet covers most of a page that is dimmed and standing still:
+     nothing passes beneath it, so it is solid and costs no blur while it rises,
+     follows the finger or scrolls its form. */
+  @media (max-width: 39.99rem) {
+    [data-slot="sheet"] {
+      background-color: var(--color-paper-raised);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    [data-slot="sheet"]:is([data-side="auto"], [data-side="auto-end"]) {
+      border-width: 1px 0 0;
+      box-shadow: var(--lg-rim-line), 0 -18px 48px -18px rgb(20 22 26 / 0.26);
+    }
+    &.dark [data-slot="sheet"]:is([data-side="auto"], [data-side="auto-end"]) {
+      box-shadow: var(--lg-rim-line), 0 -18px 48px -18px rgb(0 0 0 / 0.7);
+    }
+  }
+
+  /* The grab handle: a 36 × 5 pill. */
+  [data-slot="sheet"] [data-slot="sheet-handle"] {
+    background-color: color-mix(in srgb, var(--color-line-strong) 60%, transparent);
+  }
+
+  /* Secondary words go one step deeper on glass, as they do on the page panes. */
+  [data-slot="sheet"] :where([data-slot="sheet-description"], [data-slot="sheet-subtitle"]) {
+    color: var(--lg-ink-soft);
+  }
+  /* The hairlines above and below the scrolling part take the pane's colour. */
+  [data-slot="sheet"] [data-slot="sheet-body"] {
+    border-color: var(--lg-hairline);
+  }
+
+  /* The close button: a small bead of glass at the end of the title. */
+  [data-slot="sheet"] [data-slot="sheet-close"] {
+    background-color: color-mix(in srgb, var(--color-ink) 6%, transparent);
+    box-shadow: var(--lg-rim-line);
+    color: var(--lg-ink-soft);
+  }
+  [data-slot="sheet"] [data-slot="sheet-close"]:hover {
+    background-color: color-mix(in srgb, var(--color-ink) 11%, transparent);
+    color: var(--color-ink);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * What sits inside a sheet. A dialog is portalled out of .glass-app,
+   * so the page's control rules never reach it: the same shapes are
+   * given here — pill buttons, the secondary one a small lit pane,
+   * fields with the 0.875rem corner.
+   * ---------------------------------------------------------------- */
+  [data-slot="sheet"] [data-slot="button"] {
+    border-radius: 9999px;
+  }
+  [data-slot="sheet"] [data-slot="button"][data-variant="outline"]:not(.zimos-glass) {
+    background-color: var(--lg-control);
+    --tw-inset-shadow: var(--lg-rim-line);
+    --tw-shadow: 0 1px 2px rgb(20 22 26 / 0.05);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  [data-slot="sheet"] [data-slot="button"][data-variant="outline"]:not(.zimos-glass):hover:not(:disabled),
+  [data-slot="sheet"] [data-slot="button"][data-variant="outline"]:not(.zimos-glass)[aria-expanded="true"] {
+    background-color: var(--lg-control-lit);
+  }
+  /* A destructive confirmation: the danger fill with the main action's gloss and its own glow. */
+  [data-slot="sheet"] [data-slot="button"][data-fill="danger"] {
+    background-image: var(--lg-gloss);
+    --tw-inset-shadow: var(--lg-gloss-rim);
+    --tw-shadow: 0 10px 22px -10px color-mix(in srgb, var(--color-danger) 70%, transparent);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  [data-slot="sheet"] [data-slot="button"][data-fill="danger"]:disabled {
+    --tw-shadow: 0 0 #0000;
+  }
+  [data-slot="sheet"] :where([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"], select) {
+    border-radius: 0.875rem;
+  }
+  /* The comfortable field height of the pages, where a pointer is fine
+     (index.css already gives every control 44px on a touch screen). */
+  @media (pointer: fine) {
+    [data-slot="sheet"] :where([data-slot="input"], [data-slot="select-trigger"], select) {
+      min-height: 2.5rem;
+    }
+  }
+  /* Pressed. The main action keeps its own transition (the sheen sweep). */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-slot="sheet"] [data-slot="button"]:not([data-variant="default"], [data-variant="primary"]) {
+      transition: transform 140ms ease, background-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+    }
+    [data-slot="sheet"] [data-slot="button"]:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The context menu. The row under the pointer (or the arrow keys)
+   * takes the fill that marks selection everywhere else; a destructive
+   * one is written in the danger colour and fills with it.
+   * ---------------------------------------------------------------- */
+  [data-slot="context-menu-item"][data-highlighted] {
+    background-color: var(--lg-brand-solid);
+    background-image: var(--lg-brand-grad);
+    color: var(--lg-on-brand);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.28);
+  }
+  [data-slot="context-menu-item"][data-destructive] {
+    color: var(--lg-text-danger);
+  }
+  [data-slot="context-menu-item"][data-destructive][data-highlighted] {
+    background-color: var(--color-danger);
+    background-image: var(--lg-gloss);
+    color: var(--color-paper-raised);
+    box-shadow: var(--lg-gloss-rim);
+  }
+  [data-slot="context-menu"] [data-slot="context-menu-separator"] {
+    background-color: var(--lg-hairline);
+  }
+  /* While its menu is open the row keeps a ring, so it is clear what the menu acts on. */
+  [data-context-menu=""][data-popup-open],
+  [data-context-menu="wrap"][data-popup-open] > * {
+    outline: 2px solid color-mix(in srgb, var(--lg-brand-solid) 60%, transparent);
+    outline-offset: -2px;
+  }
+}

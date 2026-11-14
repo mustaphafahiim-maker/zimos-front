@@ -1,0 +1,137 @@
+{
+  "look": "03",
+  "currency": "EGP",
+  "collections": [
+    {
+      "name": "Men",
+      "nameAr": "رجالي",
+      "slug": "men"
+    },
+    {
+      "name": "Women",
+      "nameAr": "نسائي",
+      "slug": "women"
+    }
+  ],
+  "products": [
+    {
+      "name": "Cable-Knit Sweater Vest",
+      "nameAr": "فِست تريكو مضفّر",
+      "description": "An off-white sweater vest with a deep V-neck and cable-knit front. Layer it over tees or shirts.",
+      "descriptionAr": "فِست تريكو أوف وايت برقبة V وضفيرة على الصدر، يتلبس فوق التيشيرت أو القميص.",
+      "price": 950,
+      "image": "/xs/03/products/p01.jpg",
+      "collections": [
+        "men"
+      ]
+    },
+    {
+      "name": "Oversized Poplin Shirt",
+      "nameAr": "قميص بوبلين أبيض واسع",
+      "description": "A crisp white poplin shirt with a tall collar and full sleeves. Tuck it in or wear it loose.",
+      "descriptionAr": "قميص بوبلين أبيض بياقة عالية وأكمام واسعة، يتلبس جوه البنطلون أو سايب براحتك.",
+      "price": 990,
+      "image": "/xs/03/products/p09.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Ribbed Knit Crop Top",
+      "nameAr": "توب كروب تريكو بيج",
+      "description": "A beige ribbed-knit crop top with a square neckline. Soft, fitted and easy to style.",
+      "descriptionAr": "توب كروب بيج من التريكو المضلّع برقبة مربعة، ناعم وفيتد وسهل التنسيق.",
+      "price": 450,
+      "image": "/xs/03/products/p02.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Vintage Wash Baggy Jeans",
+      "nameAr": "جينز باجي ڤينتدج",
+      "description": "High-rise baggy jeans in a faded vintage wash. Relaxed through the leg for an easy street look.",
+      "descriptionAr": "جينز باجي هاي ويست بغسلة ڤينتدج باهتة، واسع ومريح لإطلالة ستريت ستايل.",
+      "price": 1250,
+      "image": "/xs/03/products/p03.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Floral Print Slip Dress",
+      "nameAr": "فستان ورد بحمالات",
+      "description": "A black slip dress with a bold floral print and lace-trimmed V-neck. Light and breezy for summer.",
+      "descriptionAr": "فستان أسود بحمالات وطبعة ورد جريئة وصدر V بحواف دانتيل، خفيف ومنعش للصيف.",
+      "price": 1450,
+      "compareAt": 1850,
+      "image": "/xs/03/products/p05.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Oversized Canvas Tote Bag",
+      "nameAr": "شنطة توت كانفاس سوداء",
+      "description": "A roomy black canvas tote with sturdy handles. Fits your laptop, gym kit and everything in between.",
+      "descriptionAr": "شنطة توت سوداء كبيرة من الكانفاس بيد متينة، تشيل اللابتوب وحاجات الجيم وكل اللي تحتاجه.",
+      "price": 750,
+      "image": "/xs/03/products/p07.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Essential White Crew Tee",
+      "nameAr": "تيشيرت أبيض أساسي رجالي",
+      "description": "A heavyweight white cotton tee with a classic crew neck and a regular fit. The basic you will reach for daily.",
+      "descriptionAr": "تيشيرت أبيض من القطن التقيل برقبة مدورة وقصّة مريحة، الأساسي اللي هتلبسه كل يوم.",
+      "price": 450,
+      "image": "/xs/03/products/p04.jpg",
+      "collections": [
+        "men"
+      ]
+    },
+    {
+      "name": "Sage Ribbed Mock-Neck Sweater",
+      "nameAr": "بلوفر تريكو أخضر برقبة نص عالية",
+      "description": "A chunky sage sweater in a ribbed knit with a mock neck and balloon sleeves. Cozy all winter.",
+      "descriptionAr": "بلوفر تريكو مضلّع بلون أخضر هادي ورقبة نص عالية وأكمام منفوخة، دفء وأناقة طول الشتاء.",
+      "price": 1350,
+      "compareAt": 1700,
+      "image": "/xs/03/products/p10.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Double-Breasted Gold-Button Blazer",
+      "nameAr": "بليزر دبل بزراير دهبي",
+      "description": "A black double-breasted blazer with gold buttons and a textured weave. Instantly elevates any outfit.",
+      "descriptionAr": "بليزر أسود دبل صدر بزراير دهبي وقماش محبّب، يرفع مستوى أي إطلالة في ثانية.",
+      "price": 2600,
+      "compareAt": 3300,
+      "image": "/xs/03/products/p06.jpg",
+      "collections": [
+        "women"
+      ]
+    },
+    {
+      "name": "Cream Camp-Collar Shirt",
+      "nameAr": "قميص كريمي بياقة مفتوحة",
+      "description": "A flowy cream shirt with a camp collar and dropped short sleeves. Effortless with tailored trousers.",
+      "descriptionAr": "قميص كريمي منسدل بياقة مفتوحة وأكمام قصيرة واسعة، شيك من غير مجهود مع البنطلون القماش.",
+      "price": 850,
+      "image": "/xs/03/products/p08.jpg",
+      "collections": [
+        "women"
+      ]
+    }
+  ],
+  "wording": {
+    "viewLabel": "Add to cart"
+  },
+  "wordingAr": {
+    "viewLabel": "أضف للسلة"
+  }
+}

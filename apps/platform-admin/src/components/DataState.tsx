@@ -1,7 +1,13 @@
 import type { ReactNode } from "react";
 import { Inbox } from "lucide-react";
-import { Alert, Button, Spinner } from "@store-builder/ui";
+import { Alert, Button, ListSkeleton as SharedListSkeleton, type ListSkeletonProps, ZLoader } from "@store-builder/ui";
+import { useT, type Messages } from "@/i18n/LocaleContext";
 import { getErrorMessage, isPermissionError } from "@/lib/errors";
+
+const STRINGS = {
+  en: { loading: "Loading…", noPermission: "Your admin role doesn't have permission to view this.", tryAgain: "Try again", nothingYet: "Nothing here yet." },
+  ar: { loading: "جارٍ التحميل…", noPermission: "ليست لدى دورك صلاحية لعرض هذا.", tryAgain: "إعادة المحاولة", nothingYet: "لا يوجد شيء هنا بعد." },
+} satisfies Messages;
 
 interface DataStateProps {
   loading: boolean;
@@ -11,23 +17,34 @@ interface DataStateProps {
   emptyMessage?: string;
   emptyAction?: ReactNode;
   onRetry?: () => void;
+  /** Shown while loading in place of the Z loader: placeholders in the shape of the content (a list: ListSkeleton). */
+  skeleton?: ReactNode;
   children: ReactNode;
 }
 
-/** Standard loading / error / empty wrapper for a data region. */
+/**
+ * Standard loading / error / empty wrapper for a data region, in the merchant
+ * dashboard's shapes (its components/DataState.tsx and EmptyState.tsx): the
+ * Z loader in the middle of the region, the error as an alert with a way to
+ * try again, and "nothing here" as a pane with an icon tile.
+ */
 export function DataState({
   loading,
   error,
   empty,
-  emptyMessage = "Nothing here yet.",
+  emptyMessage,
   emptyAction,
   onRetry,
+  skeleton,
   children,
 }: DataStateProps) {
+  const t = useT(STRINGS);
+  if (loading && skeleton) return <>{skeleton}</>;
+
   if (loading) {
     return (
-      <div className="flex min-h-[30vh] items-center justify-center text-ink-soft">
-        <Spinner className="size-6" />
+      <div className="flex min-h-[30vh] items-center justify-center">
+        <ZLoader label={t.loading} />
       </div>
     );
   }
@@ -38,13 +55,13 @@ export function DataState({
       <Alert variant="danger" className="flex flex-col gap-3">
         <span>
           {permission
-            ? "Your admin role doesn't have permission to view this."
+            ? t.noPermission
             : getErrorMessage(error)}
         </span>
         {onRetry && !permission && (
           <div>
-            <Button size="sm" variant="outline" onClick={onRetry}>
-              Try again
+            <Button size="sm" variant="outline" onClick={onRetry} className="min-h-11">
+              {t.tryAgain}
             </Button>
           </div>
         )}
@@ -53,18 +70,36 @@ export function DataState({
   }
 
   if (empty) {
-    return <EmptyBlock message={emptyMessage} action={emptyAction} />;
+    return <EmptyBlock message={emptyMessage ?? t.nothingYet} action={emptyAction} />;
   }
 
   return <>{children}</>;
 }
 
+/**
+ * A table while its first page loads: the dashboard's one list skeleton
+ * (@store-builder/ui), its rows as tall as the real ones, announced in the
+ * console's language.
+ */
+/** The whole page is on its way (the session): the Z over the page, announced in the page's language. */
+export function PageLoader() {
+  const t = useT(STRINGS);
+  return <ZLoader size="lg" label={t.loading} />;
+}
+
+export function ListSkeleton(props: Omit<ListSkeletonProps, "label">) {
+  const t = useT(STRINGS);
+  return <SharedListSkeleton {...props} label={t.loading} />;
+}
+
 export function EmptyBlock({ message, action }: { message: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-[var(--radius-card)] border border-dashed border-line-strong bg-paper-raised/60 px-6 py-12 text-center text-sm text-ink-soft">
-      <Inbox className="size-6 text-ink-muted" aria-hidden />
-      <p>{message}</p>
-      {action}
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-paper-raised px-6 py-12 text-center">
+      <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary-soft text-primary [&>svg]:size-6">
+        <Inbox aria-hidden />
+      </div>
+      <p className="max-w-md text-base font-semibold text-ink">{message}</p>
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }

@@ -1,0 +1,124 @@
+{
+  "xsLook": "15",
+  "header": {
+    "announcement": {
+      "enabled": true,
+      "text": "Nasr City, Cairo · Open every day from 10 am to 10 pm"
+    },
+    "menu": [
+      {
+        "label": "Home",
+        "href": "/",
+        "kind": "home"
+      },
+      {
+        "label": "Hot Deals",
+        "href": "/products",
+        "kind": "url"
+      },
+      {
+        "label": "Contact Us",
+        "href": "/contact",
+        "kind": "page"
+      }
+    ],
+    "show": {
+      "theme": false,
+      "trackOrder": false,
+      "language": false
+    },
+    "zones": {
+      "notice": [
+        {
+          "id": "notice",
+          "type": "notice"
+        }
+      ],
+      "links": [
+        {
+          "id": "strip-0",
+          "type": "text",
+          "label": "EGP"
+        },
+        {
+          "id": "strip-1",
+          "type": "link",
+          "label": "My Account",
+          "href": "/account"
+        }
+      ],
+      "brand": [
+        {
+          "id": "logo",
+          "type": "logo"
+        }
+      ],
+      "menu": [
+        {
+          "id": "menu",
+          "type": "menu"
+        }
+      ],
+      "icons": [
+        {
+          "id": "search",
+          "type": "search"
+        },
+        {
+          "id": "account",
+          "type": "account"
+        },
+        {
+          "id": "wishlist",
+          "type": "wishlist"
+        },
+        {
+          "id": "cart",
+          "type": "cart"
+        },
+        {
+          "id": "phone",
+          "type": "phone"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "groups": [
+      {
+        "title": "Information",
+        "links": [
+          {
+            "label": "Hot deals",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Contact Us",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ]
+      },
+      {
+        "title": "Service",
+        "links": [
+          {
+            "label": "View Cart",
+            "href": "/cart",
+            "kind": "cart"
+          },
+          {
+            "label": "Track My Order",
+            "href": "/track",
+            "kind": "track"
+          }
+        ]
+      }
+    ],
+    "text": "Genuine laptops, phones, cameras and accessories with an official warranty and competitive prices, plus fast delivery to every governorate.",
+    "show": {
+      "help": false
+    }
+  }
+}

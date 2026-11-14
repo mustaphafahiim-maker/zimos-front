@@ -1,26 +1,51 @@
-import { Inter, Noto_Sans_Arabic } from "next/font/google";
+import { Fraunces, Plus_Jakarta_Sans, Tajawal } from "next/font/google";
 
 /**
- * ZIMOS type: Inter for Latin, Noto Sans Arabic for Arabic. Both are variable
- * fonts, so every weight the brand uses (Light → Bold) comes from one file.
+ * All three families are declared on every route (the locale is only known
+ * per-request, below the root layout). Each exposes a CSS variable; the root
+ * layout puts every `.variable` class on <html> plus a `lang-*` class, and
+ * `globals.css` maps `--font-heading` / `--font-body` to the right pair for
+ * the active locale.
  *
- * Both load on every route (the locale is only known below the root layout).
- * Each exposes a CSS variable; `globals.css` feeds them into the shared
- * `--font-latin` / `--font-arabic` tokens from packages/ui/src/brand/zimos.css,
- * and the `lang-*` class on <html> picks the active pair.
+ * A browser only downloads a family some text on the page uses, but a
+ * preloaded one is downloaded whatever the page. next/font preloads per
+ * layout, not per locale, and both locales share the root layout, so only
+ * Tajawal — the Arabic pages' only family, Arabic being the default locale —
+ * is preloaded. The English pair (about 94 KB) is fetched when an English page
+ * asks for it (Fraunces only where a title is set in it: pricing, contact and
+ * the policies), and an Arabic page no longer downloads it at all.
  */
 
-export const inter = Inter({
+// English headings — display serif.
+export const fraunces = Fraunces({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
+  axes: ["opsz"],
+  variable: "--font-fraunces",
+  preload: false,
 });
 
-export const notoSansArabic = Noto_Sans_Arabic({
-  subsets: ["arabic"],
+// English body.
+export const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
   display: "swap",
-  variable: "--font-noto-sans-arabic",
+  variable: "--font-plus-jakarta",
+  preload: false,
+});
+
+// Arabic headings and body (not a variable font — weights are explicit).
+// Tajawal has no 600, so `font-semibold` renders at 700; 800 is for the
+// landing's headings.
+export const tajawal = Tajawal({
+  subsets: ["arabic"],
+  weight: ["400", "500", "700", "800"],
+  display: "swap",
+  variable: "--font-tajawal",
 });
 
 /** Space-separated `.variable` classes for every family. */
-export const fontVariables = [inter.variable, notoSansArabic.variable].join(" ");
+export const fontVariables = [
+  fraunces.variable,
+  plusJakarta.variable,
+  tajawal.variable,
+].join(" ");

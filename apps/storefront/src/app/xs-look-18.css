@@ -1,0 +1,949 @@
+/*
+ * Look 18 · Feane (html.design, free with attribution) — a fast-food
+ * restaurant. Everything that is this one template's is here: its colours and
+ * type, how its header and footer differ from the shared layout in
+ * xs-shell.css, how it draws the bands it shares with other looks, and its
+ * phone menu. Deleting this file (and its import, its pictures under
+ * public/xs/18 and its entries in lib/xsShell.ts and the editor's
+ * xsBlocks.ts) removes the template.
+ *
+ * Its text is Open Sans, served from this app (xs-fonts.css, Latin only;
+ * Arabic text falls through to the store's own face). Its headings are
+ * Dancing Script, which this app does not serve: Cookie stands in, the
+ * nearest script face here, at the one weight it has.
+ */
+
+[data-xs-look="18"],
+.brand-theme[data-xs-shell="18"] {
+  --xs-sans: "Open Sans", "XS Ar Cairo", var(--font-sans), sans-serif;
+  --xs-display: "Cookie", "XS Ar Aref Ruqaa", var(--font-display), serif;
+  --xs-ink: #0c0c0c;
+  --xs-ink-soft: #222;
+  --xs-muted: #999;
+  --xs-brand: #ffbe33;
+  --xs-accent: #ffbe33;
+  --xs-button: #ffbe33;
+  /* What a yellow button turns under the pointer (the template darkens it by 15%). */
+  --xs-button-dark: #e69c00;
+  --xs-highlight: #ffbe33;
+  --xs-tint: #f1f2f3;
+  --xs-dark: #222831;
+  --xs-line: #ccc;
+  --xs-ground: #fff;
+  --xs-footer-ink: #dbdbdb;
+  --xs-badge: #ffbe33;
+  --xs-btn-radius: 45px;
+  --xs-container: 1170px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+/* A store or a band with its own accent colour: its buttons darken the same way. */
+.brand-theme[data-xs-own-accent] [data-xs-look="18"] {
+  --xs-button-dark: color-mix(in srgb, var(--color-primary) 85%, #000);
+}
+.xs-own[data-own-accent] > [data-xs-look="18"] {
+  --xs-button-dark: color-mix(in srgb, var(--xs-own-accent) 85%, #000);
+}
+[data-xs-look="18"] .xs-heading {
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+[data-xs-look="18"] .xs-btn {
+  padding: 10px 45px;
+  border: 0;
+  font-size: 16px;
+  font-weight: 400;
+}
+[data-xs-look="18"] .xs-btn[data-tone="accent"],
+[data-xs-look="18"] .xs-btn[data-tone="solid"] {
+  background: var(--xs-button);
+  color: #fff;
+}
+[data-xs-look="18"] .xs-btn[data-tone="accent"]:hover,
+[data-xs-look="18"] .xs-btn[data-tone="solid"]:hover {
+  background: var(--xs-button-dark);
+  filter: none;
+}
+
+/* --- header: no strip; a script name, white capitals and bare icons on the dark top of the hero photograph */
+
+.xs-header[data-xs-look="18"] {
+  padding-bottom: 0;
+  background: none;
+}
+.xs-header[data-xs-look="18"] .xs-header__strip {
+  display: none;
+}
+/* In the page's flow, never fixed: the template's bar leaves with the page. */
+.xs-header[data-xs-look="18"] .xs-header__bar,
+.xs-header[data-xs-look="18"][data-scrolled] .xs-header__bar {
+  position: static;
+  height: var(--xs-own-bar-h, 88px);
+  background: #0d0e10 url("/xs/18/hero-bg.jpg") right top / max(1920px, 100%) auto no-repeat;
+  box-shadow: none;
+}
+.xs-header[data-xs-look="18"] .xs-header__logo {
+  color: #fff;
+}
+.xs-header[data-xs-look="18"] .xs-header__logo-name {
+  font-family: var(--xs-display);
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.xs-header[data-xs-look="18"] .xs-header__menu {
+  margin-inline: auto;
+}
+.xs-header[data-xs-look="18"] .xs-header__link {
+  margin-inline: 0;
+  padding: 5px 20px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 400;
+  text-transform: uppercase;
+  transition: color 0.3s;
+}
+.xs-header[data-xs-look="18"] .xs-header__link:hover,
+.xs-header[data-xs-look="18"] .xs-header__link[aria-current="page"] {
+  color: var(--xs-brand);
+}
+.xs-header[data-xs-look="18"] .zs-drop__item {
+  text-transform: none;
+}
+.xs-header[data-xs-look="18"] .xs-header__icons {
+  flex: 0 0 auto;
+  gap: 0;
+}
+.xs-header[data-xs-look="18"] .zt-icon-btn {
+  color: #fff;
+  transition: color 0.3s;
+}
+.xs-header[data-xs-look="18"] .zt-icon-btn:hover {
+  color: var(--xs-brand);
+}
+.xs-header[data-xs-look="18"] .zt-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.xs-header[data-xs-look="18"] .zt-icon-btn > span {
+  border-radius: 50%;
+  color: var(--xs-dark);
+}
+/* A page that opens on this look's slider or page title: the bar lies clear over the picture, as the template's does over its hero. */
+.brand-theme[data-xs-shell="18"]:has(.zt-sections > :first-of-type :is(.xs-slider, .xs-title)[data-xs-look="18"]) .xs-header {
+  margin-bottom: calc(-1 * var(--xs-own-bar-h, 88px));
+}
+.brand-theme[data-xs-shell="18"]:has(.zt-sections > :first-of-type :is(.xs-slider, .xs-title)[data-xs-look="18"]) .xs-header__bar {
+  background: none;
+}
+.brand-theme[data-xs-shell="18"] .zt-sections > :first-of-type :is(.xs-slider, .xs-title)[data-xs-look="18"] {
+  --xs-bar: 88px;
+}
+@media (max-width: 991px) {
+  .xs-header[data-xs-look="18"] .xs-header__bar,
+  .xs-header[data-xs-look="18"][data-scrolled] .xs-header__bar {
+    height: 88px;
+  }
+  .brand-theme[data-xs-shell="18"]:has(.zt-sections > :first-of-type :is(.xs-slider, .xs-title)[data-xs-look="18"]) .xs-header {
+    margin-bottom: -88px;
+  }
+  .xs-header[data-xs-look="18"] .xs-header__icons {
+    flex: 1;
+  }
+}
+
+/* --- footer: dark and centred, script titles, the store's own column in the middle */
+
+.xs-footer[data-xs-look="18"] {
+  padding: 75px 15px 40px;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: center;
+}
+.xs-footer[data-xs-look="18"] .xs-footer__col {
+  padding-bottom: 30px;
+}
+.xs-footer[data-xs-look="18"] nav.xs-footer__col ~ nav.xs-footer__col {
+  order: 1;
+}
+.xs-footer[data-xs-look="18"] .xs-footer__title {
+  padding-bottom: 20px;
+  font-family: var(--xs-display);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-transform: none;
+}
+.xs-footer[data-xs-look="18"] div.xs-footer__col .xs-footer__title {
+  font-size: 38px;
+  line-height: 1;
+}
+.xs-footer[data-xs-look="18"] li {
+  padding-bottom: 0;
+}
+.xs-footer[data-xs-look="18"] .xs-footer__link {
+  display: inline-block;
+  margin: 5px 0;
+}
+.xs-footer[data-xs-look="18"] .xs-footer__text {
+  max-width: 350px;
+  margin-inline: auto;
+  color: var(--xs-footer-ink);
+}
+.xs-footer[data-xs-look="18"] .xs-footer__social {
+  padding-top: 20px;
+}
+.xs-footer[data-xs-look="18"] .xs-footer__social ul {
+  justify-content: center;
+  gap: 5px;
+}
+.xs-footer[data-xs-look="18"] .xs-footer__social a {
+  width: 30px;
+  height: 30px;
+  background: #fff;
+  color: var(--xs-dark);
+}
+.xs-footer[data-xs-look="18"] .xs-footer__social a:hover {
+  color: var(--xs-brand);
+}
+.xs-footer[data-xs-look="18"] .xs-footer__bottom {
+  padding-top: 25px;
+}
+
+/* --- xs_slider: the hero photograph to the foot of the screen, white words on its dark side */
+
+.xs-slider[data-xs-look="18"] {
+  /* The bar's height where it lies over this picture (set above), and where the words start. */
+  --xs-bar: 0px;
+  --xs-edge: max(15px, calc(50% - var(--xs-container) / 2 + 15px));
+  height: calc(100vh - 88px + var(--xs-bar));
+  min-height: 600px;
+  /* Full height on a screen, but not without end in a frame taller than any screen. */
+  max-height: 1200px;
+  background: #0d0e10;
+}
+/* The words stand a little above the middle, as they do over the template's row of dots. */
+.xs-slider[data-xs-look="18"] .xs-slider__inner {
+  padding: calc(45px + var(--xs-bar)) 15px calc(152px + var(--xs-bar));
+  color: #fff;
+}
+.xs-slider[data-xs-look="18"] .xs-slider__heading {
+  max-width: 540px;
+  padding: 0 0 15px;
+  color: #fff;
+  font-size: 56px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-transform: none;
+}
+.xs-slider[data-xs-look="18"] .xs-slider__line {
+  max-width: 540px;
+  margin: 0 0 16px;
+  color: #fff;
+  font-size: 14px;
+}
+.xs-slider[data-xs-look="18"] .xs-slider__button {
+  min-width: 0;
+  height: auto;
+  margin-top: 10px;
+  padding: 10px 45px;
+  border-radius: 45px;
+  font-size: 16px;
+  font-weight: 400;
+  text-transform: none;
+  transition: background-color 0.3s;
+}
+.xs-slider[data-xs-look="18"] .xs-slider__button:hover {
+  background: var(--xs-button-dark);
+}
+/* The template's hero has dots, not arrows: the two arrows stand where its dots do, as its round yellow carousel buttons. */
+.xs-slider[data-xs-look="18"] .xs-slider__arrow {
+  top: calc(50% + 186px);
+  inset-inline: auto;
+  inset-inline-start: var(--xs-edge);
+  width: 45px;
+  height: 45px;
+  padding-bottom: 4px;
+  transform: none;
+  border-radius: 100%;
+  background: var(--xs-button);
+  color: #fff;
+  font-size: 24px;
+  opacity: 1;
+  transition: background-color 0.3s;
+}
+.xs-slider[data-xs-look="18"] .xs-slider__arrow:hover {
+  background: var(--xs-button-dark);
+  color: #fff;
+}
+/* Side by side on the left, where the words are in any language; the pair swaps places on a right-to-left page. */
+.xs-slider[data-xs-look="18"] .xs-slider__arrow--next,
+[dir="rtl"] .xs-slider[data-xs-look="18"] .xs-slider__arrow--prev {
+  margin-inline-start: 55px;
+}
+[dir="rtl"] .xs-slider[data-xs-look="18"] .xs-slider__arrow--next {
+  margin-inline-start: 0;
+}
+
+/* --- xs_banners: the offers — dark cards, a round picture in a yellow ring, script words and a pill beside it */
+
+.xs-banners[data-xs-look="18"] {
+  padding: calc(90px * var(--xs-space, 1)) 15px;
+}
+.xs-banners[data-xs-look="18"] .xs-banners__intro h2 {
+  margin: 0 0 10px;
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+.xs-banners[data-xs-look="18"] .xs-banners__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 45px 30px;
+}
+.xs-banners[data-xs-look="18"] .xs-banners__item {
+  display: flex;
+  align-items: center;
+  padding: 20px 15px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--xs-dark);
+  color: #fff;
+}
+.xs-banners[data-xs-look="18"] .xs-banners__img {
+  flex: 0 0 175px;
+  width: 175px;
+  height: 175px;
+  margin-inline-end: 15px;
+  border: 5px solid var(--xs-brand);
+  border-radius: 100%;
+  object-fit: cover;
+}
+.xs-banners[data-xs-look="18"] .xs-banners__text,
+.xs-banners[data-xs-look="18"] .xs-banners__item:hover .xs-banners__text {
+  position: static;
+  direction: inherit;
+  min-width: 0;
+  padding: 0;
+  background: none;
+}
+.xs-banners[data-xs-look="18"] .xs-banners__title {
+  padding: 0;
+  color: #fff;
+  font-family: var(--xs-display);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+.xs-banners[data-xs-look="18"] .xs-banners__info {
+  margin: 10px 0;
+  color: #fff;
+  font-family: var(--xs-display);
+  font-size: 40px;
+  line-height: 1.2;
+}
+.xs-banners[data-xs-look="18"] .xs-banners__more {
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  transform: none;
+}
+.xs-banners[data-xs-look="18"] .xs-banners__link {
+  padding: 10px 30px;
+  border-radius: 45px;
+  background: var(--xs-button);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 400;
+  text-transform: none;
+  transform: none;
+  transition: background-color 0.3s;
+}
+.xs-banners[data-xs-look="18"] .xs-banners__item:hover .xs-banners__link {
+  background: var(--xs-button-dark);
+}
+
+/* --- xs_products: the menu — a script heading, the collections as pills, dark cards with the dish on a pale top */
+
+.xs-products[data-xs-look="18"] {
+  padding: 0 15px calc(90px * var(--xs-space, 1));
+}
+/* Straight under a page's title, this band and the quotes take the room the template gives its menu page. */
+.zt-sections > :has(.xs-title[data-xs-look="18"]) + * :is(.xs-products, .xs-quotes)[data-xs-look="18"] {
+  padding-top: 90px;
+}
+.xs-products[data-xs-look="18"] .xs-products__head {
+  justify-content: center;
+}
+.xs-products[data-xs-look="18"] .xs-products__heading {
+  padding-bottom: 0;
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-transform: none;
+}
+.xs-products[data-xs-look="18"] .xs-products__bar {
+  justify-content: center;
+  margin: 45px auto 20px;
+  padding-bottom: 0;
+}
+.xs-products[data-xs-look="18"] .xs-products__tabs {
+  justify-content: center;
+  gap: 0;
+}
+.xs-products[data-xs-look="18"] .xs-products__tab {
+  padding: 7px 25px;
+  border: 0;
+  border-radius: 25px;
+  color: var(--xs-ink);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.xs-products[data-xs-look="18"] .xs-products__tab[data-active] {
+  background: var(--xs-dark);
+  color: #fff;
+}
+.xs-products[data-xs-look="18"] .xs-products__grid {
+  gap: 25px 30px;
+  margin-top: 25px;
+}
+.xs-products[data-xs-look="18"] .xs-products__grid:not([data-layout="slider"]) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* The pale strip across the top is the card's own ground, so the picture box can round its lower corner into the dark. */
+.xs-products[data-xs-look="18"] .xs-products__card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 15px;
+  background: linear-gradient(to bottom, var(--xs-tint) 25px, var(--xs-dark) 25px);
+  color: #fff;
+}
+/* Not positioned: the badge and the round button are placed against the card. */
+.xs-products[data-xs-look="18"] .xs-products__media {
+  position: static;
+  height: 215px;
+  margin: -1px;
+  padding: 35px 25px;
+  border-end-start-radius: 45px;
+  aspect-ratio: auto;
+  background: var(--xs-tint);
+}
+/* Shown whole, like the template's cut-out dishes; a white studio ground melts into the pale box. */
+.xs-products[data-xs-look="18"] .xs-products__img {
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  transition: transform 0.2s;
+}
+.xs-products[data-xs-look="18"] .xs-products__card:hover .xs-products__img {
+  transform: scale(1.1);
+}
+.xs-products[data-xs-look="18"] .xs-products__badge {
+  border-radius: 25px;
+  background: var(--xs-badge);
+}
+/* The template's round yellow button across from the price; its words are read out, a plus is drawn. */
+.xs-products[data-xs-look="18"] .xs-products__view,
+.xs-products[data-xs-look="18"] .xs-products__media:hover .xs-products__view {
+  bottom: 25px;
+  inset-inline-start: auto;
+  inset-inline-end: 25px;
+  width: 40px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 0 2px;
+  transform: none;
+  border-radius: 100%;
+  background: var(--xs-button);
+  color: #fff;
+  font-size: 0;
+}
+.xs-products[data-xs-look="18"] .xs-products__view::before {
+  content: "+";
+  font-size: 26px;
+  line-height: 1;
+}
+.xs-products[data-xs-look="18"] .xs-products__view:hover {
+  background: var(--xs-button-dark);
+}
+.xs-products[data-xs-look="18"] .xs-products__meta {
+  padding: 25px;
+}
+.xs-products[data-xs-look="18"] .xs-products__name {
+  padding-bottom: 0;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.xs-products[data-xs-look="18"] .xs-products__name:hover {
+  color: var(--xs-brand);
+}
+.xs-products[data-xs-look="18"] .xs-products__price {
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: calc(100% - 55px);
+  min-height: 40px;
+  margin-top: 18px;
+  color: #fff;
+  font-size: 16px;
+}
+.xs-products[data-xs-look="18"] .xs-products__price s {
+  color: var(--xs-footer-ink);
+}
+.xs-products[data-xs-look="18"] .xs-products__more-btn {
+  min-width: 0;
+  height: auto;
+  padding: 10px 55px;
+  border-radius: 45px;
+  background: var(--xs-button);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 400;
+  text-transform: none;
+  transition: background-color 0.3s;
+}
+.xs-products[data-xs-look="18"] .xs-products__more-btn:hover:not(:disabled) {
+  background: var(--xs-button-dark);
+}
+.xs-quick[data-xs-look="18"] .xs-quick__name {
+  font-family: var(--xs-sans);
+  font-weight: 600;
+}
+.xs-quick[data-xs-look="18"] .xs-quick__go {
+  font-weight: 400;
+  text-transform: none;
+}
+.xs-quick[data-xs-look="18"] .xs-quick__go:hover {
+  background: var(--xs-button-dark);
+}
+
+/* --- xs_split: about — a cut-out picture beside a script heading, a paragraph and a pill, on the dark ground */
+
+.xs-split[data-xs-look="18"] {
+  padding: calc(90px * var(--xs-space, 1)) 15px;
+  background: var(--xs-dark);
+  color: #fff;
+}
+.xs-split[data-xs-look="18"] .xs-split__inner {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 30px;
+  align-items: center;
+}
+.xs-split[data-xs-look="18"] .xs-split__grid {
+  display: block;
+}
+.xs-split[data-xs-look="18"] .xs-split__grid::before {
+  display: none;
+}
+.xs-split[data-xs-look="18"] .xs-split__pic {
+  padding: 0;
+}
+.xs-split[data-xs-look="18"] .xs-split__pic:not([data-slot="1"]) {
+  display: none;
+}
+.xs-split[data-xs-look="18"] .xs-split__pic img {
+  width: 100%;
+  max-width: 445px;
+  margin-inline: auto;
+  border-radius: 0;
+}
+.xs-split[data-xs-look="18"] .xs-heading {
+  margin: 0;
+  color: #fff;
+}
+.xs-split[data-xs-look="18"] .xs-split__text p {
+  margin: 15px 0 0;
+  color: #fff;
+}
+.xs-split[data-xs-look="18"] .xs-btn {
+  margin-top: 15px;
+}
+
+/* --- xs_contact: book a table — a script heading over boxed fields and a pill; the store's details on a dark panel where the template has its map */
+
+.xs-contact[data-xs-look="18"] {
+  padding: calc(90px * var(--xs-space, 1)) 15px;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__grid {
+  gap: 30px;
+  align-items: start;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__box {
+  padding: 0;
+  border: 0;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__heading {
+  padding-bottom: 25px;
+  color: var(--xs-ink);
+  font-family: var(--xs-display);
+  font-size: 40px;
+  line-height: 1.2;
+  text-align: start;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__field {
+  margin-bottom: 25px;
+  border-color: var(--xs-muted);
+  border-radius: 5px;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__field svg {
+  display: none;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__field input,
+.xs-contact[data-xs-look="18"] .xs-contact__message {
+  color: #000;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__field input {
+  padding-inline: 25px;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__message {
+  min-height: 125px;
+  margin-bottom: 25px;
+  padding: 12px 25px;
+  border-color: var(--xs-muted);
+  border-radius: 5px;
+}
+.xs-contact[data-xs-look="18"] :is(.xs-contact__field input, .xs-contact__message)::placeholder {
+  color: #222;
+  opacity: 1;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__done {
+  color: var(--xs-ink);
+  text-align: start;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__submit {
+  display: inline-flex;
+  width: auto;
+  height: auto;
+  margin-top: 15px;
+  padding: 10px 55px;
+  border-radius: 45px;
+  background: var(--xs-button);
+  font-size: 16px;
+  font-weight: 400;
+  transition: background-color 0.3s;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__submit:hover:not(:disabled) {
+  background: var(--xs-button-dark);
+}
+.xs-contact[data-xs-look="18"] .xs-contact__info {
+  justify-content: center;
+  gap: 30px;
+  min-height: 345px;
+  padding: 40px 45px;
+  border-radius: 10px;
+  background: var(--xs-dark);
+  color: #fff;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__row svg {
+  width: 20px;
+  margin-inline-end: 20px;
+  color: var(--xs-brand);
+}
+.xs-contact[data-xs-look="18"] .xs-contact__label {
+  color: #fff;
+  font-weight: 600;
+}
+.xs-contact[data-xs-look="18"] .xs-contact__value,
+.xs-contact[data-xs-look="18"] .xs-contact__value[data-accent] {
+  max-width: none;
+  padding-top: 5px;
+  color: var(--xs-footer-ink);
+}
+@media (min-width: 768px) {
+  /* Level with the first field, as the map is, when a heading stands over the form. */
+  .xs-contact[data-xs-look="18"] .xs-contact__grid:has(.xs-contact__heading) .xs-contact__info {
+    margin-top: 73px;
+  }
+}
+
+/* --- xs_quotes: a customer's words on a dark card, the face in a yellow ring hanging under it, round yellow arrows */
+
+.xs-quotes[data-xs-look="18"] {
+  padding: 0 15px calc(90px * var(--xs-space, 1));
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__heading {
+  margin-bottom: 45px;
+  color: var(--xs-ink);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+/* Room under the card for the arrows. */
+.xs-quotes[data-xs-look="18"] .xs-quotes__stage {
+  padding-bottom: 90px;
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__item {
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  margin-bottom: 15px;
+  padding: 25px 25px 15px;
+  border-radius: 5px;
+  background: var(--xs-dark);
+  color: #fff;
+  text-align: start;
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__item:has(.xs-quotes__face) {
+  margin-bottom: 160px;
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__item blockquote {
+  margin: 0;
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__item p {
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__item figcaption {
+  align-items: flex-start;
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__name {
+  margin: 25px 0 5px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__role {
+  margin-bottom: 10px;
+  color: #fff;
+  font-size: 15px;
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__face {
+  position: absolute;
+  top: calc(100% + 30px);
+  inset-inline-start: 0;
+  width: 115px;
+  height: 115px;
+  margin: 0;
+  border: 5px solid var(--xs-brand);
+}
+/* The yellow point between the card and the face: a square on its corner, its lower half behind the picture. */
+.xs-quotes[data-xs-look="18"] .xs-quotes__item:has(.xs-quotes__face) figcaption::before {
+  content: "";
+  position: absolute;
+  top: calc(100% + 23px);
+  inset-inline-start: 47.5px;
+  width: 20px;
+  height: 20px;
+  transform: rotate(45deg);
+  background: var(--xs-brand);
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__arrow {
+  top: auto;
+  bottom: 0;
+  display: block;
+  width: 45px;
+  height: 45px;
+  transform: none;
+  background: var(--xs-button);
+  color: #fff;
+  font-size: 24px;
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__arrow:hover {
+  background: var(--xs-button-dark);
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__arrow--prev {
+  inset-inline-start: calc(50% - 50px);
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__arrow--next {
+  inset-inline: calc(50% + 5px) auto;
+}
+.xs-quotes[data-xs-look="18"] .xs-quotes__dots {
+  display: none;
+}
+
+/* --- inner pages: the page's name in the script face on the dark top of the hero photograph */
+
+.xs-title[data-xs-look="18"] {
+  --xs-bar: 0px;
+  padding: calc((45px + var(--xs-bar)) * var(--xs-space, 1)) 15px calc(75px * var(--xs-space, 1));
+}
+/* The template's own photograph keeps its scale, so only its plain dark top shows, as it does behind the template's bar. */
+.xs-title[data-xs-look="18"][style*="/xs/18/hero-bg.jpg"] {
+  background-color: #0d0e10;
+  background-position: right top;
+  background-size: max(1920px, 100%) auto;
+}
+.xs-title[data-xs-look="18"] .xs-title__heading {
+  font-family: var(--xs-display);
+  font-size: 56px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+/* --- xs_story: the About page — the same dark band as the home page's, the picture first */
+
+.xs-story[data-xs-look="18"] {
+  padding: calc(90px * var(--xs-space, 1)) 15px;
+  background: var(--xs-dark);
+  color: #fff;
+}
+.xs-story[data-xs-look="18"] .xs-story__part,
+.xs-story[data-xs-look="18"] .xs-story__part[data-flip] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+}
+.xs-story[data-xs-look="18"] .xs-story__part + .xs-story__part {
+  margin-top: 90px;
+}
+.xs-story[data-xs-look="18"] .xs-story__text {
+  order: 2;
+  padding: 0;
+}
+.xs-story[data-xs-look="18"] .xs-story__part[data-flip] .xs-story__text {
+  order: 0;
+  padding: 0;
+}
+.xs-story[data-xs-look="18"] .xs-story__title {
+  padding-bottom: 0;
+  color: #fff;
+  font-family: var(--xs-display);
+  font-size: 40px;
+  font-weight: 400;
+}
+.xs-story[data-xs-look="18"] .xs-story__body {
+  padding: 15px 0 0;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.xs-story[data-xs-look="18"] .xs-story__quote :is(p, cite) {
+  color: var(--xs-footer-ink);
+}
+.xs-story[data-xs-look="18"] .xs-story__frame::before {
+  display: none;
+}
+.xs-story[data-xs-look="18"] .xs-story__zoom img,
+.xs-story[data-xs-look="18"] .xs-story__zoom:hover img {
+  max-width: 445px;
+  margin-inline: auto;
+  transform: none;
+}
+
+/* --- phone menu: three thick white bars that turn into a cross; centred capitals drop under the bar on the same dark photograph */
+
+.xs-header[data-xs-look="18"] .xs-phone,
+.xs-phone__layer[data-xs-look="18"] {
+  background: none;
+}
+.xs-header[data-xs-look="18"] .xs-phone__toggle,
+.xs-header[data-xs-look="18"] .xs-phone__toggle:hover {
+  gap: 6px;
+  width: 37px;
+  height: 42px;
+  padding: 0 1px;
+  color: #fff;
+  transition: transform 0.3s;
+}
+.xs-header[data-xs-look="18"] .xs-phone__toggle i {
+  height: 4px;
+  border-radius: 5px;
+}
+.xs-header[data-xs-look="18"] .xs-phone__toggle[aria-expanded="true"] {
+  transform: rotate(360deg);
+}
+.xs-header[data-xs-look="18"] .xs-phone__toggle[aria-expanded="true"] i:nth-child(1) {
+  transform: translateY(10px) rotate(45deg);
+}
+.xs-header[data-xs-look="18"] .xs-phone__toggle[aria-expanded="true"] i:nth-child(3) {
+  transform: translateY(-10px) rotate(-45deg);
+}
+/* The photograph carries on from under the bar. `.xs-phone__panel` in the selectors below lifts them over the shared rules for a list that drops, which come later (xs-phone.css). */
+.xs-phone__layer[data-xs-look="18"] .xs-phone__panel {
+  --xs-ph-ground: #0d0e10 url("/xs/18/hero-bg.jpg") right -88px / max(1920px, 100%) auto no-repeat;
+  --xs-ph-ink: #fff;
+  --xs-ph-accent: var(--xs-brand);
+  padding-bottom: 15px;
+  text-align: center;
+}
+.xs-phone__layer[data-xs-look="18"] .xs-phone__panel .xs-phone__nav {
+  padding: 15px 20px 0;
+}
+.xs-phone__layer[data-xs-look="18"] .xs-phone__link {
+  margin: 5px 0;
+  padding: 5px 25px;
+  font-size: 16px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.xs-phone__layer[data-xs-look="18"] .xs-phone__panel :is(.xs-phone__extras, .xs-phone__notice) {
+  justify-content: center;
+  padding: 15px 20px 0;
+  border-top: 0;
+}
+
+/* --- narrow screens ---------------------------------------------------------- */
+
+@media (max-width: 991px) {
+  /* The words fill more of the picture; the arrows keep to its foot. */
+  .xs-slider[data-xs-look="18"] .xs-slider__inner {
+    padding-bottom: 105px;
+  }
+  .xs-slider[data-xs-look="18"] .xs-slider__arrow {
+    top: auto;
+    bottom: 30px;
+  }
+  .xs-products[data-xs-look="18"] .xs-products__grid:not([data-layout="slider"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* An offer's picture goes over its words where the card is narrow, as in the template. */
+@media (min-width: 768px) and (max-width: 992px), (max-width: 430px) {
+  .xs-banners[data-xs-look="18"] .xs-banners__item {
+    flex-direction: column;
+    text-align: center;
+  }
+  .xs-banners[data-xs-look="18"] .xs-banners__img {
+    margin: 0 0 15px;
+  }
+  .xs-banners[data-xs-look="18"] :is(.xs-banners__text, .xs-banners__top) {
+    align-items: center;
+  }
+}
+@media (max-width: 767px) {
+  .xs-banners[data-xs-look="18"] .xs-banners__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* The words come before the picture, as the template stacks them. */
+  .xs-split[data-xs-look="18"] .xs-split__inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 45px;
+  }
+  .xs-split[data-xs-look="18"] .xs-split__text {
+    order: -1;
+  }
+  .xs-story[data-xs-look="18"] .xs-story__part,
+  .xs-story[data-xs-look="18"] .xs-story__part[data-flip] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+  .xs-story[data-xs-look="18"] .xs-story__text {
+    order: 0;
+  }
+  .xs-contact[data-xs-look="18"] .xs-contact__grid {
+    gap: 45px;
+  }
+}
+@media (max-width: 575px) {
+  .xs-slider[data-xs-look="18"] .xs-slider__inner {
+    padding-bottom: 45px;
+  }
+  .xs-products[data-xs-look="18"] .xs-products__grid:not([data-layout="slider"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 376px) {
+  .xs-slider[data-xs-look="18"] .xs-slider__heading,
+  .xs-title[data-xs-look="18"] .xs-title__heading {
+    font-size: 48px;
+  }
+}

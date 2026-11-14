@@ -1,0 +1,483 @@
+{
+  "globalStyles": {
+    "primaryColor": "#FC5D35",
+    "themeSettings": {
+      "xsLook": "17",
+      "header": {
+        "menu": [
+          {
+            "label": "الرئيسية",
+            "href": "/",
+            "kind": "home"
+          },
+          {
+            "label": "الفواكه",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "تواصل معنا",
+            "href": "/contact",
+            "kind": "page"
+          }
+        ],
+        "show": {
+          "theme": false,
+          "trackOrder": false,
+          "language": false
+        },
+        "zones": {
+          "notice": [
+            {
+              "id": "notice",
+              "type": "notice"
+            }
+          ],
+          "links": [],
+          "brand": [
+            {
+              "id": "logo",
+              "type": "logo"
+            }
+          ],
+          "menu": [
+            {
+              "id": "menu",
+              "type": "menu"
+            }
+          ],
+          "icons": [
+            {
+              "id": "search",
+              "type": "search"
+            },
+            {
+              "id": "account",
+              "type": "account"
+            },
+            {
+              "id": "wishlist",
+              "type": "wishlist"
+            },
+            {
+              "id": "cart",
+              "type": "cart"
+            },
+            {
+              "id": "phone",
+              "type": "phone"
+            }
+          ]
+        }
+      },
+      "footer": {
+        "groups": [
+          {
+            "title": "الفواكه",
+            "links": [
+              {
+                "label": "الفواكه",
+                "href": "/products",
+                "kind": "url"
+              },
+              {
+                "label": "السلة",
+                "href": "/cart",
+                "kind": "cart"
+              }
+            ]
+          },
+          {
+            "title": "خدماتنا",
+            "links": [
+              {
+                "label": "تواصل معنا",
+                "href": "/contact",
+                "kind": "page"
+              },
+              {
+                "label": "تتبّع طلبك",
+                "href": "/track",
+                "kind": "track"
+              }
+            ]
+          }
+        ],
+        "text": "فواكه طازجة منتقاة بعناية، من المزرعة إلى باب بيتك كل يوم.",
+        "show": {
+          "help": false
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "path": "/",
+      "title": "الرئيسية",
+      "pageType": "home",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs17-p1-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs17-p1-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs17-p1-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs17-p1-s1-e1",
+                        "type": "xs_hero",
+                        "props": {
+                          "look": "17",
+                          "heading": "أهلًا بك في متجر الفواكه",
+                          "text": "ننتقي ثمارنا من أفضل المزارع ونفرزها يدويًا حبةً حبة، لتصلك طازجة ومليئة بالعصارة والنكهة كما قُطفت، مع توصيل سريع يحافظ على جودتها.",
+                          "image": "/xs/17/hero.png",
+                          "buttonLabel": "تسوّق الآن",
+                          "buttonHref": "/products",
+                          "button2Label": "تواصل معنا",
+                          "button2Href": "/contact"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs17-p1-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs17-p1-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs17-p1-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs17-p1-s2-e1",
+                        "type": "xs_features",
+                        "props": {
+                          "look": "17",
+                          "heading": "خدماتنا",
+                          "text": "فواكه طازجة منتقاة بعناية، من المزرعة إلى باب بيتك كل يوم.",
+                          "image": "",
+                          "items": [
+                            {
+                              "icon": "bag",
+                              "image": "/xs/17/ico-1.png",
+                              "title": "برتقال",
+                              "text": "برتقال حلو وعصاري يُقطف في ذروة موسمه، مثالي للعصير الطازج."
+                            },
+                            {
+                              "icon": "truck",
+                              "image": "/xs/17/ico-2.png",
+                              "title": "عنب",
+                              "text": "عنب مقرمش بلا بذور، يُغسل ويُعبّأ بعناية ليبقى طازجًا لأيام."
+                            },
+                            {
+                              "icon": "support",
+                              "image": "/xs/17/ico-3.png",
+                              "title": "جوافة",
+                              "text": "جوافة عطرة من بساتين مصر، غنية بالنكهة وفيتامين سي."
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs17-p1-s3",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs17-p1-s3-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs17-p1-s3-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs17-p1-s3-e1",
+                        "type": "xs_products",
+                        "props": {
+                          "look": "17",
+                          "heading": "فواكه طازجة",
+                          "collection": "",
+                          "limit": 3,
+                          "showDiscount": true,
+                          "showTabs": false,
+                          "showSearch": false,
+                          "layout": "grid",
+                          "quickView": false,
+                          "allLabel": "كل المنتجات",
+                          "searchLabel": "بحث",
+                          "searchPlaceholder": "بحث",
+                          "loadMoreLabel": "عرض المزيد",
+                          "openLabel": "اشترِ الآن",
+                          "viewLabel": "اشترِ الآن"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs17-p1-s4",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs17-p1-s4-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs17-p1-s4-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs17-p1-s4-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "17",
+                          "heading": "فواكه بطعم لا يُقاوَم",
+                          "image": "/xs/17/tasty.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs17-p1-s5",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs17-p1-s5-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs17-p1-s5-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs17-p1-s5-e1",
+                        "type": "xs_quotes",
+                        "props": {
+                          "look": "17",
+                          "heading": "آراء عملائنا",
+                          "items": [
+                            {
+                              "quote": "أطلب منهم الفاكهة كل أسبوع منذ شهور، وفي كل مرة تصل طازجة كأنها قُطفت للتو. البرتقال حلو والعنب مقرمش والتوصيل دائمًا في موعده. أصبحوا وجهتي الأولى للفاكهة.",
+                              "name": "محمود السيد",
+                              "image": "/xs/17/client.png"
+                            },
+                            {
+                              "quote": "أطلب منهم الفاكهة كل أسبوع منذ شهور، وفي كل مرة تصل طازجة كأنها قُطفت للتو. البرتقال حلو والعنب مقرمش والتوصيل دائمًا في موعده. أصبحوا وجهتي الأولى للفاكهة.",
+                              "name": "محمود السيد",
+                              "image": "/xs/17/client.png"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs17-p1-s6",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs17-p1-s6-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs17-p1-s6-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs17-p1-s6-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "17",
+                          "heading": "تواصل معنا",
+                          "info": [],
+                          "contactPlaceholder": "البريد الإلكتروني",
+                          "messagePlaceholder": "رسالتك",
+                          "buttonLabel": "أرسل الآن"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs17-p1-s7",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs17-p1-s7-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs17-p1-s7-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs17-p1-s7-e1",
+                        "type": "xs_newsletter",
+                        "props": {
+                          "look": "17",
+                          "heading": "اشترك الآن",
+                          "text": "",
+                          "buttonLabel": "اشترك"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    },
+    {
+      "path": "/contact",
+      "title": "تواصل معنا",
+      "pageType": "static",
+      "builderData": {
+        "version": 1,
+        "sections": [
+          {
+            "id": "xs17-p2-s1",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs17-p2-s1-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs17-p2-s1-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs17-p2-s1-e1",
+                        "type": "xs_title",
+                        "props": {
+                          "look": "17",
+                          "heading": "تواصل معنا",
+                          "image": "/xs/17/tasty.jpg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "xs17-p2-s2",
+            "type": "section",
+            "settings": {
+              "width": "full",
+              "padding": "tight"
+            },
+            "rows": [
+              {
+                "id": "xs17-p2-s2-r1",
+                "type": "row",
+                "columns": [
+                  {
+                    "id": "xs17-p2-s2-c1",
+                    "type": "column",
+                    "span": 12,
+                    "elements": [
+                      {
+                        "id": "xs17-p2-s2-e1",
+                        "type": "xs_contact",
+                        "props": {
+                          "look": "17",
+                          "heading": "",
+                          "info": [],
+                          "formName": "تواصل معنا",
+                          "contactPlaceholder": "البريد الإلكتروني",
+                          "messagePlaceholder": "رسالتك",
+                          "buttonLabel": "أرسل الآن"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "seo": {}
+    }
+  ],
+  "sections": []
+}

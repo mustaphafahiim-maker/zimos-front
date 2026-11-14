@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore, type MouseEvent } from "react";
+import { animateThemeChange } from "@store-builder/ui/theme-reveal";
 import { useStore } from "@/lib/StoreContext";
 import { iconBtn } from "./ui";
 
@@ -29,6 +30,18 @@ function apply(theme: Theme) {
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((fn) => fn());
 
+/**
+ * Switches the page to light or dark from outside the toggle — the website
+ * editor's own preview switch (PreviewBridge). Not remembered: the editor
+ * sends its choice with every preview it posts, and a merchant checking dark
+ * mode there shouldn't find their own storefront visits switched too. The
+ * toggle's icon follows either way.
+ */
+export function setColorMode(theme: Theme) {
+  apply(theme);
+  emit();
+}
+
 function subscribe(onStoreChange: () => void): () => void {
   listeners.add(onStoreChange);
 
@@ -53,7 +66,7 @@ function subscribe(onStoreChange: () => void): () => void {
   };
 }
 
-function MoonIcon() {
+export function MoonIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -70,7 +83,7 @@ function MoonIcon() {
   );
 }
 
-function SunIcon() {
+export function SunIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -104,16 +117,23 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     emit();
   }, []);
 
+  // The new theme grows over the old one as a circle from where the button was pressed (@store-builder/ui/theme-reveal).
+  const onClick = useCallback((event: MouseEvent<HTMLButtonElement>) => animateThemeChange(event, toggle), [toggle]);
+
   const { t } = useStore();
   const label = theme === "dark" ? t.common.themeLight : t.common.themeDark;
 
   return (
     <button
       type="button"
-      onClick={toggle}
+      onClick={onClick}
       aria-label={label}
       title={label}
       suppressHydrationWarning
+      // In the website editor's preview a click in the header selects the
+      // header; this one only switches the preview between light and dark
+      // (PreviewBridge lets it through and tells the editor).
+      data-zimos-passthrough=""
       className={`${iconBtn} ${className}`}
     >
       <span suppressHydrationWarning>

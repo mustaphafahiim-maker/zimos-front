@@ -1,0 +1,527 @@
+{
+  "key": "xs-07",
+  "name": "XS 07",
+  "category": "food_beverage",
+  "kind": "store",
+  "tags": [
+    "xs"
+  ],
+  "rtl": false,
+  "primaryColor": "#81C408",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#81C408",
+      "themeSettings": {
+        "xsLook": "07",
+        "header": {
+          "announcement": {
+            "enabled": true,
+            "text": "New Cairo · Fresh delivery every day"
+          },
+          "menu": [
+            {
+              "label": "Home",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "Shop",
+              "href": "/products",
+              "kind": "url"
+            },
+            {
+              "label": "Contact",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [
+              {
+                "id": "strip-0",
+                "type": "link",
+                "label": "Privacy Policy",
+                "href": "/policies/privacy-policy"
+              },
+              {
+                "id": "strip-1",
+                "type": "link",
+                "label": "Terms of Use",
+                "href": "/policies/terms-of-service"
+              },
+              {
+                "id": "strip-2",
+                "type": "link",
+                "label": "Sales and Refunds",
+                "href": "/policies/refund-policy"
+              }
+            ],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "Shop Info",
+              "links": [
+                {
+                  "label": "Shop",
+                  "href": "/products",
+                  "kind": "url"
+                },
+                {
+                  "label": "Contact Us",
+                  "href": "/contact",
+                  "kind": "page"
+                }
+              ]
+            },
+            {
+              "title": "Account",
+              "links": [
+                {
+                  "label": "Shopping Cart",
+                  "href": "/cart",
+                  "kind": "cart"
+                },
+                {
+                  "label": "Order History",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            }
+          ],
+          "text": "Fresh products every day, delivered to your door in New Cairo and nearby areas.",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "Home",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs07-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs07-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs07-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs07-p1-s1-e1",
+                          "type": "xs_hero",
+                          "props": {
+                            "look": "07",
+                            "heading": "Organic Veggies & Fruits Foods",
+                            "text": "100% Organic Foods",
+                            "image": "/xs/07/hero-img-1.png",
+                            "buttonLabel": "Shop Now",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs07-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs07-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs07-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs07-p1-s2-e1",
+                          "type": "xs_features",
+                          "props": {
+                            "look": "07",
+                            "heading": "",
+                            "text": "",
+                            "image": "",
+                            "items": [
+                              {
+                                "icon": "truck",
+                                "image": "/xs/07/ico-1.svg",
+                                "title": "Free Shipping",
+                                "text": "Free on orders over EGP 300"
+                              },
+                              {
+                                "icon": "bag",
+                                "image": "/xs/07/ico-2.svg",
+                                "title": "Security Payment",
+                                "text": "100% security payment"
+                              },
+                              {
+                                "icon": "return",
+                                "image": "/xs/07/ico-3.svg",
+                                "title": "30 Day Return",
+                                "text": "30 day money guarantee"
+                              },
+                              {
+                                "icon": "support",
+                                "image": "/xs/07/ico-4.svg",
+                                "title": "24/7 Support",
+                                "text": "Support every time fast"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs07-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs07-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs07-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs07-p1-s3-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "07",
+                            "heading": "Our Organic Products",
+                            "collection": "",
+                            "limit": 8,
+                            "showDiscount": true,
+                            "showTabs": true,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "searchLabel": "Search",
+                            "viewLabel": "Quick View",
+                            "allLabel": "All Products",
+                            "searchPlaceholder": "keywords",
+                            "loadMoreLabel": "View More",
+                            "openLabel": "Add to cart"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs07-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs07-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs07-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs07-p1-s4-e1",
+                          "type": "xs_banners",
+                          "props": {
+                            "look": "07",
+                            "items": [
+                              {
+                                "image": "/xs/07/featur-1.jpg",
+                                "title": "Fresh Apples",
+                                "text": "20% OFF",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/xs/07/featur-2.jpg",
+                                "title": "Tasty Fruits",
+                                "text": "Free delivery",
+                                "href": "/products"
+                              },
+                              {
+                                "image": "/xs/07/featur-3.jpg",
+                                "title": "Exotic Vegitable",
+                                "text": "Discount 30$",
+                                "href": "/products"
+                              }
+                            ],
+                            "variant": "card"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs07-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs07-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs07-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs07-p1-s5-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "07",
+                            "heading": "Fresh Exotic Fruits in Our Store",
+                            "text": "We pick the finest tropical fruit from trusted farms and deliver it fresh to your door the same day.",
+                            "images": [
+                              "/xs/07/baner-1.png"
+                            ],
+                            "points": [],
+                            "buttonLabel": "BUY",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs07-p1-s6",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs07-p1-s6-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs07-p1-s6-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs07-p1-s6-e1",
+                          "type": "xs_quotes",
+                          "props": {
+                            "look": "07",
+                            "heading": "Our Client Saying!",
+                            "items": [
+                              {
+                                "quote": "I order my vegetables and fruit here every week; the quality never changes and delivery is always on time. The best choice for my home.",
+                                "name": "Mona Abdelrahman",
+                                "role": "Architect",
+                                "image": "/xs/07/testimonial-1.jpg"
+                              },
+                              {
+                                "quote": "I order my vegetables and fruit here every week; the quality never changes and delivery is always on time. The best choice for my home.",
+                                "name": "Mona Abdelrahman",
+                                "role": "Architect",
+                                "image": "/xs/07/testimonial-1.jpg"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "Contact",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs07-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs07-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs07-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs07-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "07",
+                            "heading": "Contact",
+                            "image": "/xs/07/cart-page-header-img.jpg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs07-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs07-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs07-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs07-p2-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "07",
+                            "heading": "Get in touch",
+                            "info": [
+                              {
+                                "icon": "address",
+                                "title": "Address",
+                                "text": "New Cairo, Cairo"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "Mail Us",
+                                "text": "Send us a message and we reply within a day"
+                              },
+                              {
+                                "icon": "phone",
+                                "title": "Telephone",
+                                "text": "Call us any day from 10 am to 10 pm"
+                              }
+                            ],
+                            "contactPlaceholder": "Enter Your Email",
+                            "messagePlaceholder": "Your Message",
+                            "buttonLabel": "Submit"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}

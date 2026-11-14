@@ -1,0 +1,147 @@
+{
+  "xsLook": "10",
+  "header": {
+    "announcement": {
+      "enabled": true,
+      "text": "The new winter collection is here"
+    },
+    "menu": [
+      {
+        "label": "Home",
+        "href": "/",
+        "kind": "home"
+      },
+      {
+        "label": "Latest",
+        "href": "/products",
+        "kind": "url"
+      },
+      {
+        "label": "About",
+        "href": "/about",
+        "kind": "page"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact",
+        "kind": "page"
+      }
+    ],
+    "show": {
+      "theme": false,
+      "trackOrder": false,
+      "language": false
+    },
+    "zones": {
+      "notice": [
+        {
+          "id": "notice",
+          "type": "notice"
+        }
+      ],
+      "links": [
+        {
+          "id": "strip-0",
+          "type": "link",
+          "label": "My Account",
+          "href": "/account"
+        },
+        {
+          "id": "strip-1",
+          "type": "link",
+          "label": "Wish List",
+          "href": "/account/wishlist"
+        },
+        {
+          "id": "strip-2",
+          "type": "link",
+          "label": "Shopping Cart",
+          "href": "/cart"
+        },
+        {
+          "id": "strip-3",
+          "type": "link",
+          "label": "Checkout",
+          "href": "/checkout"
+        }
+      ],
+      "brand": [
+        {
+          "id": "logo",
+          "type": "logo"
+        }
+      ],
+      "menu": [
+        {
+          "id": "menu",
+          "type": "menu"
+        }
+      ],
+      "icons": [
+        {
+          "id": "search",
+          "type": "search"
+        },
+        {
+          "id": "account",
+          "type": "account"
+        },
+        {
+          "id": "wishlist",
+          "type": "wishlist"
+        },
+        {
+          "id": "cart",
+          "type": "cart"
+        },
+        {
+          "id": "phone",
+          "type": "phone"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "groups": [
+      {
+        "title": "Quick Links",
+        "links": [
+          {
+            "label": "Latest",
+            "href": "/products",
+            "kind": "url"
+          },
+          {
+            "label": "Shopping Cart",
+            "href": "/cart",
+            "kind": "cart"
+          }
+        ]
+      },
+      {
+        "title": "Support",
+        "links": [
+          {
+            "label": "About",
+            "href": "/about",
+            "kind": "page"
+          },
+          {
+            "label": "Contact",
+            "href": "/contact",
+            "kind": "page"
+          },
+          {
+            "label": "Track Order",
+            "href": "/track",
+            "kind": "track"
+          }
+        ]
+      }
+    ],
+    "text": "Modern fashion in chosen fabrics at prices that suit you, with fast delivery across Egypt.",
+    "show": {
+      "help": false
+    }
+  }
+}

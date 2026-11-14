@@ -1,0 +1,464 @@
+{
+  "key": "xs-13-ar",
+  "name": "XS 13 عربي",
+  "category": "single_product",
+  "kind": "store",
+  "tags": [
+    "xs",
+    "ar"
+  ],
+  "rtl": true,
+  "primaryColor": "#235EE7",
+  "version": {
+    "globalStyles": {
+      "primaryColor": "#235EE7",
+      "themeSettings": {
+        "xsLook": "13",
+        "header": {
+          "menu": [
+            {
+              "label": "الرئيسية",
+              "href": "/",
+              "kind": "home"
+            },
+            {
+              "label": "المتجر",
+              "href": "/products",
+              "kind": "url"
+            },
+            {
+              "label": "تواصل معنا",
+              "href": "/contact",
+              "kind": "page"
+            }
+          ],
+          "show": {
+            "theme": false,
+            "trackOrder": false,
+            "language": false
+          },
+          "zones": {
+            "notice": [
+              {
+                "id": "notice",
+                "type": "notice"
+              }
+            ],
+            "links": [],
+            "brand": [
+              {
+                "id": "logo",
+                "type": "logo"
+              }
+            ],
+            "menu": [
+              {
+                "id": "menu",
+                "type": "menu"
+              }
+            ],
+            "icons": [
+              {
+                "id": "search",
+                "type": "search"
+              },
+              {
+                "id": "account",
+                "type": "account"
+              },
+              {
+                "id": "wishlist",
+                "type": "wishlist"
+              },
+              {
+                "id": "cart",
+                "type": "cart"
+              },
+              {
+                "id": "phone",
+                "type": "phone"
+              }
+            ]
+          }
+        },
+        "footer": {
+          "groups": [
+            {
+              "title": "المتجر",
+              "links": [
+                {
+                  "label": "المنتجات",
+                  "href": "/products",
+                  "kind": "url"
+                },
+                {
+                  "label": "السلة",
+                  "href": "/cart",
+                  "kind": "cart"
+                }
+              ]
+            },
+            {
+              "title": "المساعدة",
+              "links": [
+                {
+                  "label": "تواصل معنا",
+                  "href": "/contact",
+                  "kind": "page"
+                },
+                {
+                  "label": "تتبّع طلبك",
+                  "href": "/track",
+                  "kind": "track"
+                }
+              ]
+            }
+          ],
+          "text": "ساعة ذكية تواكب يومك: صحتك وإشعاراتك ونشاطك في مكان واحد، مع ضمان وتوصيل لكل محافظات مصر.",
+          "show": {
+            "help": false
+          }
+        }
+      }
+    },
+    "pages": [
+      {
+        "path": "/",
+        "title": "الرئيسية",
+        "pageType": "home",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs13-p1-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs13-p1-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs13-p1-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs13-p1-s1-e1",
+                          "type": "xs_hero",
+                          "props": {
+                            "look": "13",
+                            "heading": "مستقبل ذكي جديد",
+                            "text": "الآن… عِش الفرق بنفسك",
+                            "image": "/xs/13/header-img.png",
+                            "buttonLabel": "اشترِ الآن",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs13-p1-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs13-p1-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs13-p1-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs13-p1-s2-e1",
+                          "type": "xs_split",
+                          "props": {
+                            "look": "13",
+                            "heading": "صمّمناها لتغيّر إيقاع يومك",
+                            "text": "تتابع ساعتك نبضك ونومك ونشاطك اليومي، وتصلك الإشعارات والمكالمات على معصمك مباشرةً، بتصميم أنيق يناسب كل إطلالة.",
+                            "images": [
+                              "/xs/13/about-img.jpg"
+                            ],
+                            "points": [],
+                            "buttonLabel": "ابدأ الآن",
+                            "buttonHref": "/products"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs13-p1-s3",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs13-p1-s3-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs13-p1-s3-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs13-p1-s3-e1",
+                          "type": "xs_features",
+                          "props": {
+                            "look": "13",
+                            "heading": "مزايا تجعلنا مختلفين",
+                            "text": "لكل من يبحث عن تقنية ذكية تواكب أسلوب حياته.",
+                            "image": "",
+                            "items": [
+                              {
+                                "icon": "support",
+                                "image": "/xs/13/ico-1.svg",
+                                "title": "فنيون خبراء",
+                                "text": "فنيون معتمدون يجهّزون ساعتك ويصونونها."
+                              },
+                              {
+                                "icon": "bag",
+                                "image": "/xs/13/ico-2.svg",
+                                "title": "خدمة احترافية",
+                                "text": "فريق متخصص يقدّم لك خدمة سريعة ودعمًا حقيقيًا قبل الشراء وبعده."
+                              },
+                              {
+                                "icon": "truck",
+                                "image": "/xs/13/ico-3.svg",
+                                "title": "دعم متميز",
+                                "text": "أسئلة عن الربط أو الإعدادات؟ نرد عليك بسرعة."
+                              },
+                              {
+                                "icon": "return",
+                                "image": "/xs/13/ico-4.svg",
+                                "title": "خبرة تقنية",
+                                "text": "كل ساعة تُفحص وتُحدَّث قبل الشحن."
+                              },
+                              {
+                                "icon": "support",
+                                "image": "/xs/13/ico-5.svg",
+                                "title": "الأكثر ترشيحًا",
+                                "text": "يختارنا العملاء مرة بعد مرة في كل أنحاء مصر."
+                              },
+                              {
+                                "icon": "bag",
+                                "image": "/xs/13/ico-6.svg",
+                                "title": "تقييمات إيجابية",
+                                "text": "تقييمات عملائنا تشهد على جودتنا."
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs13-p1-s4",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs13-p1-s4-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs13-p1-s4-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs13-p1-s4-e1",
+                          "type": "xs_products",
+                          "props": {
+                            "look": "13",
+                            "heading": "منتجاتنا",
+                            "collection": "",
+                            "limit": 4,
+                            "showDiscount": true,
+                            "showTabs": false,
+                            "showSearch": false,
+                            "layout": "grid",
+                            "quickView": true,
+                            "allLabel": "كل المنتجات",
+                            "searchLabel": "بحث",
+                            "searchPlaceholder": "بحث",
+                            "loadMoreLabel": "عرض المزيد",
+                            "viewLabel": "نظرة سريعة",
+                            "openLabel": "اطلب مسبقًا"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs13-p1-s5",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs13-p1-s5-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs13-p1-s5-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs13-p1-s5-e1",
+                          "type": "xs_quotes",
+                          "props": {
+                            "look": "13",
+                            "heading": "آراء عملائنا",
+                            "items": [
+                              {
+                                "quote": "ساعة رائعة فعلًا! البطارية تكفيني طوال اليوم، والشاشة واضحة حتى تحت الشمس، ووصلني الطلب بسرعة وبتغليف ممتاز.",
+                                "name": "عمر حسني",
+                                "image": "/xs/13/user.jpg"
+                              },
+                              {
+                                "quote": "ساعة رائعة فعلًا! البطارية تكفيني طوال اليوم، والشاشة واضحة حتى تحت الشمس، ووصلني الطلب بسرعة وبتغليف ممتاز.",
+                                "name": "محمود فتحي",
+                                "image": "/xs/13/user.jpg"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      },
+      {
+        "path": "/contact",
+        "title": "تواصل معنا",
+        "pageType": "static",
+        "builderData": {
+          "version": 1,
+          "sections": [
+            {
+              "id": "xs13-p2-s1",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs13-p2-s1-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs13-p2-s1-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs13-p2-s1-e1",
+                          "type": "xs_title",
+                          "props": {
+                            "look": "13",
+                            "heading": "تواصل معنا",
+                            "image": ""
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "xs13-p2-s2",
+              "type": "section",
+              "settings": {
+                "width": "full",
+                "padding": "tight"
+              },
+              "rows": [
+                {
+                  "id": "xs13-p2-s2-r1",
+                  "type": "row",
+                  "columns": [
+                    {
+                      "id": "xs13-p2-s2-c1",
+                      "type": "column",
+                      "span": 12,
+                      "elements": [
+                        {
+                          "id": "xs13-p2-s2-e1",
+                          "type": "xs_contact",
+                          "props": {
+                            "look": "13",
+                            "heading": "أرسل رسالة",
+                            "info": [
+                              {
+                                "icon": "address",
+                                "title": "مدينة نصر، القاهرة",
+                                "text": "مفتوح يوميًا من 10 صباحًا حتى 10 مساءً"
+                              },
+                              {
+                                "icon": "phone",
+                                "title": "اتصل بنا",
+                                "text": "من السبت إلى الخميس، 9 صباحًا حتى 6 مساءً"
+                              },
+                              {
+                                "icon": "email",
+                                "title": "راسلنا",
+                                "text": "راسلنا باستفسارك في أي وقت!"
+                              }
+                            ],
+                            "contactPlaceholder": "أدخل بريدك الإلكتروني",
+                            "messagePlaceholder": "اكتب رسالتك",
+                            "buttonLabel": "أرسل رسالة"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "seo": {}
+      }
+    ],
+    "sections": []
+  }
+}
