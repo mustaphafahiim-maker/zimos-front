@@ -47,6 +47,11 @@ export const en: Dictionary = {
     secondaryCta: "See the stores",
     ticks: ["Subscribe when you publish", "Ready store templates", "Arabic and English"],
     imageAlt: "Stores built on ZIMOS from its templates, on a computer and on a phone",
+    chips: {
+      order: { title: "New order", detail: "In the confirmation queue" },
+      confirmed: { title: "Order confirmed", detail: "Tracking code ready" },
+      delivered: { title: "Delivered", detail: "Counted in your profit" },
+    },
     caption: "Real screenshots of ZIMOS stores — demo products and pictures.",
   },
 

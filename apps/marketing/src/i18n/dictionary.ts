@@ -73,6 +73,12 @@ export interface Dictionary {
     /** Under the buttons, each with a tick. */
     ticks: [string, string, string];
     imageAlt: string;
+    /** The cards floating over the stores — illustration, generic labels. */
+    chips: {
+      order: Chip;
+      confirmed: Chip;
+      delivered: Chip;
+    };
     caption: string;
   };
 
