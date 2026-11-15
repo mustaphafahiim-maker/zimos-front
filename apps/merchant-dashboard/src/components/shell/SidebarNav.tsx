@@ -28,8 +28,8 @@ const STRINGS = {
   },
   ar: {
     navLabel: "القائمة الرئيسية",
-    dashboardAria: "لوحة تحكم زيموس",
-    dashboardAriaNamed: "{name} — لوحة تحكم زيموس",
+    dashboardAria: "لوحة تحكم Zimos",
+    dashboardAriaNamed: "{name} — لوحة تحكم Zimos",
   },
 } satisfies Messages;
 

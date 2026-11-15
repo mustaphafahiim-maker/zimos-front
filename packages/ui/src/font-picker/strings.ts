@@ -70,7 +70,7 @@ export const FONT_PICKER_STRINGS: Record<FontPickerLocale, FontPickerStrings> = 
     scriptOnlyAr: "عربي فقط",
     scriptOnlyEn: "إنجليزي فقط",
     scriptBoth: "عربي + إنجليزي",
-    count: "{n} خط",
+    count: "عدد الخطوط: {n}",
     none: "لا يوجد خط مطابق. جرّب اسمًا أو نوعًا آخر.",
     loading: "جارٍ تحميل الخطوط…",
     choose: "اختر خطًا",

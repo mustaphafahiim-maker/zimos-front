@@ -4,6 +4,7 @@ import { useWorkspaceId } from "@/lib/useWorkspaceId";
 import { useAsync } from "@/lib/useAsync";
 import { formatDateTime, humanize } from "@/lib/format";
 import { fmt, useT, type Messages } from "@/i18n/LocaleContext";
+import { countOf } from "@/lib/plural";
 import { Section } from "@/components/Section";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useOrderLabels } from "../orderLabels";
@@ -29,7 +30,6 @@ const STRINGS = {
     sec: "{n} s",
     min: "{n} min",
     hours: "{h} h {m} min",
-    days: "{n} days",
     lastAction: "Last action: {what}, {when}",
     lastActionBy: "Last action: {what}, {when} {by}",
     placed: "Order placed",
@@ -51,40 +51,39 @@ const STRINGS = {
     by_api: "through the API",
   },
   ar: {
-    title: "تفاصيل الجلسة",
-    description: "عمل إيه العميل في المتجر قبل ما يطلب.",
-    untracked: "تحليلات المتجر مشافتش العميل ده (أوردر متسجّل يدوي، أو متصفح بيمنع التتبع).",
-    pagesTitle: "الصفحات اللي شافها",
-    pagesMore: "آخر {shown} من {total} صفحة.",
-    noPages: "مفيش صفحات متسجّلة.",
+    title: "تفاصيل الزيارة",
+    description: "ما فعله العميل في المتجر قبل أن يطلب.",
+    untracked: "لم ترصد تحليلات المتجر هذا العميل (طلب مسجّل يدويًا، أو متصفح يمنع التتبع).",
+    pagesTitle: "الصفحات التي شاهدها",
+    pagesMore: "المعروض: آخر {shown} من أصل {total}.",
+    noPages: "لا توجد صفحات مسجّلة.",
     home: "الصفحة الرئيسية",
     firstVisit: "أول زيارة",
-    timeToPurchase: "الوقت لحد الطلب",
+    timeToPurchase: "الوقت حتى الطلب",
     pageViews: "عدد الصفحات",
-    customerOrders: "أوردرات العميل",
-    orderSequence: "الأوردر رقم {n} للعميل ده",
-    firstOrder: "أول أوردر",
-    inAll: "{n} إجمالي",
+    customerOrders: "طلبات العميل",
+    orderSequence: "الطلب رقم {n} لهذا العميل",
+    firstOrder: "أول طلب",
+    inAll: "الإجمالي: {n}",
     newCustomer: "عميل جديد",
-    returning: "عميل متكرر · {n} أوردر",
+    returning: "عميل عائد · الطلبات: {n}",
     sec: "{n} ث",
     min: "{n} د",
     hours: "{h} س {m} د",
-    days: "{n} يوم",
     lastAction: "آخر إجراء: {what}، {when}",
     lastActionBy: "آخر إجراء: {what}، {when} {by}",
     placed: "تم الطلب",
-    movedTo: "اتنقل لـ {stage}",
-    note: "اتضافت ملاحظة",
+    movedTo: "نُقل إلى {stage}",
+    note: "أُضيفت ملاحظة",
     automation: "أتمتة {trigger}",
     webhook: "ويب هوك {event}",
     courier: "تحديث من شركة الشحن",
-    "a_order.meta_update": "اتحدّثت بيانات الأوردر",
-    "a_order.update": "اتعدّل الأوردر",
-    "a_order.items_update": "اتعدّلت المنتجات",
-    "a_shipment.create": "اتعملت شحنة",
-    "a_shipment.update": "اتحدّثت الشحنة",
-    "a_refund.create": "اتسجّل استرداد",
+    "a_order.meta_update": "تم تحديث بيانات الطلب",
+    "a_order.update": "تم تعديل الطلب",
+    "a_order.items_update": "تم تعديل المنتجات",
+    "a_shipment.create": "تم إنشاء شحنة",
+    "a_shipment.update": "تم تحديث الشحنة",
+    "a_refund.create": "تم تسجيل استرداد",
     by_user: "بواسطة {name}",
     by_userUnknown: "بواسطة عضو في الفريق",
     by_carrier: "من شركة الشحن",
@@ -108,7 +107,7 @@ function duration(t: Strings, seconds: number): string {
   if (seconds < 60) return fmt(t.sec, { n: seconds });
   if (seconds < 3600) return fmt(t.min, { n: Math.round(seconds / 60) });
   if (seconds < 2 * 86400) return fmt(t.hours, { h: Math.floor(seconds / 3600), m: Math.floor((seconds % 3600) / 60) });
-  return fmt(t.days, { n: Math.round(seconds / 86400) });
+  return countOf("day", Math.round(seconds / 86400));
 }
 
 /** "Last action: Moved to Confirmed, 4 Oct 2026, 16:15 by Mona" — for the header line. */

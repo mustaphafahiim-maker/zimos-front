@@ -18,12 +18,12 @@ describe("DataState and the plan feature gate (PLAN_FEATURE_REQUIRED)", () => {
       </DataState>,
       { locale: "ar" }
     );
-    expect(screen.getByText("خطتك الحالية لا تشمل «تحليلات متقدمة». رقِّ خطتك من قسم خطتي لاستخدامها.")).toBeTruthy();
+    expect(screen.getByText("باقتك الحالية لا تشمل «تحليلات متقدمة». رقِّ باقتك من قسم «باقتي» لاستخدامها.")).toBeTruthy();
     // Not the permission sentence a plain 403 gets, and nothing to retry.
     expect(screen.queryByText(/ليست لديك صلاحية/)).toBeNull();
     expect(screen.queryByRole("button", { name: "حاول مرة أخرى" })).toBeNull();
     // The shared Button renders the router link as an <a> with role="button".
-    const seePlans = screen.getByRole("button", { name: "عرض الخطط" });
+    const seePlans = screen.getByRole("button", { name: "عرض الباقات" });
     expect(seePlans.tagName).toBe("A");
     await user.click(seePlans);
     expect(currentPath()).toBe("/subscription");

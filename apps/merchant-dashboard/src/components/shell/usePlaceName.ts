@@ -5,7 +5,7 @@ import type { Place, PlaceId } from "@/lib/places";
 /** The dock's own, shorter names where a heading is too long to sit under a tile. */
 const SHORT = {
   en: { store: "Store", money: "Money" },
-  ar: { store: "المتجر", money: "الفلوس" },
+  ar: { store: "المتجر", money: "المالية" },
 } satisfies Messages;
 
 /**

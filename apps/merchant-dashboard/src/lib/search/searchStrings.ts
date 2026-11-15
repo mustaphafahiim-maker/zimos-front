@@ -88,7 +88,7 @@ export const SEARCH_ENTRY_STRINGS = {
   },
   ar: {
     newProduct: "منتج جديد",
-    newOrder: "إنشاء أوردر",
+    newOrder: "إنشاء طلب",
     newDiscount: "إنشاء خصم",
     newBlogPost: "مقال جديد",
     newSizeChart: "جدول مقاسات جديد",
@@ -153,7 +153,7 @@ export const SEARCH_ENTRY_STRINGS = {
     storeContact: "هاتف المتجر وبريده وعنوانه",
     trustCards: "بطاقات الثقة",
     seoMeta: "العنوان والوصف في محركات البحث",
-    connectDomain: "ربط دومين",
+    connectDomain: "ربط نطاق",
     checkoutFields: "حقول نموذج الشراء",
     shippingPrices: "سعر الشحن الافتراضي",
     deliveryZones: "مناطق التوصيل والمحافظات",
@@ -177,7 +177,7 @@ export const SEARCH_UI_STRINGS = {
     actions: "إجراءات",
     recentSearches: "عمليات بحث سابقة",
     recentPages: "فتحتها مؤخرًا",
-    notInPlan: "غير متاح في خطتك",
-    notInPlanHint: "يفتح صفحة خطتي",
+    notInPlan: "غير متاح في باقتك",
+    notInPlanHint: "يفتح صفحة «باقتي»",
   },
 } satisfies Messages;

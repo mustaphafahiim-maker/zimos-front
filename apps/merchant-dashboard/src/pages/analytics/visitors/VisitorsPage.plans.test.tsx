@@ -89,12 +89,12 @@ describe("VisitorsPage by plan", () => {
   it("in Arabic: right to left, the tabs and the prompt in Arabic", async () => {
     serve();
     renderWithProviders(<VisitorsPage />, { route: "/analytics/visitors?tab=visits", path: "/analytics/visitors", locale: "ar" });
-    expect(await screen.findByText("خطتك الحالية لا تشمل «تحليلات الزوار المفصّلة». رقِّ خطتك من قسم خطتي لاستخدامها.")).toBeInTheDocument();
+    expect(await screen.findByText("باقتك الحالية لا تشمل «تحليلات الزوار المفصّلة». رقِّ باقتك من قسم «باقتي» لاستخدامها.")).toBeInTheDocument();
     expect(document.documentElement.dir).toBe("rtl");
     expect(screen.getByRole("heading", { name: "الزوار" })).toBeInTheDocument();
     // The open tab's name is also its section's title.
     for (const label of ["نظرة عامة", "الزيارات", "الحملات", "المحافظات"]) expect(screen.getAllByText(label).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "عرض الخطط" }).getAttribute("href")).toBe("/subscription");
+    expect(screen.getByRole("button", { name: "عرض الباقات" }).getAttribute("href")).toBe("/subscription");
   });
 
   it("dark look: only the theme's colours, in the overview and in a locked tab", async () => {

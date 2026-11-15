@@ -75,7 +75,7 @@ const STRINGS = {
     resetStore: "استخدام خط المتجر الافتراضي",
     resetInherit: "استخدام الافتراضي (وراثة)",
     inherited: "موروث: {name}",
-    theme: "خط الثيم",
+    theme: "خط التصميم",
     template: "خط القالب",
     source: "المصدر",
     ownFont: "مضبوط هنا",

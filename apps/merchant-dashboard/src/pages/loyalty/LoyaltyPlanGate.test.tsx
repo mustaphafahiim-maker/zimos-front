@@ -78,7 +78,7 @@ describe("Loyalty programme and the plan (LOYALTY_REQUIRE_PLAN_FEATURE)", () => 
     });
     renderWithProviders(<LoyaltyProgramPage />, { locale: "ar" });
     expect(await screen.findByText(/نقاط عملائك مجمّدة لأن خطتك الحالية لا تشمل نقاط الولاء/)).toBeInTheDocument();
-    expect(screen.getByText("عرض الخطط").closest("a")).toHaveAttribute("href", "/subscription");
+    expect(screen.getByText("عرض الباقات").closest("a")).toHaveAttribute("href", "/subscription");
   });
 });
 

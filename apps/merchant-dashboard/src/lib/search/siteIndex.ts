@@ -199,7 +199,7 @@ const PAGE_WORDS: Partial<Record<NavKey, readonly string[]>> = {
   productQuestions: ["q&a", "استفسارات"],
   sizeCharts: ["sizes", "مقاسات"],
   digital: ["downloads", "files", "تحميل", "ملفات"],
-  courses: ["lessons", "students", "دروس", "طلاب"],
+  courses: ["lessons", "students", "دروس", "طلاب", "الكورسات", "كورسات"],
   media: ["images", "photos", "uploads", "صور", "ميديا"],
   customers: ["contacts", "clients", "جهات الاتصال", "زبائن"],
   loyalty: ["points", "rewards", "vip", "store credit", "نقاط", "مكافآت", "رصيد"],
@@ -220,14 +220,14 @@ const PAGE_WORDS: Partial<Record<NavKey, readonly string[]>> = {
   emailCampaigns: ["email campaign", "newsletter", "email marketing", "mailing", "حملة بريد", "نشرة بريدية", "تسويق بالبريد", "إيميل"],
   realtime: ["live", "now", "مباشر", "الآن"],
   webAnalytics: ["traffic", "visits", "page views", "زيارات", "ترافيك"],
-  visitors: ["sessions", "جلسات"],
+  visitors: ["sessions", "جلسات", "الزيارات"],
   attribution: ["sources", "utm", "campaigns", "مصادر", "الحملات"],
   profit: ["margin", "costs", "تكاليف", "هامش"],
   ads: ["ad spend", "facebook ads", "tiktok ads", "إعلانات", "ميزانية"],
   payments: ["gateway", "instapay", "cash on delivery", "دفع", "بوابة"],
-  settlements: ["cod", "cash collection", "couriers money", "تسويات", "فلوس الشحن"],
+  settlements: ["cod", "cash collection", "couriers money", "تسويات", "فلوس الشحن", "المالية"],
   shipping: ["delivery", "tax", "couriers", "توصيل", "ضرائب"],
-  subscription: ["plan", "billing", "upgrade", "invoices", "اشتراك", "ترقية", "فواتير"],
+  subscription: ["plan", "billing", "upgrade", "invoices", "اشتراك", "ترقية", "فواتير", "الباقة", "خطتي", "الخطة"],
   settings: ["preferences", "account", "تفضيلات"],
   activity: ["audit log", "history", "سجل"],
   support: ["help", "ticket", "contact", "مساعدة", "تذكرة"],
@@ -354,7 +354,7 @@ function setting(
 const DECLARED: EntryDef[] = [
   // Actions.
   { id: "action:new-product", kind: "action", title: text("newProduct"), keywords: ["add product", "create product", "إضافة منتج"], to: "/catalog/new", icon: IconProductAdd },
-  { id: "action:new-order", kind: "action", title: text("newOrder"), keywords: ["new order", "manual order", "add order", "طلب جديد", "أوردر يدوي"], to: "/orders/new", icon: IconOrders },
+  { id: "action:new-order", kind: "action", title: text("newOrder"), keywords: ["new order", "manual order", "add order", "طلب جديد", "طلب يدوي", "أوردر يدوي", "إنشاء أوردر"], to: "/orders/new", icon: IconOrders },
   { id: "action:new-discount", kind: "action", title: text("newDiscount"), keywords: ["coupon", "promo code", "كوبون", "كود خصم"], to: "/discounts", icon: IconTag },
   { id: "action:new-blog-post", kind: "action", title: text("newBlogPost"), keywords: ["write article", "مقالة"], to: "/blog/new", icon: IconBlog, when: BLOG_ENABLED },
   { id: "action:new-size-chart", kind: "action", title: text("newSizeChart"), keywords: ["sizes", "مقاسات"], to: "/size-charts/new", icon: IconRuler, when: SIZE_CHARTS_ENABLED },
@@ -390,7 +390,7 @@ const DECLARED: EntryDef[] = [
     : []),
 
   // Tabs kept in the address.
-  { id: "tab:/subscription?tab=plans", kind: "tab", title: both(SUBSCRIPTION_STRINGS, "plansTab"), keywords: ["upgrade", "change plan", "pricing", "ترقية", "تغيير الخطة", "الأسعار"], to: "/subscription?tab=plans", icon: IconCrown, parent: pageId("/subscription") },
+  { id: "tab:/subscription?tab=plans", kind: "tab", title: both(SUBSCRIPTION_STRINGS, "plansTab"), keywords: ["upgrade", "change plan", "pricing", "ترقية", "تغيير الباقة", "تغيير الخطة", "الأسعار"], to: "/subscription?tab=plans", icon: IconCrown, parent: pageId("/subscription") },
   { id: "tab:/subscription?tab=usage", kind: "tab", title: both(SUBSCRIPTION_STRINGS, "usageTab"), keywords: ["limits", "quota", "الحدود", "الاستهلاك"], to: "/subscription?tab=usage", icon: IconHourglass, parent: pageId("/subscription") },
   { id: "tab:/subscription?tab=invoices", kind: "tab", title: both(SUBSCRIPTION_STRINGS, "invoicesTab"), keywords: ["invoice", "pay", "receipt", "فاتورة", "دفع", "إيصال"], to: "/subscription?tab=invoices", icon: IconInvoice, parent: pageId("/subscription") },
   { id: "tab:/customers?tab=segments", kind: "tab", title: text("segments"), keywords: ["contact segments", "audience", "شرائح جهات الاتصال", "جمهور"], to: "/customers?tab=segments", icon: IconContacts, parent: pageId("/customers") },
@@ -458,7 +458,7 @@ const DECLARED: EntryDef[] = [
   setting("storeContact", { keywords: ["contact", "phone", "address", "هاتف", "عنوان"], icon: IconPhone, scope: "store-settings", section: "store-info", anchor: "store-contact" }),
   setting("trustCards", { keywords: ["trust", "guarantee", "ضمان", "ثقة"], icon: IconShield, scope: "store-settings", section: "store-info", anchor: "trust-cards" }),
   setting("seoMeta", { keywords: ["meta title", "meta description", "google", "seo", "جوجل"], icon: IconSearch, scope: "store-settings", section: "seo", anchor: "seo-meta" }),
-  setting("connectDomain", { keywords: ["domain", "dns", "custom domain", "دومين", "نطاق"], icon: IconGlobe, scope: "store-settings", section: "domains", anchor: "connect-domain", plan: { feature: "custom_domain" }, when: CUSTOM_DOMAINS_ENABLED }),
+  setting("connectDomain", { keywords: ["domain", "dns", "custom domain", "دومين", "نطاق", "ربط دومين"], icon: IconGlobe, scope: "store-settings", section: "domains", anchor: "connect-domain", plan: { feature: "custom_domain" }, when: CUSTOM_DOMAINS_ENABLED }),
   setting("checkoutFields", { keywords: ["custom field", "required field", "address field", "حقل", "إجباري"], icon: IconFilter, scope: "store-settings", section: "checkout-form", anchor: "checkout-fields" }),
 
   // Single settings: Shipping.

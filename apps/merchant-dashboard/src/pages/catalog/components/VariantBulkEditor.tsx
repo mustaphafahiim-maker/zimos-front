@@ -66,7 +66,7 @@ const STRINGS = {
     selectAll: "تحديد كل المتغيرات",
     selectRow: "تحديد {name}",
     defaultVariant: "الافتراضي",
-    applyTo: "تطبيق على {count} محدد",
+    applyTo: "تطبيق على المحدد ({count})",
     column: "العمود",
     value: "القيمة",
     apply: "تطبيق",
@@ -75,10 +75,10 @@ const STRINGS = {
     invalid: "بعض الخانات ليست أرقامًا صحيحة. صحّح الخانات المظللة.",
     skuTaken: "أحد رموز SKU مستخدم لمتغير آخر.",
     cancel: "إلغاء",
-    save: "حفظ {count} تغيير",
+    save: "حفظ التغييرات ({count})",
     noChanges: "لا توجد تغييرات",
     saving: "جارٍ الحفظ…",
-    saved: "تم تحديث {count} متغير.",
+    saved: "تم تحديث المتغيرات ({count}).",
   },
 } satisfies Messages;
 

@@ -14,7 +14,7 @@ const STRINGS = {
     hiddenHint: "Left out of the store's menus and collection lists. Its own link still opens.",
   },
   ar: {
-    showInHeader: "إظهار في هيدر المتجر",
+    showInHeader: "إظهار في رأس الصفحة",
     showInHeaderHint: "يضيف هذه المجموعة إلى القائمة أعلى متجرك.",
     hidden: "مخفية",
     hiddenHint: "لا تظهر في قوائم المتجر أو قوائم المجموعات. رابطها يفتح كالمعتاد.",

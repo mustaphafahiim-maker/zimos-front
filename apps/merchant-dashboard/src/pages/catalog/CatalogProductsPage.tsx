@@ -79,7 +79,7 @@ const STRINGS = {
   },
   ar: {
     title: "المنتجات",
-    description: "كل ما تبيعه — مع المتغيرات والعروض والمخزون.",
+    description: "كل ما تبيعه، مع المتغيرات والعروض والمخزون.",
     newProduct: "منتج جديد",
     filterLabel: "تصفية المنتجات حسب الحالة",
     tabAll: "الكل",
@@ -115,7 +115,7 @@ const STRINGS = {
     restoring: "جارٍ الاستعادة…",
     restoreHint: "يستعيد المنتج كمسودة",
     deletePermanently: "حذف نهائي",
-    restoredToast: "تمت استعادة “{name}” كمسودة. اجعله نشطًا عندما يكون جاهزًا للبيع.",
+    restoredToast: "تمت استعادة «{name}» كمسودة. اجعله نشطًا عندما يكون جاهزًا للبيع.",
   },
 } satisfies Messages;
 

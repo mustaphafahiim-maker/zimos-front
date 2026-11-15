@@ -54,7 +54,7 @@ const STRINGS = {
     confirming: "جارٍ التأكيد…",
     resend: "إرسال رمز جديد",
     sendFirst: "إرسال الرمز",
-    resendIn: "إرسال رمز جديد بعد {seconds} ثانية",
+    resendIn: "إرسال رمز جديد بعد {seconds} ث",
     sending: "جارٍ الإرسال…",
     channel: "أرسل الرمز إلى",
     byEmail: "البريد الإلكتروني {target}",

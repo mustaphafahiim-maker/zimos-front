@@ -19,8 +19,8 @@ const STRINGS = {
     moreLabel: "المزيد: {count}",
     empty_one: "واحدة فارغة",
     empty_two: "اثنتان فارغتان",
-    empty_few: "{n} فارغة",
-    empty_other: "{n} فارغة",
+    empty_few: "الفارغة: {n}",
+    empty_other: "الفارغة: {n}",
   },
 } satisfies Messages;
 

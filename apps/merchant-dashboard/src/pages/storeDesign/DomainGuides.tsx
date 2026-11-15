@@ -45,19 +45,19 @@ const STRINGS = {
     help: "Need more help? Contact us",
   },
   ar: {
-    title: "الخطوات عند مزوّد الدومين",
-    tabsLabel: "مزوّد الدومين",
+    title: "الخطوات لدى مزوّد النطاق",
+    tabsLabel: "مزوّد النطاق",
     godaddy: "GoDaddy",
     namecheap: "Namecheap",
     hostinger: "Hostinger",
     cloudflare: "Cloudflare DNS",
     recordsTitle: "أضف السجلين",
-    forwardTitle: "هل تريد أن يصل الزوار الذين يكتبون الدومين بدون www أيضًا؟",
-    forwardLead: "فعّل توجيه الدومين (Domain Forwarding) من {apex} إلى https://{www} عند مزوّد الدومين:",
+    forwardTitle: "هل تريد أن يصل الزوار الذين يكتبون النطاق بدون www أيضًا؟",
+    forwardLead: "فعّل توجيه النطاق (Domain Forwarding) من {apex} إلى https://{www} لدى مزوّد النطاق:",
     godaddyRecords:
       "سجّل الدخول وافتح My Products، ثم DNS بجوار {apex}.\nأضف سجل CNAME: الاسم {cnameName}، والقيمة {cnameValue}، وTTL ساعة أو أقل. إذا كان هناك سجل CNAME باسم www بالفعل (غالبًا يشير إلى @)، فعدّله بدلًا من إضافة سجل جديد.\nأضف سجل TXT: الاسم {txtName}، والقيمة {txtValue}.\nاحذف أي سجل A على الاسم {cnameName}.",
     godaddyForward:
-      "افتح صفحة DNS للدومين، ثم تبويب Forwarding.\nتحت Domain اختر Add Forwarding.\nالوجهة: https:// ثم {www}. النوع: Permanent (301). احفظ.",
+      "افتح صفحة DNS للنطاق، ثم تبويب Forwarding.\nتحت Domain اختر Add Forwarding.\nالوجهة: https:// ثم {www}. النوع: Permanent (301). احفظ.",
     namecheapRecords:
       "افتح Domain List، واختر Manage بجوار {apex}، ثم Advanced DNS.\nأضف CNAME Record: الـ Host هو {cnameName}، والقيمة {cnameValue}، وTTL على Automatic.\nأضف TXT Record: الـ Host هو {txtName}، والقيمة {txtValue}.\nاحذف أي سجل صفحة انتظار (parking) أو URL Redirect على الـ Host {cnameName}.",
     namecheapForward:
@@ -65,12 +65,12 @@ const STRINGS = {
     hostingerRecords:
       "من hPanel افتح Domains، واختر {apex}، ثم DNS / Nameservers.\nاحذف أولًا أي سجل A أو CNAME موجود على الاسم {cnameName}.\nأضف سجل CNAME: الاسم {cnameName}، والهدف {cnameValue}، وTTL 300.\nأضف سجل TXT: الاسم {txtName}، والقيمة {txtValue}.",
     hostingerForward:
-      "من hPanel افتح Domains، واختر {apex}، ثم Redirects (توجيه الدومين).\nوجّه إلى https://{www} بالنوع 301 (دائم). احفظ.",
+      "من hPanel افتح Domains، واختر {apex}، ثم Redirects (توجيه النطاق).\nوجّه إلى https://{www} بالنوع 301 (دائم). احفظ.",
     cloudflareRecords:
       "من لوحة Cloudflare افتح {apex}، ثم DNS، ثم Records.\nأضف سجل CNAME: الاسم {cnameName}، والهدف {cnameValue}. اجعل حالة الـ Proxy على DNS only (السحابة الرمادية)، وليس Proxied.\nأضف سجل TXT: الاسم {txtName}، والمحتوى {txtValue}.",
     cloudflareForward:
       "تأكد أن {apex} نفسه عليه سجل Proxied (السحابة البرتقالية)، مثل A @ 192.0.2.1.\nافتح Rules، ثم Redirect Rules، وأنشئ قاعدة: الـ hostname يساوي {apex}.\nثم: Static redirect إلى https://{www} بالحالة 301 مع الإبقاء على الـ query string. انشر القاعدة.",
-    note: "قد يستغرق انتشار التغييرات من بضع دقائق حتى 48 ساعة. إذا كان لدومينك سجل CAA، فيجب أن يسمح بـ letsencrypt.org وpki.goog وssl.com.",
+    note: "قد يستغرق انتشار التغييرات من بضع دقائق حتى 48 ساعة. إذا كان لنطاقك سجل CAA، فيجب أن يسمح بـ letsencrypt.org وpki.goog وssl.com.",
     help: "تحتاج مساعدة أكثر؟ تواصل معنا",
   },
 } satisfies Messages;

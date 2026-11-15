@@ -82,7 +82,7 @@ const STRINGS = {
     uploadVideo: "رفع مقطع فيديو",
     preparing: "جارٍ التجهيز…",
     uploading: "جارٍ رفع {i} من {n}…",
-    uploadedMany: "رُفعت {n} ملفات — اختر واحدًا.",
+    uploadedMany: "رُفعت الملفات ({n}) — اختر واحدًا منها.",
     pickImage: "استخدام الصورة المرفوعة {when}",
     pickVideo: "استخدام مقطع الفيديو المرفوع {when}",
     pickProduct: "استخدام هذه الصورة من {name}",

@@ -70,9 +70,9 @@ const STRINGS = {
   },
   ar: {
     title: "السجل الزمني",
-    description: "كل ما حدث لهذا الأوردر: تغييرات الحالة والتعديلات والملاحظات والرسائل والـ webhooks وتحديثات شركة الشحن.",
+    description: "كل ما حدث لهذا الطلب: تغييرات الحالة والتعديلات والملاحظات والرسائل والـ webhooks وتحديثات شركة الشحن.",
     empty: "لا يوجد شيء مسجّل بعد.",
-    placed: "تم إنشاء الأوردر",
+    placed: "تم إنشاء الطلب",
     by_user: "بواسطة {name}",
     by_userUnknown: "بواسطة أحد أعضاء الفريق",
     by_system: "تلقائيًا",
@@ -100,9 +100,9 @@ const STRINGS = {
     message_whatsapp: "رسالة واتساب إلى العميل",
     message_bot: "من مساعد واتساب",
     "a_order.update": "تعديل العنوان أو الملاحظات",
-    "a_order.meta_update": "تغيير التاجز أو العلامات",
-    "a_order.archive": "تمت أرشفة الأوردر",
-    "a_order.unarchive": "تم استرجاع الأوردر من الأرشيف",
+    "a_order.meta_update": "تغيير الوسوم أو العلامات",
+    "a_order.archive": "تمت أرشفة الطلب",
+    "a_order.unarchive": "تم استرجاع الطلب من الأرشيف",
     "a_order.financial_state_change": "تغيّرت حالة الدفع",
     "a_order.payment_received": "تم استلام دفعة",
     "a_order.payment_expired": "انتهت مهلة الدفع",
@@ -114,7 +114,7 @@ const STRINGS = {
     "a_refund.create": "تم تسجيل استرداد",
     waybill: "رقم التتبع {number}",
     courier: "شركة الشحن: {name}",
-    tags: "التاجز: {tags}",
+    tags: "الوسوم: {tags}",
   },
 } satisfies Messages;
 

@@ -7,8 +7,8 @@ import { getIntlLocale } from "@/i18n/LocaleContext";
  * only needs `one` and `other`. `{n}` in the chosen form is replaced by the
  * count with the language's digits.
  *
- *   plural(3, { one: "أوردر واحد", two: "أوردرين", few: "{n} أوردرات", other: "{n} أوردر" })
- *   → "٣ أوردرات"
+ *   plural(3, { one: "طلب واحد", two: "طلبان", few: "{n} طلبات", other: "{n} طلبًا" })
+ *   → "3 طلبات"
  */
 export type PluralForms = Partial<Record<Intl.LDMLPluralRule, string>> & { other: string };
 
@@ -41,9 +41,9 @@ export function pluralOf(strings: object, base: string, count: number): string {
 
 /**
  * The everyday counted words, written once so every screen says them the same
- * way: «دقيقة واحدة / دقيقتين / ٥ دقايق / ١١ دقيقة», «أوردر واحد / أوردرين /
- * ٣ أوردرات / ١١ أوردر» (re-audit N-10). Put the result into a template as a
- * whole word group: `fmt("باقي {left}", { left: countOf("minute", n) })`.
+ * way: «دقيقة واحدة / دقيقتان / 5 دقائق / 11 دقيقة», «طلب واحد / طلبان /
+ * 3 طلبات / 11 طلبًا» (re-audit N-10). Put the result into a template as a
+ * whole word group: `fmt("متبقٍّ {left}", { left: countOf("minute", n) })`.
  */
 const UNITS = {
   minute: {

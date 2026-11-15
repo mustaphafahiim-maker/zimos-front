@@ -111,8 +111,8 @@ describe("WhatsappSection: the plan", () => {
   it("says it in Arabic too", async () => {
     api.getWhatsappIntegration.mockResolvedValue({ connected: false, planLocked: true });
     renderWithProviders(<WhatsappSection />, { locale: "ar" });
-    expect(await screen.findByText("خطتك الحالية لا تشمل تأكيد الطلبات عبر واتساب. رقِّ خطتك لاستخدامها.")).toBeInTheDocument();
-    expect(screen.getByText("عرض الخطط").closest("a")).toHaveAttribute("href", "/subscription");
+    expect(await screen.findByText("باقتك الحالية لا تشمل تأكيد الطلبات عبر واتساب. رقِّ باقتك لاستخدامها.")).toBeInTheDocument();
+    expect(screen.getByText("عرض الباقات").closest("a")).toHaveAttribute("href", "/subscription");
   });
 
   it("names the plan, not the member's role, when the server refuses the connection for the plan", async () => {

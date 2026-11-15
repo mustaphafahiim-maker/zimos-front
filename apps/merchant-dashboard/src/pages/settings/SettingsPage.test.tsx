@@ -122,6 +122,6 @@ describe("SettingsPage team invitations", () => {
 
   it("asks for it in Arabic on an Arabic dashboard", async () => {
     await invite("ar", planLacksStaff());
-    expect(await screen.findByText("خطتك الحالية لا تشمل «حسابات الفريق». رقِّ خطتك من قسم خطتي لاستخدامها.")).toBeInTheDocument();
+    expect(await screen.findByText("باقتك الحالية لا تشمل «حسابات الفريق». رقِّ باقتك من قسم «باقتي» لاستخدامها.")).toBeInTheDocument();
   });
 });

@@ -421,7 +421,7 @@ export const NAV_LABELS = {
     visitors: "الزوار",
     attribution: "مصادر المبيعات",
     realtime: "مباشر الآن",
-    subscription: "خطتي",
+    subscription: "باقتي",
     activity: "سجل النشاط",
     settings: "الإعدادات",
     support: "تواصل مع الدعم",
@@ -440,7 +440,7 @@ export const NAV_LABELS = {
     services: "الخدمات",
     referrals: "اكسب من الإحالة",
     shoppableImages: "الصور التفاعلية",
-    courses: "الكورسات",
+    courses: "الدورات",
     storeSettings: "إعدادات المتجر",
   },
 } satisfies Messages<NavKey>;
@@ -463,6 +463,6 @@ export const NAV_GROUP_LABELS = {
     marketing: "التسويق",
     store: "المتجر",
     analytics: "التحليلات",
-    money: "الفلوس والشحن",
+    money: "المالية والشحن",
   },
 } satisfies Messages<NavGroupKey>;

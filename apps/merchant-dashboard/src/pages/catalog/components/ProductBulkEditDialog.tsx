@@ -49,7 +49,7 @@ const STRINGS = {
     done: "{count} products updated.",
   },
   ar: {
-    title: "تعديل {count} منتج",
+    title: "تعديل المنتجات المحددة ({count})",
     description: "يُطبَّق فقط ما تغيّره هنا. كل شيء آخر يبقى كما هو.",
     status: "الحالة",
     keep: "بدون تغيير",
@@ -71,10 +71,10 @@ const STRINGS = {
     priceInvalid: "أدخل رقمًا صحيحًا.",
     nothing: "اختر تغييرًا واحدًا على الأقل.",
     cancel: "إلغاء",
-    apply: "تطبيق على {count} منتج",
+    apply: "تطبيق على المنتجات ({count})",
     applying: "جارٍ التطبيق…",
-    updating: "جارٍ تحديث {count} منتج…",
-    done: "تم تحديث {count} منتج.",
+    updating: "جارٍ تحديث المنتجات ({count})…",
+    done: "تم تحديث المنتجات ({count}).",
   },
 } satisfies Messages;
 

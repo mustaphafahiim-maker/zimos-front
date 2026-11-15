@@ -62,7 +62,7 @@ export const XS_ELEMENT_SPECS: Record<XsType, XsSpec> = {
         max: 8,
         fields: [
           { key: "image", label: "Picture", labelAr: "الصورة", kind: "image" },
-          { key: "phoneImage", label: "Picture on a phone (an upright one; empty uses the one above)", labelAr: "صورة للموبايل (طولية؛ الفارغة تستخدم الصورة السابقة)", kind: "image" },
+          { key: "phoneImage", label: "Picture on a phone (an upright one; empty uses the one above)", labelAr: "صورة للهاتف (طولية؛ إن تُركت فارغة تُستخدم الصورة السابقة)", kind: "image" },
           { key: "eyebrow", label: "Small line above the heading", labelAr: "سطر صغير فوق العنوان", kind: "text" },
           { key: "heading", label: "Heading", labelAr: "العنوان", kind: "text" },
           { key: "text", label: "Sentence under the heading", labelAr: "جملة تحت العنوان", kind: "textarea" },
@@ -275,7 +275,7 @@ export const XS_ELEMENT_SPECS: Record<XsType, XsSpec> = {
               { value: "return", label: "Returns", labelAr: "استرجاع" },
             ],
           },
-          { key: "image", label: "Your own icon (instead of the one above)", labelAr: "أيقونة خاصة بك (بدلا من الأيقونة السابقة)", kind: "image" },
+          { key: "image", label: "Your own icon (instead of the one above)", labelAr: "أيقونة خاصة بك (بدلًا من الأيقونة السابقة)", kind: "image" },
           { key: "title", label: "Title", labelAr: "العنوان", kind: "text" },
           { key: "text", label: "Text", labelAr: "النص", kind: "textarea" },
         ],
@@ -462,7 +462,7 @@ export const XS_ELEMENT_SPECS: Record<XsType, XsSpec> = {
             options: [
               { value: "moon", label: "Moon (sleep)", labelAr: "قمر (النوم)" },
               { value: "bottle", label: "Bottle (feeding)", labelAr: "رضّاعة (الرضاعة)" },
-              { value: "bag", label: "Bag (going out)", labelAr: "شنطة (الخروج)" },
+              { value: "bag", label: "Bag (going out)", labelAr: "حقيبة (الخروج)" },
               { value: "clock", label: "Clock (all day)", labelAr: "ساعة (اليوم كله)" },
               { value: "heart", label: "Heart", labelAr: "قلب" },
               { value: "star", label: "Star", labelAr: "نجمة" },
@@ -473,8 +473,8 @@ export const XS_ELEMENT_SPECS: Record<XsType, XsSpec> = {
           { key: "name", label: "Name of the need", labelAr: "اسم الاحتياج", kind: "text" },
           { key: "product", label: "The product (its address name, slug)", labelAr: "المنتج (اسمه في الرابط)", kind: "text", ltr: true },
           { key: "also", label: "Other products for it (slugs, separated by commas)", labelAr: "منتجات أخرى له (أسماؤها في الرابط، بينها فاصلة)", kind: "text", ltr: true },
-          { key: "image", label: "Picture (empty: the product's)", labelAr: "الصورة (الفارغة: صورة المنتج)", kind: "image" },
-          { key: "text", label: "Why it helps", labelAr: "إزاي بيساعد", kind: "textarea" },
+          { key: "image", label: "Picture (empty: the product's)", labelAr: "الصورة (إن تُركت فارغة: صورة المنتج)", kind: "image" },
+          { key: "text", label: "Why it helps", labelAr: "كيف يساعد", kind: "textarea" },
           { key: "points", label: "Points (one per line)", labelAr: "النقاط (كل نقطة في سطر)", kind: "textarea" },
         ],
       },
@@ -499,8 +499,8 @@ export const XS_ELEMENT_SPECS: Record<XsType, XsSpec> = {
         max: 12,
         fields: [
           { key: "video", label: "Video address (an .mp4 file)", labelAr: "رابط الفيديو (ملف mp4)", kind: "text", ltr: true },
-          { key: "image", label: "Picture before it plays (empty: the product's)", labelAr: "صورة قبل التشغيل (الفارغة: صورة المنتج)", kind: "image" },
-          { key: "product", label: "The product in it (its address name, slug)", labelAr: "المنتج اللي فيه (اسمه في الرابط)", kind: "text", ltr: true },
+          { key: "image", label: "Picture before it plays (empty: the product's)", labelAr: "صورة قبل التشغيل (إن تُركت فارغة: صورة المنتج)", kind: "image" },
+          { key: "product", label: "The product in it (its address name, slug)", labelAr: "المنتج الظاهر فيه (اسمه في الرابط)", kind: "text", ltr: true },
         ],
       },
     ],
@@ -517,7 +517,7 @@ export const XS_ELEMENT_SPECS: Record<XsType, XsSpec> = {
         label: "Cards",
         kind: "itemList",
         itemLabel: "Card",
-        itemLabelAr: "كارت",
+        itemLabelAr: "بطاقة",
         titleKey: "title",
         max: 8,
         fields: [
@@ -656,7 +656,7 @@ export const XS_FIELD_GROUPS: ReadonlyArray<{ id: XsFieldGroup; title: string; t
   { id: "pictures", title: "Pictures", titleAr: "الصور", hint: "The shape, size and corners of the pictures.", hintAr: "شكل الصور ومقاسها واستدارة حوافها." },
   { id: "buttons", title: "Buttons", titleAr: "الأزرار", hint: "The size and corners of the buttons.", hintAr: "حجم نص الأزرار واستدارة حوافها." },
   { id: "colours", title: "Colours", titleAr: "الألوان", hint: "Colours of this section only. Empty keeps the template's.", hintAr: "ألوان هذا القسم فقط. الحقل الفارغ يبقي لون القالب." },
-  { id: "wording", title: "Small wording", titleAr: "الكلمات الثابتة الصغيرة", hint: "Labels the section writes by itself: tabs, buttons, messages.", hintAr: "الكلمات التي يكتبها القسم تلقائيا: التبويبات والأزرار والرسائل." },
+  { id: "wording", title: "Small wording", titleAr: "الكلمات الثابتة الصغيرة", hint: "Labels the section writes by itself: tabs, buttons, messages.", hintAr: "الكلمات التي يكتبها القسم تلقائيًا: التبويبات والأزرار والرسائل." },
 ];
 const GROUP_OF_KEY: Record<string, XsFieldGroup> = {
   columns: "layout", height: "layout", flip: "layout", width: "layout", paddingTop: "layout", paddingBottom: "layout", gap: "layout", align: "layout",
@@ -711,7 +711,7 @@ export const XS_FIELD_AR: Record<string, string> = {
  */
 export const XS_CONTENT_AR: Record<string, string> = {
   slides: "الشرائح",
-  autoplay: "تغيير الشرائح تلقائيا",
+  autoplay: "تغيير الشرائح تلقائيًا",
   seconds: "عدد الثواني لكل شريحة",
   heading: "العنوان",
   "xs_banners.heading": "العنوان فوق الصور",
@@ -751,7 +751,7 @@ export const XS_CONTENT_AR: Record<string, string> = {
   button2Href: "الزر الثاني يذهب إلى",
   info: "بيانات التواصل",
   points: "النقاط",
-  countdownLabels: "النص تحت العداد (أيام، ساعات، دقائق، ثوان)",
+  countdownLabels: "النص تحت العداد (أيام، ساعات، دقائق، ثوانٍ)",
   url: "رابط الفيديو",
   "xs_products.text": "سطر تحت العنوان",
   discountLabel: "نص شارة الخصم",
@@ -759,37 +759,37 @@ export const XS_CONTENT_AR: Record<string, string> = {
   ctaLabel: "نص الزر",
   saveLabel: "نص التوفير",
   moreLabel: "النص قبل المنتجات الأخرى",
-  fallbackHref: "وجهة الزر لو المنتج مش موجود",
+  fallbackHref: "وجهة الزر إذا لم يكن المنتج موجودًا",
   cartLabel: "اسم زر السلة (يُقرأ لقارئ الشاشة)",
   "xs_journey.items": "الاحتياجات",
-  "xs_reels.items": "الفيديوهات",
+  "xs_reels.items": "مقاطع الفيديو",
 };
 
 /** Arabic for those fields' hints, by key: the same on every band that has the field. */
 export const XS_HINT_AR: Record<string, string> = {
-  columns: "الحقل الفارغ يبقي شكل القالب. الهاتف والجهاز اللوحي يعرضان أعمدة أقل دائما.",
+  columns: "الحقل الفارغ يبقي شكل القالب. الهاتف والجهاز اللوحي يعرضان أعمدة أقل دائمًا.",
   height: "الحقل الفارغ يبقي ارتفاع القالب.",
   width: "أقصى عرض للمحتوى على الشاشة العريضة.",
   paddingTop: "الحقل الفارغ يبقي مسافة القالب.",
   paddingBottom: "الحقل الفارغ يبقي مسافة القالب.",
   gap: "الحقل الفارغ يبقي مسافة القالب.",
-  headingSize: "العنوان الكبير للقسم. الحقل الفارغ يبقي حجم القالب، ويصغر تلقائيا على الهاتف.",
+  headingSize: "العنوان الكبير للقسم. الحقل الفارغ يبقي حجم القالب، ويصغر تلقائيًا على الهاتف.",
   titleSize: "عنوان كل بطاقة أو عنصر داخل القسم.",
   textSize: "الجُمل والسطور الصغيرة.",
   imageRatio: "كل صور القسم تأخذ هذا الشكل.",
-  imageHeight: "ارتفاع محدد بدلا من الشكل. اترك «شكل الصور» فارغا ليعمل.",
+  imageHeight: "ارتفاع محدد بدلًا من الشكل. اترك «شكل الصور» فارغًا ليعمل.",
   imageWidth: "الصورة الموجودة بجانب النص.",
-  buttonRadius: "صفر يعني حواف مربعة، و٣٠ أو أكثر يعني زرا على شكل كبسولة.",
+  buttonRadius: "صفر يعني حواف مربعة، و30 أو أكثر يعني زرًا على شكل كبسولة.",
   headingColor: "الحقل الفارغ يبقي لون القالب.",
-  backgroundColor: "لون واحد بدلا من لون القالب أو صورته.",
-  collection: "اسم القسم كما يظهر في الرابط (slug). اتركه فارغا لعرض أحدث المنتجات.",
+  backgroundColor: "لون واحد بدلًا من لون القالب أو صورته.",
+  collection: "اسم القسم كما يظهر في الرابط (slug). اتركه فارغًا لعرض أحدث المنتجات.",
   limit: "زر «تحميل المزيد» يعرض المنتجات التالية.",
   quickView: "عند إيقافه، يفتح النص الموجود على البطاقة صفحة المنتج.",
-  endsAt: "يظهر العداد حتى هذا الموعد. اتركه فارغا إذا لم ترد عدادا.",
+  endsAt: "يظهر العداد حتى هذا الموعد. اتركه فارغًا إذا لم ترد عدادًا.",
   url: "رابط يوتيوب أو فيميو، أو رابط ملف فيديو.",
-  discountLabel: "{percent} هي نسبة الخصم، و{amount} هو المبلغ اللي بيوفره.",
+  discountLabel: "{percent} هي نسبة الخصم، و{amount} هو المبلغ الذي يوفّره.",
   viewLabel: "{option} هو أول اختيار للمنتج (اللون، المقاس).",
-  saveLabel: "[amount] هو المبلغ اللي بيوفره المنتج عن سعره القديم.",
+  saveLabel: "[amount] هو المبلغ الذي يوفّره المنتج مقارنةً بسعره القديم.",
 };
 
 /** Arabic for those fields' choices (`key.value`), merged into the editor's option labels. */
@@ -802,7 +802,7 @@ export const XS_OPTION_AR: Record<string, string> = {
   "headingWeight.medium": "متوسط",
   "headingWeight.semibold": "شبه عريض",
   "headingWeight.bold": "عريض",
-  "headingWeight.black": "عريض جدا",
+  "headingWeight.black": "عريض جدًا",
   "imageRatio.1:1": "مربع (1:1)",
   "imageRatio.4:3": "عرضي (4:3)",
   "imageRatio.3:2": "عرضي (3:2)",
@@ -820,11 +820,11 @@ export const XS_OPTION_AR: Record<string, string> = {
   "variant.photos": "صور مقصوصة مربعة",
   "variant.logos": "شعارات تظهر كاملة",
   "layout.grid": "شبكة على عدة صفوف",
-  "layout.slider": "صف واحد يمرر جانبيا",
+  "layout.slider": "صف واحد يُمرَّر جانبيًا",
 };
 
 export const XS_LABEL_AR: Record<XsType, string> = {
-  xs_slider: "سلايدر صور (شكل قالب)",
+  xs_slider: "عرض شرائح (شكل قالب)",
   xs_banners: "بانرات أقسام (شكل قالب)",
   xs_products: "شبكة منتجات (شكل قالب)",
   xs_title: "بانر عنوان الصفحة (شكل قالب)",
@@ -834,17 +834,17 @@ export const XS_LABEL_AR: Record<XsType, string> = {
   xs_showcase: "منتجات مع مقدمة (شكل قالب)",
   xs_features: "أسباب بأيقونات (شكل قالب)",
   xs_split: "ثلاث صور وقائمة (شكل قالب)",
-  xs_minis: "كروت منتجات صغيرة (شكل قالب)",
+  xs_minis: "بطاقات منتجات صغيرة (شكل قالب)",
   xs_quotes: "آراء العملاء (شكل قالب)",
   xs_gallery: "صف صور (شكل قالب)",
   xs_newsletter: "اشتراك النشرة البريدية (شكل قالب)",
   xs_team: "فريق العمل (شكل قالب)",
   xs_video: "فيديو (شكل قالب)",
   xs_posts: "بطاقات مقالات (شكل قالب)",
-  xs_rail: "شمّاعة الملابس (شكل قالب)",
-  xs_stack: "كروت متراصّة تتقلّب (شكل قالب)",
-  xs_journey: "اختاري حسب احتياجك (شكل قالب)",
-  xs_reels: "فيديوهات المنتجات (شكل قالب)",
+  xs_rail: "علّاقة الملابس (شكل قالب)",
+  xs_stack: "بطاقات متراصّة تتقلّب (شكل قالب)",
+  xs_journey: "اختيار حسب الاحتياج (شكل قالب)",
+  xs_reels: "مقاطع فيديو المنتجات (شكل قالب)",
 };
 
 /** Where in the library each kind of band is offered — beside Zimos's own blocks of that kind. */
@@ -903,9 +903,9 @@ const XS_TEMPLATES: XsTemplate[] = [
       {
         type: "xs_slider",
         label: "Slider 01",
-        labelAr: "سلايدر ٠١",
+        labelAr: "عرض شرائح ٠١",
         description: "Full-height pictures with a small line, a large serif heading and a rounded button that drop in one after the other.",
-        descriptionAr: "صور بارتفاع الشاشة فوقها سطر صغير وعنوان كبير وزر دائري، يظهرون واحدًا بعد الآخر.",
+        descriptionAr: "صور بارتفاع الشاشة، فوق كل منها سطر صغير وعنوان كبير وزر دائري، تظهر واحدة بعد الأخرى.",
         content: {
           slides: [
             { image: art("01", "slide-01.jpg"), eyebrow: "Women Collection 2018", heading: "NEW SEASON", buttonLabel: "Shop Now", buttonHref: "/products" },
@@ -933,7 +933,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Product grid 01",
         labelAr: "شبكة منتجات ٠١",
         description: "Your own products in four columns under tabs of your collections, with a search and a Load more button; tall pictures zoom on hover.",
-        descriptionAr: "منتجاتك في أربعة أعمدة تحت تبويبات أقسامك، مع بحث وزر تحميل المزيد، والصور تكبر عند المرور.",
+        descriptionAr: "منتجاتك في أربعة أعمدة تحت تبويبات أقسامك، مع بحث وزر «تحميل المزيد»، والصور تكبر عند المرور.",
         content: { allLabel: "All Products", searchLabel: "Search", searchPlaceholder: "Search", loadMoreLabel: "Load More", viewLabel: "Quick View", openLabel: "Add to cart", heading: "Product Overview", limit: 8 },
       },
       {
@@ -1088,9 +1088,9 @@ const XS_TEMPLATES: XsTemplate[] = [
       {
         type: "xs_minis",
         label: "Small cards 02",
-        labelAr: "كروت صغيرة ٠٢",
+        labelAr: "بطاقات صغيرة ٠٢",
         description: "Three of your products as small cards side by side: a picture on a tinted square, the name and a link.",
-        descriptionAr: "ثلاثة من منتجاتك في كروت صغيرة متجاورة: صورة على مربع ملوّن، والاسم ورابط.",
+        descriptionAr: "ثلاثة من منتجاتك في بطاقات صغيرة متجاورة: صورة على مربع ملوّن، والاسم ورابط.",
         content: { limit: 3, linkLabel: "Read More" },
       },
       {
@@ -1211,7 +1211,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Contact 02",
         labelAr: "تواصل ٠٢",
         description: "A message form on a white rounded card beside your address, phone and email. Messages arrive in your Contacts.",
-        descriptionAr: "نموذج رسالة على كارت أبيض بحواف دائرية بجانب عنوانك وهاتفك وبريدك. الرسائل تصل إلى جهات الاتصال.",
+        descriptionAr: "نموذج رسالة على بطاقة بيضاء بحواف دائرية بجانب عنوانك وهاتفك وبريدك. الرسائل تصل إلى جهات الاتصال.",
         content: {
           heading: "Get In Touch",
           contactPlaceholder: "Email address",
@@ -1702,9 +1702,9 @@ const XS_TEMPLATES: XsTemplate[] = [
       {
         type: "xs_banners",
         label: "Category cards 06",
-        labelAr: "كروت أقسام ٠٦",
+        labelAr: "بطاقات أقسام ٠٦",
         description: "Framed cards, each with a small count over a picture that zooms on hover and the category's name beneath.",
-        descriptionAr: "كروت بإطار، في كل كارت عدد صغير فوق صورة تكبر عند المرور واسم القسم تحتها.",
+        descriptionAr: "بطاقات بإطار، في كل بطاقة عدد صغير فوق صورة تكبر عند المرور، واسم القسم تحتها.",
         content: {
           variant: "card",
           items: [
@@ -1733,7 +1733,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Product grid 06",
         labelAr: "شبكة منتجات ٠٦",
         description: "A centred heading between two short rules, over four columns of your products in framed cards.",
-        descriptionAr: "عنوان في المنتصف بين خطين قصيرين، فوق أربعة أعمدة من منتجاتك في كروت بإطار.",
+        descriptionAr: "عنوان في المنتصف بين خطين قصيرين، فوق أربعة أعمدة من منتجاتك في بطاقات بإطار.",
         content: { allLabel: "All Products", searchLabel: "Search", loadMoreLabel: "Load More", searchPlaceholder: "Search by name", viewLabel: "View Detail", openLabel: "Add To Cart", heading: "Trandy Products", limit: 8, showTabs: false, showSearch: false },
       },
       {
@@ -1790,7 +1790,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Promises 07",
         labelAr: "وعود ٠٧",
         description: "Four pale rounded cards, each with a line icon on an orange disc, a title and a line.",
-        descriptionAr: "أربعة كروت فاتحة بحواف دائرية، في كل كارت أيقونة على دائرة برتقالية وعنوان وسطر.",
+        descriptionAr: "أربع بطاقات فاتحة بحواف دائرية، في كل بطاقة أيقونة على دائرة برتقالية وعنوان وسطر.",
         content: {
           items: [
             { icon: "truck", image: art("07", "ico-1.svg"), title: "Free Shipping", text: "Free on orders over EGP 300" },
@@ -1805,15 +1805,15 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Product grid 07",
         labelAr: "شبكة منتجات ٠٧",
         description: "A bold heading with your collections as rounded pills across from it, over rounded product cards with an orange outline.",
-        descriptionAr: "عنوان عريض ومقابله أقسامك كأزرار دائرية، فوق كروت منتجات بحواف دائرية وإطار برتقالي.",
+        descriptionAr: "عنوان عريض ومقابله أقسامك كأزرار دائرية، فوق بطاقات منتجات بحواف دائرية وإطار برتقالي.",
         content: { searchLabel: "Search", viewLabel: "Quick View", allLabel: "All Products", searchPlaceholder: "keywords", loadMoreLabel: "View More", openLabel: "Add to cart", heading: "Our Organic Products", limit: 8, showSearch: false },
       },
       {
         type: "xs_banners",
         label: "Offer cards 07",
-        labelAr: "كروت عروض ٠٧",
+        labelAr: "بطاقات عروض ٠٧",
         description: "Three rounded cards in green, slate and orange, each a picture with a white label set into its lower edge.",
-        descriptionAr: "ثلاثة كروت بحواف دائرية بالأخضر والرمادي والبرتقالي، في كل كارت صورة وتحتها بطاقة بيضاء.",
+        descriptionAr: "ثلاث بطاقات بحواف دائرية بالأخضر والرمادي والبرتقالي، في كل منها صورة وتحتها لوحة بيضاء.",
         content: {
           variant: "card",
           items: [
@@ -1842,7 +1842,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Quotes 07",
         labelAr: "آراء ٠٧",
         description: "Your customers' words on a pale rounded card, one at a time, with a rule and the customer's picture and name beneath.",
-        descriptionAr: "آراء عملائك على كارت فاتح بحواف دائرية، واحدًا بعد الآخر، وتحتها خط وصورة العميل واسمه.",
+        descriptionAr: "آراء عملائك على بطاقة فاتحة بحواف دائرية، واحدًا بعد الآخر، وتحتها خط وصورة العميل واسمه.",
         content: {
           heading: "Our Client Saying!",
           items: [
@@ -1865,7 +1865,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Contact 07",
         labelAr: "تواصل ٠٧",
         description: "A message form on a pale rounded card beside your address, email and phone. Messages arrive in your Contacts.",
-        descriptionAr: "نموذج رسالة على كارت فاتح بحواف دائرية بجانب عنوانك وبريدك وهاتفك. الرسائل تصل إلى جهات الاتصال.",
+        descriptionAr: "نموذج رسالة على بطاقة فاتحة بحواف دائرية بجانب عنوانك وبريدك وهاتفك. الرسائل تصل إلى جهات الاتصال.",
         content: {
           heading: "Get in touch",
           contactPlaceholder: "Enter Your Email",
@@ -1889,7 +1889,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Hero 08",
         labelAr: "واجهة ٠٨",
         description: "A very large dark heading, a paragraph and an orange gradient pill button on a pale photograph, with a product picture beside them.",
-        descriptionAr: "عنوان غامق كبير جدًا وفقرة وزر برتقالي متدرج على صورة فاتحة، وبجانبهم صورة منتج.",
+        descriptionAr: "عنوان غامق كبير جدًا وفقرة وزر برتقالي متدرج على صورة فاتحة، وبجانبها صورة منتج.",
         content: { heading: "Nike New Collection!", text: "Discover the latest sneakers, designed to bring comfort, performance and style together. Your next step starts here.", buttonLabel: "Shop Now", buttonHref: "/products", image: art("08", "banner-img.png") },
       },
       {
@@ -1976,7 +1976,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Hero 09",
         labelAr: "واجهة ٠٩",
         description: "A tall pale band with a large plum heading, a line and a mauve button, and a product picture on the other side.",
-        descriptionAr: "قسم طويل فاتح فيه عنوان بنفسجي كبير وسطر وزر موف، وفي الجهة الأخرى صورة منتج.",
+        descriptionAr: "قسم طويل فاتح فيه عنوان بنفسجي كبير وسطر وزر ليلكي، وفي الجهة الأخرى صورة منتج.",
         content: { heading: "Best quality pillow", text: "Deeper sleep and lasting comfort with pillows designed to support your neck and back.", buttonLabel: "Shop Now", buttonHref: "/products", image: art("09", "banner_img.png") },
       },
       {
@@ -1998,7 +1998,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Product grid 09",
         labelAr: "شبكة منتجات ٠٩",
         description: "A centred heading over four columns of your products on pale squares, with mauve prices.",
-        descriptionAr: "عنوان في المنتصف فوق أربعة أعمدة من منتجاتك على مربعات فاتحة، والأسعار بلون موف.",
+        descriptionAr: "عنوان في المنتصف فوق أربعة أعمدة من منتجاتك على مربعات فاتحة، والأسعار بلون ليلكي.",
         content: { allLabel: "All Products", searchLabel: "Search", viewLabel: "Quick View", openLabel: "Add to cart", searchPlaceholder: "Search keyword", loadMoreLabel: "Load More", heading: "Trending Items", limit: 8, showTabs: false, showSearch: false },
       },
       {
@@ -2019,7 +2019,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Promises 09",
         labelAr: "وعود ٠٩",
         description: "A heading and a paragraph, then four soft pale cards with a line icon and a title each.",
-        descriptionAr: "عنوان وفقرة، ثم أربعة كروت فاتحة ناعمة في كل كارت أيقونة وعنوان.",
+        descriptionAr: "عنوان وفقرة، ثم أربع بطاقات فاتحة ناعمة، في كل بطاقة أيقونة وعنوان.",
         content: {
           heading: "Your comfort deserves materials without compromise",
           text: "Our pillows are made of high-density memory foam and soft washable fabrics for ideal support and comfort that lasts for years. Every piece passes a careful quality check before it reaches your home.",
@@ -2069,7 +2069,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Contact 09",
         labelAr: "تواصل ٠٩",
         description: "A message form with a mauve button beside your address, phone and email. Messages arrive in your Contacts.",
-        descriptionAr: "نموذج رسالة بزر موف بجانب عنوانك وهاتفك وبريدك. الرسائل تصل إلى جهات الاتصال.",
+        descriptionAr: "نموذج رسالة بزر ليلكي بجانب عنوانك وهاتفك وبريدك. الرسائل تصل إلى جهات الاتصال.",
         content: {
           heading: "Get in Touch",
           contactPlaceholder: "Enter email address",
@@ -2444,7 +2444,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Hero 13",
         labelAr: "واجهة ١٣",
         description: "A small spaced-out line, a large heading and a blue gradient pill button on a pale photograph, with the product beside them.",
-        descriptionAr: "سطر صغير متباعد الحروف وعنوان كبير وزر أزرق متدرج على صورة فاتحة، وبجانبهم المنتج.",
+        descriptionAr: "سطر صغير متباعد الحروف وعنوان كبير وزر أزرق متدرج على صورة فاتحة، وبجانبها المنتج.",
         content: { heading: "Smart New Future", text: "Now you can feel the Heat", buttonLabel: "Buy Now", buttonHref: "/products", image: art("13", "header-img.png") },
       },
       {
@@ -2493,7 +2493,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Reviews 13",
         labelAr: "تقييمات ١٣",
         description: "Your customers' words on a white card on a pale ground, one at a time.",
-        descriptionAr: "آراء عملائك على كارت أبيض فوق خلفية فاتحة، واحدًا بعد الآخر.",
+        descriptionAr: "آراء عملائك على بطاقة بيضاء فوق خلفية فاتحة، واحدًا بعد الآخر.",
         content: {
           heading: "What our customers say",
           items: [
@@ -2582,7 +2582,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Product grid 14",
         labelAr: "شبكة منتجات ١٤",
         description: "A centred serif heading over a red bar, then three columns of your products on pale cards in a white frame, with a red button under the grid.",
-        descriptionAr: "عنوان في المنتصف تحته شرطة حمراء، ثم ثلاثة أعمدة من منتجاتك على كروت فاتحة بإطار أبيض، وتحت الشبكة زر أحمر.",
+        descriptionAr: "عنوان في المنتصف تحته شرطة حمراء، ثم ثلاثة أعمدة من منتجاتك على بطاقات فاتحة بإطار أبيض، وتحت الشبكة زر أحمر.",
         content: { allLabel: "All Products", searchLabel: "Search", searchPlaceholder: "Search", loadMoreLabel: "View All products", viewLabel: "Buy Now", openLabel: "Add To Cart", heading: "Our products", linkLabel: "View All products", linkHref: "/products", limit: 12, showTabs: false, showSearch: false },
       },
       {
@@ -2702,7 +2702,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Product row 15",
         labelAr: "صف منتجات ١٥",
         description: "A capital heading with your collections as red-underlined tabs across from it, over one row of framed product cards to slide along; a card takes a red ring and a red pill button on hover.",
-        descriptionAr: "عنوان بحروف كبيرة ومقابله أقسامك كتبويبات تحتها خط أحمر، فوق صف واحد من كروت منتجات بإطار يتحرك بالأسهم، والكارت يأخذ إطارًا أحمر وزرًا أحمر عند المرور.",
+        descriptionAr: "عنوان بحروف كبيرة ومقابله أقسامك كتبويبات تحتها خط أحمر، فوق صف واحد من بطاقات منتجات بإطار يتحرك بالأسهم، وتأخذ البطاقة إطارًا أحمر وزرًا أحمر عند المرور.",
         content: { loadMoreLabel: "Load More", allLabel: "All Categories", searchLabel: "Search", searchPlaceholder: "Search here", viewLabel: "quick view", openLabel: "add to cart", heading: "New Products", limit: 8, layout: "slider", showSearch: false },
       },
       {
@@ -2782,7 +2782,7 @@ const XS_TEMPLATES: XsTemplate[] = [
       {
         type: "xs_slider",
         label: "Slider 16",
-        labelAr: "سلايدر ١٦",
+        labelAr: "عرض شرائح ١٦",
         description: "Wide pictures with a very large white heading, a sentence and a red pill button low on the picture.",
         descriptionAr: "صور عريضة عليها عنوان أبيض كبير جدًا وجملة وزر أحمر بيضاوي في أسفل الصورة.",
         content: {
@@ -2812,15 +2812,15 @@ const XS_TEMPLATES: XsTemplate[] = [
       {
         type: "xs_products",
         label: "Product cards 16",
-        labelAr: "كروت منتجات ١٦",
+        labelAr: "بطاقات منتجات ١٦",
         description: "A bold heading over four white cards with a soft shadow: a tall rounded picture, the name, the price (red when marked down) and a full-width red pill button.",
-        descriptionAr: "عنوان عريض فوق أربعة كروت بيضاء بظل خفيف: صورة طولية بحواف دائرية واسم المنتج وسعره (بالأحمر لو عليه خصم) وزر أحمر بيضاوي بعرض الكارت.",
+        descriptionAr: "عنوان عريض فوق أربع بطاقات بيضاء بظل خفيف: صورة طولية بحواف دائرية واسم المنتج وسعره (بالأحمر إذا كان عليه خصم) وزر أحمر بيضاوي بعرض البطاقة.",
         content: { allLabel: "All Products", loadMoreLabel: "Load More", viewLabel: "Quick View", searchLabel: "Search", searchPlaceholder: "Search for products...", openLabel: "Add to Cart", heading: "Popular products", limit: 4, showTabs: false, showSearch: false },
       },
       {
         type: "xs_products",
         label: "Product cards 16",
-        labelAr: "كروت منتجات ١٦",
+        labelAr: "بطاقات منتجات ١٦",
         description: "",
         descriptionAr: "",
         content: { allLabel: "All Products", loadMoreLabel: "Load More", viewLabel: "Quick View", searchLabel: "Search", searchPlaceholder: "Search for products...", openLabel: "Add to Cart", heading: "Latest products", limit: 4, showTabs: false, showSearch: false },
@@ -2876,7 +2876,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Page title 16",
         labelAr: "عنوان صفحة ١٦",
         description: "The page's name in dark semi-bold letters on white; given a picture, it turns white and centred under a dark veil.",
-        descriptionAr: "اسم الصفحة بحروف داكنة على خلفية بيضاء، ولو أضفت صورة يصبح أبيض في المنتصف فوق طبقة داكنة.",
+        descriptionAr: "اسم الصفحة بحروف داكنة على خلفية بيضاء، وإذا أضفت صورة يصبح أبيض في المنتصف فوق طبقة داكنة.",
         content: { heading: "Contact", image: "" },
         page: { path: "/contact", title: "Contact" },
       },
@@ -2885,7 +2885,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Contact 16",
         labelAr: "تواصل ١٦",
         description: "A message form with pill-shaped fields and a red pill button in one white shadowed card, and your address, phone and email in the card beside it. Messages arrive in your Contacts.",
-        descriptionAr: "نموذج رسالة بخانات بيضاوية وزر أحمر بيضاوي في كارت أبيض بظل، وعنوانك وهاتفك وبريدك في الكارت المجاور. الرسائل تصل إلى جهات الاتصال.",
+        descriptionAr: "نموذج رسالة بخانات بيضاوية وزر أحمر بيضاوي في بطاقة بيضاء بظل، وعنوانك وهاتفك وبريدك في البطاقة المجاورة. الرسائل تصل إلى جهات الاتصال.",
         content: {
           heading: "Contact Us",
           contactPlaceholder: "Enter your email address",
@@ -2908,7 +2908,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Hero 17",
         labelAr: "واجهة ١٧",
         description: "A large bold heading, a paragraph and two square buttons, one orange and one black, on a pale grey ground, with a cut-out picture beside them.",
-        descriptionAr: "عنوان عريض كبير وفقرة وزران مربعان، برتقالي وأسود، على خلفية رمادية فاتحة، وبجانبهم صورة مفرّغة.",
+        descriptionAr: "عنوان عريض كبير وفقرة وزران مربعان، برتقالي وأسود، على خلفية رمادية فاتحة، وبجانبها صورة مفرّغة.",
         content: {
           heading: "Welcome to Our Fruits Shop",
           text: "We pick our fruit from the best farms and sort it by hand, piece by piece, so it reaches you fresh, juicy and full of flavour, with fast delivery that keeps it at its best.",
@@ -2924,7 +2924,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Services 17",
         labelAr: "خدمات ١٧",
         description: "A centred bold heading and line, then three outlined cards with a small black icon, an orange title and a paragraph each; an orange bar tops the card under the pointer.",
-        descriptionAr: "عنوان عريض وسطر في المنتصف، ثم ثلاثة كروت بإطار في كل كارت أيقونة سوداء صغيرة وعنوان برتقالي وفقرة، ويظهر شريط برتقالي أعلى الكارت عند المرور.",
+        descriptionAr: "عنوان عريض وسطر في المنتصف، ثم ثلاث بطاقات بإطار، في كل بطاقة أيقونة سوداء صغيرة وعنوان برتقالي وفقرة، ويظهر شريط برتقالي أعلى البطاقة عند المرور.",
         content: {
           heading: "Our Services",
           text: "Fresh, hand-picked fruit, from the farm to your door every day.",
@@ -3041,7 +3041,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Menu grid 21",
         labelAr: "شبكة المنيو ٢١",
         description: "Your collections as bold tabs in the middle, over small cards of your products: a picture on a red block with the name and a large white price.",
-        descriptionAr: "أقسامك كتبويبات عريضة في المنتصف، وتحتها كروت صغيرة لمنتجاتك: صورة فوق مستطيل أحمر عليه الاسم والسعر بالأبيض.",
+        descriptionAr: "أقسامك كتبويبات عريضة في المنتصف، وتحتها بطاقات صغيرة لمنتجاتك: صورة فوق مستطيل أحمر عليه الاسم والسعر بالأبيض.",
         content: { searchLabel: "Search", searchPlaceholder: "Search", loadMoreLabel: "Load More", viewLabel: "Quick View", openLabel: "Add to cart", limit: 8, showSearch: false, allLabel: "All" },
       },
       {
@@ -3180,7 +3180,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Menu grid 21",
         labelAr: "شبكة المنيو ٢١",
         description: "Your collections as bold tabs in the middle, over small cards of your products: a picture on a red block with the name and a large white price.",
-        descriptionAr: "أقسامك كتبويبات عريضة في المنتصف، وتحتها كروت صغيرة لمنتجاتك: صورة فوق مستطيل أحمر عليه الاسم والسعر بالأبيض.",
+        descriptionAr: "أقسامك كتبويبات عريضة في المنتصف، وتحتها بطاقات صغيرة لمنتجاتك: صورة فوق مستطيل أحمر عليه الاسم والسعر بالأبيض.",
         content: { searchLabel: "Search", searchPlaceholder: "Search", loadMoreLabel: "Load More", viewLabel: "Quick View", openLabel: "Add to cart", limit: 12, showSearch: false, allLabel: "All" },
         page: { path: "/menu", title: "Menu" },
         library: false,
@@ -3193,9 +3193,9 @@ const XS_TEMPLATES: XsTemplate[] = [
       {
         type: "xs_slider",
         label: "Slider 18",
-        labelAr: "سلايدر ١٨",
+        labelAr: "عرض شرائح ١٨",
         description: "A dark photograph to the foot of the screen under a clear bar, with a large white script heading, a small paragraph and a yellow pill button on its start side, and two round yellow arrows beneath.",
-        descriptionAr: "صورة داكنة بارتفاع الشاشة وشريط القائمة شفاف فوقها، وفي جانبها عنوان أبيض كبير بخط يدوي وفقرة صغيرة وزر أصفر دائري، وتحتهم سهمان أصفران دائريان.",
+        descriptionAr: "صورة داكنة بارتفاع الشاشة وشريط القائمة شفاف فوقها، وفي جانبها عنوان أبيض كبير بخط يدوي وفقرة صغيرة وزر أصفر دائري، وتحتها سهمان أصفران دائريان.",
         content: {
           slides: [
             { image: art("18", "hero-bg.jpg"), heading: "Fast Food Restaurant", text: "Juicy burgers, hot pizza from the oven and crispy fries, freshly made for you in minutes. Order now and enjoy your meal hot wherever you are.", buttonLabel: "Order Now", buttonHref: "/menu" },
@@ -3209,7 +3209,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Offers 18",
         labelAr: "عروض ١٨",
         description: "Two dark cards side by side, each a round picture in a yellow ring beside a script title, a large discount line and a yellow pill link.",
-        descriptionAr: "كارتان داكنان متجاوران، في كل كارت صورة دائرية بإطار أصفر وبجانبها عنوان بخط يدوي وسطر خصم كبير وزر أصفر دائري.",
+        descriptionAr: "بطاقتان داكنتان متجاورتان، في كل بطاقة صورة دائرية بإطار أصفر وبجانبها عنوان بخط يدوي وسطر خصم كبير وزر أصفر دائري.",
         content: {
           items: [
             { image: art("18", "o1.jpg"), title: "Tasty Thursdays", text: "20% Off", linkLabel: "Order Now", href: "/menu" },
@@ -3222,7 +3222,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Menu 18",
         labelAr: "قائمة الطعام ١٨",
         description: "A centred script heading and your collections as rounded pills, over three columns of dark rounded cards: each dish on a pale top, its name and price beneath and a round yellow button beside the price.",
-        descriptionAr: "عنوان بخط يدوي في المنتصف وأقسامك كأزرار دائرية، فوق ثلاثة أعمدة من كروت داكنة بحواف دائرية: صورة الطبق على خلفية فاتحة، وتحتها الاسم والسعر وبجانب السعر زر أصفر دائري.",
+        descriptionAr: "عنوان بخط يدوي في المنتصف وأقسامك كأزرار دائرية، فوق ثلاثة أعمدة من بطاقات داكنة بحواف دائرية: صورة الطبق على خلفية فاتحة، وتحتها الاسم والسعر وبجانب السعر زر أصفر دائري.",
         content: { searchLabel: "Search", searchPlaceholder: "Search", viewLabel: "Quick View", openLabel: "Add to cart", allLabel: "All", loadMoreLabel: "View More", heading: "Our Menu", limit: 9, showSearch: false },
       },
       {
@@ -3256,7 +3256,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Quotes 18",
         labelAr: "آراء ١٨",
         description: "A centred script heading over your customers' words on a dark card, one at a time, with the customer's picture in a yellow ring hanging under the card and two round yellow arrows.",
-        descriptionAr: "عنوان بخط يدوي في المنتصف وتحته آراء عملائك على كارت داكن، واحدًا بعد الآخر، وأسفل الكارت صورة العميل بإطار أصفر وسهمان أصفران دائريان.",
+        descriptionAr: "عنوان بخط يدوي في المنتصف وتحته آراء عملائك على بطاقة داكنة، واحدًا بعد الآخر، وأسفل البطاقة صورة العميل بإطار أصفر وسهمان أصفران دائريان.",
         content: {
           heading: "What Says Our Customers",
           items: [
@@ -3345,7 +3345,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Hero 20",
         labelAr: "واجهة ٢٠",
         description: "A very large white heading, a paragraph and a square amber button on a darkened photograph, with a round plate turning slowly beside them.",
-        descriptionAr: "عنوان أبيض كبير جدًا وفقرة وزر كهرماني مربع فوق صورة داكنة، وبجانبهم طبق دائري يدور ببطء.",
+        descriptionAr: "عنوان أبيض كبير جدًا وفقرة وزر كهرماني مربع فوق صورة داكنة، وبجانبها طبق دائري يدور ببطء.",
         content: { heading: "Enjoy Our Delicious Meal", text: "Fresh dishes made by our master chefs with carefully chosen ingredients, in a warm setting made for family and friends.", buttonLabel: "Book A Table", buttonHref: "/contact", image: art("20", "hero.png") },
       },
       {
@@ -3417,7 +3417,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Chefs 20",
         labelAr: "الطهاة ٢٠",
         description: "A script line and a bold centred heading over four shadowed cards, each a round portrait, a name and a role.",
-        descriptionAr: "سطر بخط يدوي وعنوان عريض في المنتصف فوق أربعة كروت بظل خفيف، في كل كارت صورة دائرية واسم ووظيفة.",
+        descriptionAr: "سطر بخط يدوي وعنوان عريض في المنتصف فوق أربع بطاقات بظل خفيف، في كل بطاقة صورة دائرية واسم ووظيفة.",
         content: {
           heading: "Our Master Chefs",
           text: "Team Members",
@@ -3434,7 +3434,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Quotes 20",
         labelAr: "آراء ٢٠",
         description: "Your customers' words on an amber card, one at a time, with the customer's round picture, name and line beneath and ringed dots under the card.",
-        descriptionAr: "آراء عملائك على كارت كهرماني، واحدًا بعد الآخر، وتحتها صورة العميل الدائرية واسمه وسطر عنه، ونقاط دائرية أسفل الكارت.",
+        descriptionAr: "آراء عملائك على بطاقة كهرمانية، واحدًا بعد الآخر، وتحتها صورة العميل الدائرية واسمه وسطر عنه، ونقاط دائرية أسفل البطاقة.",
         content: {
           heading: "Our Clients Say!!!",
           items: [
@@ -3474,7 +3474,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Chefs 20",
         labelAr: "الطهاة ٢٠",
         description: "A script line and a bold centred heading over four shadowed cards, each a round portrait, a name and a role.",
-        descriptionAr: "سطر بخط يدوي وعنوان عريض في المنتصف فوق أربعة كروت بظل خفيف، في كل كارت صورة دائرية واسم ووظيفة.",
+        descriptionAr: "سطر بخط يدوي وعنوان عريض في المنتصف فوق أربع بطاقات بظل خفيف، في كل بطاقة صورة دائرية واسم ووظيفة.",
         content: {
           heading: "Our Master Chefs",
           text: "Team Members",
@@ -3548,7 +3548,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Hero 19",
         labelAr: "واجهة ١٩",
         description: "A photograph as tall as the screen under a dark veil, with a very large white heading and an italic line in its middle; the header lies clear over it.",
-        descriptionAr: "صورة بارتفاع الشاشة عليها ظل غامق، وفي وسطها عنوان أبيض كبير جدًا وسطر مائل، والهيدر شفاف فوقها.",
+        descriptionAr: "صورة بارتفاع الشاشة عليها ظل غامق، وفي وسطها عنوان أبيض كبير جدًا وسطر مائل، والترويسة شفافة فوقها.",
         content: { heading: "The Best Coffee & Restaurant in the Heart of Cairo", text: "An authentic taste that brings you together at one table", image: art("19", "hero.jpg") },
       },
       {
@@ -3585,7 +3585,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Best dishes 19",
         labelAr: "أفضل الأطباق ١٩",
         description: "A script heading, a line and a red-outlined button on the start side, beside your dishes as pictures: one large and the rest small, each named in white with a yellow price.",
-        descriptionAr: "عنوان بخط يدوي وسطر وزر بإطار أحمر في البداية، وبجانبهم أطباقك كصور: واحدة كبيرة والباقي صغيرة، وعلى كل صورة الاسم بالأبيض والسعر بالأصفر.",
+        descriptionAr: "عنوان بخط يدوي وسطر وزر بإطار أحمر في البداية، وبجانبها أطباقك كصور: واحدة كبيرة والباقي صغيرة، وعلى كل صورة الاسم بالأبيض والسعر بالأصفر.",
         content: {
           heading: "Our Best & Unique Menu",
           text: "A selection of our tastiest dishes, made daily with fresh ingredients and an unforgettable chef's touch.",
@@ -3615,7 +3615,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Book a table 19",
         labelAr: "احجز طاولة ١٩",
         description: "A wide photograph under a deep dark veil with a script heading, a line and a red-outlined button in its middle; the band is as tall as its words.",
-        descriptionAr: "صورة عريضة عليها ظل غامق، وفي وسطها عنوان بخط يدوي وسطر وزر بإطار أحمر، وارتفاعها على قد الكلام.",
+        descriptionAr: "صورة عريضة عليها ظل غامق، وفي وسطها عنوان بخط يدوي وسطر وزر بإطار أحمر، وارتفاعها بقدر الكلام.",
         content: {
           autoplay: false,
           slides: [
@@ -3634,7 +3634,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Page title 19",
         labelAr: "عنوان صفحة ١٩",
         description: "The page's name in very large white letters over a dimmed photograph as tall as the screen; the header lies clear over it.",
-        descriptionAr: "اسم الصفحة بحروف بيضاء كبيرة جدًا فوق صورة معتمة بارتفاع الشاشة، والهيدر شفاف فوقها.",
+        descriptionAr: "اسم الصفحة بحروف بيضاء كبيرة جدًا فوق صورة معتمة بارتفاع الشاشة، والترويسة شفافة فوقها.",
         content: { heading: "Get in Touch", image: art("19", "hero.jpg") },
         page: { path: "/contact", title: "Contact" },
       },
@@ -3662,7 +3662,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Page title 19",
         labelAr: "عنوان صفحة ١٩",
         description: "The page's name in very large white letters over a dimmed photograph as tall as the screen; the header lies clear over it.",
-        descriptionAr: "اسم الصفحة بحروف بيضاء كبيرة جدًا فوق صورة معتمة بارتفاع الشاشة، والهيدر شفاف فوقها.",
+        descriptionAr: "اسم الصفحة بحروف بيضاء كبيرة جدًا فوق صورة معتمة بارتفاع الشاشة، والترويسة شفافة فوقها.",
         content: { heading: "About our Restaurant", image: art("19", "hero.jpg") },
         page: { path: "/about", title: "About" },
         library: false,
@@ -3716,7 +3716,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Page title 19",
         labelAr: "عنوان صفحة ١٩",
         description: "The page's name in very large white letters over a dimmed photograph as tall as the screen; the header lies clear over it.",
-        descriptionAr: "اسم الصفحة بحروف بيضاء كبيرة جدًا فوق صورة معتمة بارتفاع الشاشة، والهيدر شفاف فوقها.",
+        descriptionAr: "اسم الصفحة بحروف بيضاء كبيرة جدًا فوق صورة معتمة بارتفاع الشاشة، والترويسة شفافة فوقها.",
         content: { heading: "See Our Menu", image: art("19", "hero.jpg") },
         page: { path: "/menu", title: "Menu" },
         library: false,
@@ -3741,7 +3741,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Hero 22",
         labelAr: "واجهة ٢٢",
         description: "Centred white words under a violet glow on near-black: a very large heading, a line, a gradient pill button and an outlined one, with a wide rounded picture below.",
-        descriptionAr: "كلام أبيض في المنتصف تحت وهج بنفسجي على خلفية شبه سوداء: عنوان كبير جدًا وسطر وزر كبسولة بتدرّج لوني وآخر بإطار، وتحتهم صورة عريضة بحواف دائرية.",
+        descriptionAr: "كلام أبيض في المنتصف تحت وهج بنفسجي على خلفية شبه سوداء: عنوان كبير جدًا وسطر وزر كبسولة بتدرّج لوني وآخر بإطار، وتحتها صورة عريضة بحواف دائرية.",
         content: {
           heading: "The All-In-One Growth Software for Local Business Owners",
           text: "The complete automated system designed to capture more leads, follow up instantly, and grow your local business - all in one place.",
@@ -3755,9 +3755,9 @@ const XS_TEMPLATES: XsTemplate[] = [
       {
         type: "xs_features",
         label: "Feature cards 22",
-        labelAr: "كروت مميزات ٢٢",
+        labelAr: "بطاقات مميزات ٢٢",
         description: "A centred heading and line, then four soft dark cards, each a white icon, a bold title and a short list with every point on a line of its own.",
-        descriptionAr: "عنوان وسطر في المنتصف، ثم أربعة كروت داكنة ناعمة، في كل كارت أيقونة بيضاء وعنوان عريض وقائمة قصيرة كل بند فيها في سطر.",
+        descriptionAr: "عنوان وسطر في المنتصف، ثم أربع بطاقات داكنة ناعمة، في كل بطاقة أيقونة بيضاء وعنوان عريض وقائمة قصيرة كل بند فيها في سطر.",
         content: {
           heading: "Replace Your Clunky Tools With A Smart, All-In-One System",
           text: "Log in to a single powerful dashboard to manage everything seamlessly.",
@@ -3811,7 +3811,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Quotes 22",
         labelAr: "آراء ٢٢",
         description: "Your customers' words on a dark rounded card over a violet glow, one at a time: a quote mark, white words, and a small round picture beside the name.",
-        descriptionAr: "آراء عملائك على كارت داكن بحواف دائرية فوق وهج بنفسجي، واحدًا بعد الآخر: علامة اقتباس وكلام أبيض وصورة دائرية صغيرة بجانب الاسم.",
+        descriptionAr: "آراء عملائك على بطاقة داكنة بحواف دائرية فوق وهج بنفسجي، واحدًا بعد الآخر: علامة اقتباس وكلام أبيض وصورة دائرية صغيرة بجانب الاسم.",
         content: {
           heading: "Real Stories From Local Business Owners",
           items: [
@@ -3827,7 +3827,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Three steps 22",
         labelAr: "ثلاث خطوات ٢٢",
         description: "A centred heading over three soft dark cards side by side, each a white icon, a numbered title and a sentence.",
-        descriptionAr: "عنوان في المنتصف فوق ثلاثة كروت داكنة ناعمة متجاورة، في كل كارت أيقونة بيضاء وعنوان مرقّم وجملة.",
+        descriptionAr: "عنوان في المنتصف فوق ثلاث بطاقات داكنة ناعمة متجاورة، في كل بطاقة أيقونة بيضاء وعنوان مرقّم وجملة.",
         content: {
           heading: "Your 3-Step Path to Automated Growth",
           items: [
@@ -3856,7 +3856,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Offer with a list 22",
         labelAr: "عرض بقائمة ٢٢",
         description: "A heading, a few short paragraphs, a green-ticked list and a gradient pill button beside a picture on a dark rounded card.",
-        descriptionAr: "عنوان وفقرات قصيرة وقائمة بعلامات صح خضراء وزر كبسولة بتدرّج لوني، بجانب صورة على كارت داكن بحواف دائرية.",
+        descriptionAr: "عنوان وفقرات قصيرة وقائمة بعلامات صح خضراء وزر كبسولة بتدرّج لوني، بجانب صورة على بطاقة داكنة بحواف دائرية.",
         content: {
           images: [art("22", "ebook.png")],
           heading: "Free Resource for Local Business Owners",
@@ -3875,7 +3875,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Call to action 22",
         labelAr: "دعوة للاشتراك ٢٢",
         description: "A wide dark rounded card with a bright violet glow in its lower corner: a centred heading and line over a pill-shaped email box and a gradient button.",
-        descriptionAr: "كارت داكن عريض بحواف دائرية وفي ركنه السفلي وهج بنفسجي ساطع: عنوان وسطر في المنتصف فوق خانة بريد على شكل كبسولة وزر بتدرّج لوني.",
+        descriptionAr: "بطاقة داكنة عريضة بحواف دائرية وفي ركنها السفلي وهج بنفسجي ساطع: عنوان وسطر في المنتصف فوق خانة بريد على شكل كبسولة وزر بتدرّج لوني.",
         content: {
           heading: "Ready to put Your Local Business Growth on Autopilot?",
           text: "Stop wasting thousands on scattered tools that don't convert and start enjoying streamlined, predictable growth.",
@@ -3943,7 +3943,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Contact 22",
         labelAr: "تواصل ٢٢",
         description: "Your email and phone on soft dark cards beside a message form with pill-shaped boxes and a gradient button. Messages arrive in your Contacts.",
-        descriptionAr: "بريدك وهاتفك على كروت داكنة ناعمة بجانب نموذج رسالة بخانات على شكل كبسولة وزر بتدرّج لوني. الرسائل تصل إلى جهات الاتصال.",
+        descriptionAr: "بريدك وهاتفك على بطاقات داكنة ناعمة بجانب نموذج رسالة بخانات على شكل كبسولة وزر بتدرّج لوني. الرسائل تصل إلى جهات الاتصال.",
         content: {
           heading: "Have a question? Send us a message",
           contactPlaceholder: "Email Address",
@@ -3965,9 +3965,9 @@ const XS_TEMPLATES: XsTemplate[] = [
       {
         type: "xs_rail",
         label: "Clothing rail 23",
-        labelAr: "شمّاعة الملابس ٢٣",
+        labelAr: "علّاقة الملابس ٢٣",
         description: "Your clothes on a rail across the opening screen: they turn as the shopper passes, slide along, and lift to show their back and be bought.",
-        descriptionAr: "ملابسك على شمّاعة بعرض الشاشة: تدور القطعة لما يمر عليها العميل، وتتحرك على الشمّاعة، وترتفع ليرى ظهرها ويشتريها.",
+        descriptionAr: "ملابسك على علّاقة بعرض الشاشة: تدور القطعة عندما يمر عليها العميل، وتتحرك على العلّاقة، وترتفع ليرى ظهرها ويشتريها.",
         content: {
           eyebrow: "New season · On the rail",
           heading: "Turn the clothes over with your own hands",
@@ -3986,7 +3986,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Shop by kind 23",
         labelAr: "تسوّق حسب النوع ٢٣",
         description: "Four tall pictures, one per kind of clothing, each with its name and a link that leads to your shop.",
-        descriptionAr: "أربع صور طويلة، صورة لكل نوع من الملابس، وعلى كل واحدة اسمها ورابط يوصّل لمتجرك.",
+        descriptionAr: "أربع صور طويلة، صورة لكل نوع من الملابس، وعلى كل واحدة اسمها ورابط يوصل إلى متجرك.",
         content: {
           heading: "Shop by kind",
           variant: "tile",
@@ -4011,7 +4011,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "The edits 23",
         labelAr: "التشكيلات ٢٣",
         description: "Pictures dealt like a hand of cards: the shopper drags through them, each with a small label, a title and a line.",
-        descriptionAr: "صور متراصّة زي كروت في الإيد: العميل يسحب بينها، وعلى كل واحدة شارة صغيرة وعنوان وسطر.",
+        descriptionAr: "صور متراصّة مثل بطاقات في اليد: يتنقّل العميل بينها بالسحب، وعلى كل واحدة شارة صغيرة وعنوان وسطر.",
         content: {
           heading: "The edits",
           text: "Five ways to wear the season. Drag through them.",
@@ -4076,7 +4076,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Story 23",
         labelAr: "قصة ٢٣",
         description: "Text beside a picture of the workroom, the sides swapping from one part to the next.",
-        descriptionAr: "نص بجانب صورة لورشة العمل، ويتبادلان الجهة من جزء للتاني.",
+        descriptionAr: "نص بجانب صورة لورشة العمل، ويتبادلان الجهة من جزء لآخر.",
         content: {
           items: [
             {
@@ -4108,7 +4108,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Contact 23",
         labelAr: "تواصل معنا ٢٣",
         description: "A message form beside your address, phone and email.",
-        descriptionAr: "نموذج رسالة بجانب عنوانك ورقم تليفونك وبريدك.",
+        descriptionAr: "نموذج رسالة بجانب عنوانك ورقم هاتفك وبريدك.",
         content: {
           heading: "Write to us",
           contactPlaceholder: "Your email or phone",
@@ -4135,7 +4135,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Hero 24",
         labelAr: "الواجهة ٢٤",
         description: "Wide pictures with a wave under them, your words on their light side, dots and arrows; a picture of its own on a phone.",
-        descriptionAr: "صور عريضة تحتها موجة، وكلامك على الجزء الفاتح منها، بنقط وأسهم؛ ولكل صورة صورة خاصة بالموبايل.",
+        descriptionAr: "صور عريضة تحتها موجة، وكلامك على الجزء الفاتح منها، بنقاط وأسهم؛ ولكل صورة نسخة خاصة بالهاتف.",
         content: {
           autoplay: true,
           seconds: 5,
@@ -4162,9 +4162,9 @@ const XS_TEMPLATES: XsTemplate[] = [
       {
         type: "xs_features",
         label: "Trust cards 24",
-        labelAr: "كروت الثقة ٢٤",
+        labelAr: "بطاقات الثقة ٢٤",
         description: "Four small cards under the hero: inspecting before paying, cash on delivery, exchange and help.",
-        descriptionAr: "أربع كروت صغيرة تحت الواجهة: المعاينة قبل الدفع والدفع عند الاستلام والاستبدال والمساعدة.",
+        descriptionAr: "أربع بطاقات صغيرة تحت الواجهة: المعاينة قبل الدفع والدفع عند الاستلام والاستبدال والمساعدة.",
         content: {
           heading: "",
           items: [
@@ -4180,7 +4180,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Shop by category 24",
         labelAr: "تسوّق حسب القسم ٢٤",
         description: "Rounded square pictures, one per category, each with its name under it and a link to it.",
-        descriptionAr: "صور مربعة بحواف دائرية، صورة لكل قسم، واسمه تحتها ورابط ليه.",
+        descriptionAr: "صور مربعة بحواف دائرية، صورة لكل قسم، واسمه تحتها ورابط إليه.",
         content: {
           heading: "Shop by category",
           variant: "card",
@@ -4200,7 +4200,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Savings offers 24",
         labelAr: "عروض التوفير ٢٤",
         description: "Your bundles in rounded cards, each with what it saves and a full-width button to choose its colour.",
-        descriptionAr: "مجموعاتك في كروت بحواف دائرية، على كل واحدة المبلغ اللي بتوفّره وزر بعرضها لاختيار اللون.",
+        descriptionAr: "مجموعاتك في بطاقات بحواف دائرية، على كل واحدة المبلغ الذي توفّره وزر بعرضها لاختيار اللون.",
         content: {
           heading: "Savings offers",
           text: "Save more with a bundle made for your baby's stage",
@@ -4242,9 +4242,9 @@ const XS_TEMPLATES: XsTemplate[] = [
       {
         type: "xs_journey",
         label: "Shop by need 24",
-        labelAr: "اختاري حسب احتياجك ٢٤",
+        labelAr: "اختيار حسب الاحتياج ٢٤",
         description: "A tab for each need — sleep, feeding, going out — opening on the bundle that answers it, its price and what it saves.",
-        descriptionAr: "تبويب لكل احتياج — النوم والرضاعة والخروج — يفتح على المجموعة اللي تناسبه بسعرها واللي بتوفّره.",
+        descriptionAr: "تبويب لكل احتياج — النوم والرضاعة والخروج — يفتح على المجموعة التي تناسبه بسعرها وما توفّره.",
         content: {
           kicker: "Shop by need",
           heading: "What do you need right now?",
@@ -4310,9 +4310,9 @@ const XS_TEMPLATES: XsTemplate[] = [
       {
         type: "xs_reels",
         label: "See it for real 24",
-        labelAr: "شوفيها على الحقيقة ٢٤",
+        labelAr: "شاهدها في الواقع ٢٤",
         description: "Upright videos of your products in use; one plays at a time, each with its product, price and a cart button under it.",
-        descriptionAr: "فيديوهات طولية لمنتجاتك وهي بتتستخدم؛ واحد بس بيشتغل في المرة، وتحت كل واحد منتجه وسعره وزر للسلة.",
+        descriptionAr: "مقاطع فيديو طولية لمنتجاتك أثناء استخدامها؛ يعمل مقطع واحد فقط في كل مرة، وتحت كل مقطع منتجه وسعره وزر للسلة.",
         content: {
           heading: "See it for real",
           text: "Our products in everyday use",
@@ -4385,7 +4385,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Story 24",
         labelAr: "قصة ٢٤",
         description: "Text beside a picture of mother and baby, the sides swapping from one part to the next.",
-        descriptionAr: "نص بجانب صورة لأم وبيبي، ويتبادلان الجهة من جزء للتاني.",
+        descriptionAr: "نص بجانب صورة لأم وطفلها، ويتبادلان الجهة من جزء لآخر.",
         content: {
           items: [
             {
@@ -4417,7 +4417,7 @@ const XS_TEMPLATES: XsTemplate[] = [
         label: "Contact 24",
         labelAr: "تواصل معنا ٢٤",
         description: "A message form beside your address, phone and email.",
-        descriptionAr: "نموذج رسالة بجانب عنوانك ورقم تليفونك وبريدك.",
+        descriptionAr: "نموذج رسالة بجانب عنوانك ورقم هاتفك وبريدك.",
         content: {
           heading: "Write to us",
           contactPlaceholder: "Your email or phone",

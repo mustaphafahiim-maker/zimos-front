@@ -29,7 +29,7 @@ describe("AccessBanner and paying", () => {
     api.getWorkspaceAccess.mockResolvedValue(access({ phase: "restricted", status: "past_due", trialing: false, enforced: true }));
     renderWithProviders(<AccessBanner />, { locale: "ar" });
     const banner = await screen.findByRole("alert");
-    expect(within(banner).getByRole("link", { name: "خطتي" })).toHaveAttribute("href", "/subscription?tab=invoices");
+    expect(within(banner).getByRole("link", { name: "باقتي" })).toHaveAttribute("href", "/subscription?tab=invoices");
   });
 
   it("shows no link to whoever can't manage billing", async () => {

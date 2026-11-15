@@ -40,11 +40,11 @@ const STRINGS = {
     ogImage: "رابط صورة المشاركة",
     ogImageHint: "تظهر عند مشاركة رابط المتجر على واتساب أو فيسبوك. المقاس الأفضل 1200×630.",
     verification: "توثيق Google Search Console",
-    verificationHint: "الكود الموجود داخل content=\"…\" فقط من وسم meta الذي يعطيه جوجل.",
+    verificationHint: "القيمة الموجودة داخل content=\"…\" فقط من وسم meta الذي يعطيه جوجل.",
     preview: "معاينة نتيجة البحث",
     samplePage: "اسم المنتج",
-    auto: "ملفا sitemap.xml و robots.txt يُنشآن لمتجرك تلقائيًا، وكل صفحة منتج تحمل بيانات Product لجوجل.",
-    saved: "تم حفظ إعدادات SEO.",
+    auto: "ملفا sitemap.xml وrobots.txt يُنشآن لمتجرك تلقائيًا، وكل صفحة منتج تحمل بيانات Product لجوجل.",
+    saved: "تم حفظ إعدادات محركات البحث.",
   },
 } satisfies Messages;
 

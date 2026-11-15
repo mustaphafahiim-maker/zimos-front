@@ -45,8 +45,8 @@ const STRINGS = {
     fulfillment: "Fulfillment",
   },
   ar: {
-    order: "الأوردر",
-    back: "الأوردرات",
+    order: "الطلب",
+    back: "الطلبات",
     placed: "تم الطلب {date}",
     confirmation: "التأكيد",
     payment: "الدفع",

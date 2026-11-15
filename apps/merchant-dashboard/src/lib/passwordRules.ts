@@ -25,7 +25,7 @@ export interface PasswordRule {
 export const MIN_PASSWORD_LENGTH = 8;
 
 export const PASSWORD_RULES: PasswordRule[] = [
-  { id: "length", label: "٨ حروف على الأقل", labelEn: "At least 8 characters", test: (v) => v.length >= MIN_PASSWORD_LENGTH },
+  { id: "length", label: "8 أحرف على الأقل", labelEn: "At least 8 characters", test: (v) => v.length >= MIN_PASSWORD_LENGTH },
   { id: "lower", label: "حرف صغير واحد على الأقل (a–z)", labelEn: "One lowercase letter (a–z)", test: (v) => /[a-z]/.test(v) },
   { id: "upper", label: "حرف كبير واحد على الأقل (A–Z)", labelEn: "One uppercase letter (A–Z)", test: (v) => /[A-Z]/.test(v) },
   {

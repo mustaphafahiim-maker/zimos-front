@@ -10,8 +10,8 @@ const STRINGS = {
     seePlans: "See the plans",
   },
   ar: {
-    featureRequired: "خطتك الحالية لا تشمل {feature}. رقِّ خطتك لاستخدامها.",
-    seePlans: "عرض الخطط",
+    featureRequired: "باقتك الحالية لا تشمل {feature}. رقِّ باقتك لاستخدامها.",
+    seePlans: "عرض الباقات",
   },
 } satisfies Messages;
 
