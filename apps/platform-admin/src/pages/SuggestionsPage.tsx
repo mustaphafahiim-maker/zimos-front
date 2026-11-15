@@ -71,7 +71,7 @@ const STRINGS = {
     save: "حفظ",
     saving: "جارٍ الحفظ…",
     saved: "تم الحفظ.",
-    readOnly: "يمكنك قراءة الاقتراحات؛ الرد يحتاج صلاحية support.manage.",
+    readOnly: "يمكنك قراءة الاقتراحات؛ الرد يحتاج إلى صلاحية support.manage.",
     more: "عرض المزيد",
   },
 };

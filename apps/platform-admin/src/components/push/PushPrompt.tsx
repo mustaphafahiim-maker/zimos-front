@@ -21,8 +21,8 @@ const STRINGS = {
     ios: "On an iPhone or iPad (iOS 16.4 or later): tap Share, then “Add to Home Screen”, and open Zimos Admin from there to turn notifications on.",
   },
   ar: {
-    text: "فعّل إشعارات الجهاز على هذا الهاتف أو الكمبيوتر لتصلك التسجيلات والمدفوعات والتذاكر فور وصولها.",
-    enable: "فعّل الإشعارات",
+    text: "فعّل إشعارات الجهاز على هذا الهاتف أو الحاسوب لتصلك التسجيلات والمدفوعات والتذاكر فور وصولها.",
+    enable: "تفعيل الإشعارات",
     notNow: "ليس الآن",
     enabled: "تم تفعيل الإشعارات.",
     ios: "على iPhone أو iPad (iOS 16.4 أو أحدث): اضغط زر المشاركة، ثم «إضافة إلى الشاشة الرئيسية»، وافتح Zimos Admin من هناك لتفعيل الإشعارات.",

@@ -104,7 +104,7 @@ describe("a store's links", () => {
   it("in Arabic: the badge, the state and the links' names", () => {
     localStorage.setItem("zimos.console.locale", "ar");
     show({ ...base, customDomain: { ...DOMAIN, status: "verified", sslStatus: "pending", state: "pending" }, customDomainCount: 1 });
-    expect(screen.getByText("دومين مخصص")).toBeTruthy();
+    expect(screen.getByText("نطاق مخصص")).toBeTruthy();
     expect(screen.getByText("في الانتظار")).toBeTruthy();
     expect(screen.getByText("SSL قيد الإصدار")).toBeTruthy();
     expect(screen.getByRole("link", { name: "فتح Nare في تبويب جديد" }).getAttribute("href")).toBe("https://naree.zimos.co");

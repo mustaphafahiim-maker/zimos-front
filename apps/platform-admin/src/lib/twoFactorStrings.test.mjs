@@ -22,7 +22,7 @@ describe("the line over the console's code field", () => {
 
   it("has every string in Arabic too", () => {
     assert.deepEqual(Object.keys(ar).sort(), Object.keys(en).sort());
-    assert.equal(challengeBody(ar, { ...base, channel: "totp" }), "أدخل الرمز المكوّن من ٦ أرقام من تطبيق المصادقة.");
+    assert.equal(challengeBody(ar, { ...base, channel: "totp" }), "أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة.");
   });
 });
 

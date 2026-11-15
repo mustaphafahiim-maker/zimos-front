@@ -23,7 +23,7 @@ const STRINGS = {
   ar: {
     open: "فتح {name} في تبويب جديد",
     openDomain: "فتح {name} على {host} في تبويب جديد",
-    customDomain: "دومين مخصص",
+    customDomain: "نطاق مخصص",
     connected: "متصل",
     pending: "في الانتظار",
     problem: "به مشكلة",

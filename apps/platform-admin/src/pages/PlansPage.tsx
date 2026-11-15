@@ -10,6 +10,7 @@ import { Toggle } from "@/components/Toggle";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toast";
 import { fmt, useLocale, useT, type Messages } from "@/i18n/LocaleContext";
+import { countForm } from "@/i18n/activeLocale";
 import { useAuth } from "@/context/AuthContext";
 import { P } from "@/lib/permissions";
 import { useAsync } from "@/lib/useAsync";
@@ -43,11 +44,16 @@ const STRINGS = {
     perMonth: " / month",
     perYear: "{price} / year",
     freeTrial: "Free trial",
-    trialDays: "{days} days",
+    trialDays_one: "1 day",
+    trialDays_two: "2 days",
+    trialDays_few: "{days} days",
+    trialDays_many: "{days} days",
     none: "None",
     storesPerOwner: "Stores per owner",
-    storeOne: "store",
-    storeMany: "stores",
+    stores_one: "1 store",
+    stores_two: "2 stores",
+    stores_few: "{n} stores",
+    stores_many: "{n} stores",
     funnelsPerMonth: "Funnels per month",
     campaignEmailsPerMonth: "Campaign emails per month",
     campaignsPerMonth: "Campaigns per month",
@@ -130,10 +136,10 @@ const STRINGS = {
     activeHint: "Inactive plans stay on existing workspaces but can't be chosen for new ones.",
   },
   ar: {
-    title: "الخطط",
-    description: "خطط الاشتراك المعروضة على التجار.",
-    newPlan: "خطة جديدة",
-    emptyMessage: "لا توجد خطط بعد. أنشئ أول خطة يمكن للتجار الاشتراك فيها.",
+    title: "الباقات",
+    description: "باقات الاشتراك المعروضة على التجار.",
+    newPlan: "باقة جديدة",
+    emptyMessage: "لا توجد باقات بعد. أنشئ أول باقة يمكن للتجار الاشتراك فيها.",
     active: "نشطة",
     inactive: "غير نشطة",
     shownAtSignup: "تظهر عند التسجيل · #{order}",
@@ -141,11 +147,16 @@ const STRINGS = {
     perMonth: " / شهريًا",
     perYear: "{price} / سنويًا",
     freeTrial: "الفترة التجريبية المجانية",
-    trialDays: "{days} يومًا",
+    trialDays_one: "يوم واحد",
+    trialDays_two: "يومان",
+    trialDays_few: "{days} أيام",
+    trialDays_many: "{days} يومًا",
     none: "لا يوجد",
     storesPerOwner: "المتاجر لكل مالك",
-    storeOne: "متجر",
-    storeMany: "متاجر",
+    stores_one: "متجر واحد",
+    stores_two: "متجران",
+    stores_few: "{n} متاجر",
+    stores_many: "{n} متجرًا",
     funnelsPerMonth: "مسارات البيع شهريًا",
     campaignEmailsPerMonth: "رسائل الحملات شهريًا",
     campaignsPerMonth: "الحملات شهريًا",
@@ -162,11 +173,11 @@ const STRINGS = {
     updated: "حُدّثت {when}",
     edit: "تعديل",
     deleteNamed: "حذف {name}",
-    savedToast: "حُفظت الخطة «{name}».",
-    deleteTitle: "حذف الخطة «{name}»؟",
-    deleteDescription: "لا يمكن حذف خطط عليها متاجر نشطة — اجعلها غير نشطة بدلًا من ذلك.",
-    deletePlan: "حذف الخطة",
-    deletedToast: "حُذفت الخطة.",
+    savedToast: "حُفظت الباقة «{name}».",
+    deleteTitle: "حذف الباقة «{name}»؟",
+    deleteDescription: "لا يمكن حذف باقات عليها متاجر نشطة — اجعلها غير نشطة بدلًا من ذلك.",
+    deletePlan: "حذف الباقة",
+    deletedToast: "حُذفت الباقة.",
     errNumbers: "يجب أن تكون الأسعار وأيام التجربة والرسوم أرقامًا.",
     errQuota: "يجب أن تكون حصة الطلبات عددًا صحيحًا، أو فارغة لغير المحدود.",
     errTrial: "يجب أن تكون الفترة التجريبية عددًا صحيحًا من الأيام من 0 (بلا تجربة) إلى 90.",
@@ -177,13 +188,13 @@ const STRINGS = {
     errMaxRecipients: "يجب أن يكون المستلمون لكل حملة عددًا صحيحًا (1 أو أكثر) — أو حدّد «غير محدود».",
     errDisplayOrder: "يجب أن يكون ترتيب العرض عددًا صحيحًا من 0 إلى 10000.",
     errFee: "يجب أن تكون الرسوم لكل طلب رقمًا، و0 لعدم وجود رسوم.",
-    errFeePlan: "الرسوم لكل طلب متاحة فقط لخطة سعرها 0 شهريًا بالجنيه المصري. اجعل السعر الشهري 0، أو الرسوم 0.",
+    errFeePlan: "الرسوم لكل طلب متاحة فقط لباقة سعرها 0 شهريًا بالجنيه المصري. اجعل السعر الشهري 0، أو الرسوم 0.",
     errFreeOrders: "يجب أن تكون الطلبات المجانية عددًا صحيحًا، و0 لعدم وجودها.",
     errDebtLimit: "يجب أن يكون حد المديونية مبلغًا، أو فارغًا للسحب على المكشوف الثابت.",
     editNamed: "تعديل {name}",
     cancel: "إلغاء",
     saving: "جارٍ الحفظ…",
-    savePlan: "حفظ الخطة",
+    savePlan: "حفظ الباقة",
     name: "الاسم",
     code: "الرمز",
     codeHint: "معرّف بأحرف صغيرة تستخدمه الفوترة. يُشتق من الاسم إذا تُرك فارغًا.",
@@ -201,11 +212,11 @@ const STRINGS = {
     perCodOrder: "= {fee} لكل طلب دفع عند الاستلام",
     limits: "الحدود",
     maxStores: "الحد الأقصى للمتاجر",
-    maxStoresHint: "عدد المتاجر المسموح بها لمالك واحد. يُطبَّق أكبر حد بين خطط متاجره الحالية.",
+    maxStoresHint: "عدد المتاجر المسموح بها لمالك واحد. يُطبَّق أكبر حد بين باقات متاجره الحالية.",
     maxFunnels: "الحد الأقصى لمسارات البيع شهريًا",
     maxFunnelsHint: "مسارات البيع التي يمكن لمتجر واحد إنشاؤها كل شهر تقويمي (بتوقيت القاهرة)، بما فيها المحذوفة.",
     maxCampaignEmails: "رسائل حملات البريد شهريًا",
-    maxCampaignEmailsHint: "الرسائل التسويقية التي يمكن لمتجر واحد إرسالها كل شهر تقويمي (بتوقيت القاهرة). 0 = لا شيء؛ الخطط القديمة تبدأ من 0.",
+    maxCampaignEmailsHint: "الرسائل التسويقية التي يمكن لمتجر واحد إرسالها كل شهر تقويمي (بتوقيت القاهرة). 0 = لا شيء؛ الباقات القديمة تبدأ من 0.",
     maxCampaigns: "حملات البريد شهريًا",
     maxCampaignsHint: "الحملات التي يمكن لمتجر واحد إرسالها أو جدولتها كل شهر تقويمي (بتوقيت القاهرة). المسودات لا تُحسب، والحملة الملغاة قبل بدئها تُعيد مكانها.",
     maxRecipients: "المستلمون لكل حملة",
@@ -217,7 +228,7 @@ const STRINGS = {
     displayOrderHint: "الأقل يظهر أولًا في صفحة الأسعار.",
     feePerOrderField: "الرسوم لكل طلب ({currency})",
     feePerOrderHint:
-      "الدفع لكل طلب: تُخصم من الرصيد المدفوع مسبقًا للمتجر عن كل طلب (WALLET_ENABLED). فقط لخطة سعرها 0 شهريًا بالجنيه المصري. 0 = بلا رسوم.",
+      "الدفع لكل طلب: تُخصم من الرصيد المدفوع مسبقًا للمتجر عن كل طلب (WALLET_ENABLED). فقط لباقة سعرها 0 شهريًا بالجنيه المصري. 0 = بلا رسوم.",
     freeOrdersField: "الطلبات المجانية لكل متجر",
     freeOrdersHint: "طلبات يضعها المتجر قبل خصم أي رسوم. يمكن منح المزيد لكل متجر من صفحته.",
     debtLimitField: "حد المديونية ({currency})",
@@ -225,7 +236,7 @@ const STRINGS = {
       "إلى أي حد يمكن أن ينزل الرصيد تحت الصفر؛ بعده تُرفض الطلبات الجديدة ويبقى المتجر مفتوحًا. فارغ = السحب على المكشوف الثابت (10 ج.م.) ويتوقف المتجر عن البيع. المقترح: 5 × الرسوم ({suggested}).",
     freeOrdersRow: "الطلبات المجانية",
     debtLimitRow: "حد المديونية",
-    activeHint: "تبقى الخطط غير النشطة على المتاجر الحالية لكن لا يمكن اختيارها لمتاجر جديدة.",
+    activeHint: "تبقى الباقات غير النشطة على المتاجر الحالية لكن لا يمكن اختيارها لمتاجر جديدة.",
   },
 } satisfies Messages;
 
@@ -416,9 +427,9 @@ export function PlansPage() {
                 </div>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                   <dt className="text-ink-soft">{t.freeTrial}</dt>
-                  <dd className="text-end text-ink">{p.trialDays > 0 ? fmt(t.trialDays, { days: p.trialDays }) : t.none}</dd>
+                  <dd className="text-end text-ink">{p.trialDays > 0 ? fmt(t[`trialDays_${countForm(p.trialDays)}`], { days: p.trialDays }) : t.none}</dd>
                   <dt className="text-ink-soft">{t.storesPerOwner}</dt>
-                  <dd className="text-end text-ink">{limitLabel(p.maxStores, p.maxStores === 1 ? t.storeOne : t.storeMany, t.unlimited)}</dd>
+                  <dd className="text-end text-ink">{p.maxStores === null || p.maxStores === undefined ? t.unlimited : fmt(t[`stores_${countForm(p.maxStores)}`], { n: formatNumber(p.maxStores) })}</dd>
                   <dt className="text-ink-soft">{t.funnelsPerMonth}</dt>
                   <dd className="text-end text-ink">{limitLabel(p.maxFunnelsPerMonth, t.perMo, t.unlimited)}</dd>
                   {p.maxCampaignEmailsPerMonth !== undefined && (
