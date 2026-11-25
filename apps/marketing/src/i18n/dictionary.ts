@@ -73,7 +73,15 @@ export interface Dictionary {
     /** Under the buttons, each with a tick. */
     ticks: [string, string, string];
     imageAlt: string;
+    /** The cards floating over the stores — illustration, generic labels. */
+    chips: {
+      order: Chip;
+      confirmed: Chip;
+      delivered: Chip;
+    };
     caption: string;
+    /** The objects around the hero (components/hero-scene.tsx): decoration, hidden from screen readers. */
+    scene: HeroScene;
   };
 
   /** The stores: every template of the library as a whole store, to open and look through. */
@@ -138,18 +146,30 @@ export interface Dictionary {
       bump: string;
       orderNow: string;
       queue: string;
+      /** The queue's three counts: new, confirmed, later. */
+      counts: [Amount, Amount, Amount];
       orderNumber: string;
       risk: string;
       confirmed: string;
       refused: string;
       later: string;
+      /** The orders waiting under the one on the call. */
+      nextOrders: [QueuedOrder, QueuedOrder, QueuedOrder];
       shipment: string;
+      courier: Amount;
+      collect: Amount;
+      deliverTo: Amount;
       tracking: string;
       statuses: [string, string, string];
+      /** When each status came, under it. */
+      statusTimes: [string, string, string];
+      expected: Amount;
       profitTitle: string;
       rows: [Amount, Amount, Amount, Amount];
       net: Amount;
       currency: string;
+      /** Under the week's chart: how the week compares. */
+      week: Amount;
     };
     /** Under the drawings: they are an illustration. */
     note: string;
@@ -212,8 +232,8 @@ export interface Dictionary {
     yearlySave: string;
     perMonth: string;
     perYear: string;
-    /** "{price}" */
-    yearlyEquivalent: string;
+    /** Under a monthly price, muted. */
+    billedMonthly: string;
     /** Read before the struck-out twelve monthly payments under a yearly price (screen readers only). */
     fullYearLabel: string;
     /** "{price}": the yearly price over twelve months, under it. */
@@ -228,6 +248,8 @@ export interface Dictionary {
     unlimited: string;
     cta: string;
     ctaYearly: string;
+    /** The badge on the middle of three plans (the home page and the pricing page). */
+    mostPopular: string;
     seeAll: string;
     comingSoon: string;
     comingSoonBody: string;
@@ -247,6 +269,8 @@ export interface Dictionary {
       /** The pill above the plan's name. */
       badge: string;
       tagline: string;
+      /** The home page's wide card: what the plan is, as its title (its name, from the API, is the pill above). */
+      title: string;
       /** After the fee, like perMonth. */
       perOrder: string;
       /** "{orders}" (lib/format formatOrderCount). */
@@ -358,6 +382,13 @@ export interface Amount {
   value: string;
 }
 
+/** An order in the journey's confirmation queue: its number, its product and its total, as written. */
+export interface QueuedOrder {
+  number: string;
+  item: string;
+  total: string;
+}
+
 export interface JourneyStep {
   id: "ad" | "page" | "confirm" | "ship" | "profit";
   /** Short, on the step's button. */
@@ -394,3 +425,44 @@ export interface FaqItem {
   question: string;
   answer: string;
 }
+
+/**
+ * What the hero's objects say (components/hero-scene.tsx): each object's
+ * word when it is tapped (`pops`), its hint under the pointer (`tips`), the
+ * words drawn on a few of them, and the small tally of what was tapped.
+ * Amounts are illustration, written the way the rest of the page writes them.
+ */
+export interface HeroScene {
+  /** Until the first tap. */
+  hint: string;
+  pops: Record<HeroScenePop, string>;
+  tips: Record<HeroSceneTip, string>;
+  /** On the coins. */
+  coin: string;
+  /** On the two price tags. */
+  tags: [string, string];
+  /** In the chat bubble. */
+  chat: { title: string; detail: string };
+  /** The tally: its heading, the words after its two counts, and the amount's currency before or after it. */
+  stat: { today: string; orders: string; reviews: string; before: string; after: string };
+}
+
+export type HeroScenePop =
+  | "order1"
+  | "order2"
+  | "order3"
+  | "order4"
+  | "profit1"
+  | "profit2"
+  | "profit3"
+  | "tag1"
+  | "tag2"
+  | "bag"
+  | "ok"
+  | "rocket"
+  | "bell"
+  | "chat"
+  | "review"
+  | "truck";
+
+export type HeroSceneTip = "box" | "profit" | "discount" | "price" | "cart" | "confirm" | "publish" | "notifications" | "message" | "reviews" | "ship";
